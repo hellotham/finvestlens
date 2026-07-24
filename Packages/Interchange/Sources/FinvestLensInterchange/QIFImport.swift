@@ -26,7 +26,7 @@ public enum QIFImporter {
     ]
 
     public static func parse(_ data: Data) -> [StagedTransaction] {
-        parse(String(decoding: data, as: UTF8.self))
+        parse(ImportParsing.decode(data))
     }
 
     public static func parse(_ text: String) -> [StagedTransaction] {
@@ -123,8 +123,11 @@ public enum QIFImporter {
         case "sell", "sellx", "shrsout": return .sell
         case "reinvdiv", "reinvlg", "reinvsh", "reinvint", "reinvmd": return .reinvestDividend
         case "div", "divx", "cgshort", "cgshortx", "cglong", "cglongx",
-             "intinc", "intincx", "miscinc", "miscincx", "rtrncap", "rtrncapx":
+             "intinc", "intincx", "miscinc", "miscincx":
             return .dividend
+        // Return of capital reduces cost basis; booking it as dividend income
+        // overstated income and left later sales overstating basis.
+        case "rtrncap", "rtrncapx": return .returnOfCapital
         default: return .other
         }
     }

@@ -31,7 +31,8 @@ FinvestLensApp (macOS / iPadOS / iOS)          ← SwiftUI, per-platform
    ├── FeatureUI          SwiftUI views + AppModel (@Observable view model)
    ├── Reports            report computation (Swift) + Swift Charts rendering
    ├── Interchange        GnuCash XML import/export · QIF/OFX/CSV · import matcher
-   ├── Rules              rules engine · merchant heuristics · operator search
+   ├── Rules              rules engine · merchant heuristics
+   ├── Shared             App-Group snapshot shared with the widget/Quick Look extensions
    ├── Quotes             pluggable price/quote providers (URLSession)
    ├── Intelligence       Apple Intelligence (FoundationModels) features (§11)
    │                      PDF text/OCR extraction · statement/invoice/dividend
@@ -299,9 +300,11 @@ Interchange   → Engine
 Quotes        → Engine
 Reports       → Engine
 Rules         → Engine
+Shared        (no dependencies — Foundation-only App-Group snapshot leaf)
 Intelligence  → Engine, Interchange
-FeatureUI     → Engine, Persistence, Interchange, Reports, Rules, Quotes, Intelligence
+FeatureUI     → Engine, Persistence, Interchange, Reports, Rules, Quotes, Intelligence, Shared
 FinvestLensApp (macOS/iPadOS/iOS targets) → FeatureUI
+Widget/QuickLook extension targets → Shared
 ```
 
 ---

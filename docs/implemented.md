@@ -19,6 +19,109 @@ Companions: [PRD](prd.md) · [Architecture](architecture.md) · [Plan](plan.md) 
 
 ---
 
+## Full-codebase review pass (25 Jul 2026)
+
+A max-effort review of the entire codebase against the PRD, Architecture and
+Plan (ten independent finder angles → per-candidate adversarial verification →
+a gap sweep; 63 distinct candidates, 60 confirmed, 2 refuted). Everything
+confirmed was fixed the same day; all nine suites green (1,094 tests, +29
+regression pins) and both platform targets build.
+
+**Money-correctness fixes (engine & import).** Stock splits now rescale open
+*short* positions (both FIFO/LIFO and average-cost — a split while short
+previously produced phantom lots and overstated gains); Scrub no longer flags
+the single-split zero-value stock-split shape as degenerate (GnuCash's own
+scrub accepts it — Check & Repair used to nag forever); Close Book **aborts**
+(preview warns, toast on execute) when the equity account is
+foreign-denominated and no exchange rate exists, instead of silently booking
+the unconverted figure; a weekend-back-adjusted first occurrence is no longer
+dropped when the query window ends just before the nominal start (bills came
+due late); `statementDate` survives a GnuCash-XML round-trip (the getter now
+reads the `timespec` flavour the importer produces); CAMT booked reversals
+keep `CdtDbtInd`'s sign — the extra `RvslInd` flip inverted every reversal
+(ISO 20022 defines the indicator as the reversal entry's own direction; the
+fixture was corrected against the standard); lone-decimal-comma amounts
+("4,99") no longer parse 100× too large, and the Intelligence layer now
+delegates to the one importer parser instead of a drifted copy; OFX values are
+entity-decoded; a UTF-8 BOM is stripped at every import decode; the matcher's
+verbatim-reference pass now requires the money to agree (recycled cheque
+numbers swallowed real rows) and payee learning skips wash accounts; QIF
+`RtrnCap` maps to return-of-capital (was booked as dividend income); OFX
+investment rows are labelled from `SECLIST` tickers, not raw CUSIPs.
+
+**Data-safety fixes (persistence & app).** FileLock: the heartbeat re-checks
+on-disk ownership (a machine waking from sleep used to clobber a legitimately
+re-assigned lock — the loss is now surfaced as a toast and the session falls
+back to fingerprint-guarded saves); breaking a stale lock re-reads inside the
+delete so two racing breakers can't both acquire; an unreadable/corrupt lock
+file now reads as a stale unknown holder (Break Lock offered) instead of
+silently disabling locking. The SQLite loader never drops a row over a corrupt
+GUID — accounts, transactions and prices mint a counted random identity like
+splits always did, so the load-warnings toast reports it. Posting scheduled
+transactions is one whole-book undo action (⌘Z used to rewind `lastPosted`
+but leave the transactions — reposting duplicated them); Revert and
+reload-from-disk clear the undo stack (stale snapshots could rewrite the
+adopted book); investment imports stamp the broker FITID as `online_id` and
+the review flags already-imported trades (re-importing an overlapping broker
+file used to re-create every trade); Split-from-Invoice preserves the funding
+leg's identity (saving used to clear its reconcile state);
+duplicate/copy-paste carry tags; every money-entry sheet parses with the
+strict whole-string parser ("4,001.23" typed into Reconcile used to start the
+session against $4).
+
+**Correct statuses & guarded intelligence.** Bills: a blank-description
+schedule never matches a blank-description transaction; a bill due today is
+*due*, not overdue (day granularity); name matches must also agree on amount
+within ±25% (FR-BILL-01's expected-amount matching — a $5 coffee named "Rent"
+no longer settles the rent). Income above its budget is favourable — no more
+"Over budget: Salary" (alerts filter income lines; the budget row now reads
+"Ahead by"). FR-PLAN-05's fifth alert kind, **unusual spend**, is implemented
+(current month ≥2× the trailing six-month average and ≥$100 over — transparent
+arithmetic in the message). FR-GOAL-01's **goal-to-bill link** shipped (goal
+editor picker + row badge). The review-deck story validator's blanket
+1900–2100 "calendar year" exemption is gone — only ungrouped years the slide's
+own facts name (label years expanded, ±1) pass ungrounded, so a fabricated
+"$2,000" is rejected again; statement sign-correction votes on the account
+convention per statement, so positive-owed-balance credit-card statements no
+longer import with every row inverted; the account-name matcher prefers an
+account's own leaf prefix and gates short-needle containment ("Car" filed
+under Cars, not Childcare); quote fetches record the provider-reported
+currency in the price source ("Finance::Quote:yahoo (USD)") so the documented
+provenance actually exists; latest-quote refresh skips identical same-day
+rows (every book open used to append duplicates forever) and all history
+fetches share the one-run-at-a-time guard.
+
+**Performance & structure.** The dashboard's alerts/bills/budget reads,
+`plannerDebts`, `knownTags`, the price scatter (stable ids), and the cash-flow
+forecast (its memo key embedded a live `Date()`, so it never hit) are all
+memoised through `cachedReport`; the report screen attaches one `.task` to the
+container instead of one per branch (every report computed twice on first
+open); free-text search debounces 200 ms (tests call `runSearch()`
+directly); `endOfToday()` uses calendar day-arithmetic (the +86 400 form was
+wrong on DST transition days) and `todayCap` delegates to it. Shared concepts
+now live once: `Account.isWash` (matcher, Uncategorised review, Smart
+Categorise), `Book.baseCurrency` (root-commodity-first — `commodities.first`
+was registration-order dependent), `BookKvpKeys` (Engine constants for the
+cross-module slots), `StatementLabels.uncategorised` (seven comparison sites),
+`DividendAccounts` paths, the narrative tokeniser
+(`ImportMatcher.narrativeTokens` with an opt-in date-token filter),
+`AmountFormat.compact` (the two decks' copies had a symbol hack that printed
+"C3.83m" for CHF), `ReportPeriod.financialYearLabel`, and
+`GnuCashDate.parseDayOnly` (CAMT allocated a `DateFormatter` per entry row).
+Dead code deleted: `AsyncReport`, `detailLine`/`legDetailLine`,
+`debtPlanResults`, `financialYearPackDocuments`, `apiKey`/`setAPIKey`,
+`SubaccountsTip`, `Book.removeInvoice`/`noOpenLots`, the `Item.swift` template
+husk; `selectedSplitID` is computed from the selection set.
+
+**CI & docs.** The SPDX gate now covers the app-target directories (six files
+gained the machine-readable header) and the allowed-to-fail macOS-26 job runs
+FeatureUI's tests; plan.md's P6 status, the architecture package graph (Shared
+was missing), PRD FR-FIND-01's shared-grammar claim, and deferred.md's rule
+tail were corrected to match the code, with two new recorded judgement calls
+(rule set-budget, Quick Look for `.gnucash`).
+
+---
+
 ## Test comprehensiveness pass (24 Jul 2026)
 
 The closing quality gate: measured line coverage across every package

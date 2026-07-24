@@ -37,13 +37,13 @@ enum GnuCashScheduledBudgetImport {
         let scheduled = delegate.buildScheduled(book: book)
         let budgets = delegate.buildBudgets(book: book)
 
-        if !scheduled.isEmpty, book.kvp["finvestlens/scheduledTransactions"] == nil,
+        if !scheduled.isEmpty, book.kvp[BookKvpKeys.scheduledTransactions] == nil,
            let json = encode(scheduled) {
-            book.kvp["finvestlens/scheduledTransactions"] = .string(json)
+            book.kvp[BookKvpKeys.scheduledTransactions] = .string(json)
         }
-        if !budgets.isEmpty, book.kvp["finvestlens/budgets"] == nil,
+        if !budgets.isEmpty, book.kvp[BookKvpKeys.budgets] == nil,
            let json = encode(budgets) {
-            book.kvp["finvestlens/budgets"] = .string(json)
+            book.kvp[BookKvpKeys.budgets] = .string(json)
         }
         return (scheduled.count, budgets.count)
     }
@@ -294,7 +294,7 @@ enum GnuCashScheduledBudgetImport {
                                             startDate: start,
                                             weekendAdjust: Self.weekend(record.weekendAdjust))
 
-                var currency = book.commodities.first { $0.namespace == .currency } ?? .aud
+                var currency = book.baseCurrency
                 var splits: [ScheduledSplit] = []
                 if let template = templatesBySX[record.guid] {
                     if let matched = book.commodities.first(where: { $0.mnemonic == template.currencyID }) {
@@ -383,17 +383,8 @@ enum GnuCashScheduledBudgetImport {
             }
         }
 
-        static let gdateFormatter: DateFormatter = {
-            let f = DateFormatter()
-            f.calendar = Calendar(identifier: .gregorian)
-            f.locale = Locale(identifier: "en_US_POSIX")
-            f.timeZone = TimeZone(identifier: "UTC")
-            f.dateFormat = "yyyy-MM-dd"
-            return f
-        }()
-
         static func gdate(_ value: String) -> Date? {
-            gdateFormatter.date(from: String(value.prefix(10)))
+            GnuCashDate.parseDayOnly(value)
         }
     }
 }

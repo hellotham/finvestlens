@@ -26,6 +26,7 @@ struct SavedSearchTests {
         let model = AppModel()
         try model.newDocument(at: url)
         model.searchQuery = "tag:work amount:>100"
+        model.runSearch()
         model.saveCurrentSearch(name: "Big work")
         #expect(model.savedSearches.count == 1)
         try model.save()

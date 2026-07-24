@@ -56,10 +56,12 @@ extension AppModel {
             }
         }
 
-        let dates = (0...12).compactMap { calendar.date(byAdding: .month, value: -$0, to: now) }.reversed()
-        let trend = FinancialReports.netWorthSeries(book, dates: Array(dates), currency: reportCurrency)
-        let breakdown = FinancialReports.categoryBreakdown(book, from: yearAgo, to: now,
-                                                           currency: reportCurrency)
+        // Through the memoised wrappers, not the report functions directly:
+        // this runs from the sheet's body, and the direct calls repeated two
+        // full-book walks per body pass (with a Calendar.current month
+        // derivation that could drift a day from the wrapper's).
+        let trend = netWorthSeries(months: 13, endingAt: now)
+        guard let breakdown = categoryBreakdown(from: yearAgo, to: now) else { return nil }
 
         return PassportData(
             title: documentURL?.deletingPathExtension().lastPathComponent ?? "Financial Summary",
@@ -130,7 +132,7 @@ struct PassportPage: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(data.title)
                     .scaledFont(.title, weight: .semibold, design: .serif)
-                Text("Financial summary as of \(data.asOf.formatted(date: .long, time: .omitted))")
+                Text("Financial summary as of \(AppDateFormat.current.long(data.asOf))")
                     .scaledFont(.callout)
                     .foregroundStyle(.secondary)
             }

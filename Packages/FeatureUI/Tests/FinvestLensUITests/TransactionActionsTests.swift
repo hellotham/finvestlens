@@ -62,7 +62,7 @@ struct TransactionActionsTests {
 
         model.selectedAccountID = bank
         let row = try #require(model.registerRows.first)
-        model.selectedSplitID = row.id
+        model.selectedSplitIDs = [row.id]
 
         #expect(model.hasSelectedTransaction)
         #expect(model.selectedTransactionID == txn)
@@ -72,7 +72,7 @@ struct TransactionActionsTests {
     func noSelection() throws {
         let (model, url, _, _, _) = try makeModel()
         defer { model.close(); try? FileManager.default.removeItem(at: url) }
-        model.selectedSplitID = nil
+        model.selectedSplitIDs = []
         #expect(!model.hasSelectedTransaction)
     }
 
@@ -84,7 +84,7 @@ struct TransactionActionsTests {
         let (model, url, bank, _, txn) = try makeModel()
         defer { model.close(); try? FileManager.default.removeItem(at: url) }
         model.selectedAccountID = bank
-        model.selectedSplitID = try #require(model.registerRows.first).id
+        model.selectedSplitIDs = [try #require(model.registerRows.first).id]
         model.deleteTransaction(txn)
         #expect(!model.hasSelectedTransaction)
     }
@@ -124,7 +124,7 @@ struct TransactionActionsTests {
         let (model, url, bank, _, txn) = try makeModel()
         defer { model.close(); try? FileManager.default.removeItem(at: url) }
         model.selectedAccountID = bank
-        model.selectedSplitID = try #require(model.registerRows.first).id
+        model.selectedSplitIDs = [try #require(model.registerRows.first).id]
         let splitID = try #require(model.selectedSplitID)
 
         // Reconcile state, jump, void and duplicate all resolve from the row.

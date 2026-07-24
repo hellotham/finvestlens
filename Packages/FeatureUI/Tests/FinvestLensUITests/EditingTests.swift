@@ -144,10 +144,14 @@ struct EditingTests {
         ])
 
         model.searchQuery = "wool"
+
+        model.runSearch()
         #expect(model.searchResults.count == 1)
         #expect(model.searchResults.first?.description == "Woolworths")
 
         model.searchQuery = "salary"      // matches by account name
+
+        model.runSearch()
         #expect(model.searchResults.count == 1)
         #expect(model.searchResults.first?.description == "Employer pay")
 

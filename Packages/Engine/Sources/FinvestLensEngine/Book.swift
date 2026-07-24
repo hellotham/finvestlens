@@ -92,6 +92,16 @@ public final class Book {
     /// All accounts in the tree, excluding the invisible root.
     public var accounts: [Account] { rootAccount.descendants }
 
+    /// The book's base currency: the root account's commodity when it is a
+    /// currency, falling back to the first registered currency. This is the
+    /// one authoritative derivation — `commodities.first` alone is
+    /// registration-order dependent and can disagree with the root account's
+    /// actual denomination on a loaded book.
+    public var baseCurrency: Commodity {
+        if rootAccount.commodity.namespace == .currency { return rootAccount.commodity }
+        return commodities.first { $0.namespace == .currency } ?? .aud
+    }
+
     /// Adds `account` under `parent` (default: the root account).
     @discardableResult
     public func addAccount(_ account: Account, under parent: Account? = nil) -> Account {

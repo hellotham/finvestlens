@@ -331,10 +331,10 @@ struct DividendImportSheet: View {
         }
     }
 
-    private var franked: Decimal { Decimal(string: frankedText) ?? 0 }
-    private var unfranked: Decimal { Decimal(string: unfrankedText) ?? 0 }
-    private var credits: Decimal { Decimal(string: creditsText) ?? 0 }
-    private var net: Decimal { Decimal(string: netText) ?? 0 }
+    private var franked: Decimal { EditableSplit.strictDecimal(frankedText.trimmingCharacters(in: .whitespaces)) ?? 0 }
+    private var unfranked: Decimal { EditableSplit.strictDecimal(unfrankedText.trimmingCharacters(in: .whitespaces)) ?? 0 }
+    private var credits: Decimal { EditableSplit.strictDecimal(creditsText.trimmingCharacters(in: .whitespaces)) ?? 0 }
+    private var net: Decimal { EditableSplit.strictDecimal(netText.trimmingCharacters(in: .whitespaces)) ?? 0 }
     private var componentsMatch: Bool { franked + unfranked == net }
     private var canRecord: Bool {
         cashAccountID != nil && net > 0 && componentsMatch && !extracting

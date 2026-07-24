@@ -15,13 +15,21 @@ extension AppModel {
 
     /// Proactive alerts across bills, budgets, cash-flow forecast and price
     /// targets, most-severe first (`FR-PLAN-05`).
-    public func alerts(asOf: Date = Date()) -> [FinancialAlert] {
+    ///
+    /// Memoised per (day, revision): the dashboard's content checks and cards
+    /// call this on every body pass — which re-runs on hover — and each build
+    /// internally recomputes bill reminders, budget actuals and a full-book
+    /// cash-flow forecast.
+    public func alerts(asOf: Date? = nil) -> [FinancialAlert] {
         guard let book else { return [] }
-        return FinancialReports.alerts(
-            book, scheduled: scheduledTransactions, budgets: budgets,
-            currency: reportCurrency, asOf: asOf,
-            forecastAccountID: defaultForecastAccountID,
-            priceTargets: priceTargets)
+        let asOf = asOf ?? Self.endOfToday()
+        return cachedReport("alerts:\(asOf.timeIntervalSinceReferenceDate)") {
+            FinancialReports.alerts(
+                book, scheduled: scheduledTransactions, budgets: budgets,
+                currency: reportCurrency, asOf: asOf,
+                forecastAccountID: defaultForecastAccountID,
+                priceTargets: priceTargets)
+        } ?? []
     }
 
     // MARK: Price targets

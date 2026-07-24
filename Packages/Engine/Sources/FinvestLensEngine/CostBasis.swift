@@ -250,14 +250,24 @@ public enum CostBasis {
         for event in events {
             if event.isSplit {
                 // Rescale every open lot so total cost is preserved: shares grow
-                // by the split ratio, per-share cost shrinks by it.
-                let current = open.reduce(Decimal(0)) { $0 + $1.remaining }
-                if current > 0 {
-                    let ratio = (current + event.quantity) / current
+                // by the split ratio, per-share cost shrinks by it. The ratio is
+                // struck against the NET position — event.quantity is the balance
+                // delta, and on a short position the balance (and the delta) is
+                // negative — and open shorts rescale too: their share count grows
+                // while total proceeds stay fixed, so the eventual cover strikes
+                // the same economic gain.
+                let currentLong = open.reduce(Decimal(0)) { $0 + $1.remaining }
+                let currentShort = shorts.reduce(Decimal(0)) { $0 + $1.remainingShares }
+                let net = currentLong - currentShort
+                if net != 0 {
+                    let ratio = (net + event.quantity) / net
                     if ratio > 0 {
                         for index in open.indices {
                             open[index].remaining *= ratio
                             open[index].costPerShare /= ratio
+                        }
+                        for index in shorts.indices {
+                            shorts[index].remainingShares *= ratio
                         }
                     }
                 }
@@ -376,8 +386,21 @@ public enum CostBasis {
 
         for event in events {
             if event.isSplit {
-                // Cost pool is unchanged; only the share count moves.
-                pooledShares += event.quantity
+                // Cost pool is unchanged; only the share count moves. As above,
+                // the ratio comes from the NET position so an open short rescales
+                // its share count (proceeds fixed) instead of corrupting the pool
+                // with a negative share delta.
+                let currentShort = shorts.reduce(Decimal(0)) { $0 + $1.remainingShares }
+                let net = pooledShares - currentShort
+                if net != 0 {
+                    let ratio = (net + event.quantity) / net
+                    if ratio > 0 {
+                        pooledShares *= ratio
+                        for index in shorts.indices {
+                            shorts[index].remainingShares *= ratio
+                        }
+                    }
+                }
                 continue
             }
             if event.isReturnOfCapital {

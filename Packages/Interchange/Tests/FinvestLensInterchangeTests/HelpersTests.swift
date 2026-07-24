@@ -84,3 +84,80 @@ struct GzipTests {
         }
     }
 }
+
+@Suite("Tolerant amount parsing (review pins)")
+struct ImportParsingAmountTests {
+
+    @Test("A lone decimal comma is not thousands grouping")
+    func decimalComma() {
+        // 1–2 trailing digits after a lone comma can only be a decimal comma —
+        // stripping it read the amount 100× too large ("4,99" → 499).
+        #expect(ImportParsing.amount("4,99") == Decimal(string: "4.99"))
+        #expect(ImportParsing.amount("1234,56") == Decimal(string: "1234.56"))
+        #expect(ImportParsing.amount("-45,2") == Decimal(string: "-45.2"))
+        // Groups of exactly three stay the en/US thousands reading.
+        #expect(ImportParsing.amount("1,234") == Decimal(1234))
+        // Dual separators keep their disambiguation.
+        #expect(ImportParsing.amount("1.234,56") == Decimal(string: "1234.56"))
+        #expect(ImportParsing.amount("1,234.56") == Decimal(string: "1234.56"))
+    }
+
+    @Test("An explicit inner sign does not cancel a wrapper negative")
+    func doubleNegative() {
+        #expect(ImportParsing.amount("(-5)") == Decimal(-5))
+        #expect(ImportParsing.amount("(5)") == Decimal(-5))
+        #expect(ImportParsing.amount("500.00-") == Decimal(-500))
+    }
+
+    @Test("A UTF-8 BOM is stripped at decode")
+    func bomDecode() {
+        let data = Data([0xEF, 0xBB, 0xBF] + Array("date,amount".utf8))
+        #expect(ImportParsing.decode(data) == "date,amount")
+    }
+}
+
+@Suite("OFX entities & security list (review pins)")
+struct OFXEntityTests {
+
+    @Test("SGML entities decode in values")
+    func entities() {
+        let ofx = """
+        <STMTTRN><DTPOSTED>20260115<TRNAMT>-50.00<FITID>F1<NAME>JOHNSON &amp; JOHNSON &lt;PTY&gt;<MEMO>A&#38;B
+        """
+        let rows = OFXImporter.parse(ofx)
+        #expect(rows.first?.payee == "JOHNSON & JOHNSON <PTY>")
+        #expect(rows.first?.memo == "A&B")
+    }
+
+    @Test("Investment rows are labelled by SECLIST ticker, not CUSIP")
+    func seclistTicker() {
+        let ofx = """
+        <SECLIST><STOCKINFO><SECINFO><SECID><UNIQUEID>023135106<UNIQUEIDTYPE>CUSIP</SECID>
+        <SECNAME>Amazon.com Inc<TICKER>AMZN</SECINFO></STOCKINFO></SECLIST>
+        <INVSTMTRS><BUYSTOCK><INVBUY><INVTRAN><FITID>T1<DTTRADE>20260110</INVTRAN>
+        <SECID><UNIQUEID>023135106</SECID><UNITS>10<UNITPRICE>150.00<TOTAL>-1500.00</INVBUY></BUYSTOCK></INVSTMTRS>
+        """
+        let rows = OFXImporter.parse(ofx)
+        let investment = rows.first { $0.investment != nil }
+        #expect(investment?.investment?.security == "AMZN")
+    }
+
+    @Test("RETOFCAP maps to the return-of-capital action")
+    func returnOfCapital() {
+        let ofx = """
+        <RETOFCAP><INVTRAN><FITID>R1<DTTRADE>20260201</INVTRAN><SECID><UNIQUEID>X1</SECID><TOTAL>500.00</RETOFCAP>
+        """
+        let rows = OFXImporter.parse(ofx)
+        #expect(rows.first?.investment?.action == .returnOfCapital)
+    }
+}
+
+@Suite("QIF investment actions (review pins)")
+struct QIFActionTests {
+    @Test("RtrnCap maps to return-of-capital, not dividend income")
+    func qifReturnOfCapital() {
+        #expect(QIFImporter.investmentAction("RtrnCap") == .returnOfCapital)
+        #expect(QIFImporter.investmentAction("RtrnCapX") == .returnOfCapital)
+        #expect(QIFImporter.investmentAction("Div") == .dividend)
+    }
+}

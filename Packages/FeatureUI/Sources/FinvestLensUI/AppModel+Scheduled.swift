@@ -94,27 +94,35 @@ extension AppModel {
     public func postDueScheduled(through: Date = Date(), variables: [String: Decimal] = [:]) -> Int {
         guard let book else { return 0 }
         var list = scheduledTransactions
+        guard list.contains(where: { $0.isEnabled && !$0.dueDates(through: through).isEmpty })
+        else { return 0 }
         var created = 0
-        for index in list.indices {
-            let dueDates = list[index].dueDates(through: through)
-            // Post in chronological order and advance `lastPosted` only across the
-            // contiguous prefix that actually posted. Stopping at the first failure
-            // (e.g. an unbound formula variable) leaves that instance and the ones
-            // after it to be retried, rather than silently skipping them.
-            var postedThrough: Date?
-            for date in dueDates {
-                guard ScheduledTransactionService.post(list[index], date: date, into: book, variables: variables) != nil
-                else { break }
-                created += 1
-                postedThrough = date
+        // ONE whole-book undoable action: the posted transactions and the
+        // schedules' advanced `lastPosted` must rewind together. Registering
+        // only the kvp restore left the transactions in the book — ⌘Z made
+        // the same dates due again and the next post created duplicates.
+        editingWholeBook(named: "Post Scheduled Transactions") {
+            for index in list.indices {
+                let dueDates = list[index].dueDates(through: through)
+                // Post in chronological order and advance `lastPosted` only across the
+                // contiguous prefix that actually posted. Stopping at the first failure
+                // (e.g. an unbound formula variable) leaves that instance and the ones
+                // after it to be retried, rather than silently skipping them.
+                var postedThrough: Date?
+                for date in dueDates {
+                    guard ScheduledTransactionService.post(list[index], date: date, into: book, variables: variables) != nil
+                    else { break }
+                    created += 1
+                    postedThrough = date
+                }
+                if let postedThrough, (list[index].lastPosted ?? .distantPast) < postedThrough {
+                    list[index].lastPosted = postedThrough
+                }
             }
-            if let postedThrough, (list[index].lastPosted ?? .distantPast) < postedThrough {
-                list[index].lastPosted = postedThrough
+            if created > 0 {
+                scheduledTransactions = list
+                persistKvpCollections()   // lastPosted rides the same undo snapshot
             }
-        }
-        if created > 0 {
-            scheduledTransactions = list
-            commitKvpCollections(named: "Post Scheduled Transactions")   // persists lastPosted + refreshes
         }
         return created
     }

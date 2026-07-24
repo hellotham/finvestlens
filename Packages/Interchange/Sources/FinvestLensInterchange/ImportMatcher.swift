@@ -58,15 +58,11 @@ public enum ImportMatcher {
         return calendar
     }
 
-    /// A wash account — a posting that still needs a real home. GnuCash's own
-    /// `Imbalance-*`/`Orphan-*`, plus the placeholder names books accumulate
-    /// from years of hand-imports.
-    public static func isWash(_ account: Account) -> Bool {
-        if account.isImbalanceOrOrphan { return true }
-        let name = account.name.trimmingCharacters(in: .whitespaces).lowercased()
-        return name == "unspecified" || name == "uncategorised"
-            || name == "uncategorized" || name == "unknown"
-    }
+    /// A wash account — a posting that still needs a real home. Delegates to
+    /// the Engine's one shared predicate (`Account.isWash`), so the matcher,
+    /// the Uncategorised review, and Smart Categorise can never disagree about
+    /// which accounts are "parked".
+    public static func isWash(_ account: Account) -> Bool { account.isWash }
 
     /// An account that can be the other side of a cash transfer — a real
     /// balance-sheet account statements are drawn on.
@@ -96,16 +92,36 @@ public enum ImportMatcher {
         let tokens: Set<String>
     }
 
-    /// Words worth matching between the two sides of a suspected transfer.
-    static func narrativeTokens(_ text: String) -> Set<String> {
+    /// Words worth matching between the two sides of a suspected transfer —
+    /// and, via `droppingDateTokens`, the same tokeniser the smart categoriser
+    /// uses for payee-narrative similarity (one implementation; the two copies
+    /// had already drifted a date-token guard apart).
+    ///
+    /// `droppingDateTokens` additionally removes month-word + digit compounds
+    /// ("JAN23", "apr2023") that sit in statement narratives and would let
+    /// same-month payments of different payees cross-match.
+    public static func narrativeTokens(_ text: String,
+                                       droppingDateTokens: Bool = false) -> Set<String> {
         let mapped = text.lowercased().unicodeScalars.map {
             CharacterSet.alphanumerics.contains($0) ? Character($0) : " "
         }
         let filler: Set<String> = ["the", "and", "to", "from", "for", "of", "at"]
         return Set(String(mapped).split(separator: " ").map(String.init).filter {
             $0.count >= 2 && !$0.allSatisfy(\.isNumber) && !filler.contains($0)
+                && !(droppingDateTokens && isDateToken($0))
         })
     }
+
+    /// A month abbreviation, optionally with a trailing year (`jan`, `jan23`,
+    /// `apr2023`).
+    private static func isDateToken(_ token: String) -> Bool {
+        guard token.count >= 3, Self.monthPrefixes.contains(String(token.prefix(3))) else { return false }
+        return token.dropFirst(3).allSatisfy(\.isNumber)
+    }
+
+    private static let monthPrefixes: Set<String> = [
+        "jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec",
+    ]
 
     /// Whether the two sides of a suspected transfer tell the same story.
     /// Equal amount + close dates alone can coincide (a card refund against an
@@ -138,8 +154,12 @@ public enum ImportMatcher {
             if !memo.isEmpty, memo != keys[0] { keys.append(memo) }
             for key in keys where !key.isEmpty {
                 for other in transaction.splits where other !== split {
-                    if let account = other.account?.guid {
-                        payeeAccounts[key, default: [:]][account, default: 0] += 1
+                    // Wash accounts are parking spots, not categorisations —
+                    // learning them would let Imbalance outvote a real category
+                    // the user actually used (and a non-nil wash suggestion
+                    // also suppresses the funding fallback).
+                    if let account = other.account, !isWash(account) {
+                        payeeAccounts[key, default: [:]][account.guid, default: 0] += 1
                     }
                 }
             }
@@ -292,7 +312,14 @@ public enum ImportMatcher {
                     if transaction.number == row.reference
                         || split.action == row.reference
                         || split.memo == row.reference {
-                        return split
+                        // A verbatim reference (cheque number, memo'd bank ref)
+                        // is only duplicate evidence when the money agrees —
+                        // cheque books recycle numbers, so "105" alone must not
+                        // let a $120 entry from years ago swallow a new $500
+                        // row. (The FITID-mismatch veto inside amountCandidate
+                        // applies here too; the FITID-equality branch above
+                        // stays unconditional, as that key is bank-unique.)
+                        if amountCandidate(split) { return split }
                     }
                 }
             }

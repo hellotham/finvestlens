@@ -180,7 +180,7 @@ struct AddPriceSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Add") { add() }
-                        .disabled(commodityKey.isEmpty || Decimal(string: valueText) == nil)
+                        .disabled(commodityKey.isEmpty || EditableSplit.strictDecimal(valueText.trimmingCharacters(in: .whitespaces)) == nil)
                 }
             }
         }
@@ -188,7 +188,7 @@ struct AddPriceSheet: View {
 
     private func add() {
         guard let commodity = commodities.first(where: { key($0) == commodityKey }),
-              let value = Decimal(string: valueText)
+              let value = EditableSplit.strictDecimal(valueText.trimmingCharacters(in: .whitespaces))
         else { return }
         model.addPrice(commodity: commodity, currency: model.reportCurrency, date: date, value: value)
         dismiss()
@@ -235,13 +235,13 @@ struct AddRateSheet: View {
     }
 
     private var isValid: Bool {
-        !fromCode.isEmpty && !toCode.isEmpty && fromCode != toCode && (Decimal(string: rateText) ?? 0) > 0
+        !fromCode.isEmpty && !toCode.isEmpty && fromCode != toCode && (EditableSplit.strictDecimal(rateText.trimmingCharacters(in: .whitespaces)) ?? 0) > 0
     }
 
     private func add() {
         guard let from = currencies.first(where: { $0.mnemonic == fromCode }),
               let to = currencies.first(where: { $0.mnemonic == toCode }),
-              let rate = Decimal(string: rateText) else { return }
+              let rate = EditableSplit.strictDecimal(rateText.trimmingCharacters(in: .whitespaces)) else { return }
         model.addExchangeRate(from: from, to: to, rate: rate, date: date)
         dismiss()
     }

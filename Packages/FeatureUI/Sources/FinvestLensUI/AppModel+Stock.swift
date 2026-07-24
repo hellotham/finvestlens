@@ -64,7 +64,8 @@ extension AppModel {
         splitOld: Decimal = 0,
         date: Date,
         description: String,
-        memo: String = ""
+        memo: String = "",
+        reference: String = ""
     ) throws -> GncGUID {
         guard let book else { throw StockEntryError.noBook }
         let commissionAccount = commissionID.flatMap { book.account(with: $0) }
@@ -135,6 +136,13 @@ extension AppModel {
 
         guard txn.isBalanced else { throw StockEntryError.invalidInput }
         editing([txn.guid], named: "Add Stock Transaction") {
+            // The broker's FITID rides in `online_id`, exactly as cash imports
+            // stamp it — it is the only thing that lets a re-imported
+            // overlapping statement recognise an already-posted trade
+            // (investment rows never pass through the cash matcher).
+            if !reference.isEmpty {
+                txn.splits.first?.kvp["online_id"] = .string(reference)
+            }
             book.addTransaction(txn)
         }
         return txn.guid

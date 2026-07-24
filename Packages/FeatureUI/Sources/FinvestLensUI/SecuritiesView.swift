@@ -177,12 +177,12 @@ private struct PriceTargetSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Set Target") {
-                        if let value = Decimal(string: amount), value > 0 {
+                        if let value = EditableSplit.strictDecimal(amount.trimmingCharacters(in: .whitespaces)), value > 0 {
                             model.setPriceTarget(commodity, target: value, direction: direction)
                         }
                         dismiss()
                     }
-                    .disabled(Decimal(string: amount).map { $0 <= 0 } ?? true)
+                    .disabled(EditableSplit.strictDecimal(amount.trimmingCharacters(in: .whitespaces)).map { $0 <= 0 } ?? true)
                 }
             }
             .onAppear {

@@ -112,6 +112,7 @@ struct StructuredFindTests {
         #expect(model.findQuery != nil)
 
         model.searchQuery = "Pay one"
+        model.runSearch()   // the UI path debounces; force the synchronous run
         #expect(model.findQuery == nil, "the bar wins; two searches must not both be live")
         #expect(model.searchResults.count == 1)
     }

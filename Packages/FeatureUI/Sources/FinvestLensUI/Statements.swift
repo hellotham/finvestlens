@@ -19,6 +19,14 @@
 
 import Foundation
 import FinvestLensEngine
+
+/// Statement-presentation labels that carry SEMANTICS: the integrity line's
+/// caption is compared at seven sites (ordering, fold protection, section
+/// ranking), so it lives once — rewording the display string in one place and
+/// not the others silently broke all of them.
+enum StatementLabels {
+    static let uncategorised = "Uncategorised"
+}
 import FinvestLensReports
 
 // MARK: - The statement value
@@ -248,7 +256,7 @@ struct StatementBuilder {
     /// wrong on a statement (rule 8b): `Imbalance-AUD` / `Orphan-…` read as
     /// "Uncategorised".
     static func displayName(for account: Account) -> String {
-        if account.isImbalanceOrOrphan { return "Uncategorised" }
+        if account.isImbalanceOrOrphan { return StatementLabels.uncategorised }
         return account.name
     }
 
@@ -317,7 +325,7 @@ struct StatementBuilder {
         // Integrity balances (Uncategorised) stay visible but never lead a
         // statement — they order after every real caption.
         func integrityClass(_ node: Node) -> Int {
-            node.name == "Uncategorised" ? 1 : 0
+            node.name == StatementLabels.uncategorised ? 1 : 0
         }
         // Within a liquidity/maturity class, positive balances lead
         // (largest first) and negatives trail — an annual report opens a
@@ -525,7 +533,7 @@ struct StatementBuilder {
         // IAS 1 minimum line items: cash and equivalents never fold; an
         // Uncategorised balance is an integrity signal that must stay visible.
         func protectedAsset(_ node: Node) -> Bool {
-            if node.name == "Uncategorised" { return true }
+            if node.name == StatementLabels.uncategorised { return true }
             var weights: [AccountType: Decimal] = [:]
             node.typeWeights(into: &weights)
             let dominant = weights.max { $0.value < $1.value }?.key
@@ -538,7 +546,7 @@ struct StatementBuilder {
         var liabilities = buildSection(title: "Liabilities", totalLabel: "Total liabilities",
                                        forest: liabilityForest, ordering: .maturity,
                                        columnCount: columnCount,
-                                       protected: { $0.name == "Uncategorised" })
+                                       protected: { $0.name == StatementLabels.uncategorised })
         // The section totals come from the engine's own figures — the forest
         // must agree (identity-tested), but the engine's number is the truth.
         assets.section.totalAmounts = [current.totalAssets, prior?.totalAssets]
@@ -612,11 +620,11 @@ struct StatementBuilder {
         var income = buildSection(title: "Income", totalLabel: "Total income",
                                   forest: incomeForest, ordering: .magnitude,
                                   columnCount: columnCount,
-                                  protected: { $0.name == "Uncategorised" })
+                                  protected: { $0.name == StatementLabels.uncategorised })
         var expenses = buildSection(title: "Expenses", totalLabel: "Total expenses",
                                     forest: expenseForest, ordering: .magnitude,
                                     columnCount: columnCount,
-                                    protected: { $0.name == "Uncategorised" })
+                                    protected: { $0.name == StatementLabels.uncategorised })
         income.section.totalAmounts = [current.totalIncome, prior?.totalIncome]
             .prefix(columnCount).map { $0 }
         expenses.section.totalAmounts = [current.totalExpenses, prior?.totalExpenses]

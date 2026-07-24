@@ -33,24 +33,12 @@ public struct ReportsWindow: View {
 struct PriceScatterView: View {
     @Bindable var model: AppModel
 
-    private struct Point: Identifiable {
-        let id = UUID()
-        let symbol: String
-        let date: Date
-        let price: Double
-    }
-
-    private var points: [Point] {
-        model.securitiesWithPriceHistory.flatMap { commodity in
-            model.priceHistory(for: commodity).map {
-                Point(symbol: commodity.mnemonic, date: $0.date,
-                      price: NSDecimalNumber(decimal: $0.value).doubleValue)
-            }
-        }
-    }
-
     var body: some View {
-        let data = points
+        // Memoised in the model (stable ids from the price GUIDs): building
+        // this in the view was O(securities × prices) per body pass — ~3M
+        // comparisons on the reference book — with fresh UUID identities that
+        // defeated Charts diffing every render.
+        let data = model.priceScatterPoints()
         Group {
         if data.isEmpty {
             ContentUnavailableView("No prices", systemImage: "chart.dots.scatter",
@@ -178,7 +166,7 @@ struct ForecastView: View {
                     TextField("Amount (+in / −out)", text: $wiAmount)
                         .frame(width: 130).multilineTextAlignment(.trailing)
                     TextField("Label", text: $wiLabel).frame(width: 120)
-                    Button("Add") { addWhatIf() }.disabled(Decimal(string: wiAmount) == nil)
+                    Button("Add") { addWhatIf() }.disabled(EditableSplit.strictDecimal(wiAmount.trimmingCharacters(in: .whitespaces)) == nil)
                 }
                 .scaledFont(.caption)
             }
@@ -199,7 +187,7 @@ struct ForecastView: View {
     }
 
     private func addWhatIf() {
-        guard let amount = Decimal(string: wiAmount) else { return }
+        guard let amount = EditableSplit.strictDecimal(wiAmount.trimmingCharacters(in: .whitespaces)) else { return }
         model.addWhatIfEvent(date: wiDate, amount: amount, label: wiLabel)
         wiAmount = ""; wiLabel = ""; showAddWhatIf = false
     }

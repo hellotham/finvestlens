@@ -14,6 +14,7 @@
 
 import Foundation
 import FinvestLensEngine
+import FinvestLensInterchange
 
 @MainActor
 extension AppModel {
@@ -140,7 +141,7 @@ extension AppModel {
                     }
                     txn.transactionDescription = friendly
                 }
-                for split in txn.splits where split.account?.isImbalanceOrOrphan ?? false {
+                for split in txn.splits where split.account?.isWash ?? false {
                     txn.removeSplit(split)
                 }
                 for leg in plan.legs {
@@ -217,7 +218,7 @@ extension AppModel {
     private static func isTemplate(_ transaction: Transaction) -> Bool {
         guard transaction.splits.count >= 2, transaction.isBalanced else { return false }
         for split in transaction.splits {
-            guard let account = split.account, !account.isImbalanceOrOrphan else { return false }
+            guard let account = split.account, !account.isWash else { return false }
             if account.commodity != transaction.currency { return false }
         }
         return true
@@ -227,7 +228,7 @@ extension AppModel {
                           book: Book) -> CategoryPlan? {
         // The target's real (anchor) legs — usually the single bank/card leg — and
         // the value they net to. The uncategorised legs will be replaced.
-        let anchorSplits = target.splits.filter { !($0.account?.isImbalanceOrOrphan ?? true) }
+        let anchorSplits = target.splits.filter { !($0.account?.isWash ?? true) }
         let anchorAccounts = Set(anchorSplits.compactMap { $0.account?.guid })
         let anchorValue = anchorSplits.reduce(Decimal(0)) { $0 + $1.value }
         guard !anchorAccounts.isEmpty, anchorValue != 0 else { return nil }
@@ -330,32 +331,10 @@ extension AppModel {
     // MARK: - Description similarity
 
     /// Alphabetic tokens worth matching on: lowercased, punctuation-split, with
-    /// pure numbers (reference/date noise) and common filler dropped.
+    /// pure numbers (reference/date noise), common filler, and month-year
+    /// compounds ("VAP DST JAN23") dropped. Delegates to the matcher's shared
+    /// tokeniser so the two narrative pipelines can never drift again.
     static func significantTokens(_ text: String) -> Set<String> {
-        let scalars = text.lowercased().unicodeScalars.map {
-            CharacterSet.alphanumerics.contains($0) ? Character($0) : " "
-        }
-        let tokens = String(scalars).split(separator: " ").map(String.init)
-        return Set(tokens.filter { token in
-            token.count >= 2 && !token.allSatisfy(\.isNumber)
-                && !Self.fillerTokens.contains(token) && !Self.isDateToken(token)
-        })
+        ImportMatcher.narrativeTokens(text, droppingDateTokens: true)
     }
-
-    /// A month abbreviation, optionally with a trailing year (`jan`, `jan23`,
-    /// `apr2023`). These sit in statement narratives ("VAP DST JAN23") and would
-    /// otherwise let same-month payments of different securities cross-match.
-    private static func isDateToken(_ token: String) -> Bool {
-        guard token.count >= 3, Self.monthPrefixes.contains(String(token.prefix(3))) else { return false }
-        return token.dropFirst(3).allSatisfy(\.isNumber)
-    }
-
-    private static let monthPrefixes: Set<String> = [
-        "jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec",
-    ]
-
-    // Only structural stopwords: idf already drives down domain-ubiquitous words
-    // ("direct", "debit", "visa", "australia") per account, and an over-eager
-    // filler list collapses narratives like "ANZ CREDIT CARD" to a single token.
-    private static let fillerTokens: Set<String> = ["the", "and", "to", "from", "for", "of", "at"]
 }

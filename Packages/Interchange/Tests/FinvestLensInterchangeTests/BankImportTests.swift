@@ -260,6 +260,55 @@ struct ImportMatcherTests {
         let results = ImportMatcher.match(staged, into: bank, book: book)
         #expect(results[0].suggestedAccountID == groceries.guid)
     }
+
+    @Test("A recycled cheque number with a different amount is not a duplicate")
+    func referenceNeedsMatchingAmount() {
+        let (book, bank, groceries) = makeBook()
+        // A three-year-old cheque numbered "105" for $120.
+        let old = Transaction(currency: .aud, datePosted: day(2023, 3, 1),
+                              number: "105", description: "Plumber")
+        old.addSplit(account: groceries, value: Decimal(120))
+        old.addSplit(account: bank, value: Decimal(-120))
+        book.addTransaction(old)
+
+        // A new $500 cheque re-using the number must import, not vanish —
+        // but a genuine re-import (same number, same amount) still dedupes.
+        let rows = [
+            StagedTransaction(date: day(2026, 3, 1), amount: Decimal(-500),
+                              payee: "Cheque", reference: "105"),
+            StagedTransaction(date: day(2026, 3, 2), amount: Decimal(-120),
+                              payee: "Cheque", reference: "105"),
+        ]
+        let results = ImportMatcher.match(rows, into: bank, book: book)
+        #expect(!results[0].isDuplicate)
+        #expect(results[1].isDuplicate)
+    }
+
+    @Test("Wash accounts are never learned as payee suggestions")
+    func washNotLearned() {
+        let (book, bank, groceries) = makeBook()
+        let imbalance = book.addAccount(Account(name: "Imbalance-AUD", type: .bank, commodity: .aud))
+        // The same payee parked in Imbalance twice (fallback imports), but
+        // categorised to Groceries once — the real category must win, and a
+        // wash suggestion must never suppress better fallbacks.
+        for dayOfMonth in [2, 3] {
+            let parked = Transaction(currency: .aud, datePosted: day(2026, 2, dayOfMonth),
+                                     description: "WOOLWORTHS 1234")
+            parked.addSplit(account: imbalance, value: Decimal(50))
+            parked.addSplit(account: bank, value: Decimal(-50))
+            book.addTransaction(parked)
+        }
+        let categorised = Transaction(currency: .aud, datePosted: day(2026, 2, 4),
+                                      description: "WOOLWORTHS 1234")
+        categorised.addSplit(account: groceries, value: Decimal(60))
+        categorised.addSplit(account: bank, value: Decimal(-60))
+        book.addTransaction(categorised)
+
+        let staged = [StagedTransaction(date: day(2026, 6, 1), amount: Decimal(-45),
+                                        payee: "WOOLWORTHS 1234")]
+        let results = ImportMatcher.match(staged, into: bank, book: book)
+        #expect(results[0].suggestedAccountID == groceries.guid)
+    }
 }
 
 @Suite("Import matcher — transfers")

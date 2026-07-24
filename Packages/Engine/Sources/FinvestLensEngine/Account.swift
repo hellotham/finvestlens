@@ -95,6 +95,21 @@ public final class Account {
         name.hasPrefix("Imbalance") || name.hasPrefix("Orphan")
     }
 
+    /// Whether postings here are "parked" rather than categorised: the
+    /// ``isImbalanceOrOrphan`` holding accounts plus the placeholder names
+    /// imported books accumulate from years of hand-categorising elsewhere
+    /// ("Unspecified", "Uncategorised", "Unknown").
+    ///
+    /// This is the one wash-account predicate — the import matcher, the
+    /// Uncategorised review, and Smart Categorise all share it, so an account
+    /// can never be wash to one of them and invisible to the others.
+    public var isWash: Bool {
+        if isImbalanceOrOrphan { return true }
+        let lowered = name.trimmingCharacters(in: .whitespaces).lowercased()
+        return lowered == "unspecified" || lowered == "uncategorised"
+            || lowered == "uncategorized" || lowered == "unknown"
+    }
+
     /// The parent account, or `nil` for the root. Weak to avoid a retain cycle.
     public private(set) weak var parent: Account?
     /// Child accounts, owned strongly by this account.

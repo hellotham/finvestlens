@@ -22,13 +22,15 @@ extension AppModel {
     /// the document's scheduled transactions and any what-if events
     /// (`FR-PLAN-02`, `FR-PLAN-03`).
     public func cashFlowForecast(accountID: GncGUID, months: Int = 6,
-                                 from: Date = Date()) -> [CashFlowPoint] {
+                                 from: Date? = nil) -> [CashFlowPoint] {
         guard let book else { return [] }
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "UTC") ?? .current
-        // Quantised for the memo key; what-if events are session state, so
-        // they join the key rather than invalidating the whole cache.
-        let start = min(from, Self.endOfToday())
+        // Quantised for the memo key — the old `min(Date(), endOfToday())`
+        // default was always the live clock, so the key changed on every call
+        // and each body pass re-walked the whole book despite the cache.
+        // What-if events are session state; they join the key.
+        let start = from ?? Self.endOfToday()
         let horizon = calendar.date(byAdding: .month, value: months, to: start) ?? start
         return cachedReport("fcast:\(accountID.hexString):\(months):\(start.timeIntervalSinceReferenceDate):\(whatIfEvents.hashValue)") {
             FinancialReports.cashFlowForecast(book, accountID: accountID,
@@ -39,15 +41,19 @@ extension AppModel {
     }
 
     /// Upcoming/overdue bills from scheduled transactions over a window around
-    /// `asOf` (30 days back … 60 days ahead) (`FR-BILL-01`).
-    public func billReminders(asOf: Date = Date()) -> [BillReminder] {
+    /// `asOf` (30 days back … 60 days ahead) (`FR-BILL-01`). Memoised per
+    /// (day, revision) — the dashboard reads it several times per body pass.
+    public func billReminders(asOf: Date? = nil) -> [BillReminder] {
         guard let book else { return [] }
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(identifier: "UTC") ?? .current
-        let from = calendar.date(byAdding: .day, value: -30, to: asOf) ?? asOf
-        let to = calendar.date(byAdding: .day, value: 60, to: asOf) ?? asOf
-        return FinancialReports.billReminders(book, scheduled: scheduledTransactions,
-                                              from: from, to: to, asOf: asOf)
+        let asOf = asOf ?? Self.endOfToday()
+        return cachedReport("bills:\(asOf.timeIntervalSinceReferenceDate)") {
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = TimeZone(identifier: "UTC") ?? .current
+            let from = calendar.date(byAdding: .day, value: -30, to: asOf) ?? asOf
+            let to = calendar.date(byAdding: .day, value: 60, to: asOf) ?? asOf
+            return FinancialReports.billReminders(book, scheduled: scheduledTransactions,
+                                                  from: from, to: to, asOf: asOf)
+        } ?? []
     }
 
     /// Adds a hypothetical what-if event to the cash-flow forecast (session-only,

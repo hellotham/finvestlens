@@ -74,7 +74,7 @@ public struct InvestmentDetail: Hashable, Sendable {
     /// The kinds of security action an import can express, normalised across
     /// QIF action codes and OFX transaction types.
     public enum Action: String, Hashable, Sendable {
-        case buy, sell, dividend, reinvestDividend, other
+        case buy, sell, dividend, reinvestDividend, returnOfCapital, other
     }
 
     public var action: Action
@@ -96,12 +96,24 @@ public struct InvestmentDetail: Hashable, Sendable {
     }
 }
 
-/// Shared helpers for importers.
-enum ImportParsing {
+/// Shared helpers for importers. Public so the Intelligence layer's tolerant
+/// extraction parses money with the *same* rules — two drifting copies meant a
+/// fix could land in one pipeline and not the other.
+public enum ImportParsing {
+
+    /// Decodes import-file bytes as UTF-8, stripping a leading BOM — Excel's
+    /// "CSV UTF-8" (and some bank portals) prepend `EF BB BF`, and a preserved
+    /// U+FEFF glues itself to the first field or tag, silently failing the
+    /// first row's date parse and header autodetection.
+    public static func decode(_ data: Data) -> String {
+        var text = String(decoding: data, as: UTF8.self)
+        if text.hasPrefix("\u{FEFF}") { text.removeFirst() }
+        return text
+    }
 
     /// Parses a monetary string, tolerating currency symbols, thousands
     /// separators, spaces, and parenthesised negatives.
-    static func amount(_ raw: String) -> Decimal? {
+    public static func amount(_ raw: String) -> Decimal? {
         var text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return nil }
         var negative = false
@@ -119,8 +131,7 @@ enum ImportParsing {
         }
         // When both separators appear, the rightmost is the decimal point — this
         // disambiguates US "1,234.56" from European "1.234,56"; the other groups
-        // thousands. (A single separator stays ambiguous, so the en/US reading
-        // below — comma = thousands, period = decimal — is kept.)
+        // thousands.
         if let dot = text.lastIndex(of: "."), let comma = text.lastIndex(of: ",") {
             if comma > dot {   // European: comma is the decimal separator
                 text = text.replacingOccurrences(of: ".", with: "")
@@ -128,9 +139,23 @@ enum ImportParsing {
             } else {           // US: comma groups thousands
                 text = text.replacingOccurrences(of: ",", with: "")
             }
+        } else if text.contains(",") {
+            // A lone comma: thousands grouping needs exactly 3 digits per
+            // group, so a comma followed by 1–2 trailing digits ("4,99") can
+            // only be a decimal comma — stripping it read the amount 100×
+            // too large. Groups of 3 keep the en/US reading (ambiguous).
+            let parts = text.split(separator: ",", omittingEmptySubsequences: false)
+            let trailingDigits = parts.last.map { $0.filter(\.isNumber).count } ?? 0
+            if parts.count == 2, trailingDigits >= 1, trailingDigits <= 2 {
+                text = text.replacingOccurrences(of: ",", with: ".")
+            }
         }
         text = text.filter { $0.isNumber || $0 == "." || $0 == "-" || $0 == "+" }
         guard let value = Decimal(string: text) else { return nil }
-        return negative ? -value : value
+        // The sign may already be explicit ("(-5)" / "-500.00-"): only apply
+        // the wrapper-derived negation to a positive magnitude, or the two
+        // notations cancel and a debit flips positive.
+        if negative { return value > 0 ? -value : value }
+        return value
     }
 }

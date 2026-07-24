@@ -87,3 +87,46 @@ struct AlertsTests {
         #expect(low?.severity == .critical)
     }
 }
+
+@Suite("Alerts engine (review pins)")
+struct AlertsReviewPinTests {
+
+    @Test("Income above its budget is favourable, not an over-budget warning")
+    func incomeAbovePlanIsNotOverBudget() {
+        let book = Book(baseCurrency: .aud)
+        let bank = book.addAccount(Account(name: "Bank", type: .bank, commodity: .aud))
+        let salary = book.addAccount(Account(name: "Salary", type: .income, commodity: .aud))
+        let t = Transaction(currency: .aud, datePosted: day(2026, 2, 10), description: "Pay")
+        t.addSplit(account: bank, value: dec("8500")); t.addSplit(account: salary, value: dec("-8500"))
+        book.addTransaction(t)
+        var budget = Budget(name: "Monthly"); budget.setAmount(dec("8000"), for: salary.guid)
+
+        let alerts = FinancialReports.alerts(book, budgets: [budget], currency: .aud, asOf: day(2026, 2, 20))
+        #expect(!alerts.contains { $0.kind == .overBudget })
+    }
+
+    @Test("Unusual spend: double the trailing average raises an info alert")
+    func unusualSpend() {
+        let book = Book(baseCurrency: .aud)
+        let bank = book.addAccount(Account(name: "Bank", type: .bank, commodity: .aud))
+        let dining = book.addAccount(Account(name: "Dining", type: .expense, commodity: .aud))
+        // Six months at ~$200/month, then $850 in the current month.
+        for month in 1...6 {
+            let t = Transaction(currency: .aud, datePosted: day(2025, 6 + month, 10), description: "Dinner")
+            t.addSplit(account: dining, value: dec("200")); t.addSplit(account: bank, value: dec("-200"))
+            book.addTransaction(t)
+        }
+        let spike = Transaction(currency: .aud, datePosted: day(2026, 1, 12), description: "Banquet")
+        spike.addSplit(account: dining, value: dec("850")); spike.addSplit(account: bank, value: dec("-850"))
+        book.addTransaction(spike)
+
+        let alerts = FinancialReports.alerts(book, currency: .aud, asOf: day(2026, 1, 20))
+        let unusual = alerts.first { $0.kind == .unusualSpend }
+        #expect(unusual != nil)
+        #expect(unusual?.title.contains("Dining") == true)
+
+        // A normal month raises nothing.
+        let quiet = FinancialReports.alerts(book, currency: .aud, asOf: day(2025, 12, 20))
+        #expect(!quiet.contains { $0.kind == .unusualSpend })
+    }
+}

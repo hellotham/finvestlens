@@ -31,12 +31,12 @@ struct StockTransactionSheet: View {
     @State private var memo = ""
     @State private var errorText: String?
 
-    private var shares: Decimal? { Decimal(string: sharesText) }
-    private var price: Decimal? { Decimal(string: priceText) }
-    private var amount: Decimal? { Decimal(string: amountText) }
-    private var commission: Decimal { Decimal(string: commissionText) ?? 0 }
-    private var splitNew: Decimal? { Decimal(string: splitNewText) }
-    private var splitOld: Decimal? { Decimal(string: splitOldText) }
+    private var shares: Decimal? { EditableSplit.strictDecimal(sharesText.trimmingCharacters(in: .whitespaces)) }
+    private var price: Decimal? { EditableSplit.strictDecimal(priceText.trimmingCharacters(in: .whitespaces)) }
+    private var amount: Decimal? { EditableSplit.strictDecimal(amountText.trimmingCharacters(in: .whitespaces)) }
+    private var commission: Decimal { EditableSplit.strictDecimal(commissionText.trimmingCharacters(in: .whitespaces)) ?? 0 }
+    private var splitNew: Decimal? { EditableSplit.strictDecimal(splitNewText.trimmingCharacters(in: .whitespaces)) }
+    private var splitOld: Decimal? { EditableSplit.strictDecimal(splitOldText.trimmingCharacters(in: .whitespaces)) }
 
     var body: some View {
         NavigationStack {

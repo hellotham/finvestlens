@@ -111,6 +111,28 @@ enum AmountFormat {
         value.formatted(.currency(code: code))
     }
 
+    /// "$3.83m" / "$120k" — deck callouts breathe better compact. One
+    /// implementation (both review decks carried byte-identical private
+    /// copies, each with a `.first`-character symbol hack that printed
+    /// "C3.83m" for CHF and "A3.83m" for a foreign-locale AUD).
+    static func compact(_ value: Decimal, code: String) -> String {
+        let double = NSDecimalNumber(decimal: value).doubleValue
+        // The full localized symbol: everything before the first digit of a
+        // formatted zero ("A$0.00" → "A$", "CHF 0.00" → "CHF ").
+        let zero = string(0, code: code)
+        let symbol = String(zero.prefix { !$0.isNumber })
+        let magnitude = abs(double)
+        let sign = double < 0 ? "−" : ""
+        switch magnitude {
+        case 1_000_000...:
+            return "\(sign)\(symbol)\(String(format: "%.2f", magnitude / 1_000_000))m"
+        case 10_000...:
+            return "\(sign)\(symbol)\(String(format: "%.0f", magnitude / 1_000))k"
+        default:
+            return "\(sign)\(string(abs(value), code: code))"
+        }
+    }
+
     /// A VoiceOver-friendly reading of a signed money value: the magnitude in
     /// words plus "debit"/"credit", so a dense numeric cell isn't read as a
     /// bare stream of digits with an ambiguous minus sign.
@@ -1623,7 +1645,6 @@ struct RegisterView: View {
             ScheduleTransactionSheet(model: model, transactionID: id)
         }
         .onChange(of: selection) {
-            model.selectedSplitID = selection.first
             model.selectedSplitIDs = selection
         }
         #if os(macOS)
@@ -1673,7 +1694,8 @@ struct RegisterView: View {
     }
 
     private var currencyCode: String {
-        model.postableAccounts.first { $0.id == model.selectedAccountID }?.currencyCode ?? "AUD"
+        model.postableAccounts.first { $0.id == model.selectedAccountID }?.currencyCode
+            ?? model.reportCurrency.mnemonic
     }
 }
 
@@ -1895,7 +1917,6 @@ struct JournalView: View {
                 return row.isHeading ? model.anySplitID(ofTransaction: row.transactionID) : id
             })
             model.selectedSplitIDs = splitIDs
-            model.selectedSplitID = splitIDs.first
         }
         #if os(macOS)
         .onExitCommand { selection = [] }
@@ -1951,13 +1972,11 @@ public struct TransactionActions: View {
                     ? (splitID.map { Set([$0]) } ?? [])
                     : selectionSplitIDs
                 model.selectedSplitIDs = ids
-                model.selectedSplitID = ids.first
                 model.presentedPanel = .autoCategorize
             }
             .disabled(needsRow)
             Button("Bulk Edit…", systemImage: "square.and.pencil") {
                 model.selectedSplitIDs = selectionSplitIDs
-                model.selectedSplitID = selectionSplitIDs.first
                 model.presentedPanel = .bulkEdit
             }
             // A uniform change needs a set to change; one row edits in place or
@@ -3249,11 +3268,15 @@ struct TransactionEditorSheet: View {
     private func applyInvoice(_ analysis: InvoiceAnalysis) {
         if description.isEmpty { description = analysis.vendor }
         if !isEditing, let invoiceDate = analysis.date { date = invoiceDate }
-        let existing = lines.first
-        let fundingAmount = (existing?.amount ?? 0) != 0
-            ? existing!.amountText
-            : NSDecimalNumber(decimal: -analysis.total).stringValue
-        let funding = EditableSplit(accountID: existing?.accountID, amountText: fundingAmount)
+        // Keep the existing funding row itself — identity included. Rebuilding
+        // it as a fresh EditableSplit dropped its `splitID`, so saving an
+        // existing transaction replaced every split and silently cleared the
+        // funding leg's reconcile state (the exact regression the split-reuse
+        // mechanism in updateTransaction exists to prevent).
+        var funding = lines.first ?? EditableSplit()
+        if funding.amount == 0 {
+            funding.amountText = NSDecimalNumber(decimal: -analysis.total).stringValue
+        }
         let items = analysis.lineItems.map {
             EditableSplit(accountID: $0.suggestedCategoryID,
                           amountText: NSDecimalNumber(decimal: $0.amount).stringValue)
@@ -3430,6 +3453,9 @@ struct TransactionEditorSheet: View {
     private func applyFx() {
         guard let fxLocal, fxLocal != 0, let fxAmount, fxAmount != 0 else { return }
         let foreign = model.currencyCommodity(fxCode)
+        // The rate's local side is the accounts' own currency — captured
+        // BEFORE the override flips `displayCurrency` to the foreign one.
+        let localCurrency = model.transactionCurrency(for: lines.compactMap(\.accountID))
         let foreignText = NSDecimalNumber(decimal: foreign.round(fxAmount)).stringValue
         let localText = NSDecimalNumber(decimal: fxLocal).stringValue
         if lines.count < 2 { lines = [EditableSplit(), EditableSplit()] }
@@ -3441,8 +3467,8 @@ struct TransactionEditorSheet: View {
         lines[1].amountText = foreignText
         lines[1].quantityText = localText
         // The implied/entered rate is real data — teach the price DB. Stored as
-        // local-per-foreign (the price of one MYR in AUD).
-        if let fxRate { model.recordFxRate(code: fxCode, rate: fxRate, date: date) }
+        // local-per-foreign against the accounts' own currency.
+        if let fxRate { model.recordFxRate(code: fxCode, rate: fxRate, date: date, in: localCurrency) }
         fxShown = false
     }
 

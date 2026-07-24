@@ -46,7 +46,8 @@ struct BudgetView: View {
                             }
                             Section {
                                 ForEach(actuals) { actual in
-                                    BudgetRow(actual: actual, code: model.reportCurrency.mnemonic)
+                                    BudgetRow(actual: actual, code: model.reportCurrency.mnemonic,
+                                              isIncome: model.book?.account(with: actual.id)?.type == .income)
                                 }
                             }
                         }
@@ -100,6 +101,7 @@ struct BudgetView: View {
 private struct BudgetRow: View {
     let actual: BudgetActual
     let code: String
+    var isIncome = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -116,10 +118,14 @@ private struct BudgetRow: View {
                     .foregroundStyle(.secondary)
             }
             ProgressView(value: min(1.0, max(0, actual.fractionUsed ?? 0)))
-                .tint(actual.isOverBudget ? .red : .accentColor)
+                .tint(actual.isOverBudget ? (isIncome ? .green : .red) : .accentColor)
             if actual.isOverBudget {
-                Text("Over by \(AmountFormat.string(-actual.remaining, code: code))")
-                    .scaledFont(.caption).foregroundStyle(.red)
+                // Income landing above its plan is favourable — "over budget"
+                // is overspending language, wrong for earning more than planned.
+                Text(isIncome
+                     ? "Ahead by \(AmountFormat.string(-actual.remaining, code: code))"
+                     : "Over by \(AmountFormat.string(-actual.remaining, code: code))")
+                    .scaledFont(.caption).foregroundStyle(isIncome ? .green : .red)
             } else {
                 Text("\(AmountFormat.string(actual.remaining, code: code)) remaining")
                     .scaledFont(.caption).foregroundStyle(.secondary)
@@ -231,8 +237,8 @@ struct EditBudgetSheet: View {
         if let period = selectedPeriod {
             // Edit only this period's overrides, preserving flat amounts and
             // every other period.
-            for (id, text) in amounts where Decimal(string: text) != nil {
-                updated.setAmount(Decimal(string: text)!, for: id, period: period)
+            for (id, text) in amounts where EditableSplit.strictDecimal(text.trimmingCharacters(in: .whitespaces)) != nil {
+                updated.setAmount(EditableSplit.strictDecimal(text.trimmingCharacters(in: .whitespaces))!, for: id, period: period)
             }
         } else {
             // Flat amounts (every period), keeping any per-period overrides.
@@ -240,7 +246,7 @@ struct EditBudgetSheet: View {
                                   uniquingKeysWith: { a, _ in a })
             var lines: [BudgetLine] = []
             for (id, text) in amounts {
-                guard let amount = Decimal(string: text), amount != 0 else { continue }
+                guard let amount = EditableSplit.strictDecimal(text.trimmingCharacters(in: .whitespaces)), amount != 0 else { continue }
                 var line = byID[id] ?? BudgetLine(accountGUID: id, amount: 0)
                 line.amount = amount
                 line.rollover = rollovers[id] ?? false

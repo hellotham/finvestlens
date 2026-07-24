@@ -91,10 +91,10 @@ struct ReconcileView: View {
             ToolbarItem(placement: .confirmationAction) {
                 Button("Start") {
                     model.beginReconcile(accountID: accountID, statementDate: statementDate,
-                                         statementBalance: Decimal(string: endingBalanceText) ?? 0)
+                                         statementBalance: EditableSplit.strictDecimal(endingBalanceText.trimmingCharacters(in: .whitespaces)) ?? 0)
                 }
                 .keyboardShortcut(.defaultAction)
-                .disabled(Decimal(string: endingBalanceText) == nil)
+                .disabled(EditableSplit.strictDecimal(endingBalanceText.trimmingCharacters(in: .whitespaces)) == nil)
             }
         }
     }

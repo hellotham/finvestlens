@@ -187,14 +187,17 @@ public struct Recurrence: Codable, Hashable, Sendable {
     public func occurrences(since: Date?, through: Date,
                             limit: Int = 5000, calendar: Calendar? = nil) -> [Date] {
         let cal = calendar ?? Self.utcCalendar
-        guard startDate <= through else { return [] }
         var result: [Date] = []
         // Occurrence 0 is the start — weekend-adjusted like every other
         // occurrence, so this list agrees with `next(after:)`, which answers
-        // the adjusted start for any reference before it.
+        // the adjusted start for any reference before it. The cut-off guard
+        // must use the ADJUSTED seed: a weekend-back adjustment can move the
+        // first occurrence 1–2 days before the nominal start, and gating on
+        // `startDate` would drop it whenever `through` lands in that gap.
         var seed = YMD(startDate, calendar: cal)
         seed.adjustForWeekend(period: period, wadj: weekendAdjust)
         var date = seed.date(timeFrom: startDate, calendar: cal)
+        guard date <= through else { return [] }
         var iterations = 0
         while date <= through, iterations < limit {
             if since == nil || date > since! { result.append(date) }

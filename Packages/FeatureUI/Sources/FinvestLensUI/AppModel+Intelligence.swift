@@ -8,6 +8,17 @@
 
 import Foundation
 import FinvestLensEngine
+
+/// The well-known accounts the dividend flows post to — named once. Two writer
+/// flows (the dividend-statement booking and Smart Import) each created these
+/// paths verbatim; editing one forked the chart of accounts into parallel
+/// trees for the same money.
+enum DividendAccounts {
+    static let franked = ["Income", "Dividends", "Franked Dividends"]
+    static let unfranked = ["Income", "Dividends", "Unfranked Dividends"]
+    static let frankingCredits = ["Income", "Dividends", "Franking Credits"]
+    static let creditsReceivable = ["Assets", "Franking Credits Receivable"]
+}
 import FinvestLensInterchange
 import FinvestLensIntelligence
 import FinvestLensReports
@@ -133,7 +144,7 @@ extension AppModel {
     /// are returned — used to scope Auto-Categorise to the register selection.
     public func uncategorizedItems(limitedTo transactions: Set<GncGUID>? = nil) -> [UncategorizedItem] {
         guard let book else { return [] }
-        let holders = book.accounts.filter(\.isImbalanceOrOrphan)
+        let holders = book.accounts.filter(\.isWash)
         return holders.flatMap { holder in
             book.splits(for: holder).compactMap { split -> UncategorizedItem? in
                 guard let transaction = split.transaction else { return nil }
@@ -196,7 +207,7 @@ extension AppModel {
     /// the counter leg of a simple two-leg transaction. `nil` for multi-split
     /// fully-categorised transactions (inspector territory).
     private func attachmentTargetSplit(in txn: Transaction) -> Split? {
-        if let imbalance = txn.splits.first(where: { $0.account?.isImbalanceOrOrphan ?? false }) {
+        if let imbalance = txn.splits.first(where: { $0.account?.isWash ?? false }) {
             return imbalance
         }
         guard txn.splits.count == 2,
@@ -211,7 +222,7 @@ extension AppModel {
     ]
 
     private static func isMoneyLeg(_ split: Split) -> Bool {
-        split.account.map { attachmentMoneyTypes.contains($0.type) && !$0.isImbalanceOrOrphan } ?? false
+        split.account.map { attachmentMoneyTypes.contains($0.type) && !$0.isWash } ?? false
     }
 
     /// A money leg of the right magnitude and direction: `spending` wants an
@@ -763,7 +774,7 @@ extension AppModel {
     ) async throws -> AttachmentCategorySuggestion? {
         guard let book, let txn = book.transaction(with: transactionID) else { return nil }
         // The uncategorised leg gives the model the amount's sign; else any leg.
-        let imbalance = txn.splits.first { $0.account?.isImbalanceOrOrphan ?? false }
+        let imbalance = txn.splits.first { $0.account?.isWash ?? false }
         let amount = -(imbalance?.value ?? txn.splits.first?.value ?? 0)
         let candidates = categoryCandidates()
 
@@ -913,7 +924,7 @@ extension AppModel {
     private func insightFallback(for txn: Transaction,
                                  from doc: ParsedAttachment) async -> AttachmentCategorySuggestion? {
         guard let book, !doc.textExcerpt.isEmpty, isIntelligenceAvailable else { return nil }
-        let amount = -(txn.splits.first { $0.account?.isImbalanceOrOrphan ?? false }?.value
+        let amount = -(txn.splits.first { $0.account?.isWash ?? false }?.value
                        ?? txn.splits.first?.value ?? 0)
         guard let insight = try? await AttachmentInsight.analyze(
             documentText: doc.textExcerpt,
@@ -1136,18 +1147,18 @@ extension AppModel {
         }
         var splits = [SplitInput(accountID: cashAccountID, value: details.netPayment)]
         if details.frankedAmount != 0 {
-            let account = ensureAccount(path: ["Income", "Dividends", "Franked Dividends"], type: .income)
+            let account = ensureAccount(path: DividendAccounts.franked, type: .income)
             splits.append(SplitInput(accountID: account?.guid, value: -details.frankedAmount,
                                      memo: details.ticker))
         }
         if details.unfrankedAmount != 0 {
-            let account = ensureAccount(path: ["Income", "Dividends", "Unfranked Dividends"], type: .income)
+            let account = ensureAccount(path: DividendAccounts.unfranked, type: .income)
             splits.append(SplitInput(accountID: account?.guid, value: -details.unfrankedAmount,
                                      memo: details.ticker))
         }
         if recordFrankingCredits && details.frankingCredits != 0 {
-            let income = ensureAccount(path: ["Income", "Dividends", "Franking Credits"], type: .income)
-            let receivable = ensureAccount(path: ["Assets", "Franking Credits Receivable"], type: .asset)
+            let income = ensureAccount(path: DividendAccounts.frankingCredits, type: .income)
+            let receivable = ensureAccount(path: DividendAccounts.creditsReceivable, type: .asset)
             splits.append(SplitInput(accountID: income?.guid, value: -details.frankingCredits,
                                      memo: details.ticker))
             splits.append(SplitInput(accountID: receivable?.guid, value: details.frankingCredits,

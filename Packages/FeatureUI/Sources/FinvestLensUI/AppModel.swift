@@ -506,11 +506,29 @@ public final class AppModel {
         return true
     }
 
-    /// Free-text query; setting it recomputes ``searchResults``.
+    /// Free-text query; setting it recomputes ``searchResults`` after a short
+    /// debounce — `.searchable` writes per keystroke, and the synchronous
+    /// full-book scan made typing pay a whole-book walk per character on the
+    /// main actor. Clearing is immediate. Programmatic callers (and tests) can
+    /// call ``runSearch()`` directly for a synchronous result.
     public var searchQuery: String = "" {
-        didSet { runSearch() }
+        didSet { scheduleSearch() }
     }
+    @ObservationIgnored private var searchDebounceTask: Task<Void, Never>?
     public internal(set) var searchResults: [TransactionSummary] = []
+
+    private func scheduleSearch() {
+        searchDebounceTask?.cancel()
+        guard !searchQuery.trimmingCharacters(in: .whitespaces).isEmpty else {
+            runSearch()   // instant clear
+            return
+        }
+        searchDebounceTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(200))
+            guard !Task.isCancelled else { return }
+            self?.runSearch()
+        }
+    }
 
     /// The active structured query (Find, ⌘F), or `nil` when the free-text bar
     /// is the search. The two are alternatives: running one clears the other.
@@ -680,11 +698,12 @@ public final class AppModel {
     /// operation used to be context-menu-only: no menu items, no shortcuts, and
     /// nothing at all in the Journal and General Ledger styles, which offered
     /// Edit and nothing else.
-    public var selectedSplitID: GncGUID?
+    public var selectedSplitID: GncGUID? { selectedSplitIDs.first }
 
-    /// Every selected register row (split GUIDs). `selectedSplitID` is the first
-    /// of these; this full set lets commands like Auto-Categorise act on a
-    /// multi-row selection.
+    /// Every selected register row (split GUIDs). ``selectedSplitID`` derives
+    /// from this set — it was a stored copy every writer had to assign in
+    /// lockstep, the exact stored-copy-that-can-drift pattern. This full set
+    /// lets commands like Auto-Categorise act on a multi-row selection.
     public var selectedSplitIDs: Set<GncGUID> = []
 
     /// The transactions the current register selection belongs to.
@@ -817,8 +836,8 @@ public final class AppModel {
 
     private enum KvpKey {
         static let rules = "finvestlens/ruleGroups"
-        static let scheduled = "finvestlens/scheduledTransactions"
-        static let budgets = "finvestlens/budgets"
+        static let scheduled = BookKvpKeys.scheduledTransactions
+        static let budgets = BookKvpKeys.budgets
         static let quoteSymbols = "finvestlens/quoteSymbols"
         static let savedSearches = "finvestlens/savedSearches"
         static let savedFindQueries = "finvestlens/savedFindQueries"
@@ -1118,7 +1137,13 @@ public final class AppModel {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(25))
                 guard !Task.isCancelled else { break }
-                self?.document?.heartbeat()
+                if let usurper = self?.document?.heartbeat() {
+                    // Our stale lock was legitimately broken (e.g. this Mac
+                    // slept past the staleness window). The session survives,
+                    // guarded only by the save-time conflict check.
+                    self?.showToast(.failure,
+                        "\(usurper.user)@\(usurper.host) took over this book's lock while this Mac was asleep. Saving now requires the file to be unchanged.")
+                }
             }
         }
         autosaveTask?.cancel()
@@ -1160,6 +1185,11 @@ public final class AppModel {
         guard let document else { return }
         try? document.reloadFromDisk()
         externalChangePending = false
+        // The freshly adopted book invalidates every undo snapshot — replaying
+        // one would silently rewrite the other device's data (an "Add
+        // Transaction" entry would even delete a transaction that version
+        // legitimately contains).
+        resetUndoStack()
         reloadKvpCollections()
         refreshAll()
     }
@@ -1436,6 +1466,10 @@ public final class AppModel {
 
     public func revert() throws {
         try document?.revert()
+        // Pre-revert undo entries would replay stale snapshots onto the
+        // reloaded book (and autosave would then persist them) — every other
+        // book-replacement path clears the stack too.
+        resetUndoStack()
         reloadKvpCollections()
         refreshAll()
     }

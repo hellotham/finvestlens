@@ -348,3 +348,49 @@ struct DebitMarkerTests {
         #expect(IntelligenceParsing.amount("1,000 SDR") == 1000)
     }
 }
+
+@Suite("Review pins — parsing, matching, validation")
+struct IntelligenceReviewPinTests {
+
+    @Test("Decimal-comma amounts parse via the shared importer rules")
+    func decimalComma() {
+        #expect(IntelligenceParsing.amount("45,20") == Decimal(string: "45.20"))
+        #expect(IntelligenceParsing.amount("1.234,56") == Decimal(string: "1234.56"))
+        #expect(IntelligenceParsing.amount("1,234.56") == Decimal(string: "1234.56"))
+        #expect(IntelligenceParsing.amount("45,20 DR") == Decimal(string: "-45.20"))
+        #expect(IntelligenceParsing.amount("500 IDR") == Decimal(500))
+    }
+
+    @Test("A truncated answer matches its own leaf, not a longer stranger")
+    func carNotChildcare() {
+        let candidates = [
+            CategoryCandidate(id: .random(), fullName: "Expenses:Childcare"),
+            CategoryCandidate(id: .random(), fullName: "Expenses:Cars"),
+        ]
+        #expect(AccountNameMatcher.match("Car", in: candidates)?.fullName == "Expenses:Cars")
+        // Short needles no longer land inside unrelated longer leaves.
+        #expect(AccountNameMatcher.match("Tax", in: [
+            CategoryCandidate(id: .random(), fullName: "Expenses:Taxi"),
+        ])?.fullName == "Expenses:Taxi")   // prefix of its own leaf is fine
+        #expect(AccountNameMatcher.match("air", in: [
+            CategoryCandidate(id: .random(), fullName: "Expenses:Repairs"),
+        ]) == nil)                          // mid-word containment is not
+    }
+
+    @Test("Validator: only years the facts name pass ungrounded")
+    func validatorYears() {
+        let facts = ReviewSlideFacts(
+            kicker: "Spending", periodLabel: "FY 2024–25", currencyCode: "AUD",
+            figures: [("Dining", Decimal(string: "1234.56")!)])
+        func grounded(_ text: String) -> Bool {
+            ReviewStoryValidator.isGrounded(
+                ReviewSlideStory(headline: text, insight: ""), facts: facts)
+        }
+        #expect(grounded("Dining ran to 1,234.56 in FY 2024–25"))
+        #expect(grounded("Momentum into 2025"))          // label year, expanded
+        #expect(grounded("Compared with 2024"))          // named year
+        #expect(!grounded("Dining ran to 2,000"))        // fabricated figure
+        #expect(!grounded("Spending hit 1,950 this year"))
+        #expect(!grounded("On track for 2050"))          // unnamed year
+    }
+}

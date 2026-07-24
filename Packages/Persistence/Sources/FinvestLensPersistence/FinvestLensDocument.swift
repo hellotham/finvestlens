@@ -231,7 +231,7 @@ public final class FinvestLensDocument {
         try Self.replaceItem(at: fileURL, withContentsOf: workingCopyURL)  // atomic write-back
         baselineFingerprint = try Self.fingerprint(of: fileURL)
         hasUnsavedChanges = false
-        if advisoryLockHeld { try? lock.refreshHeartbeat() }
+        if advisoryLockHeld { heartbeat() }
     }
 
     /// Discards unsaved changes by reloading the book from the shared file.
@@ -252,9 +252,23 @@ public final class FinvestLensDocument {
     }
 
     /// Refreshes the lock heartbeat (drive from a timer while open).
-    public func heartbeat() {
-        guard advisoryLockHeld else { return }
-        try? lock.refreshHeartbeat()
+    ///
+    /// Returns the holder that took over the lock if ours was legitimately
+    /// broken while this process slept — the session then continues guarded
+    /// only by the save-time fingerprint conflict check, and the caller should
+    /// warn the user. Returns `nil` while the lock is still ours.
+    @discardableResult
+    public func heartbeat() -> LockHolder? {
+        guard advisoryLockHeld else { return nil }
+        do {
+            try lock.refreshHeartbeat()
+            return nil
+        } catch FileLock.LockError.lockLost(let usurper) {
+            advisoryLockHeld = false
+            return usurper
+        } catch {
+            return nil
+        }
     }
 
     // MARK: External changes / sync (`FR-PLT-02`)

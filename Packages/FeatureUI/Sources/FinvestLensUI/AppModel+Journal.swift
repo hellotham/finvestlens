@@ -45,20 +45,6 @@ public struct JournalRow: Identifiable, Hashable, Sendable {
     /// Gives the journal styles the same Balance column as Basic, so switching
     /// styles doesn't reflow the trailing columns.
     public var runningBalance: Decimal?
-
-    /// The secondary detail line for this row: notes on a heading, action and
-    /// memo on a leg. Empty when there is nothing to say.
-    public var detailLine: String {
-        if isHeading { return notes }
-        let action = action.trimmingCharacters(in: .whitespaces)
-        let memo = memo.trimmingCharacters(in: .whitespaces)
-        switch (action.isEmpty, memo.isEmpty) {
-        case (false, false): return "\(action) · \(memo)"
-        case (false, true): return action
-        case (true, false): return memo
-        case (true, true): return ""
-        }
-    }
 }
 
 /// One row of the Basic / Auto-Split register table: a transaction row (the
@@ -75,19 +61,6 @@ public struct AutoSplitRow: Identifiable, Hashable, Sendable {
     public let legReconcile: String
     public let legAmount: Decimal
     public let legCurrencyCode: String
-
-    /// The leg's secondary detail — action and memo, composed exactly as the
-    /// journal styles compose theirs, so the expansion reads the same there.
-    public var legDetailLine: String {
-        let action = legAction.trimmingCharacters(in: .whitespaces)
-        let memo = legMemo.trimmingCharacters(in: .whitespaces)
-        switch (action.isEmpty, memo.isEmpty) {
-        case (false, false): return "\(action) · \(memo)"
-        case (false, true): return action
-        case (true, false): return memo
-        case (true, true): return ""
-        }
-    }
 
     init(main: RegisterRow) {
         id = main.id

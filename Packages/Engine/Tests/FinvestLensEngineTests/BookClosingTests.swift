@@ -38,11 +38,11 @@ struct BookClosingTests {
     }
 
     @Test("Closing zeroes P&L and moves the period result into equity")
-    func closes() {
+    func closes() throws {
         let (b, a) = book()
         let equityBefore = b.balance(of: a["equity"]!).amount
 
-        let result = BookClosing.build(in: b, asOf: day(10), into: a["equity"]!)
+        let result = try BookClosing.build(in: b, asOf: day(10), into: a["equity"]!)
         #expect(result.closedAccountCount == 2)
         for txn in result.transactions { b.addTransaction(txn) }
 
@@ -61,9 +61,9 @@ struct BookClosingTests {
     }
 
     @Test("Closing is balanced, so the book still balances afterwards")
-    func staysBalanced() {
+    func staysBalanced() throws {
         let (b, a) = book()
-        let result = BookClosing.build(in: b, asOf: day(10), into: a["equity"]!)
+        let result = try BookClosing.build(in: b, asOf: day(10), into: a["equity"]!)
         for txn in result.transactions {
             // Every closing transaction sums to zero across its splits.
             let sum = txn.splits.reduce(Decimal(0)) { $0 + $1.value }
@@ -76,18 +76,18 @@ struct BookClosingTests {
     }
 
     @Test("Nothing to close yields no transactions")
-    func nothingToClose() {
+    func nothingToClose() throws {
         let b = Book(baseCurrency: .aud)
         let equity = b.addAccount(Account(name: "Equity", type: .equity, commodity: .aud))
-        let result = BookClosing.build(in: b, asOf: day(10), into: equity)
+        let result = try BookClosing.build(in: b, asOf: day(10), into: equity)
         #expect(result.transactions.isEmpty)
         #expect(result.closedAccountCount == 0)
     }
 
     @Test("A second close after more activity only closes the new amount")
-    func rerun() {
+    func rerun() throws {
         let (b, a) = book()
-        for txn in BookClosing.build(in: b, asOf: day(10), into: a["equity"]!).transactions {
+        for txn in try BookClosing.build(in: b, asOf: day(10), into: a["equity"]!).transactions {
             b.addTransaction(txn)
         }
         // More income after the first close.
@@ -96,9 +96,29 @@ struct BookClosingTests {
         more.addSplit(Split(account: a["income"]!, value: dec("-200")))
         b.addTransaction(more)
 
-        let second = BookClosing.build(in: b, asOf: day(30), into: a["equity"]!)
+        let second = try BookClosing.build(in: b, asOf: day(30), into: a["equity"]!)
         #expect(second.closedAccountCount == 1)           // only income moved
         for txn in second.transactions { b.addTransaction(txn) }
         #expect(b.balance(of: a["income"]!).amount == 0)  // flat again
+    }
+
+    @Test("Foreign-denominated equity: no rate aborts, a rate converts the quantity")
+    func foreignEquity() throws {
+        let (b, a) = book()
+        let usd = Commodity(namespace: .currency, mnemonic: "USD", fullName: "US Dollar", smallestFraction: 100)
+        b.registerCommodity(usd)
+        let usdEquity = b.addAccount(Account(name: "US Retained", type: .equity, commodity: usd))
+
+        // No AUD↔USD rate: closing must refuse rather than book the raw value.
+        #expect(throws: BookClosing.ClosingError.missingExchangeRate(from: "AUD", to: "USD")) {
+            _ = try BookClosing.build(in: b, asOf: day(10), into: usdEquity)
+        }
+
+        // With a rate the equity quantity converts (AUD −700 × 0.5 = USD −350).
+        b.addPrice(Price(commodity: .aud, currency: usd, date: day(5), value: dec("0.5")))
+        let result = try BookClosing.build(in: b, asOf: day(10), into: usdEquity)
+        let equityLeg = try #require(result.transactions.first?.splits.first { $0.account === usdEquity })
+        #expect(equityLeg.value == dec("-700"))
+        #expect(equityLeg.quantity == dec("-350"))
     }
 }

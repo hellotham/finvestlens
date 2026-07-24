@@ -20,7 +20,7 @@ import Foundation
 public enum OFXImporter {
 
     public static func parse(_ data: Data) -> [StagedTransaction] {
-        parse(String(decoding: data, as: UTF8.self))
+        parse(ImportParsing.decode(data))
     }
 
     public static func parse(_ text: String) -> [StagedTransaction] {
@@ -56,12 +56,30 @@ public enum OFXImporter {
         ("BUYSTOCK", .buy), ("BUYMF", .buy), ("BUYOTHER", .buy), ("BUYDEBT", .buy),
         ("SELLSTOCK", .sell), ("SELLMF", .sell), ("SELLOTHER", .sell), ("SELLDEBT", .sell),
         ("REINVEST", .reinvestDividend), ("INCOME", .dividend),
+        ("RETOFCAP", .returnOfCapital),
     ]
+
+    /// The statement's `<SECLIST>`: `UNIQUEID` (CUSIP/ISIN) → ticker/name, so
+    /// investment rows can be labelled by ticker instead of a raw CUSIP — the
+    /// only place OFX carries the human-readable security identity.
+    private static func securityDirectory(_ text: String)
+        -> [String: (ticker: String?, name: String?)] {
+        var map: [String: (ticker: String?, name: String?)] = [:]
+        for info in ["STOCKINFO", "MFINFO", "DEBTINFO", "OTHERINFO"] {
+            for chunk in text.components(separatedBy: "<\(info)>").dropFirst() {
+                let body = chunk.components(separatedBy: "</\(info)>").first ?? chunk
+                guard let id = value("UNIQUEID", in: body) else { continue }
+                map[id] = (value("TICKER", in: body), value("SECNAME", in: body))
+            }
+        }
+        return map
+    }
 
     /// Extracts every investment transaction block into a staged row carrying
     /// its ``InvestmentDetail``. Quantity/price are absent on income rows.
     private static func parseInvestments(_ text: String) -> [StagedTransaction] {
         var result: [StagedTransaction] = []
+        let directory = securityDirectory(text)
         for (tag, action) in investmentWrappers {
             for chunk in text.components(separatedBy: "<\(tag)>").dropFirst() {
                 let body = chunk.components(separatedBy: "</\(tag)>").first ?? chunk
@@ -71,7 +89,9 @@ public enum OFXImporter {
                 let price = value("UNITPRICE", in: body).flatMap(ImportParsing.amount) ?? 0
                 let commission = value("COMMISSION", in: body).flatMap(ImportParsing.amount) ?? 0
                 let total = value("TOTAL", in: body).flatMap(ImportParsing.amount) ?? 0
-                let security = value("UNIQUEID", in: body) ?? value("SECID", in: body) ?? ""
+                let uniqueID = value("UNIQUEID", in: body) ?? ""
+                let listed = directory[uniqueID]
+                let security = listed?.ticker ?? listed?.name ?? uniqueID
                 result.append(StagedTransaction(
                     date: date, amount: total, payee: security,
                     memo: value("MEMO", in: body) ?? "",
@@ -91,7 +111,30 @@ public enum OFXImporter {
         let after = body[range.upperBound...]
         let end = after.firstIndex(of: "<") ?? after.endIndex
         let value = String(after[..<end]).trimmingCharacters(in: .whitespacesAndNewlines)
-        return value.isEmpty ? nil : value
+        return value.isEmpty ? nil : decodeEntities(value)
+    }
+
+    /// OFX 1.x §2.3.2 (and XML by definition) escape `&` `<` `>` in values;
+    /// leaving `&amp;` literal polluted payees ("JOHNSON &amp; JOHNSON"),
+    /// broke matcher history keys, and diverged from the CAMT path, whose
+    /// `XMLParser` decodes natively.
+    private static func decodeEntities(_ text: String) -> String {
+        guard text.contains("&") else { return text }
+        var out = text
+            .replacingOccurrences(of: "&lt;", with: "<")
+            .replacingOccurrences(of: "&gt;", with: ">")
+            .replacingOccurrences(of: "&quot;", with: "\"")
+            .replacingOccurrences(of: "&apos;", with: "'")
+            .replacingOccurrences(of: "&nbsp;", with: " ")
+        while let range = out.range(of: #"&#[xX]?[0-9a-fA-F]+;"#, options: .regularExpression) {
+            let token = out[range]
+            let isHex = token.lowercased().hasPrefix("&#x")
+            let digits = token.dropFirst(isHex ? 3 : 2).dropLast()
+            let scalar = UInt32(digits, radix: isHex ? 16 : 10).flatMap(Unicode.Scalar.init)
+            out.replaceSubrange(range, with: scalar.map { String(Character($0)) } ?? "")
+        }
+        // Last, so a double-escaped "&amp;lt;" correctly yields a literal "&lt;".
+        return out.replacingOccurrences(of: "&amp;", with: "&")
     }
 
     /// OFX dates are `YYYYMMDD` optionally followed by time/zone; take the date.

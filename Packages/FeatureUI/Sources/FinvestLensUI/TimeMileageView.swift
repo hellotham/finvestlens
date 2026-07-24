@@ -140,7 +140,7 @@ private struct BillableEntrySheet: View {
     private var incomeAccounts: [AccountNode] {
         model.postableAccounts.filter { $0.isType(.income) }
     }
-    private func dec(_ s: String) -> Decimal { Decimal(string: s.trimmingCharacters(in: .whitespaces)) ?? 0 }
+    private func dec(_ s: String) -> Decimal { EditableSplit.strictDecimal(s.trimmingCharacters(in: .whitespaces)) ?? 0 }
     private var isValid: Bool { customerID != nil && dec(quantity) > 0 }
 
     var body: some View {

@@ -31,11 +31,3 @@ struct SmartImportTip: Tip {
     var image: Image? { Image(systemName: "doc.viewfinder") }
 }
 
-/// Including a whole subtree's postings in the register.
-struct SubaccountsTip: Tip {
-    var title: Text { Text("See a whole subtree at once") }
-    var message: Text? {
-        Text("Turn on Subaccounts to include every posting under this account — GnuCash's Open Subaccounts, without a second window.")
-    }
-    var image: Image? { Image(systemName: "list.bullet.indent") }
-}

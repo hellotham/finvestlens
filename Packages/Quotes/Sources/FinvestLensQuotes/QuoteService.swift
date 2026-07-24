@@ -74,14 +74,21 @@ public struct QuoteService: Sendable {
 
     /// Maps a ``Quote`` to a `Price`. The provider-reported currency, if any, is
     /// carried in the price `source` for provenance but does not override the
-    /// caller's `currency` (multi-currency FX valuation is a higher layer).
+    /// caller's `currency` (multi-currency FX valuation is a higher layer) —
+    /// so a USD-listed ticker fetched into an AUD book leaves a visible trace
+    /// ("Finance::Quote:yahoo (USD)") instead of an unrecoverable mislabel.
     static func price(from quote: Quote, commodity: Commodity, currency: Commodity, kind: QuoteProviderKind) -> Price {
-        Price(
+        var source = "Finance::Quote:\(kind.rawValue)"
+        if let reported = quote.currencyCode, !reported.isEmpty,
+           reported.caseInsensitiveCompare(currency.mnemonic) != .orderedSame {
+            source += " (\(reported))"
+        }
+        return Price(
             commodity: commodity,
             currency: currency,
             date: quote.date,
             value: quote.price,
-            source: "Finance::Quote:\(kind.rawValue)",
+            source: source,
             type: "last"
         )
     }

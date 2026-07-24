@@ -279,7 +279,7 @@ extension AppModel {
     public func registerAccountID(forTransaction id: GncGUID) -> GncGUID? {
         guard let txn = book?.transaction(with: id) else { return nil }
         let onBalanceSheet = txn.splits.first { split in
-            guard let account = split.account, !account.isImbalanceOrOrphan else { return false }
+            guard let account = split.account, !account.isWash else { return false }
             switch account.type {
             case .bank, .cash, .credit, .asset, .liability, .stock, .mutualFund,
                  .receivable, .payable:
@@ -399,7 +399,7 @@ extension AppModel {
     /// and USD income closes into one balanced transaction each, and adding
     /// their quantities into a single figure would be a sum of unlike units.
     public func closingPreview(asOf date: Date, equityID: GncGUID)
-        -> (accounts: Int, byCurrency: [ClosingCurrencyPreview])? {
+        -> (accounts: Int, byCurrency: [ClosingCurrencyPreview], missingRate: String?)? {
         guard let book, let equity = book.account(with: equityID) else { return nil }
         return cachedReport("closepv:\(date.timeIntervalSinceReferenceDate):\(equityID.hexString)") {
             Self.buildClosingPreview(book: book, asOf: date, equity: equity)
@@ -407,8 +407,15 @@ extension AppModel {
     }
 
     private static func buildClosingPreview(book: Book, asOf date: Date, equity: Account)
-        -> (accounts: Int, byCurrency: [ClosingCurrencyPreview]) {
-        let result = BookClosing.build(in: book, asOf: date, into: equity)
+        -> (accounts: Int, byCurrency: [ClosingCurrencyPreview], missingRate: String?) {
+        let result: BookClosing.Result
+        do {
+            result = try BookClosing.build(in: book, asOf: date, into: equity)
+        } catch BookClosing.ClosingError.missingExchangeRate(let from, let to) {
+            return (0, [], "No \(from) → \(to) exchange rate — add a price before closing into this account.")
+        } catch {
+            return (0, [], error.localizedDescription)
+        }
         let byCurrency = result.transactions.map { txn in
             let equityQuantity = txn.splits
                 .filter { $0.account === equity }
@@ -418,7 +425,7 @@ extension AppModel {
             return ClosingCurrencyPreview(currencyCode: txn.currency.mnemonic,
                                           netToEquity: -equityQuantity)
         }
-        return (result.closedAccountCount, byCurrency)
+        return (result.closedAccountCount, byCurrency, nil)
     }
 
     /// Posts the period-end closing transactions, moving income/expense balances
@@ -428,7 +435,16 @@ extension AppModel {
     public func closeBook(asOf date: Date, equityID: GncGUID,
                           description: String = "Closing Entries") -> Int? {
         guard let book, let equity = book.account(with: equityID) else { return nil }
-        let result = BookClosing.build(in: book, asOf: date, into: equity, description: description)
+        let result: BookClosing.Result
+        do {
+            result = try BookClosing.build(in: book, asOf: date, into: equity, description: description)
+        } catch BookClosing.ClosingError.missingExchangeRate(let from, let to) {
+            showToast(.failure, "Cannot close: no \(from) → \(to) exchange rate.")
+            return nil
+        } catch {
+            showToast(.failure, "Cannot close: \(error.localizedDescription)")
+            return nil
+        }
         guard !result.transactions.isEmpty else { return 0 }
         editingWholeBook(named: "Close Financial Year") {
             for txn in result.transactions { book.addTransaction(txn) }
@@ -523,6 +539,9 @@ extension AppModel {
         let copy = Transaction(currency: source.currency, datePosted: source.datePosted,
                                number: source.number, description: source.transactionDescription,
                                notes: source.notes)
+        // Tags are first-class (FR-TAG-01) — a duplicate that silently dropped
+        // them vanished from tag: searches and tag reports.
+        copy.tags = source.tags
         for split in source.splits {
             copy.addSplit(Split(account: split.account, value: split.value,
                                 quantity: split.quantity, memo: split.memo, action: split.action))
@@ -562,7 +581,8 @@ extension AppModel {
             transactionDescription: txn.transactionDescription,
             notes: txn.notes,
             currency: txn.currency,
-            legs: legs))
+            legs: legs,
+            tags: txn.tags))
         return true
     }
 
@@ -610,6 +630,7 @@ extension AppModel {
                               number: clipboard.number,
                               description: clipboard.transactionDescription,
                               notes: clipboard.notes)
+        txn.tags = clipboard.tags ?? []
         for (account, leg) in resolved {
             txn.addSplit(Split(account: account, value: leg.value, quantity: leg.quantity,
                                memo: leg.memo, action: leg.action))
@@ -704,7 +725,13 @@ extension AppModel {
     /// the start with no caller: the editor's Tags field was free text, so the
     /// only way to reuse a tag was to remember how you spelled it, and a typo
     /// silently made a second tag.
-    public var knownTags: [String] { book?.allTags ?? [] }
+    ///
+    /// Memoised per revision — the transaction editor evaluates tag
+    /// suggestions in its body, so an uncached walk re-decoded every
+    /// transaction's tags KVP on every keystroke in ANY editor field.
+    public var knownTags: [String] {
+        cachedReport("allTags") { book?.allTags ?? [] } ?? []
+    }
 
     /// Tags starting with `prefix` that are not already on the transaction being
     /// edited, for autocomplete. Matching on a prefix rather than anywhere is
@@ -1078,7 +1105,12 @@ extension AppModel {
                 return txn.datePosted >= date
             case "to":
                 guard let date = Self.parseSearchDate(value) else { return false }
-                return txn.datePosted <= date
+                // Inclusive end day: parseSearchDate answers the START of the
+                // named day, and comparing `<=` against midnight excluded that
+                // whole day's transactions — the opposite of every report's
+                // inclusive `datePosted <= to` convention.
+                let end = Calendar.current.date(byAdding: .day, value: 1, to: date) ?? date
+                return txn.datePosted < end
             case "type":
                 return matchesAccountType(value, txn)
             case "has":
@@ -1141,9 +1173,9 @@ extension AppModel {
 
     private func matchesAmount(_ spec: String, _ txn: Transaction) -> Bool {
         let magnitude = txn.splits.map(\.value).map(abs).max() ?? 0
-        if spec.hasPrefix(">"), let n = Decimal(string: String(spec.dropFirst())) { return magnitude > n }
-        if spec.hasPrefix("<"), let n = Decimal(string: String(spec.dropFirst())) { return magnitude < n }
-        if let n = Decimal(string: spec) { return magnitude == n }
+        if spec.hasPrefix(">"), let n = EditableSplit.strictDecimal(String(spec.dropFirst())) { return magnitude > n }
+        if spec.hasPrefix("<"), let n = EditableSplit.strictDecimal(String(spec.dropFirst())) { return magnitude < n }
+        if let n = EditableSplit.strictDecimal(spec) { return magnitude == n }
         return false
     }
 

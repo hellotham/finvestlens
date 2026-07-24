@@ -41,6 +41,31 @@ public extension FinancialReports {
         var reminders: [BillReminder] = []
         let grace = TimeInterval(graceDays) * 86_400
         let dueSoon = TimeInterval(dueSoonDays) * 86_400
+        let calendar = Calendar.current
+
+        // One pass over the book: transactions bucketed by posting day, so
+        // each occurrence's paid-check probes a handful of day buckets instead
+        // of scanning every transaction — the dashboard evaluates this report
+        // several times per body pass on a 100k-transaction book.
+        var byDay: [Date: [Transaction]] = [:]
+        let windowLower = from.addingTimeInterval(-grace)
+        let windowUpper = to.addingTimeInterval(grace)
+        for txn in book.transactions
+        where txn.datePosted >= windowLower && txn.datePosted <= windowUpper {
+            byDay[calendar.startOfDay(for: txn.datePosted), default: []].append(txn)
+        }
+        func candidates(near date: Date) -> [Transaction] {
+            var result: [Transaction] = []
+            var day = calendar.startOfDay(for: date.addingTimeInterval(-grace))
+            let end = date.addingTimeInterval(grace)
+            while day <= end {
+                if let bucket = byDay[day] { result.append(contentsOf: bucket) }
+                guard let next = calendar.date(byAdding: .day, value: 1, to: day) else { break }
+                day = next
+            }
+            return result
+        }
+        let today = calendar.startOfDay(for: asOf)
 
         for schedule in scheduled where schedule.isEnabled {
             let amount = outflowAmount(schedule, book: book)
@@ -49,9 +74,14 @@ public extension FinancialReports {
             for date in dates {
                 let status: BillStatus
                 if isPaid(name: schedule.name, description: schedule.transactionDescription,
-                          billID: schedule.id, near: date, grace: grace, book: book) {
+                          billID: schedule.id, expected: amount,
+                          near: date, grace: grace, candidates: candidates(near: date)) {
                     status = .paid
-                } else if date < asOf {
+                } else if calendar.startOfDay(for: date) < today {
+                    // Day granularity: a bill due today is *due*, not overdue.
+                    // Occurrences carry the schedule's time-of-day, and an
+                    // instant comparison against a live clock flipped them to
+                    // a critical "overdue" partway through their own due day.
                     status = .overdue
                 } else if date <= asOf.addingTimeInterval(dueSoon) {
                     status = .dueSoon
@@ -85,21 +115,39 @@ public extension FinancialReports {
     /// description heuristic below.
     public static let billLinkKey = "finvestlens/bill-id"
 
+    /// How far a payment may drift from the bill's expected amount and still
+    /// settle it by name (utilities vary month to month; ±25% covers that
+    /// while a $5 transaction named like the rent no longer marks an $800
+    /// bill paid — `FR-BILL-01`'s expected-amount matching).
+    static let amountTolerance = Decimal(string: "0.25")!
+
     private static func isPaid(name: String, description: String, billID: GncGUID,
-                               near date: Date,
-                               grace: TimeInterval, book: Book) -> Bool {
+                               expected: Decimal, near date: Date,
+                               grace: TimeInterval, candidates: [Transaction]) -> Bool {
         let lower = date.addingTimeInterval(-grace)
         let upper = date.addingTimeInterval(grace)
-        return book.transactions.contains { txn in
+        let name = name.trimmingCharacters(in: .whitespaces)
+        let description = description.trimmingCharacters(in: .whitespaces)
+        return candidates.contains { txn in
             guard txn.datePosted >= lower, txn.datePosted <= upper else { return false }
             // Exact: a rule linked this payment to the bill (FR-RULE-01
-            // link-to-bill) — no name matching required.
+            // link-to-bill) — no name or amount matching required.
             if case let .guid(linked)? = txn.kvp[billLinkKey], linked == billID {
                 return true
             }
+            // Heuristic: a NON-EMPTY matching description. Comparing empty
+            // against empty returned `.orderedSame`, so a description-less
+            // schedule was marked paid by any blank-description bank row in
+            // the grace window and never raised overdue.
             let d = txn.transactionDescription
-            return d.caseInsensitiveCompare(name) == .orderedSame
-                || d.caseInsensitiveCompare(description) == .orderedSame
+            let nameMatches = (!name.isEmpty && d.caseInsensitiveCompare(name) == .orderedSame)
+                || (!description.isEmpty && d.caseInsensitiveCompare(description) == .orderedSame)
+            guard nameMatches else { return false }
+            // …and agreeing money (skip only when the schedule's expected
+            // amount is unknown).
+            guard expected > 0 else { return true }
+            let magnitude = txn.splits.map { abs($0.value) }.max() ?? 0
+            return abs(magnitude - expected) <= expected * Self.amountTolerance
         }
     }
 }

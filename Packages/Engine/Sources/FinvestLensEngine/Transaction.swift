@@ -64,8 +64,15 @@ public final class Transaction {
     /// like any other preserved KVP, so it survives a GnuCash round-trip.
     public var statementDate: Date? {
         get {
-            guard case let .date(date)? = kvp[Self.statementDateKey] else { return nil }
-            return date
+            // Accept both date-flavoured KVP cases: the setter writes `.date`,
+            // but a GnuCash-XML round-trip re-imports any non-midnight value as
+            // `.timespec` (the exporter emits gdate only for day-only dates) —
+            // matching only `.date` made the slot silently read nil after one
+            // round-trip, breaking re-import duplicate detection.
+            switch kvp[Self.statementDateKey] {
+            case .date(let date), .timespec(let date): return date
+            default: return nil
+            }
         }
         set {
             kvp[Self.statementDateKey] = newValue.map { .date($0) }

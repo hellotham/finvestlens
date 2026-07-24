@@ -68,7 +68,20 @@ public final class FileLock {
     public enum LockError: Error, Equatable {
         case alreadyLocked(LockHolder)
         case notHeldByUs
+        /// We believed we held the lock, but the on-disk file now names another
+        /// instance — our stale lock was legitimately broken (e.g. this machine
+        /// slept past the staleness window). Continuing to rewrite the file
+        /// would clobber the new holder and leave two live writers.
+        case lockLost(LockHolder)
     }
+
+    /// Stand-in holder reported when a lock file exists but cannot be read or
+    /// decoded (crash mid-create, zero bytes). Its ancient heartbeat makes it
+    /// read as stale everywhere, so the UI offers Break Lock instead of the
+    /// old behaviour — silently degrading to lockless mode.
+    public static let unreadableHolder = LockHolder(
+        host: "unknown", user: "unknown", instanceID: "", pid: 0,
+        acquiredAt: .distantPast, heartbeatAt: .distantPast)
 
     /// The document being guarded.
     public let documentURL: URL
@@ -139,8 +152,12 @@ public final class FileLock {
     }
 
     /// `true` if a lock exists but its heartbeat has aged past ``staleAfter``.
+    /// An unreadable/corrupt lock file counts as stale — it has no live holder
+    /// and must be breakable, not a permanent silent bar to locking.
     public func isStale(now: Date = Date()) -> Bool {
-        guard let holder = currentHolder() else { return false }
+        guard let holder = currentHolder() else {
+            return FileManager.default.fileExists(atPath: lockURL.path)
+        }
         return now.timeIntervalSince(holder.heartbeatAt) > staleAfter
     }
 
@@ -159,25 +176,61 @@ public final class FileLock {
             if let existing = currentHolder() {
                 throw LockError.alreadyLocked(existing)
             }
+            if FileManager.default.fileExists(atPath: lockURL.path) {
+                // The file exists but is unreadable/corrupt. Report it as a
+                // (stale) unknown holder so the caller offers Break Lock —
+                // rethrowing the raw file error made the document layer treat
+                // this as "locking unsupported here" and open lockless.
+                throw LockError.alreadyLocked(Self.unreadableHolder)
+            }
             throw error
         }
     }
 
     /// Breaks a stale lock and acquires it. Throws if the existing lock is
     /// **not** stale (a live holder).
+    ///
+    /// Two machines can race to break the same stale lock. The delete re-reads
+    /// the file *inside* its coordination scope and only removes the exact
+    /// stale holder that was judged — a different or freshly re-created holder
+    /// means another breaker already won, and their new lock is left alone
+    /// (the final `acquire` then fails with `alreadyLocked` for us).
     public func breakStaleLockAndAcquire(now: Date = Date()) throws {
-        if let holder = currentHolder(), now.timeIntervalSince(holder.heartbeatAt) <= staleAfter {
-            throw LockError.alreadyLocked(holder)
+        let judged = currentHolder()
+        if let judged, now.timeIntervalSince(judged.heartbeatAt) <= staleAfter {
+            throw LockError.alreadyLocked(judged)
         }
+        var raceWinner: LockHolder?
         try? coordinatedWrite(options: [.forDeleting]) { url in
-            try FileManager.default.removeItem(at: url)
+            let current = (try? Data(contentsOf: url)).flatMap {
+                try? JSONDecoder().decode(LockHolder.self, from: $0)
+            }
+            if let current,
+               current != judged || now.timeIntervalSince(current.heartbeatAt) <= staleAfter {
+                raceWinner = current
+                return
+            }
+            // Still the judged stale holder (or an unreadable husk): remove it.
+            try? FileManager.default.removeItem(at: url)
         }
+        if let raceWinner { throw LockError.alreadyLocked(raceWinner) }
         try acquire(now: now)
     }
 
     /// Refreshes the heartbeat timestamp; must be called by the holder.
+    ///
+    /// Verifies on-disk ownership first: if another machine legitimately broke
+    /// our stale lock while this process slept, blindly rewriting the file
+    /// would clobber the new holder and leave two live writers. In that case
+    /// `held` drops and ``LockError/lockLost(_:)`` is thrown so the caller can
+    /// warn the user. (If the file merely vanished mid-break, the rewrite
+    /// re-creates our lock and the rival's create-if-absent backs off.)
     public func refreshHeartbeat(now: Date = Date()) throws {
         guard held else { throw LockError.notHeldByUs }
+        if let onDisk = currentHolder(), onDisk.instanceID != instanceID {
+            held = false
+            throw LockError.lockLost(onDisk)
+        }
         let holder = makeHolder(now: now)
         let data = try JSONEncoder().encode(holder)
         try coordinatedWrite(options: [.forReplacing]) { url in

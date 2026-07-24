@@ -11,7 +11,7 @@ import FinvestLensEngine
 
 /// The kind of proactive alert (`FR-PLAN-05`, Advisor-FYI).
 public enum AlertKind: String, Sendable, Codable {
-    case billDue, lowBalance, overBudget, priceTarget
+    case billDue, lowBalance, overBudget, priceTarget, unusualSpend
 }
 
 /// Alert urgency.
@@ -81,10 +81,12 @@ public extension FinancialReports {
                 date: bill.dueDate))
         }
 
-        // Over budget (warning).
+        // Over budget (warning). Income lines are excluded: actuals are
+        // sign-adjusted so earned income is positive, and income landing
+        // above its planned figure is favourable — not overspending.
         for budget in budgets {
             for line in budgetActuals(book, budget: budget, from: monthStart(asOf), to: asOf, currency: currency)
-            where line.isOverBudget {
+            where line.isOverBudget && book.account(with: line.id)?.type != .income {
                 alerts.append(FinancialAlert(
                     id: "budget:\(line.id.hexString)",
                     kind: .overBudget, severity: .warning,
@@ -93,6 +95,9 @@ public extension FinancialReports {
                     date: nil))
             }
         }
+
+        // Unusual spend (info) — FR-PLAN-05's fifth alert kind.
+        alerts.append(contentsOf: unusualSpendAlerts(book, asOf: asOf, currency: currency))
 
         // Projected low / negative balance.
         if let forecastAccountID {
@@ -125,6 +130,53 @@ public extension FinancialReports {
         }
 
         return alerts.sorted { ($0.severity, $0.date ?? .distantFuture) > ($1.severity, $1.date ?? .distantFuture) }
+    }
+
+    /// Expense accounts whose current-month spend runs at least `ratio`×
+    /// their trailing `months`-month average, and at least `floor` currency
+    /// units past it (`FR-PLAN-05` "unusual spend"). Transparent arithmetic —
+    /// the message shows both figures, no black box. Accounts denominated in
+    /// other commodities are skipped so units never mix.
+    static func unusualSpendAlerts(_ book: Book, asOf: Date, currency: Commodity,
+                                   months: Int = 6,
+                                   ratio: Decimal = 2, floor: Decimal = 100) -> [FinancialAlert] {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "UTC") ?? .current
+        let currentStart = monthStart(asOf)
+        guard months > 0,
+              let historyStart = cal.date(byAdding: .month, value: -months, to: currentStart)
+        else { return [] }
+
+        var current: [GncGUID: Decimal] = [:]
+        var history: [GncGUID: Decimal] = [:]
+        var names: [GncGUID: String] = [:]
+        for txn in book.transactions {
+            let date = txn.datePosted
+            guard date >= historyStart, date <= asOf else { continue }
+            for split in txn.splits {
+                guard let account = split.account, account.type == .expense,
+                      account.commodity == currency, split.value > 0 else { continue }
+                names[account.guid] = account.name
+                if date >= currentStart {
+                    current[account.guid, default: 0] += split.value
+                } else {
+                    history[account.guid, default: 0] += split.value
+                }
+            }
+        }
+
+        var alerts: [FinancialAlert] = []
+        for (guid, spent) in current {
+            let average = currency.round((history[guid] ?? 0) / Decimal(months))
+            guard average > 0, spent >= average * ratio, spent - average >= floor else { continue }
+            alerts.append(FinancialAlert(
+                id: "unusual:\(guid.hexString)",
+                kind: .unusualSpend, severity: .info,
+                title: "Unusual spend: \(names[guid] ?? "")",
+                message: "\(AmountFormat.money(spent, currency)) this month — usually about \(AmountFormat.money(average, currency))",
+                date: nil))
+        }
+        return alerts.sorted { $0.id < $1.id }
     }
 
     private static func monthStart(_ date: Date) -> Date {

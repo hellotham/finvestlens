@@ -105,7 +105,7 @@ extension AppModel {
             // Category order: assets, liabilities, equity, income, expenses,
             // then everything else; integrity groups last.
             func rank(_ group: (title: String, nodes: [StatementBuilder.Node])) -> Int {
-                if group.title == "Uncategorised" { return 9 }
+                if group.title == StatementLabels.uncategorised { return 9 }
                 var weights: [AccountType: Decimal] = [:]
                 for node in group.nodes { node.typeWeights(into: &weights) }
                 switch weights.max(by: { $0.value < $1.value })?.key {
@@ -127,7 +127,7 @@ extension AppModel {
                     forest: group.nodes,
                     ordering: .magnitude,
                     columnCount: 2,
-                    protected: { $0.name == "Uncategorised" }))
+                    protected: { $0.name == StatementLabels.uncategorised }))
             }
 
             let format = AppDateFormat.current

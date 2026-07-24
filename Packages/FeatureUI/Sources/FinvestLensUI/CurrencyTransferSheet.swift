@@ -24,8 +24,8 @@ struct CurrencyTransferSheet: View {
     @State private var errorText: String?
 
     private var accounts: [AccountNode] { model.settlementAccountNodes }
-    private var sourceAmount: Decimal? { Decimal(string: sourceText) }
-    private var destAmount: Decimal? { Decimal(string: destText) }
+    private var sourceAmount: Decimal? { EditableSplit.strictDecimal(sourceText.trimmingCharacters(in: .whitespaces)) }
+    private var destAmount: Decimal? { EditableSplit.strictDecimal(destText.trimmingCharacters(in: .whitespaces)) }
 
     private var fromCode: String { accounts.first { $0.id == fromID }?.currencyCode ?? "" }
     private var toCode: String { accounts.first { $0.id == toID }?.currencyCode ?? "" }

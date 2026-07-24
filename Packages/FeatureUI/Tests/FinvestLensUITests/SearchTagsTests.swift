@@ -46,6 +46,8 @@ struct SearchTagsTests {
         ])
 
         model.searchQuery = "tag:work"
+
+        model.runSearch()
         #expect(model.searchResults.count == 1)
         #expect(model.searchResults.first?.description == "Woolworths")
     }
@@ -65,6 +67,7 @@ struct SearchTagsTests {
             SplitInput(accountID: bank, value: dec("-10")),
         ])
         model.searchQuery = "account:Groceries amount:>100"
+        model.runSearch()
         #expect(model.searchResults.count == 1)
         #expect(model.searchResults.first?.description == "Woolworths big shop")
     }
@@ -86,14 +89,17 @@ struct SearchTagsTests {
 
         // Negation: everything that is NOT Woolworths.
         model.searchQuery = "-Woolworths"
+        model.runSearch()
         #expect(model.searchResults.map(\.description) == ["Salary"])
 
         // type: matches a split's account type.
         model.searchQuery = "type:expense"
+        model.runSearch()
         #expect(model.searchResults.count == 2)   // both touch Groceries
 
         // has:tag finds the tagged transaction only.
         model.searchQuery = "has:tag"
+        model.runSearch()
         #expect(model.searchResults.map(\.description) == ["Woolworths"])
     }
 

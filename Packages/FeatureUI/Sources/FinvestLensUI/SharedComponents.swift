@@ -122,39 +122,4 @@ struct EmbeddedQuickLook: NSViewRepresentable {
 }
 #endif
 
-/// P3's compute-off-body wrapper: paints immediately (spinner on first load,
-/// stale content while refreshing), then builds the report in a task — the
-/// model memoises per (parameters, book revision), so a body pass never
-/// computes anything. `key` must change when the parameters or the book do.
-struct AsyncReport<Key: Equatable, Value, Content: View>: View {
-    let key: Key
-    let title: String
-    let build: @MainActor () -> Value?
-    @ViewBuilder let content: (Value) -> Content
 
-    /// Wrapped so "built, but the report was nil" (no book, nothing to
-    /// report) is distinct from "not built yet".
-    @State private var built: [Value?] = []
-
-    var body: some View {
-        Group {
-            if let value = built.first {
-                if let value {
-                    content(value)
-                } else {
-                    ContentUnavailableView("Nothing to report", systemImage: "doc.text.magnifyingglass")
-                }
-            } else {
-                ProgressView("Building \(title)…")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            }
-        }
-        .task(id: key) {
-            // One runloop turn so the placeholder actually paints before a
-            // seconds-long first build (the build itself is main-actor: the
-            // engine book is not sendable, and edits race a background read).
-            await Task.yield()
-            built = [build()]
-        }
-    }
-}

@@ -49,3 +49,12 @@ public struct KvpFrame: Hashable, Codable, Sendable {
         set { slots[key] = newValue }
     }
 }
+
+/// Book-level `finvestlens/*` KVP slot keys that cross module boundaries —
+/// the Interchange importer writes them, the app model and intents read them
+/// back. A drifted literal on either side silently orphans persisted data
+/// (imported schedules invisible to the app), so the strings live once, here.
+public enum BookKvpKeys {
+    public static let scheduledTransactions = "finvestlens/scheduledTransactions"
+    public static let budgets = "finvestlens/budgets"
+}

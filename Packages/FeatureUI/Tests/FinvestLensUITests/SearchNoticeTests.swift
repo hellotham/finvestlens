@@ -52,6 +52,8 @@ struct SearchNoticeTests {
 
         model.searchQuery = "date:2026"
 
+        model.runSearch()
+
         #expect(model.searchResults.isEmpty)
         #expect(model.searchNotices == [.unknownKey("date")])
         #expect(model.isSearching, "the results pane must still appear to say 'no results'")
@@ -68,6 +70,8 @@ struct SearchNoticeTests {
 
         model.searchQuery = "Date:"
 
+        model.runSearch()
+
         #expect(model.searchResults.count == 1, "the literal search must still run")
         #expect(model.searchNotices == [.unknownKey("date")], "and must still say what it did")
     }
@@ -79,6 +83,7 @@ struct SearchNoticeTests {
 
         for query in ["account:CDIA", "desc:NRMA", "memo:x", "amount:>1", "tag:foo", "acct:CDIA"] {
             model.searchQuery = query
+            model.runSearch()
             #expect(model.searchNotices.isEmpty, "\(query) is a real operator")
         }
     }
@@ -89,6 +94,8 @@ struct SearchNoticeTests {
         defer { model.close(); try? FileManager.default.removeItem(at: url) }
 
         model.searchQuery = "NRMA"
+
+        model.runSearch()
         #expect(model.searchNotices.isEmpty)
         #expect(model.searchResults.count == 1)
     }
@@ -101,6 +108,8 @@ struct SearchNoticeTests {
         defer { model.close(); try? FileManager.default.removeItem(at: url) }
 
         model.searchQuery = "09:30"
+
+        model.runSearch()
         #expect(model.searchNotices.isEmpty)
     }
 
@@ -110,6 +119,8 @@ struct SearchNoticeTests {
         defer { model.close(); try? FileManager.default.removeItem(at: url) }
 
         model.searchQuery = "date:2026 date:2025 notes:x"
+
+        model.runSearch()
         #expect(model.searchNotices == [.unknownKey("date"), .unknownKey("notes")])
     }
 
@@ -119,6 +130,8 @@ struct SearchNoticeTests {
         defer { model.close(); try? FileManager.default.removeItem(at: url) }
 
         model.searchQuery = "date:2026"
+
+        model.runSearch()
         #expect(!model.searchNotices.isEmpty)
 
         model.searchQuery = ""
