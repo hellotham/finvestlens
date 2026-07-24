@@ -730,6 +730,27 @@ struct DashboardView: View {
     private var perfHoldingPoints: [PerfPoint] { perfSeries.filter { !$0.isPortfolio } }
     private var perfPortfolioPoints: [PerfPoint] { perfSeries.filter(\.isPortfolio) }
 
+    /// Each holding's return at its last sampled date — i.e. its rate of
+    /// return since the beginning of the timescale — ranked best-first and
+    /// split into the top and bottom three. The two groups are disjoint
+    /// slices of one ordering, so with six or fewer holdings nothing appears
+    /// twice (and with three or fewer only the top row shows).
+    static func rankPerfLeaders(_ holdingPoints: [PerfPoint])
+        -> (top: [(series: String, pct: Double)], bottom: [(series: String, pct: Double)]) {
+        var latest: [String: PerfPoint] = [:]
+        for point in holdingPoints where !point.isPortfolio {
+            if let existing = latest[point.series], existing.date >= point.date { continue }
+            latest[point.series] = point
+        }
+        let ranked = latest.values
+            .sorted { $0.returnPct == $1.returnPct ? $0.series < $1.series
+                                                   : $0.returnPct > $1.returnPct }
+            .map { (series: $0.series, pct: $0.returnPct) }
+        let top = Array(ranked.prefix(3))
+        let bottom = Array(ranked.dropFirst(top.count).suffix(3))
+        return (top, bottom)
+    }
+
     @ViewBuilder
     private func performanceCard() -> some View {
         Card("Performance", systemImage: "chart.line.uptrend.xyaxis.circle") {
@@ -737,38 +758,52 @@ struct DashboardView: View {
                 Text("No priced holdings to value over this period.")
                     .scaledFont(.callout).foregroundStyle(.secondary)
             } else {
-                Chart {
-                    // Individual holdings: thin, de-emphasised — the divergence is
-                    // the story, identity comes from the hover tooltip.
-                    ForEach(perfHoldingPoints) { p in
-                        LineMark(x: .value("Date", p.date), y: .value("Return", p.returnPct),
-                                 series: .value("Security", p.series))
-                            .foregroundStyle(by: .value("Security", p.series))
-                            .lineStyle(StrokeStyle(lineWidth: 1))
-                            .opacity(0.45)
+                VStack(alignment: .leading, spacing: 6) {
+                    Chart {
+                        // Individual holdings: thin, de-emphasised — the divergence is
+                        // the story, identity comes from the hover tooltip.
+                        ForEach(perfHoldingPoints) { p in
+                            LineMark(x: .value("Date", p.date), y: .value("Return", p.returnPct),
+                                     series: .value("Security", p.series))
+                                .foregroundStyle(by: .value("Security", p.series))
+                                .lineStyle(StrokeStyle(lineWidth: 1))
+                                .opacity(0.45)
+                        }
+                        // The portfolio: bold, on top, in the foreground colour.
+                        ForEach(perfPortfolioPoints) { p in
+                            LineMark(x: .value("Date", p.date), y: .value("Return", p.returnPct),
+                                     series: .value("Series", Self.portfolioSeries))
+                                .foregroundStyle(.primary)
+                                .lineStyle(StrokeStyle(lineWidth: 3))
+                        }
+                        RuleMark(y: .value("Zero", 0)).foregroundStyle(.secondary.opacity(0.3))
+                            .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
                     }
-                    // The portfolio: bold, on top, in the foreground colour.
-                    ForEach(perfPortfolioPoints) { p in
-                        LineMark(x: .value("Date", p.date), y: .value("Return", p.returnPct),
-                                 series: .value("Series", Self.portfolioSeries))
-                            .foregroundStyle(.primary)
-                            .lineStyle(StrokeStyle(lineWidth: 3))
+                    .chartLegend(.hidden)
+                    .chartYAxis { AxisMarks(format: FloatingPointFormatStyle<Double>.Percent.percent.precision(.fractionLength(0))) }
+                    .frame(minHeight: 150, maxHeight: .infinity)
+                    .chartOverlay { proxy in perfHoverOverlay(proxy) }
+                    .overlay(alignment: .topLeading) {
+                        if let perfHover {
+                            perfTooltip(at: perfHover.date)
+                                .fixedSize()
+                                .offset(x: min(perfHover.at.x + 8, 40), y: 8)
+                        }
                     }
-                    RuleMark(y: .value("Zero", 0)).foregroundStyle(.secondary.opacity(0.3))
-                        .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
+                    .accessibilityLabel("Each holding's return over \(model.label(for: period)), rebased to the start; hover for all holdings and the portfolio")
+
+                    // Who drove the divergence: the best and worst holdings,
+                    // each with its return since the start of the timescale.
+                    let leaders = Self.rankPerfLeaders(perfHoldingPoints)
+                    if !leaders.top.isEmpty {
+                        perfLeaderRow(icon: "arrowtriangle.up.fill", tint: .green,
+                                      title: "Top", entries: leaders.top)
+                        if !leaders.bottom.isEmpty {
+                            perfLeaderRow(icon: "arrowtriangle.down.fill", tint: .red,
+                                          title: "Bottom", entries: leaders.bottom)
+                        }
+                    }
                 }
-                .chartLegend(.hidden)
-                .chartYAxis { AxisMarks(format: FloatingPointFormatStyle<Double>.Percent.percent.precision(.fractionLength(0))) }
-                .frame(minHeight: 150, maxHeight: .infinity)
-                .chartOverlay { proxy in perfHoverOverlay(proxy) }
-                .overlay(alignment: .topLeading) {
-                    if let perfHover {
-                        perfTooltip(at: perfHover.date)
-                            .fixedSize()
-                            .offset(x: min(perfHover.at.x + 8, 40), y: 8)
-                    }
-                }
-                .accessibilityLabel("Each holding's return over \(model.label(for: period)), rebased to the start; hover for all holdings and the portfolio")
             }
         }
     }
@@ -818,6 +853,41 @@ struct DashboardView: View {
         .background(.thickMaterial, in: RoundedRectangle(cornerRadius: 8))
         .shadow(radius: 4)
         .allowsHitTesting(false)
+    }
+
+    /// One footer line of ranked holdings, explicitly labelled:
+    /// "▲ Top 3   BHP +18.2%  CSL +12.0%  VAS +9.1%". The count is the real
+    /// row length ("Bottom 2" on a five-holding book, "Top 2" on a two-holding
+    /// one), and each value keeps the sign colour — a "top" performer can
+    /// still be down in a falling market.
+    private func perfLeaderRow(icon: String, tint: Color, title: String,
+                               entries: [(series: String, pct: Double)]) -> some View {
+        HStack(spacing: 10) {
+            HStack(spacing: 3) {
+                Image(systemName: icon).foregroundStyle(tint)
+                    .font(.caption2)
+                    .accessibilityHidden(true)
+                Text("\(title) \(entries.count)")
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.secondary)
+            }
+            ForEach(entries, id: \.series) { entry in
+                HStack(spacing: 3) {
+                    Text(entry.series).foregroundStyle(.secondary)
+                    Text(entry.pct, format: .percent.precision(.fractionLength(1)))
+                        .monospacedDigit()
+                        .foregroundStyle(entry.pct < 0 ? .red : .green)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .scaledFont(.caption2)
+        .lineLimit(1)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(title) \(entries.count) performers since the start of the period: "
+            + entries.map { entry in
+                "\(entry.series) \(entry.pct.formatted(.percent.precision(.fractionLength(1))))"
+            }.joined(separator: ", "))
     }
 
     private func perfRow(name: String, pct: Double, bold: Bool) -> some View {
