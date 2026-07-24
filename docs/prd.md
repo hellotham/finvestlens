@@ -90,6 +90,7 @@ FinvestLens is delivered in phases. Requirement priorities use **MoSCoW** (Must 
 | **P7 — Business features** | SMB | Customers/vendors, invoices/bills, tax tables, A/R–A/P |
 | **P8 — Extended import/export** | Interop breadth | MT940/MT942 + CAMT.053 import; online bank sync; PDF export |
 | **P9 — Planning & insights** | Money-inspired | Debt Reduction Planner, Lifetime Planner, tax estimator, insights/comparison reports |
+| **P10 — Ledger CLI & interchange** | Plain-text accounting | Ledger 3 journal import/export; the read-only `finlens` CLI (balance/register/print…) — design in [ledger-design.md](ledger-design.md) |
 
 Planning features that layer onto earlier phases (bill reminders, cash-flow forecast, alerts, budgets, payee rules, portfolio, dashboard, onboarding) are scheduled within P4–P7 — see [§5.16](#516-planning-forecasting--insights-microsoft-moneyinspired) and the [enhancement study](enhancements-msmoney.md). An optional on-device **Apple Intelligence** layer ([§5.18](#518-on-device-intelligence-apple-intelligence), FR-AI-01…08) adds PDF statement/invoice/dividend import, auto-categorisation, and budget/forecast narration over the same engine — see [Architecture §11](architecture.md#11-apple-intelligence-integration-intelligence-package).
 
@@ -268,6 +269,8 @@ FinvestLens is a **document-based app** with its **own native file format** (a s
 | FR-XIO-08 | Support **save/load of CSV import settings** (column-mapping profiles) for repeat imports. | Should | P4 |
 | FR-XIO-06 | Export **CSV** for accounts, transactions, and prices. | Should | P4 |
 | FR-XIO-04 | Import **MT940 / MT942** and **CAMT.053** (ISO 20022) bank statement formats — native parsers feeding the Import Matcher, with extension + content-sniffing format detection. *(Delivered 24 Jul 2026.)* | Could | P8 ✅ |
+| FR-XIO-09 | Import the **Ledger 3 plain-text journal** format (transactions, postings, costs `@`/`@@`, states, tags/metadata, aux dates, prices, the living directive set), with per-line errors, an import summary, and balance-assertion verification. Policies for the features that defy a strict engine (unbalanced virtuals, automated entries) are recorded in [ledger-design.md](ledger-design.md) §4. | Could | P10 |
+| FR-XIO-10 | Export a **Ledger 3 journal** the real `ledger` binary parses, deterministic and round-trippable (GUIDs/types/states/tags via ledger-legal metadata comments; securities/FX as `@@` total-cost postings; prices as `P` lines). | Could | P10 |
 | FR-XIO-07 | **Online bank sync** via modern aggregation APIs — **SimpleFIN** / **GoCardless (Nordigen)** and, for Australia, the **Consumer Data Right (CDR / Open Banking)** via an **accredited intermediary** — feeding the Import Matcher. Optional, explicitly consented, cloud-mediated; the app stays fully functional offline. *(Skipped from the phase plan 24 Jul 2026 — [deferred.md](deferred.md) §5; revisit only on strong demand.)* | Won't-for-now | — |
 
 ### 5.15 Platform integration
@@ -322,6 +325,18 @@ Automation and organization features that layer onto the engine. See the [enhanc
 | FR-BUD-03 | **Auto-budgets**: budgets that **auto-replenish** each period (fixed or rollover); support a **zero-based** budgeting workflow. *(Extends `FR-BUD-*`, `FR-PLAN-04`.)* | Could | P4 |
 | FR-RULE-03 | **Default category taxonomy + heuristic auto-categorisation** (Frollo-inspired): ship a standard category set and auto-suggest categories/merchant-name cleanup on import, complementing the rules engine and Import Matcher (optional on-device enrichment later). | Should | P4 |
 | FR-GOAL-02 | **Savings challenges** (Frollo-inspired): gamified, time-boxed savings challenges layered on savings goals, with in-app prompts/notifications. | Could | P9 ✅ |
+
+### 5.18a Command-line interface (ledger-modelled) — P10
+
+A read-only CLI (`finlens`) over `.finvestlens` books, Ledger journals, and GnuCash files, modelled on [Ledger 3](https://ledger-cli.org)'s commands, query language and report shapes. Design: [ledger-design.md](ledger-design.md).
+
+| ID | Requirement | Pri | Phase |
+|---|---|---|---|
+| FR-CLI-01 | Provide the core reporting commands — `balance`, `register`, `print`, `csv`, `accounts`, `payees`, `commodities`, `prices`, `pricedb`, `stats`, `equity`, `cleared`, `source` — with ledger's layouts (tree balance with chain elision and grand total, running-total register, canonical `print`). | Could | P10 |
+| FR-CLI-02 | Support ledger's query idioms (account regexes with implicit OR, `and/or/not`, `@payee`, `%tag`, `#code`, `=note`), smart dates, `-b/-e/-p` period expressions, state filters, and sort/display options per the core-80 subset in [ledger-cli-reference.md](ledger-cli-reference.md). | Could | P10 |
+| FR-CLI-03 | Operate **strictly read-only**: open books via a read-only store connection with no lock, no working copy, and no writes — safe against a book the app has open (verified by test). | Must (within P10) | P10 |
+| FR-CLI-04 | Valuation flags (`-V`, `-X`, `-B`, `-H`) over the book's price database and journal-implied costs. | Could | P10 |
+| FR-CLI-05 | An **interactive REPL** (no-command invocation): sources loaded once, one report command per prompt, with `push`/`pop`/`reload` as in ledger. | Could | P10 |
 
 ### 5.18 On-device intelligence (Apple Intelligence)
 
@@ -408,6 +423,7 @@ Book
 8. **P7 Business features** — customers/vendors, invoices/bills, tax tables, A/R–A/P. *(FR-BUS-\*)*
 9. **P8 Extended import/export** — MT940/MT942 + CAMT.053 bank-statement import; online bank sync; PDF export. *(FR-XIO-04/07, FR-RPT-05)*
 10. **P9 Planning & insights** — Debt Reduction Planner, Lifetime Planner, tax estimator/tagging, insights/comparison reports. *(FR-PLAN-10..13, 15..17, FR-GOAL-*)* Earlier planning features (bill reminders, forecast, alerts, payee rules, portfolio, dashboard, onboarding) map to P4–P7. *(FR-PLAN-01..09, 14)*
+11. **P10 Ledger CLI & interchange** — Ledger 3 journal import/export; the `finlens` read-only CLI. *(FR-XIO-09/10, FR-CLI-\*; design: [ledger-design.md](ledger-design.md))*
 
 ---
 

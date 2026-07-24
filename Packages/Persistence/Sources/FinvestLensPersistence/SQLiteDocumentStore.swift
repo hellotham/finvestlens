@@ -35,6 +35,21 @@ public final class SQLiteDocumentStore {
         }
     }
 
+    /// Read-only access for tools (the `finlens` CLI, ADR-L2): the SQLite
+    /// connection refuses every write, no migration runs, and the caller
+    /// never takes the advisory lock — safe against a book the app has open.
+    /// Fails if the on-disk schema is newer than expected only at `read()`
+    /// time, like any read of an incompatible file.
+    public init(readOnlyPath path: String) throws {
+        var configuration = Configuration()
+        configuration.readonly = true
+        dbQueue = try DatabaseQueue(path: path, configuration: configuration)
+        changeCounter = try dbQueue.read { db in
+            try Int64.fetchOne(db, sql: "SELECT value FROM meta WHERE key = 'changeCounter'")
+                .flatMap { $0 } ?? 0
+        }
+    }
+
     // MARK: Schema
 
     private static var migrator: DatabaseMigrator {

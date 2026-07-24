@@ -64,5 +64,28 @@ enum DocumentDialogs {
 
         model.importGnuCashBook(from: source, saveAs: destination)
     }
+
+    /// File ▸ Import Ledger Journal…: pick the journal, then where to save
+    /// the converted native book (`FR-XIO-09`).
+    static func importLedger(_ model: AppModel) {
+        let open = NSOpenPanel()
+        open.title = "Import Ledger Journal"
+        open.message = "Choose a Ledger journal (.ledger, .journal, .dat)."
+        open.allowedContentTypes = [.plainText, .data]
+        open.allowsOtherFileTypes = true
+        open.allowsMultipleSelection = false
+        guard open.runModal() == .OK, let source = open.url else { return }
+
+        let save = NSSavePanel()
+        save.title = "Save Imported Book"
+        save.message = "Choose where to save the converted FinvestLens book."
+        save.nameFieldStringValue = source.deletingPathExtension()
+            .lastPathComponent + ".finvestlens"
+        save.allowedContentTypes = [documentType]
+        save.canCreateDirectories = true
+        guard save.runModal() == .OK, let destination = save.url else { return }
+
+        model.importLedgerBook(from: source, saveAs: destination)
+    }
 }
 #endif

@@ -336,3 +336,41 @@ struct LoadWarningsTests {
         #expect(summary.contains("1 identifier"))
     }
 }
+
+@Suite("Read-only store access (ADR-L2)")
+struct ReadOnlyStoreTests {
+
+    @Test("A read-only store reads the book, refuses writes, and leaves the file untouched")
+    func readOnly() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        // Author a book with the normal read-write store.
+        let writer = try SQLiteDocumentStore(path: url.path)
+        let book = Book(baseCurrency: .aud)
+        let bank = book.addAccount(Account(name: "Bank", type: .bank, commodity: .aud))
+        let food = book.addAccount(Account(name: "Food", type: .expense, commodity: .aud))
+        let txn = Transaction(currency: .aud, datePosted: Date(timeIntervalSince1970: 0),
+                              description: "Shop")
+        txn.addSplit(Split(account: food, value: 10))
+        txn.addSplit(Split(account: bank, value: -10))
+        book.addTransaction(txn)
+        try writer.write(book)
+
+        let before = try Data(contentsOf: url)
+
+        let reader = try SQLiteDocumentStore(readOnlyPath: url.path)
+        let loaded = try reader.read()
+        #expect(loaded.transactions.count == 1)
+        #expect(loaded.accounts.count == 2)
+
+        // Writing through the read-only connection must throw…
+        #expect(throws: (any Error).self) { try reader.write(loaded) }
+        // …and the file is byte-identical afterwards (the CLI's guarantee).
+        #expect(try Data(contentsOf: url) == before)
+        // No sibling lock appeared either.
+        let lockURL = url.deletingPathExtension().appendingPathExtension("lock")
+        #expect(!FileManager.default.fileExists(atPath: lockURL.path))
+    }
+}

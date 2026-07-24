@@ -81,6 +81,81 @@ struct GnuCashFileDocument: FileDocument {
     }
 }
 
+/// A Ledger 3 journal for `.fileExporter` (`FR-XIO-10`, export only).
+struct LedgerFileDocument: FileDocument {
+    static var readableContentTypes: [UTType] { [.plainText] }
+
+    var text: String
+    init(text: String) { self.text = text }
+    init(configuration: ReadConfiguration) throws {
+        text = String(decoding: configuration.file.regularFileContents ?? Data(), as: UTF8.self)
+    }
+    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
+        FileWrapper(regularFileWithContents: Data(text.utf8))
+    }
+}
+
+/// The three whole-book export chains (GnuCash XML, Ledger journal, CSV),
+/// lifted out of the root view's body: each is a request flag → document →
+/// `fileExporter` pair, and inline they pushed the body past the
+/// type-checker's budget.
+private struct FileExportModifiers: ViewModifier {
+    @Bindable var model: AppModel
+    @Binding var exportDocument: GnuCashFileDocument?
+    @Binding var showingExport: Bool
+    @Binding var ledgerDocument: LedgerFileDocument?
+    @Binding var showingLedgerExport: Bool
+    @Binding var ledgerFilename: String
+    @Binding var csvDocument: CSVFileDocument?
+    @Binding var showingCSVExport: Bool
+    @Binding var csvFilename: String
+
+    private var bookName: String {
+        model.documentURL?.deletingPathExtension().lastPathComponent ?? "FinvestLens"
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .onChange(of: model.exportRequested) {
+                guard model.exportRequested else { return }
+                model.exportRequested = false
+                guard let data = model.gnuCashExportData() else { return }
+                exportDocument = GnuCashFileDocument(data: data)
+                showingExport = true
+            }
+            .fileExporter(isPresented: $showingExport, document: exportDocument,
+                          contentType: GnuCashFileDocument.contentType,
+                          defaultFilename: "Book") { _ in
+                exportDocument = nil
+            }
+            .onChange(of: model.ledgerExportRequested) {
+                guard model.ledgerExportRequested else { return }
+                model.ledgerExportRequested = false
+                guard let text = model.ledgerExportText() else { return }
+                ledgerFilename = bookName + ".ledger"
+                ledgerDocument = LedgerFileDocument(text: text)
+                showingLedgerExport = true
+            }
+            .fileExporter(isPresented: $showingLedgerExport, document: ledgerDocument,
+                          contentType: .plainText,
+                          defaultFilename: ledgerFilename) { _ in
+                ledgerDocument = nil
+            }
+            .onChange(of: model.csvExportRequest) {
+                guard let kind = model.csvExportRequest else { return }
+                model.csvExportRequest = nil
+                csvFilename = kind.filename(book: bookName)
+                csvDocument = CSVFileDocument(text: model.csvExport(kind))
+                showingCSVExport = true
+            }
+            .fileExporter(isPresented: $showingCSVExport, document: csvDocument,
+                          contentType: .commaSeparatedText,
+                          defaultFilename: csvFilename) { _ in
+                csvDocument = nil
+            }
+    }
+}
+
 /// A UTF-8 CSV file for `.fileExporter` (`FR-XIO-06`, export only).
 struct CSVFileDocument: FileDocument {
     static var readableContentTypes: [UTType] { [.commaSeparatedText] }
@@ -256,6 +331,9 @@ public struct FinvestLensRootView: View {
     @Environment(\.openWindow) private var openWindow
     @State private var showingExport = false
     @State private var exportDocument: GnuCashFileDocument?
+    @State private var ledgerDocument: LedgerFileDocument?
+    @State private var showingLedgerExport = false
+    @State private var ledgerFilename = "Book.ledger"
     @State private var showingCSVExport = false
     @State private var csvDocument: CSVFileDocument?
     @State private var csvFilename = "Export"
@@ -502,30 +580,13 @@ public struct FinvestLensRootView: View {
             Text(statementError ?? "")
         }
         .onAppear(perform: offerOnboardingIfEmpty)
-        .onChange(of: model.exportRequested) {
-            guard model.exportRequested else { return }
-            model.exportRequested = false
-            if let data = model.gnuCashExportData() {
-                exportDocument = GnuCashFileDocument(data: data)
-                showingExport = true
-            }
-        }
-        .fileExporter(isPresented: $showingExport, document: exportDocument,
-                      contentType: GnuCashFileDocument.contentType, defaultFilename: "Book") { _ in
-            exportDocument = nil
-        }
-        .onChange(of: model.csvExportRequest) {
-            guard let kind = model.csvExportRequest else { return }
-            model.csvExportRequest = nil
-            let bookName = model.documentURL?.deletingPathExtension().lastPathComponent ?? "FinvestLens"
-            csvFilename = kind.filename(book: bookName)
-            csvDocument = CSVFileDocument(text: model.csvExport(kind))
-            showingCSVExport = true
-        }
-        .fileExporter(isPresented: $showingCSVExport, document: csvDocument,
-                      contentType: .commaSeparatedText, defaultFilename: csvFilename) { _ in
-            csvDocument = nil
-        }
+        .modifier(FileExportModifiers(
+            model: model,
+            exportDocument: $exportDocument, showingExport: $showingExport,
+            ledgerDocument: $ledgerDocument, showingLedgerExport: $showingLedgerExport,
+            ledgerFilename: $ledgerFilename,
+            csvDocument: $csvDocument, showingCSVExport: $showingCSVExport,
+            csvFilename: $csvFilename))
         .sheet(isPresented: $model.showingHelp) { HelpView() }
         .sheet(item: $model.printCheckRequestTxnID) { txnID in
             CheckPrintSheet(model: model, txnID: txnID)

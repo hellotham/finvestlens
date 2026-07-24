@@ -755,6 +755,8 @@ public final class AppModel {
     public var bankImportRequested = false
     /// Set by menu commands to trigger the GnuCash XML exporter in the root view.
     public var exportRequested = false
+    /// File ▸ Export Ledger Journal… (`FR-XIO-10`).
+    public var ledgerExportRequested = false
     /// Set by menu commands to trigger a CSV export (`FR-XIO-06`); the root view
     /// renders it and presents the save panel.
     public var csvExportRequest: CSVExportKind?
@@ -1464,6 +1466,76 @@ public final class AppModel {
     public func gnuCashExportData(compressed: Bool = false) -> Data? {
         guard let book else { return nil }
         return GnuCashXMLExporter.export(book, compressed: compressed)
+    }
+
+    /// The current book as a Ledger 3 journal (`FR-XIO-10`) — the same
+    /// canonical text the `finlens print` command emits. `nil` if no
+    /// document is open.
+    public func ledgerExportText() -> String? {
+        guard let book else { return nil }
+        return LedgerExport.text(from: book)
+    }
+
+    /// Imports a Ledger journal as a new native book, reporting the summary
+    /// (or the failure) the way the GnuCash import does.
+    public func importLedgerBook(from source: URL, saveAs destination: URL) {
+        guard saveAndCloseIfOpen() else { return }
+        do {
+            let summary = try importLedger(from: source, saveAs: destination)
+            recordLastBook(destination)
+            var note = "Imported \(summary.accountsCreated) accounts and "
+                + "\(summary.transactions) transactions from “\(source.lastPathComponent)”."
+            var caveats: [String] = []
+            if summary.assertionsChecked > 0 {
+                caveats.append("\(summary.assertionsChecked) balance assertion"
+                    + (summary.assertionsChecked == 1 ? "" : "s") + " checked"
+                    + (summary.assertionsFailed > 0 ? " (\(summary.assertionsFailed) failed)" : ""))
+            }
+            if summary.assignmentsResolved > 0 {
+                caveats.append("\(summary.assignmentsResolved) balance assignment"
+                    + (summary.assignmentsResolved == 1 ? "" : "s") + " resolved")
+            }
+            if summary.unbalancedVirtualsSkipped > 0 {
+                caveats.append("\(summary.unbalancedVirtualsSkipped) unbalanced virtual posting"
+                    + (summary.unbalancedVirtualsSkipped == 1 ? "" : "s") + " skipped")
+            }
+            if summary.periodicIgnored + summary.automatedIgnored > 0 {
+                caveats.append("\(summary.periodicIgnored + summary.automatedIgnored) periodic/automated entr"
+                    + (summary.periodicIgnored + summary.automatedIgnored == 1 ? "y" : "ies") + " not applied")
+            }
+            let errors = summary.diagnostics.filter { $0.severity == .error }
+            if !errors.isEmpty {
+                caveats.append("\(errors.count) line" + (errors.count == 1 ? "" : "s")
+                    + " could not be read (first: \(errors[0].description))")
+            }
+            if !caveats.isEmpty { note += " " + caveats.joined(separator: "; ") + "." }
+            if let proposal = cleanupProposal(importNote: note) {
+                pendingCleanup = proposal
+            } else {
+                infoMessage = note
+            }
+        } catch {
+            documentError = DocumentError(
+                message: "Couldn’t import “\(source.lastPathComponent)”: \(error.localizedDescription)")
+        }
+    }
+
+    /// Parses a Ledger journal and saves it as a new native document.
+    @discardableResult
+    public func importLedger(from source: URL, saveAs destination: URL) throws -> LedgerImportSummary {
+        let parsed = try LedgerParser.parse(fileAt: source)
+        let result = LedgerImport.importBook(parsed: parsed)
+        let doc = try FinvestLensDocument.create(at: destination,
+                                                 baseCurrency: result.book.baseCurrency)
+        try replaceBook(of: doc, with: result.book)
+        document = doc
+        reloadKvpCollections()
+        refreshAll()
+        startQuoteAutoRefresh()
+        startDocumentMaintenance()
+        observeExternalChanges()
+        resetUndoStack()
+        return result.summary
     }
 
     public func save() throws {

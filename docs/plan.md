@@ -25,6 +25,7 @@ This is the authoritative **delivery schedule and status record**. It sequences 
 | **Report-quality redesign** | ✅ Complete (24 Jul 2026) | Statements at annual-report standard — face-and-notes presentation from the user's own tree, ASC 274 ordering, accounting typography, comparatives, incl. the Trial Balance — plus the Financial Review and Investment Review slide decks with validator-grounded on-device insights. Plan/research: [report-redesign.md](report-redesign.md); design: [architecture.md §5.6a](architecture.md); narrative in [implemented.md](implemented.md). |
 | **P8 — Extended import** | ✅ Complete (24 Jul 2026) | MT940/MT942 + CAMT.053 importers feed the Import Matcher; format auto-detection incl. content sniffing. Online bank sync (FR-XIO-07) **skipped by decision (24 Jul 2026)** — moved to [deferred.md](deferred.md) §5. |
 | **P9 — Planning & insights** | ✅ Complete (24 Jul 2026) | Debt & Lifetime planners, tax estimator, Spending Insights, wellbeing score, passport PDF, savings challenges, Emergency Records, audit log — design in [planning-design.md](planning-design.md). |
+| **P10 — Ledger CLI & interchange** | 🚧 **In progress** (P10a/P10b done 25 Jul 2026) | Ledger 3 journal import/export + the read-only `finlens` CLI. Research + phased plan in [ledger-design.md](ledger-design.md) (format spec: [ledger-format-reference.md](ledger-format-reference.md), CLI spec: [ledger-cli-reference.md](ledger-cli-reference.md)). |
 
 **Every phase P0–P9 is delivered**; a set of low-priority tails deferred *within* them is tracked, ranked, in [deferred.md](deferred.md). The narrative of what was built, with the audits and measurements behind it, is in [implemented.md](implemented.md).
 
@@ -283,6 +284,28 @@ Dependencies point downward only; `Engine` builds/tests with nothing above it (`
 **Risks.** Lifetime Planner is large and assumption-heavy — ship a transparent, adjustable model; label projections clearly (not advice, per NG4).
 
 ---
+
+## 13b. Phase P10 — Ledger CLI & interchange (planned)
+
+**Status.** 🔲 **Designed, not started** (25 Jul 2026). Full research and the
+phased plan live in [ledger-design.md](ledger-design.md); the journal-format
+and CLI specs (verified against the Ledger 3 manual and its C++ source) are
+[ledger-format-reference.md](ledger-format-reference.md) and
+[ledger-cli-reference.md](ledger-cli-reference.md).
+
+**Objective.** Bridge to plain-text accounting: read/write Ledger 3 journals
+with GnuCash-XML-grade round-trip seriousness, and ship `finlens` — a
+ledger-modelled, strictly read-only CLI over `.finvestlens` books, ledger
+journals, and GnuCash files.
+
+**Sub-phases** (each releasable; detail + exit criteria in the design doc §7):
+- ✅ **P10a** — Ledger codec core in Interchange (parser + canonical writer; fixed-point pinned).
+- ✅ **P10b** — Book ⟷ journal mapping, read-only store access, app File ▸ Import/Export menus; real-book round-trip verified byte-identical with zero errors. *(FR-XIO-09/10)*
+- **P10c** — the `finlens` CLI package: core-80 commands, query/period grammars, the interactive REPL, golden-output tests, read-only guarantee. *(FR-CLI-01..03, 05)*
+- **P10d** — depth on demand: valuation flags, periodic grouping, `--budget` family, `xact`, mini value-expressions. *(FR-CLI-04)*
+
+**Dependencies.** P1 (store), P3 (interchange patterns), P5 (PriceDB for valuation).
+**Risks.** Grammar breadth; output-fidelity expectations; foreign journals vs the double-entry invariant — mitigations in the design doc §8.
 
 ## 14. Quality gates (apply every phase)
 
