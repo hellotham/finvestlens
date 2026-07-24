@@ -114,8 +114,10 @@ struct finvestlensApp: App {
                 Divider()
                 #if os(macOS)
                 Button("Import GnuCash…") { DocumentDialogs.importGnuCash(model) }
+                Button("Import Ledger Journal…") { DocumentDialogs.importLedger(model) }
                 #endif
                 Button("Export GnuCash…") { model.exportRequested = true }
+                Button("Export Ledger Journal…") { model.ledgerExportRequested = true }
                     .keyboardShortcut("e", modifiers: [.command, .shift])
                     .disabled(!model.isOpen)
                 #if os(macOS)
