@@ -137,20 +137,9 @@ extension AppModel {
         AmountFormat.string(value, code: code)
     }
 
-    /// "[redacted]" — deck callouts breathe better compact.
+    /// "[redacted]" — deck callouts breathe better compact (shared formatter).
     private func compact(_ value: Decimal, _ code: String) -> String {
-        let double = NSDecimalNumber(decimal: value).doubleValue
-        let symbol = AmountFormat.string(0, code: code).first.map(String.init) ?? ""
-        let magnitude = abs(double)
-        let sign = double < 0 ? "−" : ""
-        switch magnitude {
-        case 1_000_000...:
-            return "\(sign)\(symbol)\(String(format: "%.2f", magnitude / 1_000_000))m"
-        case 10_000...:
-            return "\(sign)\(symbol)\(String(format: "%.0f", magnitude / 1_000))k"
-        default:
-            return "\(sign)\(money(abs(value), code))"
-        }
+        AmountFormat.compact(value, code: code)
     }
 
     private func percentDelta(_ current: Decimal, _ prior: Decimal) -> Decimal? {

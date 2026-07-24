@@ -157,7 +157,39 @@ extension AppModel {
     /// End of the current day — the stable stand-in for "now" in report memo
     /// keys (a raw `Date()` would make every call a cache miss).
     static func endOfToday() -> Date {
-        Calendar.current.startOfDay(for: Date()).addingTimeInterval(24 * 3600)
+        // Calendar arithmetic, not +86 400: a DST transition day is 23 or 25
+        // hours long, and the fixed offset put the cap at 23:00 the same day
+        // (dropping late-evening postings) or 01:00 tomorrow (leaking the
+        // next day in) — mis-bounding every "as of now" report twice a year.
+        let calendar = Calendar.current
+        let start = calendar.startOfDay(for: Date())
+        return calendar.date(byAdding: .day, value: 1, to: start)
+            ?? start.addingTimeInterval(86_400)
+    }
+
+    /// One dot on the price-history scatter — `id` derives from the symbol and
+    /// observation date, so identities are stable across renders and Charts
+    /// can diff instead of rebuilding every mark.
+    public struct PriceScatterPoint: Identifiable, Sendable {
+        public let id: String
+        public let symbol: String
+        public let date: Date
+        public let price: Double
+    }
+
+    /// Every security price as a scatter point, memoised per revision —
+    /// building this in the view was O(securities × prices) per body pass.
+    public func priceScatterPoints() -> [PriceScatterPoint] {
+        cachedReport("priceScatter") {
+            securitiesWithPriceHistory.flatMap { commodity in
+                priceHistory(for: commodity).map {
+                    PriceScatterPoint(
+                        id: "\(commodity.mnemonic):\($0.date.timeIntervalSinceReferenceDate)",
+                        symbol: commodity.mnemonic, date: $0.date,
+                        price: NSDecimalNumber(decimal: $0.value).doubleValue)
+                }
+            }
+        } ?? []
     }
 
     /// Securities that have at least one recorded price (candidates for the

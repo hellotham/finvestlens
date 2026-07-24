@@ -135,5 +135,4 @@ public enum BusinessError: Error, Equatable, Sendable {
     case notPosted
     case wrongPostingAccount
     case entryMissingAccount
-    case noOpenLots
 }

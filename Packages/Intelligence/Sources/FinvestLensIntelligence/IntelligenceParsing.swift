@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import FinvestLensInterchange
 
 /// Tolerant parsing of model-generated values.
 ///
@@ -17,28 +18,29 @@ import Foundation
 public enum IntelligenceParsing {
 
     /// Parses a monetary string: `"$1,234.56"`, `"(45.20)"`, `"-45.20"`, `"CR 12.00"`.
+    ///
+    /// Delegates the numeric core to `ImportParsing.amount` — the bank-file
+    /// importers' parser — after handling the DR/CR markers statements print.
+    /// Two drifted copies meant the EU separator disambiguation ("1.234,56",
+    /// "45,20") lived only in the import pipeline while AI-extracted amounts
+    /// silently misparsed 100×.
     public static func amount(_ raw: String) -> Decimal? {
         var text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return nil }
-        var negative = false
-        if text.hasPrefix("(") && text.hasSuffix(")") {
-            negative = true
-            text = String(text.dropFirst().dropLast())
-        }
         // A debit marker is its own token ("500 DR", "DR 500") — a bare
         // suffix test would read the currency code in "500 IDR" as one.
+        var debit = false
         let upper = text.uppercased()
-        if upper == "DR" || upper.hasSuffix(" DR") || upper.hasPrefix("DR ") {
-            negative = true
+        if upper == "DR" { return nil }   // a marker with no number
+        if upper.hasSuffix(" DR") {
+            debit = true
+            text = String(text.dropLast(3))
+        } else if upper.hasPrefix("DR ") {
+            debit = true
+            text = String(text.dropFirst(3))
         }
-        text = text.filter { $0.isNumber || $0 == "." || $0 == "-" }
-        // A lone trailing minus (European style "45.20-") still means negative.
-        if text.hasSuffix("-") {
-            negative = true
-            text = String(text.dropLast())
-        }
-        guard let value = Decimal(string: text), !text.isEmpty else { return nil }
-        return negative && value > 0 ? -value : value
+        guard let value = ImportParsing.amount(text) else { return nil }
+        return debit && value > 0 ? -value : value
     }
 
     /// Parses a model-generated date, preferring ISO `yyyy-MM-dd`.

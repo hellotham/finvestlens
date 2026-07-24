@@ -316,7 +316,7 @@ struct InvoiceEditorSheet: View {
         }
     }
 
-    private func dec(_ s: String) -> Decimal { Decimal(string: s.trimmingCharacters(in: .whitespaces)) ?? 0 }
+    private func dec(_ s: String) -> Decimal { EditableSplit.strictDecimal(s.trimmingCharacters(in: .whitespaces)) ?? 0 }
 
     private var total: Decimal {
         lines.reduce(Decimal(0)) { running, line in
@@ -672,7 +672,7 @@ struct ProcessPaymentSheet: View {
             !$0.isPlaceholder && ($0.type == .bank || $0.type == .cash || $0.type == .asset)
         }
     }
-    private func dec(_ s: String) -> Decimal { Decimal(string: s.trimmingCharacters(in: .whitespaces)) ?? 0 }
+    private func dec(_ s: String) -> Decimal { EditableSplit.strictDecimal(s.trimmingCharacters(in: .whitespaces)) ?? 0 }
 
     var body: some View {
         NavigationStack {
@@ -894,7 +894,7 @@ struct TaxTablesSheet: View {
     @State private var percentage = "10"
     @FocusState private var nameFocused: Bool
 
-    private func dec(_ s: String) -> Decimal { Decimal(string: s.trimmingCharacters(in: .whitespaces)) ?? 0 }
+    private func dec(_ s: String) -> Decimal { EditableSplit.strictDecimal(s.trimmingCharacters(in: .whitespaces)) ?? 0 }
     /// Tax collected is a liability (GST payable) or, for purchases, an asset.
     private var taxAccounts: [Account] {
         (model.book?.accounts ?? []).filter {

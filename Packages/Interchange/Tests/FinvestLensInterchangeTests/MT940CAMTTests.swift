@@ -187,8 +187,11 @@ struct CAMTImportTests {
         #expect(rows[1].reference == "TX-778899")
         #expect(rows[1].payee == "HELLO THAM CHRIS THAM")
 
-        // A booked reversal of a debit flips back to a credit.
-        #expect(rows[2].amount == Decimal(50))
+        // CdtDbtInd carries the reversal entry's own direction (ISO 20022:
+        // "if CdtDbtInd is CRDT and RvslInd is Yes, the ORIGINAL operation was
+        // a debit"), so DBIT + RvslInd stays a debit — no second flip. SWIFT
+        // MT940's RC/RD marks are the opposite convention and DO flip.
+        #expect(rows[2].amount == Decimal(-50))
         #expect(rows[2].memo == "REVERSAL OF FEE")
     }
 

@@ -29,16 +29,22 @@ public struct SavingsGoal: Identifiable, Codable, Hashable, Sendable {
     /// An optional group name for organising goals (Firefly's object groups).
     public var group: String
     public var notes: String
+    /// An optional link to a scheduled transaction (a bill) this goal is
+    /// saving toward — `FR-GOAL-01`'s "optionally link a goal to a bill".
+    public var billID: GncGUID?
 
     public init(id: GncGUID = .random(), name: String, accountGUID: GncGUID? = nil,
                 targetAmount: Decimal = 0, savedAmount: Decimal = 0,
-                targetDate: Date? = nil, group: String = "", notes: String = "") {
+                targetDate: Date? = nil, group: String = "", notes: String = "",
+                billID: GncGUID? = nil) {
         self.id = id; self.name = name; self.accountGUID = accountGUID
         self.targetAmount = targetAmount; self.savedAmount = savedAmount
         self.targetDate = targetDate; self.group = group; self.notes = notes
+        self.billID = billID
     }
 
-    /// Older slots predate `group`/`notes`/`targetDate`; decode them as absent.
+    /// Older slots predate `group`/`notes`/`targetDate`/`billID`; decode them
+    /// as absent.
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = try c.decode(GncGUID.self, forKey: .id)
@@ -49,6 +55,7 @@ public struct SavingsGoal: Identifiable, Codable, Hashable, Sendable {
         targetDate = try c.decodeIfPresent(Date.self, forKey: .targetDate)
         group = try c.decodeIfPresent(String.self, forKey: .group) ?? ""
         notes = try c.decodeIfPresent(String.self, forKey: .notes) ?? ""
+        billID = try c.decodeIfPresent(GncGUID.self, forKey: .billID)
     }
 
     /// The amount still to save (never below zero).

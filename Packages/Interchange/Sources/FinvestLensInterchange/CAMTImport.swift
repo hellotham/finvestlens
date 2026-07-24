@@ -12,8 +12,12 @@ import Foundation
 /// and, because the entry structure is identical, CAMT.052 account reports.
 ///
 /// A streaming `XMLParser` reads each `<Ntry>` into one staged row:
-/// - `Amt` signed by `CdtDbtInd` (`DBIT` → negative), flipped again by a true
-///   `RvslInd` (a booked reversal undoes the original direction);
+/// - `Amt` signed by `CdtDbtInd` (`DBIT` → negative). `RvslInd` is
+///   informational only: ISO 20022 defines `CdtDbtInd` as the direction of
+///   the reversal entry *itself* ("if CdtDbtInd is CRDT and RvslInd is true,
+///   the original operation was a debit entry"), so no second flip — unlike
+///   SWIFT MT940's `RC`/`RD` marks, which name the *original* direction and
+///   do flip;
 /// - entries whose status is `PDNG` are skipped — they re-arrive booked on the
 ///   next statement (both the plain `<Sts>` text and the nested `<Sts><Cd>`
 ///   of the .001.08+ versions are read);
@@ -156,8 +160,10 @@ private final class Delegate: NSObject, XMLParserDelegate {
     private func finishEntry() {
         guard status != "PDNG", let amount, amount != 0,
               let date = bookingDate ?? valueDate else { return }
-        var negative = isDebit
-        if isReversal { negative.toggle() }
+        // CdtDbtInd already carries the reversal entry's own direction, so a
+        // booked reversal needs no flip (see the type doc; flipping imported
+        // every CAMT refund with an inverted sign).
+        let negative = isDebit
 
         let reference = !entryReference.isEmpty ? entryReference
             : !detailReference.isEmpty ? detailReference
@@ -173,10 +179,8 @@ private final class Delegate: NSObject, XMLParserDelegate {
     }
 
     private static func date(_ raw: String) -> Date? {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = TimeZone(identifier: "UTC")
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.date(from: String(raw.prefix(10)))
+        // Shared cached UTC/POSIX day parser — a fresh DateFormatter per
+        // entry row was the expensive part of parsing large statements.
+        GnuCashDate.parseDayOnly(raw)
     }
 }

@@ -31,6 +31,15 @@ public enum BookClosing {
         public var closedAccountCount: Int
     }
 
+    /// Closing cannot proceed safely.
+    public enum ClosingError: Error, Equatable {
+        /// The equity account is denominated in a different commodity and the
+        /// price database has no rate (direct, inverse, or one-hop) to convert
+        /// the period result — booking the raw value would misstate equity by
+        /// the FX factor, so the close aborts instead.
+        case missingExchangeRate(from: String, to: String)
+    }
+
     /// Builds closing transactions as of `date` (inclusive), moving income and
     /// expense balances into `equity`. Returns an empty result when nothing has
     /// a balance to close.
@@ -40,7 +49,7 @@ public enum BookClosing {
     ///   - equity: the equity account the period result lands in.
     ///   - description: the closing transactions' description.
     public static func build(in book: Book, asOf date: Date, into equity: Account,
-                             description: String = "Closing Entries") -> Result {
+                             description: String = "Closing Entries") throws -> Result {
         // Every account's balance as of the date, in one pass.
         let balances = book.balancesByAccount(to: date)
 
@@ -70,10 +79,17 @@ public enum BookClosing {
             // The balancing leg into equity carries the period result. Its value
             // is in the transaction (P&L) currency; when equity is denominated in
             // a different commodity the quantity must be converted, or the equity
-            // balance would read the foreign value as if it were its own currency.
-            let equityQty = equity.commodity == currency
-                ? equityQuantity
-                : (book.convert(equityQuantity, from: currency, to: equity.commodity, on: date) ?? equityQuantity)
+            // balance would read the foreign value as if it were its own currency
+            // — and with no rate available the close aborts rather than booking
+            // the unconverted figure.
+            let equityQty: Decimal
+            if equity.commodity == currency {
+                equityQty = equityQuantity
+            } else if let converted = book.convert(equityQuantity, from: currency, to: equity.commodity, on: date) {
+                equityQty = converted
+            } else {
+                throw ClosingError.missingExchangeRate(from: currency.mnemonic, to: equity.commodity.mnemonic)
+            }
             txn.addSplit(Split(account: equity, value: equityQuantity, quantity: equityQty))
             transactions.append(txn)
         }

@@ -50,6 +50,8 @@ struct SearchNavigationTests {
         defer { model.close(); try? FileManager.default.removeItem(at: url) }
 
         model.searchQuery = "Acme"
+
+        model.runSearch()
         #expect(model.searchResults.count == 1)
 
         model.showInRegister(txn)
@@ -149,6 +151,8 @@ struct SearchNavigationTests {
         defer { model.close(); try? FileManager.default.removeItem(at: url) }
 
         model.searchQuery = "Acme"
+
+        model.runSearch()
         model.showInRegister(.random())
 
         #expect(model.searchQuery == "Acme", "a bad id must not clear the user's search")

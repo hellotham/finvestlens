@@ -98,6 +98,12 @@ struct TransactionMemberTests {
         txn.statementDate = nil
         #expect(txn.statementDate == nil)
         #expect(txn.kvp["finvestlens/statement-date"] == nil)
+
+        // A GnuCash-XML round-trip re-imports a non-midnight value as
+        // `.timespec` — the getter must read that flavour too, or the slot
+        // silently loses its meaning after one export/import cycle.
+        txn.kvp["finvestlens/statement-date"] = .timespec(day(12))
+        #expect(txn.statementDate == day(12))
     }
 
     @Test("Document links trim and clear like GnuCash associations")

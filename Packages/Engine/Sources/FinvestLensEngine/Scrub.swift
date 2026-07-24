@@ -64,7 +64,15 @@ public enum Scrub {
                 continue
             }
             if transaction.splits.count < 2 {
-                issues.append(.degenerateTransaction(transaction.guid, splitCount: transaction.splits.count))
+                // A single zero-value split with a non-zero quantity is a stock
+                // split — the shape the split assistant (and GnuCash's) records.
+                // GnuCash's own scrub accepts it; only flag the rest.
+                let isStockSplitShape = transaction.splits.count == 1
+                    && transaction.splits[0].value == 0
+                    && transaction.splits[0].quantity != 0
+                if !isStockSplitShape {
+                    issues.append(.degenerateTransaction(transaction.guid, splitCount: transaction.splits.count))
+                }
             }
             if !transaction.isBalanced {
                 issues.append(.unbalancedTransaction(

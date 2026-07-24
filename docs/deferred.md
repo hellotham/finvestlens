@@ -8,8 +8,10 @@ Two items were **skipped from the plan by decision** (online bank sync from
 P8, TXF export from P9) — §5 below. The 24 Jul 2026 backlog pass built
 everything else that was buildable without external dependencies (credit
 notes, the round-trip fidelity tail, load-time warnings, the iOS rename/move
-flow, rule link-to-bill — see [implemented.md](implemented.md)); what remains
-below needs hardware, runners, translators, or a judgement call.
+flow, rule link-to-bill), and the 25 Jul 2026 full-codebase review pass closed
+the two remaining PRD *Should* gaps it surfaced (the unusual-spend alert and
+goal-to-bill links) — see [implemented.md](implemented.md). What remains below
+needs hardware, runners, translators, or a judgement call.
 
 Each row cites its PRD `FR-*`/`NFR-*` and the phase it belonged to.
 
@@ -33,7 +35,8 @@ Common workflows partly built; each is a bounded piece of work.
 
 | Item | FR / Phase | Notes |
 |---|---|---|
-| Rule actions tail | FR-RULE-01 / P4 | **link-to-bill shipped 24 Jul 2026** (a rule stamps the payment with the schedule's GUID; bill reminders match it exactly before falling back to the name heuristic). Remaining: **convert-type** only — fuzzy in a double-entry model, left by judgement. |
+| Rule actions tail | FR-RULE-01 / P4 | **link-to-bill shipped 24 Jul 2026** (a rule stamps the payment with the schedule's GUID; bill reminders match it exactly before falling back to the name heuristic). Remaining, both left by judgement: **convert-type** (fuzzy in a double-entry model) and **set-budget** (budgets here are per-account planned amounts — a rule "assigning a budget" to a transaction has no coherent target; recorded 25 Jul 2026). |
+| Quick Look for `.gnucash` | FR-PLT-03 / P6 | The QL extension previews `.finvestlens` (read-only SQLite). Extending it to `.gnucash` needs a UTImportedTypeDeclarations entry plus a gzip-XML preview path (linking Interchange into the extension) — left by judgement 25 Jul 2026: GnuCash files are the interchange format, not the document users browse. |
 
 ## 3 — Apple Intelligence import caveats (monitor)
 

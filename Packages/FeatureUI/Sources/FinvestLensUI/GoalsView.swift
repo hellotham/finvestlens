@@ -50,7 +50,10 @@ struct GoalsView: View {
                             Section(group.name.isEmpty ? "Goals" : group.name) {
                                 ForEach(group.goals) { goal in
                                     GoalRow(goal: goal, code: code,
-                                            accountName: goal.accountGUID.flatMap { model.accountName($0) })
+                                            accountName: goal.accountGUID.flatMap { model.accountName($0) },
+                                            billName: goal.billID.flatMap { id in
+                                                model.scheduledTransactions.first { $0.id == id }?.name
+                                            })
                                         .contentShape(Rectangle())
                                         .onTapGesture { editing = goal }
                                         .contextMenu {
@@ -185,7 +188,7 @@ private struct ChallengeEditorSheet: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Start") {
                         guard let goalID,
-                              let amount = Decimal(string: target.trimmingCharacters(in: .whitespaces)),
+                              let amount = EditableSplit.strictDecimal(target.trimmingCharacters(in: .whitespaces)),
                               amount > 0 else { return }
                         model.addChallenge(goalID: goalID,
                                            name: name.trimmingCharacters(in: .whitespaces),
@@ -193,7 +196,7 @@ private struct ChallengeEditorSheet: View {
                         dismiss()
                     }
                     .disabled(goalID == nil || name.trimmingCharacters(in: .whitespaces).isEmpty
-                              || Decimal(string: target.trimmingCharacters(in: .whitespaces)) == nil)
+                              || EditableSplit.strictDecimal(target.trimmingCharacters(in: .whitespaces)) == nil)
                 }
             }
         }
@@ -207,6 +210,7 @@ private struct GoalRow: View {
     let goal: SavingsGoal
     let code: String
     let accountName: String?
+    var billName: String? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -214,6 +218,11 @@ private struct GoalRow: View {
                 Text(goal.name).fontWeight(.medium)
                 if goal.isComplete {
                     Image(systemName: "checkmark.seal.fill").foregroundStyle(.green)
+                }
+                if let billName {
+                    Label(billName, systemImage: "calendar.badge.clock")
+                        .font(.caption).foregroundStyle(.secondary)
+                        .help("Saving toward this bill")
                 }
                 Spacer()
                 Text(AmountFormat.string(goal.savedAmount, code: code)
@@ -251,8 +260,9 @@ private struct GoalEditorSheet: View {
     @State private var hasDate = false
     @State private var date = Date()
     @State private var group = ""
+    @State private var billID: GncGUID?
 
-    private func dec(_ s: String) -> Decimal { Decimal(string: s.trimmingCharacters(in: .whitespaces)) ?? 0 }
+    private func dec(_ s: String) -> Decimal { EditableSplit.strictDecimal(s.trimmingCharacters(in: .whitespaces)) ?? 0 }
     private var isValid: Bool { !name.trimmingCharacters(in: .whitespaces).isEmpty && accountID != nil }
 
     var body: some View {
@@ -268,6 +278,16 @@ private struct GoalEditorSheet: View {
                     DatePicker("By", selection: $date, displayedComponents: .date)
                 }
                 TextField("Group (optional)", text: $group)
+                if !model.scheduledTransactions.isEmpty {
+                    // FR-GOAL-01: a goal can save toward a bill — e.g. an
+                    // annual insurance premium accumulated monthly.
+                    Picker("Linked bill", selection: $billID) {
+                        Text("None").tag(GncGUID?.none)
+                        ForEach(model.scheduledTransactions) { schedule in
+                            Text(schedule.name).tag(GncGUID?.some(schedule.id))
+                        }
+                    }
+                }
             }
             .formStyle(.grouped)
             .navigationTitle(goal == nil ? "New Goal" : "Edit Goal")
@@ -292,6 +312,7 @@ private struct GoalEditorSheet: View {
         hasDate = goal.targetDate != nil
         date = goal.targetDate ?? Date()
         group = goal.group
+        billID = goal.billID
     }
 
     private func save() {
@@ -301,6 +322,7 @@ private struct GoalEditorSheet: View {
         edited.targetAmount = dec(target)
         edited.targetDate = hasDate ? date : nil
         edited.group = group.trimmingCharacters(in: .whitespaces)
+        edited.billID = billID
         if goal == nil { model.addSavingsGoal(edited) } else { model.updateSavingsGoal(edited) }
         dismiss()
     }
@@ -316,7 +338,7 @@ private struct GoalAdjustSheet: View {
     @State private var adding = true
 
     private var code: String { model.reportCurrency.mnemonic }
-    private func dec(_ s: String) -> Decimal { Decimal(string: s.trimmingCharacters(in: .whitespaces)) ?? 0 }
+    private func dec(_ s: String) -> Decimal { EditableSplit.strictDecimal(s.trimmingCharacters(in: .whitespaces)) ?? 0 }
 
     var body: some View {
         NavigationStack {

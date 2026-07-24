@@ -99,6 +99,12 @@ extension AppModel {
 
         let foreign = currencyCommodity(currencyCode)
         let rounded = foreign.round(foreignAmount)
+        // The implied rate's local side is the TRANSACTION's currency —
+        // captured before the restructure rewrites it. Recording it against
+        // the report currency wrote a quantitatively wrong rate for the wrong
+        // pair whenever the legs sat in a foreign-denominated account (a
+        // USD-account EUR invoice stored EUR→AUD ≈ 1.08 where truth ≈ 1.65).
+        let localCurrency = txn.currency
         editing([transactionID], named: "Record Foreign Amount") {
             txn.currency = foreign
             for split in txn.splits {
@@ -107,15 +113,19 @@ extension AppModel {
                 split.quantity = localValue   // what moves the account, unchanged
             }
         }
-        recordFxRate(code: currencyCode, rate: local / rounded, date: txn.datePosted)
+        recordFxRate(code: currencyCode, rate: local / rounded,
+                     date: txn.datePosted, in: localCurrency)
         return true
     }
 
     /// Records a user-confirmed rate (e.g. the implied rate of a purchase whose
-    /// foreign and local amounts are both known) into the price DB.
-    public func recordFxRate(code: String, rate: Decimal, date: Date) {
+    /// foreign and local amounts are both known) into the price DB. The rate is
+    /// local-per-foreign, so the pair recorded is foreign → `localCurrency`
+    /// (defaulting to the report currency for report-level callers).
+    public func recordFxRate(code: String, rate: Decimal, date: Date,
+                             in localCurrency: Commodity? = nil) {
         // One rate-recording implementation app-wide.
-        addExchangeRate(from: currencyCommodity(code), to: reportCurrency,
+        addExchangeRate(from: currencyCommodity(code), to: localCurrency ?? reportCurrency,
                         rate: rate, date: date)
     }
 }

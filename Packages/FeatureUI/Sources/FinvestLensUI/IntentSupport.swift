@@ -27,11 +27,11 @@ public enum IntentSupport {
     }
 
     static func baseCurrency(_ book: Book) -> Commodity {
-        book.commodities.first { $0.namespace == .currency } ?? .aud
+        book.baseCurrency
     }
 
     private static func decodeScheduled(_ book: Book) -> [ScheduledTransaction] {
-        guard case let .string(json)? = book.kvp["finvestlens/scheduledTransactions"],
+        guard case let .string(json)? = book.kvp[BookKvpKeys.scheduledTransactions],
               let data = json.data(using: .utf8) else { return [] }
         return (try? JSONDecoder().decode([ScheduledTransaction].self, from: data)) ?? []
     }

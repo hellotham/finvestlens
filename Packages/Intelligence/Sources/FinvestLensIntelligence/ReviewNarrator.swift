@@ -77,9 +77,31 @@ public enum ReviewStoryValidator {
             .joined(separator: " ")
         let exempt = numericTokens(in: exemptSource)
 
+        // Calendar years are quotable only when the slide's own words name
+        // them: the label's years (with "FY 2024–25" expanded to 2025) plus a
+        // ±1 neighbourhood for natural YoY prose. The old blanket 1900–2100
+        // exemption let fabricated figures like "$2,000" or "2050" through
+        // ungrounded — the exact failure class this validator exists to stop.
+        var allowedYears: Set<Decimal> = []
+        var namedYears: [Int] = []
+        var suffixes: [Int] = []
+        for token in exempt where token.decimalPlaces == 0 && !token.hasGrouping {
+            let intValue = NSDecimalNumber(decimal: token.value).intValue
+            if (1900...2100).contains(intValue) { namedYears.append(intValue) }
+            else if (0...99).contains(intValue) { suffixes.append(intValue) }
+        }
+        for year in namedYears {
+            for delta in -1...1 { allowedYears.insert(Decimal(year + delta)) }
+            for suffix in suffixes {
+                let expanded = (year / 100) * 100 + suffix
+                if (1900...2100).contains(expanded) { allowedYears.insert(Decimal(expanded)) }
+            }
+        }
+
         for token in numericTokens(in: text) {
-            // Calendar years read as dates, not figures.
-            if token.decimalPlaces == 0, token.value >= 1900, token.value <= 2100 {
+            // A named calendar year reads as a date, not a figure — but only
+            // ungrouped ("2025", never "2,025") and only years the facts name.
+            if token.decimalPlaces == 0, !token.hasGrouping, allowedYears.contains(token.value) {
                 continue
             }
             if exempt.contains(where: {
@@ -94,7 +116,7 @@ public enum ReviewStoryValidator {
         return true
     }
 
-    struct Token { var value: Decimal; var decimalPlaces: Int }
+    struct Token { var value: Decimal; var decimalPlaces: Int; var hasGrouping = false }
 
     static func numericTokens(in text: String) -> [Token] {
         var tokens: [Token] = []
@@ -102,13 +124,14 @@ public enum ReviewStoryValidator {
         func flush() {
             guard !current.isEmpty else { return }
             defer { current = "" }
+            let grouped = current.contains(",")
             let cleaned = current.replacingOccurrences(of: ",", with: "")
             guard cleaned.contains(where: \.isNumber),
                   let value = Decimal(string: cleaned) else { return }
             let places = cleaned.contains(".")
                 ? cleaned.split(separator: ".").last.map { $0.count } ?? 0
                 : 0
-            tokens.append(Token(value: abs(value), decimalPlaces: places))
+            tokens.append(Token(value: abs(value), decimalPlaces: places, hasGrouping: grouped))
         }
         for character in text {
             if character.isNumber || character == "." || character == "," {

@@ -7,6 +7,7 @@
 //  This file is part of FinvestLens.
 //
 //  Copyright (C) 2026 Christine Tham
+//  SPDX-License-Identifier: GPL-3.0-or-later
 //
 //  FinvestLens is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by

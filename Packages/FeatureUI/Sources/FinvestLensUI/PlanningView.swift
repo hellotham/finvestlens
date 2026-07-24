@@ -75,7 +75,7 @@ struct DebtPlannerView: View {
     private var debts: [DebtPlan.Debt] { model.plannerDebts() }
     private var code: String { model.reportCurrency.mnemonic }
 
-    private func dec(_ s: String) -> Decimal { Decimal(string: s.trimmingCharacters(in: .whitespaces)) ?? 0 }
+    private func dec(_ s: String) -> Decimal { EditableSplit.strictDecimal(s.trimmingCharacters(in: .whitespaces)) ?? 0 }
 
     /// The planner inputs as currently edited (percent fields are per-cent).
     private var editedDebts: [DebtPlan.Debt] {
@@ -204,7 +204,7 @@ struct DebtPlannerView: View {
 
     private func payoffDate(_ months: Int) -> String {
         let date = Calendar.current.date(byAdding: .month, value: months, to: Date()) ?? Date()
-        return date.formatted(.dateTime.month(.abbreviated).year())
+        return AppDateFormat.current.monthYear(date)
     }
 
     private func binding(_ store: Binding<[GncGUID: String]>, _ id: GncGUID) -> Binding<String> {
@@ -414,7 +414,7 @@ struct LifetimePlannerView: View {
                 Button("Add") {
                     guard let year = Int(eventYear.trimmingCharacters(in: .whitespaces)),
                           !eventName.isEmpty else { return }
-                    let amount = Decimal(string: eventAmount.trimmingCharacters(in: .whitespaces)) ?? 0
+                    let amount = EditableSplit.strictDecimal(eventAmount.trimmingCharacters(in: .whitespaces)) ?? 0
                     update { $0.events.append(.init(name: eventName, year: year, amount: amount)) }
                     eventName = ""; eventYear = ""; eventAmount = ""
                     persist()
@@ -484,7 +484,7 @@ private struct DecimalTextField: View {
                 }
                 .onChange(of: text) { _, fresh in
                     guard focused,
-                          let parsed = Decimal(string: fresh.trimmingCharacters(in: .whitespaces))
+                          let parsed = EditableSplit.strictDecimal(fresh.trimmingCharacters(in: .whitespaces))
                     else { return }
                     value = parsed / scale
                 }

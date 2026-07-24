@@ -18,7 +18,7 @@ import FinvestLensReports
 // MARK: - Stored models (book KVP)
 
 /// The user's figures for one debt — statements don't carry APR or minimums.
-public struct DebtInput: Codable, Sendable, Equatable, Identifiable {
+public struct DebtInput: Codable, Sendable, Equatable, Hashable, Identifiable {
     public var id: GncGUID { accountID }
     public var accountID: GncGUID
     public var apr: Decimal
@@ -31,7 +31,7 @@ public struct DebtInput: Codable, Sendable, Equatable, Identifiable {
     }
 }
 
-public struct DebtPlanSettings: Codable, Sendable, Equatable {
+public struct DebtPlanSettings: Codable, Sendable, Equatable, Hashable {
     public var monthlyBudget: Decimal
     public var strategyRaw: String
     public var inputs: [DebtInput]
@@ -163,38 +163,37 @@ extension AppModel {
     /// inputs.
     public func plannerDebts() -> [DebtPlan.Debt] {
         guard let book else { return [] }
-        let inputs = Dictionary(uniqueKeysWithValues: debtPlanSettings.inputs.map { ($0.accountID, $0) })
-        let balances = book.balancesByAccount(from: nil, to: Self.endOfToday())
-        var debts: [DebtPlan.Debt] = []
-        for account in book.accounts where !account.isPlaceholder {
-            guard account.type == .credit || account.type == .liability else { continue }
-            let owed = -(balances[ObjectIdentifier(account)] ?? 0)
-            guard owed > 0 else { continue }
-            let input = inputs[account.guid]
-            debts.append(DebtPlan.Debt(id: account.guid, name: account.name,
-                                       balance: account.commodity.round(owed),
-                                       apr: input?.apr ?? 0,
-                                       minimumPayment: input?.minimumPayment ?? 0))
-        }
-        return debts.sorted { $0.balance > $1.balance }
+        // Memoised: the planner view reads this several times per body pass
+        // (and per keystroke in its fields), and each build walks every split
+        // in the book. `derivedRevision` invalidates on any edit, and the
+        // settings join the key so an APR/minimum change recomputes.
+        return cachedReport("plannerDebts:\(Self.endOfToday().timeIntervalSinceReferenceDate):\(debtPlanSettings.hashValue)") {
+            // `uniquingKeysWith`, not `uniqueKeysWithValues`: the inputs come
+            // straight from the book file's KVP slot, and a duplicated account
+            // entry in a hand-edited or foreign-written file must not crash
+            // the planner.
+            let inputs = Dictionary(debtPlanSettings.inputs.map { ($0.accountID, $0) },
+                                    uniquingKeysWith: { first, _ in first })
+            let balances = book.balancesByAccount(from: nil, to: Self.endOfToday())
+            var debts: [DebtPlan.Debt] = []
+            for account in book.accounts where !account.isPlaceholder {
+                guard account.type == .credit || account.type == .liability else { continue }
+                let owed = -(balances[ObjectIdentifier(account)] ?? 0)
+                guard owed > 0 else { continue }
+                let input = inputs[account.guid]
+                debts.append(DebtPlan.Debt(id: account.guid, name: account.name,
+                                           balance: account.commodity.round(owed),
+                                           apr: input?.apr ?? 0,
+                                           minimumPayment: input?.minimumPayment ?? 0))
+            }
+            return debts.sorted { $0.balance > $1.balance }
+        } ?? []
     }
 
     public func updateDebtPlanSettings(_ settings: DebtPlanSettings) {
         guard settings != debtPlanSettings else { return }
         debtPlanSettings = settings
         commitKvpCollections(named: "Change Debt Plan")
-    }
-
-    /// Runs the plan under the saved settings, plus the minimums-only baseline
-    /// it is measured against.
-    public func debtPlanResults() -> (plan: DebtPlan.Result, baseline: DebtPlan.Result)? {
-        let debts = plannerDebts()
-        guard !debts.isEmpty else { return nil }
-        let plan = DebtPlan.simulate(debts: debts, budget: debtPlanSettings.monthlyBudget,
-                                     strategy: debtPlanSettings.strategy, currency: reportCurrency)
-        let baseline = DebtPlan.simulate(debts: debts, budget: 0,
-                                         strategy: .minimumsOnly, currency: reportCurrency)
-        return (plan, baseline)
     }
 
     // MARK: Lifetime Planner (FR-PLAN-11)

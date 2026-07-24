@@ -56,6 +56,8 @@ struct ImportView: View {
 
     // Investment (security) rows — imported via the Stock Assistant path.
     @State private var investments: [StagedTransaction] = []
+    /// Rows whose broker reference is already posted (see `loadAndMatch`).
+    @State private var invAlreadyImported: Set<UUID> = []
     @State private var invSecurity: [UUID: GncGUID] = [:]
     @State private var invSettlement: GncGUID?
     @State private var invIncome: GncGUID?
@@ -232,7 +234,7 @@ struct ImportView: View {
     }
 
     private var targetCode: String {
-        accounts.first { $0.id == targetID }?.currencyCode ?? "AUD"
+        accounts.first { $0.id == targetID }?.currencyCode ?? model.reportCurrency.mnemonic
     }
 
     private func destination(for result: MatchResult) -> GncGUID? {
@@ -256,8 +258,15 @@ struct ImportView: View {
         assignments = [:]
 
         // Security rows take the Stock-Assistant path, pre-matching each to a
-        // security account by name/ticker where one exists.
+        // security account by name/ticker where one exists. Rows whose broker
+        // reference is already stamped on a posted transaction are flagged as
+        // duplicates — investment rows bypass the cash matcher, so without
+        // this a re-imported overlapping broker file re-created every trade.
         investments = model.investmentRows(from: staged)
+        let importedRefs = model.importedInvestmentReferences()
+        invAlreadyImported = Set(investments
+            .filter { !$0.reference.isEmpty && importedRefs.contains($0.reference) }
+            .map(\.id))
         invSecurity = [:]
         for row in investments {
             invSecurity[row.id] = model.matchingSecurityAccount(for: row)
@@ -272,13 +281,15 @@ struct ImportView: View {
     private var incomeAccounts: [AccountNode] { model.incomeAccountNodes }
     private var creatableInvestments: [StagedTransaction] {
         investments.filter { row in
-            guard let inv = row.investment else { return false }
+            guard let inv = row.investment, !invAlreadyImported.contains(row.id)
+            else { return false }
             let hasSecurity = invSecurity[row.id] != nil
             let hasIncome = invIncome != nil
             switch inv.action {
             case .buy, .sell: return hasSecurity && invSettlement != nil
             case .dividend: return hasIncome && invSettlement != nil
             case .reinvestDividend: return hasSecurity && hasIncome
+            case .returnOfCapital: return hasSecurity && invSettlement != nil
             case .other: return false
             }
         }
@@ -321,6 +332,10 @@ struct ImportView: View {
                 Text(inv?.action.rawValue.capitalized ?? "—").fontWeight(.medium)
                 Text(inv?.security ?? "").foregroundStyle(.secondary)
                 Spacer()
+                if invAlreadyImported.contains(row.id) {
+                    Label("Already imported", systemImage: "checkmark.circle")
+                        .foregroundStyle(.secondary).scaledFont(.caption)
+                }
                 Text(AmountFormat.string(row.amount, code: targetCode)).monospacedDigit()
             }
             if let inv, inv.quantity != 0 {

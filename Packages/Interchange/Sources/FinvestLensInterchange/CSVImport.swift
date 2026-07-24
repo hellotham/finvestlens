@@ -80,7 +80,7 @@ public struct CSVColumnMapping: Sendable {
 public enum CSVTransactionImporter {
 
     public static func parse(_ data: Data, mapping: CSVColumnMapping) -> [StagedTransaction] {
-        parse(String(decoding: data, as: UTF8.self), mapping: mapping)
+        parse(ImportParsing.decode(data), mapping: mapping)
     }
 
     public static func parse(_ text: String, mapping: CSVColumnMapping) -> [StagedTransaction] {
@@ -171,7 +171,7 @@ public struct CSVPriceColumnMapping: Sendable {
 public enum CSVPriceImporter {
 
     public static func parse(_ data: Data, mapping: CSVPriceColumnMapping) -> [StagedPrice] {
-        parse(String(decoding: data, as: UTF8.self), mapping: mapping)
+        parse(ImportParsing.decode(data), mapping: mapping)
     }
 
     public static func parse(_ text: String, mapping: CSVPriceColumnMapping) -> [StagedPrice] {

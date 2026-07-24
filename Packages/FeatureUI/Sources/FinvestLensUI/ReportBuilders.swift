@@ -512,8 +512,10 @@ extension AppModel {
         let fromYear = calendar.component(.year, from: from)
         let toYear = calendar.component(.year, from: to)
         if stride.year == 1 {
+            // Bare year for January-start FYs (compact column headers); the FY
+            // designation itself comes from the one shared formatter.
             return fromMonth == 1 ? "\(fromYear)"
-                : "FY \(fromYear)–\(String(format: "%02d", toYear % 100))"
+                : ReportPeriod.financialYearLabel(fromYear: fromYear, toYear: toYear)
         }
         if stride.month == 3 {
             return "Q\((fromMonth - 1) / 3 + 1) \(fromYear)"

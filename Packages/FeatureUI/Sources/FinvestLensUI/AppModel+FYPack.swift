@@ -29,7 +29,7 @@ extension AppModel {
         for _ in 0..<4 {
             let endYear = calendar.component(.year, from: range.to)
             let startYear = calendar.component(.year, from: range.from)
-            let label = startYear == endYear ? "FY \(endYear)" : "FY \(startYear)–\(String(endYear).suffix(2))"
+            let label = ReportPeriod.financialYearLabel(fromYear: startYear, toYear: endYear)
             years.append((label, range.from, range.to))
             guard range.to > oldest else { break }
             let from = calendar.date(byAdding: .year, value: -1, to: range.from) ?? range.from
@@ -74,14 +74,6 @@ extension AppModel {
             pages.append(.document(dividends))
         }
         return pages
-    }
-
-    /// The pack as documents only — kept for tests that assert membership.
-    func financialYearPackDocuments(from: Date, to: Date, label: String) -> [ReportDocument] {
-        financialYearPackPages(from: from, to: to, label: label).compactMap {
-            if case .document(let document) = $0 { return document }
-            return nil
-        }
     }
 
     /// Dividend & Franking summary: income-statement lines under a Dividends

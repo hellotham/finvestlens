@@ -47,6 +47,13 @@ enum GnuCashDate {
         date.timeIntervalSince1970.truncatingRemainder(dividingBy: 86_400) == 0
     }
 
+    /// Parses a bare `yyyy-MM-dd` (UTC), ignoring anything after the day —
+    /// shared by the CAMT importer and the scheduled/budget KVP codec so the
+    /// UTC/POSIX formatter configuration lives exactly once.
+    static func parseDayOnly(_ raw: String) -> Date? {
+        dateOnlyFormatter.date(from: String(raw.prefix(10)))
+    }
+
     /// Parses a `ts:date` / `gdate` string, tolerating both forms.
     static func parse(_ raw: String) -> Date? {
         let text = raw.trimmingCharacters(in: .whitespacesAndNewlines)

@@ -130,12 +130,10 @@ struct DashboardView: View {
 
     private var code: String { model.reportCurrency.mnemonic }
 
-    /// "As of now", pinned to the end of today so it is stable across a session:
-    /// `Date()` changes every call, which would defeat the report memo cache by
-    /// making every panel's cache key unique on each body pass.
-    private var todayCap: Date {
-        Calendar.current.startOfDay(for: Date()).addingTimeInterval(24 * 3600)
-    }
+    /// "As of now", pinned to the end of today so it is stable across a session
+    /// — one definition app-wide (a second copy of the expression here carried
+    /// the same DST bug and could drift from the model's memo keys).
+    private var todayCap: Date { AppModel.endOfToday() }
 
     private enum Panel: String, Hashable, CaseIterable {
         case upNext

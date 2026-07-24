@@ -411,7 +411,10 @@ public final class SQLiteDocumentStore {
             var order: [GncGUID] = []
             var root: Account?
             for row in try Row.fetchAll(db, sql: "SELECT * FROM account") {
-                guard let guid = GncGUID(hex: row["guid"]) else { continue }
+                // A corrupt GUID must not vanish the whole account (and dangle
+                // every split pointing at it) — mint a counted random identity
+                // so the row survives, like the split-level policy.
+                let guid = Serialize.parseGUID(row["guid"])
                 let account = Account(
                     guid: guid,
                     name: row["name"],
@@ -468,7 +471,9 @@ public final class SQLiteDocumentStore {
             reporter?.startTransactions()
             var builtTxns = 0
             for row in try Row.fetchAll(db, sql: "SELECT * FROM txn") {
-                guard let guid = GncGUID(hex: row["guid"]) else { continue }
+                // Never silently drop a transaction (and all its splits) over a
+                // corrupt GUID — mint a counted random identity; money survives.
+                let guid = Serialize.parseGUID(row["guid"])
                 let txn = Transaction(
                     guid: guid,
                     currency: commodity(row["currencyNamespace"], row["currencyMnemonic"]),
@@ -504,7 +509,8 @@ public final class SQLiteDocumentStore {
             var builtPrices = 0
             // Prices.
             for row in try Row.fetchAll(db, sql: "SELECT * FROM price") {
-                guard let guid = GncGUID(hex: row["guid"]) else { continue }
+                // Same open-what-you-can policy as accounts/transactions.
+                let guid = Serialize.parseGUID(row["guid"])
                 book.addPrice(Price(
                     guid: guid,
                     commodity: commodity(row["commodityNamespace"], row["commodityMnemonic"]),

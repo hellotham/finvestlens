@@ -30,8 +30,11 @@ extension AppModel {
     }
 
     /// Budget-vs-actual for the calendar month containing `month` (`FR-BUD-02`).
-    public func budgetActuals(_ budget: Budget, month: Date = Date()) -> [BudgetActual] {
+    /// Memoised per (month, budget, revision) — the dashboard's budget checks
+    /// and card read it on every body pass.
+    public func budgetActuals(_ budget: Budget, month: Date? = nil) -> [BudgetActual] {
         guard let book else { return [] }
+        let month = month ?? Self.endOfToday()
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "UTC") ?? .current
         let components = calendar.dateComponents([.year, .month], from: month)
@@ -39,8 +42,10 @@ extension AppModel {
               let nextMonth = calendar.date(byAdding: .month, value: 1, to: start)
         else { return [] }
         let end = nextMonth.addingTimeInterval(-1)
-        return FinancialReports.budgetActuals(book, budget: budget, from: start, to: end,
-                                              currency: reportCurrency)
+        return cachedReport("budact:\(budget.id.hexString):\(start.timeIntervalSinceReferenceDate)") {
+            FinancialReports.budgetActuals(book, budget: budget, from: start, to: end,
+                                           currency: reportCurrency)
+        } ?? []
     }
 
     /// Zero-based summary for a budget (`FR-PLAN-04`).

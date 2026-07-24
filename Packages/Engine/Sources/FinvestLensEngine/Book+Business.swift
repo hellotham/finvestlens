@@ -47,10 +47,6 @@ public extension Book {
     @discardableResult
     func addLot(_ lot: Lot) -> Lot { lots.append(lot); return lot }
 
-    func removeInvoice(_ invoice: Invoice) {
-        invoices.removeAll { $0 === invoice }
-    }
-
     // MARK: Lookup
 
     func customer(with guid: GncGUID) -> Customer? { customers.first { $0.guid == guid } }

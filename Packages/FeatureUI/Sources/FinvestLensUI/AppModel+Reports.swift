@@ -13,9 +13,11 @@ import FinvestLensReports
 @MainActor
 extension AppModel {
 
-    /// The currency used for single-currency reports (the book's base).
+    /// The currency used for single-currency reports — the Engine's one
+    /// authoritative derivation (root-account commodity first; `.first` over
+    /// the commodity table alone was registration-order dependent).
     var reportCurrency: Commodity {
-        book?.commodities.first { $0.namespace == .currency } ?? .aud
+        book?.baseCurrency ?? .aud
     }
 
     public func balanceSheet(asOf: Date = Date()) -> BalanceSheet? {

@@ -4,9 +4,10 @@ name: CI
 # declares swift-tools-version 6.2, which ships with Xcode 26, so all jobs select
 # it explicitly rather than relying on the runner's default Xcode. The
 # correctness-critical packages (engine, persistence, interchange, quotes, rules,
-# reports, shared) build and test on their own; the full app target and the
-# Intelligence package additionally need the macOS 26 SDK (FoundationModels) and
-# are built in a separate, allowed-to-fail job.
+# reports, shared) build and test on their own; the full app target, the
+# Intelligence package, AND FeatureUI (whose one test bundle links Intelligence)
+# additionally need the macOS 26 SDK (FoundationModels) and run in a separate,
+# allowed-to-fail job until GitHub ships a macOS 26 runner.
 
 on:
   push:
@@ -68,6 +69,7 @@ jobs:
               missing=1
             fi
           done < <(find Packages FinvestLensWidgets FinvestLensQuickLook \
+                     finvestlens finvestlensTests finvestlensUITests \
                      -name '*.swift' -not -path '*/.build/*' -print0 2>/dev/null)
           exit $missing
 
@@ -89,6 +91,8 @@ jobs:
           sudo xcode-select -s "$app"
       - name: Swift version
         run: swift --version
+      - name: FeatureUI tests (needs the macOS 26 SDK)
+        run: swift test --package-path Packages/FeatureUI
       - name: Build app + extensions (unsigned)
         run: |
           xcodebuild build \

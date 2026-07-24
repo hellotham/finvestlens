@@ -135,13 +135,23 @@ public enum ReportPeriod: Codable, Hashable, Sendable {
         let fromYear = calendar.component(.year, from: from)
         let toYear = calendar.component(.year, from: to)
 
+        return label(fromYear: fromYear, toYear: toYear, from: from, to: to, calendar: calendar)
+    }
+
+    /// The financial-year designation for arbitrary year bounds: "FY 2024–25",
+    /// or "FY 2025" for a calendar year (because "FY 2025–25" reads as a
+    /// typo). The one formatter — the period selector, comparative column
+    /// headers, and the FY Pack picker had each hand-built their own copy.
+    public static func financialYearLabel(fromYear: Int, toYear: Int) -> String {
+        fromYear == toYear
+            ? "FY \(fromYear)"
+            : "FY \(fromYear)–\(String(format: "%02d", toYear % 100))"
+    }
+
+    private func label(fromYear: Int, toYear: Int, from: Date, to: Date, calendar: Calendar) -> String {
         switch self {
         case .currentFinancialYear, .previousFinancialYear:
-            // A July–June year is written FY 2026–27; a January year is just
-            // the year, because "FY 2026–26" would read as a typo.
-            return fromYear == toYear
-                ? "FY \(fromYear)"
-                : "FY \(fromYear)–\(String(format: "%02d", toYear % 100))"
+            return Self.financialYearLabel(fromYear: fromYear, toYear: toYear)
         case .calendarYearToDate:
             return "\(fromYear) to date"
         case .previousCalendarYear:

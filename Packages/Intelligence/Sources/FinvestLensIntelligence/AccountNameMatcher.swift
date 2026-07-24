@@ -56,14 +56,21 @@ public enum AccountNameMatcher {
                 return hit
             }
         }
-        // Substring either way, longest candidate name first for specificity.
+        // A singular/truncated answer against its own leaf ("Car" → "Cars"):
+        // prefix beats substring, and the SHORTEST prefix-matching leaf wins —
+        // longest-first substring matching filed "Car" under "Childcare".
+        let byBrevity = candidates.sorted { $0.leafName.count < $1.leafName.count }
+        if let hit = byBrevity.first(where: { normalize($0.leafName).hasPrefix(needle) }) {
+            return hit
+        }
+        // Substring either way, longest candidate name first for specificity —
+        // both directions gated on the shorter side being long enough that the
+        // containment is meaningful ("Tax" must not swallow "Taxi", and "Car"
+        // must not land inside "Childcare").
         let bySpecificity = candidates.sorted { $0.fullName.count > $1.fullName.count }
         return bySpecificity.first {
             let candidate = normalize($0.leafName)
-            // Account-leaf contains the model's answer, or vice versa — but only
-            // when the shorter side is long enough that the containment is
-            // meaningful, so a 3-letter leaf like "Tax" doesn't swallow "Taxi".
-            if candidate.contains(needle) { return true }
+            if needle.count >= 4, candidate.contains(needle) { return true }
             return candidate.count >= 4 && needle.contains(candidate)
         }
     }

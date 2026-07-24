@@ -113,16 +113,16 @@ extension AppModel {
                 transaction.removeSplit(split)
             }
             if details.frankedAmount != 0,
-               let account = ensureAccount(path: ["Income", "Dividends", "Franked Dividends"], type: .income) {
+               let account = ensureAccount(path: DividendAccounts.franked, type: .income) {
                 transaction.addSplit(account: account, value: -details.frankedAmount, memo: details.ticker)
             }
             if details.unfrankedAmount != 0,
-               let account = ensureAccount(path: ["Income", "Dividends", "Unfranked Dividends"], type: .income) {
+               let account = ensureAccount(path: DividendAccounts.unfranked, type: .income) {
                 transaction.addSplit(account: account, value: -details.unfrankedAmount, memo: details.ticker)
             }
             if details.frankingCredits != 0,
-               let income = ensureAccount(path: ["Income", "Dividends", "Franking Credits"], type: .income),
-               let receivable = ensureAccount(path: ["Assets", "Franking Credits Receivable"], type: .asset) {
+               let income = ensureAccount(path: DividendAccounts.frankingCredits, type: .income),
+               let receivable = ensureAccount(path: DividendAccounts.creditsReceivable, type: .asset) {
                 transaction.addSplit(account: income, value: -details.frankingCredits, memo: details.ticker)
                 transaction.addSplit(account: receivable, value: details.frankingCredits, memo: details.ticker)
             }

@@ -190,7 +190,7 @@ struct CloseBookView: View {
     private var equityChoices: [(id: GncGUID, name: String)] { model.equityAccountChoices }
     private var code: String { model.reportCurrency.mnemonic }
 
-    private var preview: (accounts: Int, byCurrency: [AppModel.ClosingCurrencyPreview])? {
+    private var preview: (accounts: Int, byCurrency: [AppModel.ClosingCurrencyPreview], missingRate: String?)? {
         guard let equityID else { return nil }
         return model.closingPreview(asOf: date, equityID: equityID)
     }
@@ -223,7 +223,10 @@ struct CloseBookView: View {
                                         .monospacedDigit()
                                 }
                             }
-                            if preview.accounts == 0 {
+                            if let missing = preview.missingRate {
+                                Label(missing, systemImage: "exclamationmark.triangle")
+                                    .foregroundStyle(.orange).scaledFont(.caption)
+                            } else if preview.accounts == 0 {
                                 Text("Nothing has a balance to close as of this date.")
                                     .foregroundStyle(.secondary).scaledFont(.caption)
                             } else if preview.byCurrency.count > 1 {
@@ -256,7 +259,7 @@ struct CloseBookView: View {
                         if let equityID { posted = model.closeBook(asOf: date, equityID: equityID,
                                                                    description: description) }
                     }
-                    .disabled(equityID == nil || (preview?.accounts ?? 0) == 0)
+                    .disabled(equityID == nil || (preview?.accounts ?? 0) == 0 || preview?.missingRate != nil)
                 }
             }
         }

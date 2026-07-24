@@ -64,6 +64,18 @@ struct FirstOccurrenceWeekendTests {
         #expect(fromNext == utc(2025, 3, 14))
         #expect(fromList == fromNext)
     }
+
+    @Test("The adjusted first occurrence survives a `through` before the nominal start")
+    func adjustedStartInsideGap() {
+        // Sat 15 Mar 2025, monthly, adjust back → due Fri 14 Mar. Asking for
+        // occurrences through the 14th must include it: the old guard compared
+        // against the NOMINAL start (the 15th), so the instance only surfaced
+        // a day late — bills and scheduled posts missed their real due day.
+        let rule = Recurrence(period: .monthly, interval: 1,
+                              startDate: utc(2025, 3, 15), weekendAdjust: .back)
+        #expect(rule.occurrences(since: nil, through: utc(2025, 3, 14)) == [utc(2025, 3, 14)])
+        #expect(rule.occurrences(since: nil, through: utc(2025, 3, 13)).isEmpty)
+    }
 }
 
 @Suite("Loan degenerate terms")

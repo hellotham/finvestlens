@@ -64,7 +64,11 @@ public enum StatementExtractor {
             throw IntelligenceError.unavailable("Apple Intelligence is not available.")
         }
 
-        var staged: [StagedTransaction] = []
+        struct RawRow {
+            var date: Date; var amount: Decimal; var payee: String; var reference: String
+            var previous: Decimal?; var balance: Decimal?
+        }
+        var raw: [RawRow] = []
         var seen = Set<String>()
         // Running balance carried across rows (and pages) for sign correction.
         var previousBalance: Decimal?
@@ -89,41 +93,62 @@ public enum StatementExtractor {
                 }
                 for row in response.content.transactions {
                     guard let date = IntelligenceParsing.date(row.date),
-                          var amount = IntelligenceParsing.amount(row.amount),
+                          let amount = IntelligenceParsing.amount(row.amount),
                           amount != 0
                     else { continue }
-                    // The model can't reliably tell Debit from Credit columns in
-                    // flattened PDF text, so when the statement shows a running
-                    // balance the sign is fixed deterministically: the balance
-                    // falls after money out and rises after money in.
                     let balance = IntelligenceParsing.amount(row.balanceAfter)
-                    if let previous = previousBalance, let balance {
-                        let magnitude = abs(amount)
-                        if previous - magnitude == balance {
-                            amount = -magnitude
-                        } else if previous + magnitude == balance {
-                            amount = magnitude
-                        }
-                    }
-                    if let balance { previousBalance = balance }
                     // Dedupe across pages (carried-over rows, repeated headers).
                     // Include the running balance and reference so two genuinely
                     // distinct same-day/amount/payee rows (e.g. two identical
                     // coffees) aren't collapsed — only a truly repeated row, which
                     // shares its balance and reference too, is dropped.
                     let key = "\(row.date)|\(abs(amount))|\(row.payee.lowercased())|\(row.reference)|\(row.balanceAfter)"
-                    guard seen.insert(key).inserted else { continue }
-                    staged.append(StagedTransaction(
-                        date: date,
-                        amount: amount,
-                        payee: row.payee,
-                        reference: row.reference
-                    ))
+                    guard seen.insert(key).inserted else {
+                        if let balance { previousBalance = balance }
+                        continue
+                    }
+                    raw.append(RawRow(date: date, amount: amount, payee: row.payee,
+                                      reference: row.reference,
+                                      previous: previousBalance, balance: balance))
+                    if let balance { previousBalance = balance }
                 }
             } catch {
                 throw IntelligenceError.wrap(error)
             }
             onProgress?(index + 1, pages.count)
+        }
+
+        // The balance column fixes signs deterministically — but the
+        // CONVENTION depends on the account: an asset statement's balance
+        // falls after money out, while a credit card's positive amount-owed
+        // balance RISES after a purchase. Applying the asset reading
+        // unconditionally inverted every row on card statements, so the
+        // statement votes: whichever reading agrees with more of the model's
+        // own signs (the guide makes purchases negative) wins, and rows whose
+        // balance delta explains their magnitude are corrected under it.
+        var assetVotes = 0
+        var liabilityVotes = 0
+        for row in raw {
+            guard let previous = row.previous, let balance = row.balance else { continue }
+            let delta = balance - previous
+            guard delta != 0, abs(delta) == abs(row.amount) else { continue }
+            if (delta > 0) == (row.amount > 0) { assetVotes += 1 }
+            if (delta < 0) == (row.amount > 0) { liabilityVotes += 1 }
+        }
+        let liabilityConvention = liabilityVotes > assetVotes
+
+        var staged: [StagedTransaction] = []
+        for row in raw {
+            var amount = row.amount
+            if let previous = row.previous, let balance = row.balance {
+                let delta = balance - previous
+                if abs(delta) == abs(amount) {
+                    amount = liabilityConvention ? -delta : delta
+                }
+            }
+            staged.append(StagedTransaction(
+                date: row.date, amount: amount,
+                payee: row.payee, reference: row.reference))
         }
         return staged.sorted { $0.date < $1.date }
         #else

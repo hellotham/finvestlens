@@ -26,18 +26,9 @@ extension AppModel {
 
     // MARK: API keys
 
-    /// The stored API key for `kind`, if any.
-    public func apiKey(for kind: QuoteProviderKind) -> String? {
-        apiKeys.key(for: kind)
-    }
-
-    /// Stores (or clears) the API key for `kind`.
-    public func setAPIKey(_ key: String?, for kind: QuoteProviderKind) {
-        try? apiKeys.setKey(key, for: kind)
-    }
-
     /// Providers that are ready to use: Yahoo always, keyed providers once a
-    /// key is stored.
+    /// key is stored. (Key read/write goes straight to the store —
+    /// `DocumentSettingsView` uses `apiKeys.key(for:)`/`setKey` directly.)
     public var availableProviders: [QuoteProviderKind] {
         QuoteProviderKind.allCases.filter { !$0.requiresAPIKey || (apiKeys.key(for: $0)?.isEmpty == false) }
     }
@@ -122,11 +113,14 @@ extension AppModel {
             quoteStatus = .failure("No securities to price.")
             return
         }
+        guard quoteProgress == nil else { return }   // one fetch run at a time
+        quoteProgress = 0
+        defer { quoteProgress = nil }
         quoteStatus = .fetching("latest quotes")
         let service = service()
         var fetched: [Price] = []
         var failures: [String] = []
-        for commodity in commodities {
+        for (index, commodity) in commodities.enumerated() {
             do {
                 fetched.append(try await service.latestPrice(
                     for: commodity, in: reportCurrency, using: kind,
@@ -134,13 +128,25 @@ extension AppModel {
             } catch {
                 failures.append("\(commodity.mnemonic): \(Self.describe(error))")
             }
+            quoteProgress = Double(index + 1) / Double(commodities.count)
         }
         // Collected first, then applied in one go: the fetches await, and an
         // edit has to snapshot and mutate without suspending in between.
-        let added = fetched.count
+        // Identical same-day rows are skipped: the auto-refresh runs on every
+        // book open, and over a closed-market weekend each run returned the
+        // same Friday close — plain appends accumulated duplicate price rows
+        // forever (and made the "already current" toast unreachable).
+        let calendar = Calendar.current
+        func rowKey(_ price: Price) -> String {
+            let day = calendar.startOfDay(for: price.date).timeIntervalSinceReferenceDate
+            return "\(price.commodity.namespace):\(price.commodity.mnemonic):\(day):\(price.value)"
+        }
+        var seen = Set((book?.prices ?? []).map(rowKey))
+        let novel = fetched.filter { seen.insert(rowKey($0)).inserted }
+        let added = novel.count
         if added > 0 {
             editingPrices(named: "Fetch Quotes") {
-                for price in fetched { book?.addPrice(price) }
+                for price in novel { book?.addPrice(price) }
             }
         }
         quoteStatus = failures.isEmpty
@@ -212,6 +218,12 @@ extension AppModel {
             quoteStatus = .failure(replacing ? "No securities selected." : "No securities to price.")
             return
         }
+        // One run at a time — the guard used to live only on the ⌘⇧U wrapper,
+        // so the Quotes sheet's buttons could start a second concurrent run
+        // that snapshotted `existing` before the first committed and re-added
+        // every price it fetched (and the first finisher's deferred
+        // `quoteProgress = nil` killed the shared progress overlay).
+        guard quoteProgress == nil else { return }
         let service = service()
         let calendar = Calendar.current
         let today = Date()

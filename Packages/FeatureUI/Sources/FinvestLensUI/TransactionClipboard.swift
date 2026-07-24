@@ -49,6 +49,8 @@ public struct TransactionClipboard: Codable, Sendable, Equatable {
     public var notes: String
     public var currency: Commodity
     public var legs: [Leg]
+    /// Optional so payloads written before tags travelled still decode.
+    public var tags: [String]?
 
     /// The pasteboard type. Private to the app: this is JSON of an internal
     /// shape, and nothing else should be reading it.

@@ -57,4 +57,70 @@ struct BillRemindersTests {
             from: day(2026, 2, 1), to: day(2026, 2, 28), asOf: day(2026, 2, 15))
         #expect(bills.first { $0.dueDate == day(2026, 2, 1) }?.status == .paid)
     }
+
+    @Test("A blank-description schedule is never settled by a blank-description transaction")
+    func blankDescriptionNotPaid() {
+        let book = Book(baseCurrency: .aud)
+        let bank = book.addAccount(Account(name: "Bank", type: .bank, commodity: .aud))
+        let rent = book.addAccount(Account(name: "Rent", type: .expense, commodity: .aud))
+        // Imported schedule whose *description* is empty and whose name matches
+        // nothing in the register.
+        let sx = ScheduledTransaction(
+            name: "Landlord Direct Debit", currency: .aud,
+            recurrence: Recurrence(period: .monthly, startDate: day(2026, 2, 1)),
+            splits: [
+                ScheduledSplit(accountGUID: rent.guid, value: dec("800")),
+                ScheduledSplit(accountGUID: bank.guid, value: dec("-800")),
+            ])
+        // An unrelated blank-description bank row inside the grace window —
+        // comparing ""=="" used to mark the bill paid.
+        let blank = Transaction(currency: .aud, datePosted: day(2026, 2, 2), description: "")
+        blank.addSplit(account: rent, value: dec("50"))
+        blank.addSplit(account: bank, value: dec("-50"))
+        book.addTransaction(blank)
+
+        let bills = FinancialReports.billReminders(
+            book, scheduled: [sx],
+            from: day(2026, 2, 1), to: day(2026, 2, 28), asOf: day(2026, 2, 15))
+        #expect(bills.first { $0.dueDate == day(2026, 2, 1) }?.status == .overdue)
+    }
+
+    @Test("A bill due today is due, not overdue — day granularity")
+    func dueTodayIsNotOverdue() {
+        let (book, sx) = fixture()
+        // asOf mid-afternoon (local) on the due day: the instant comparison
+        // used to flip this to critical "overdue" once the occurrence's
+        // time-of-day passed. Anchor to the local calendar day the report
+        // buckets with, so the assertion holds in any timezone.
+        let asOf = Calendar.current.startOfDay(for: day(2026, 2, 1)).addingTimeInterval(15 * 3600)
+        let bills = FinancialReports.billReminders(
+            book, scheduled: [sx],
+            from: day(2026, 2, 1), to: day(2026, 2, 28), asOf: asOf)
+        #expect(bills.first { $0.dueDate == day(2026, 2, 1) }?.status == .dueSoon)
+    }
+
+    @Test("A name match with a wildly different amount does not settle the bill")
+    func amountGate() {
+        let (book, sx) = fixture()
+        // $5 named like the $800 rent: FR-BILL-01's expected-amount matching.
+        let coffee = Transaction(currency: .aud, datePosted: day(2026, 2, 1), description: "Rent")
+        coffee.addSplit(account: book.accounts.first { $0.name == "Rent" }!, value: dec("5"))
+        coffee.addSplit(account: book.accounts.first { $0.name == "Bank" }!, value: dec("-5"))
+        book.addTransaction(coffee)
+
+        let bills = FinancialReports.billReminders(
+            book, scheduled: [sx],
+            from: day(2026, 2, 1), to: day(2026, 2, 28), asOf: day(2026, 2, 15))
+        #expect(bills.first { $0.dueDate == day(2026, 2, 1) }?.status == .overdue)
+
+        // Within the ±25% band (utilities drift) it still settles.
+        let close = Transaction(currency: .aud, datePosted: day(2026, 2, 1), description: "Rent")
+        close.addSplit(account: book.accounts.first { $0.name == "Rent" }!, value: dec("780"))
+        close.addSplit(account: book.accounts.first { $0.name == "Bank" }!, value: dec("-780"))
+        book.addTransaction(close)
+        let after = FinancialReports.billReminders(
+            book, scheduled: [sx],
+            from: day(2026, 2, 1), to: day(2026, 2, 28), asOf: day(2026, 2, 15))
+        #expect(after.first { $0.dueDate == day(2026, 2, 1) }?.status == .paid)
+    }
 }

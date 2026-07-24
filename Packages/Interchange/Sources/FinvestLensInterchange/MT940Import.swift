@@ -33,7 +33,7 @@ import Foundation
 public enum MT940Importer {
 
     public static func parse(_ data: Data) -> [StagedTransaction] {
-        parse(String(decoding: data, as: UTF8.self))
+        parse(ImportParsing.decode(data))
     }
 
     public static func parse(_ text: String) -> [StagedTransaction] {

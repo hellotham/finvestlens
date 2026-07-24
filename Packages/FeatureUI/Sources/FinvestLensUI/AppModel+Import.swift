@@ -134,6 +134,7 @@ extension AppModel {
         case .sell: action = .sell
         case .dividend: action = .dividend
         case .reinvestDividend: action = .reinvestDividend
+        case .returnOfCapital: action = .returnOfCapital
         case .other: return nil
         }
 
@@ -157,7 +158,26 @@ extension AppModel {
             amount: abs(row.amount), commission: commission,
             date: row.date,
             description: inv.security.isEmpty ? "Imported investment" : inv.security,
-            memo: row.memo)
+            memo: row.memo,
+            reference: row.reference)
+    }
+
+    /// The broker references (`FITID`s) already posted as investment
+    /// transactions — built once per review batch so re-importing an
+    /// overlapping broker file can flag each already-recorded trade instead of
+    /// silently offering it again (investment rows bypass the cash matcher,
+    /// which is the only other duplicate gate).
+    public func importedInvestmentReferences() -> Set<String> {
+        guard let book else { return [] }
+        var references = Set<String>()
+        for txn in book.transactions {
+            for split in txn.splits {
+                if case let .string(id)? = split.kvp["online_id"], !id.isEmpty {
+                    references.insert(id)
+                }
+            }
+        }
+        return references
     }
 
     /// Finds a non-placeholder account by (case-insensitive) name.

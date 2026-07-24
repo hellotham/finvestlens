@@ -676,36 +676,41 @@ struct ReportScreen: View {
 
     @ViewBuilder
     private var content: some View {
+        // ONE `.task` on the container, not one per branch: a branch of a
+        // @ViewBuilder if/else is its own view identity, so a per-branch task
+        // re-fired when the spinner flipped to content and every report
+        // computed twice on first open (a second full-book scan for the
+        // builders that bypass the memo cache).
         if isStatementKind {
-            if let statement {
-                StatementView(statement: statement)
-                    .task(id: configuration) { await recomputeStatement() }
-            } else {
-                ProgressView("Preparing \(configuration.kind)…")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .task(id: configuration) { await recomputeStatement() }
-            }
-        } else if let kind, kind.usesScaffold {
-            if let document {
-                if document.isEmpty {
-                    ContentUnavailableView("Nothing to report", systemImage: kind.icon,
-                                           description: Text(emptyReason(kind)))
-                        .task(id: configuration) { await recompute() }
+            Group {
+                if let statement {
+                    StatementView(statement: statement)
                 } else {
-                    ReportDocumentView(model: model, document: document)
+                    ProgressView("Preparing \(configuration.kind)…")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+            }
+            .task(id: configuration) { await recomputeStatement() }
+        } else if let kind, kind.usesScaffold {
+            Group {
+                if let document {
+                    if document.isEmpty {
+                        ContentUnavailableView("Nothing to report", systemImage: kind.icon,
+                                               description: Text(emptyReason(kind)))
+                    } else {
                         // Recompute when parameters change — and only then. The
                         // computation never runs in `body`.
-                        .task(id: configuration) { await recompute() }
+                        ReportDocumentView(model: model, document: document)
+                    }
+                } else if computeFinished {
+                    ContentUnavailableView("Nothing to report", systemImage: kind.icon,
+                                           description: Text(emptyReason(kind)))
+                } else {
+                    ProgressView("Preparing \(configuration.kind)…")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
-            } else if computeFinished {
-                ContentUnavailableView("Nothing to report", systemImage: kind.icon,
-                                       description: Text(emptyReason(kind)))
-                    .task(id: configuration) { await recompute() }
-            } else {
-                ProgressView("Preparing \(configuration.kind)…")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .task(id: configuration) { await recompute() }
             }
+            .task(id: configuration) { await recompute() }
         } else {
             legacyContent
         }
