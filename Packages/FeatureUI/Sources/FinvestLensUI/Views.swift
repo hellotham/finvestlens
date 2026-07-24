@@ -942,6 +942,18 @@ struct AccountsSidebar: View {
                     Label("Rules", systemImage: "wand.and.stars").tag(SidebarSelection.rules)
                     Label("Emergency Records", systemImage: "cross.case").tag(SidebarSelection.emergencyRecords)
                 }
+                // Pinned accounts, flat, in the order they were favourited —
+                // the shortcut past three disclosure triangles for the handful
+                // of registers someone lives in. Same row (and context menu)
+                // as the tree, so selecting one is selecting the account.
+                let favourites = model.favouriteAccountNodes
+                if !favourites.isEmpty {
+                    Section("Favourites") {
+                        ForEach(favourites) { node in
+                            row(node, label: node.name)
+                        }
+                    }
+                }
             }
             accountsSection
         }
@@ -996,6 +1008,11 @@ struct AccountsSidebar: View {
         .accessibilityLabel(label)
         .accessibilityValue(AmountFormat.string(node.balance, code: node.currencyCode))
         .contextMenu {
+            Button(model.isFavouriteAccount(node.id) ? "Remove from Favourites" : "Add to Favourites",
+                   systemImage: model.isFavouriteAccount(node.id) ? "star.slash" : "star") {
+                model.toggleFavouriteAccount(node.id)
+            }
+            Divider()
             Button("Edit…") { sheet = .edit(node.id) }
             Button("Reconcile…") {
                 #if os(macOS)

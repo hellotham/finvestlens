@@ -594,6 +594,12 @@ public final class AppModel {
     /// Securities tracked but not held (watch list, `FR-PLAN-07`).
     public internal(set) var watchlist: [Commodity] = []
 
+    /// Accounts pinned to the sidebar's Favourites section, in the order they
+    /// were favourited. Book-KVP-backed, so favourites travel with the file
+    /// (they are how the user works with *this* book, like watch lists — not
+    /// desk state).
+    public internal(set) var favouriteAccountIDs: [GncGUID] = []
+
     /// User-set price targets that raise alerts (`FR-PLAN-05`).
     public internal(set) var priceTargets: [PriceTarget] = []
 
@@ -844,6 +850,7 @@ public final class AppModel {
         static let savedReports = "finvestlens/savedReports"
         static let reportSettings = "finvestlens/reportSettings"
         static let watchlist = "finvestlens/watchlist"
+        static let favouriteAccounts = "finvestlens/favouriteAccounts"
         static let priceTargets = "finvestlens/priceTargets"
         static let companyInfo = "finvestlens/companyInfo"
         static let savingsGoals = "finvestlens/savingsGoals"
@@ -859,7 +866,7 @@ public final class AppModel {
     func reloadKvpCollections() {
         guard let book else {
             ruleGroups = []; scheduledTransactions = []; budgets = []; quoteSymbols = [:]
-            savingsGoals = []; billableEntries = []
+            savingsGoals = []; billableEntries = []; favouriteAccountIDs = []
             debtPlanSettings = DebtPlanSettings(); lifetimePlan = StoredLifetimePlan()
             taxSettings = nil; savingsChallenges = []; emergencyRecords = []
             return
@@ -873,6 +880,7 @@ public final class AppModel {
         savedReports = Self.decodeSlot([SavedReport].self, book.kvp[KvpKey.savedReports]) ?? []
         reportSettings = Self.decodeSlot(ReportSettings.self, book.kvp[KvpKey.reportSettings]) ?? ReportSettings()
         watchlist = Self.decodeSlot([Commodity].self, book.kvp[KvpKey.watchlist]) ?? []
+        favouriteAccountIDs = Self.decodeSlot([GncGUID].self, book.kvp[KvpKey.favouriteAccounts]) ?? []
         priceTargets = Self.decodeSlot([PriceTarget].self, book.kvp[KvpKey.priceTargets]) ?? []
         companyInfo = Self.decodeSlot(CompanyInfo.self, book.kvp[KvpKey.companyInfo]) ?? CompanyInfo()
         savingsGoals = Self.decodeSlot([SavingsGoal].self, book.kvp[KvpKey.savingsGoals]) ?? []
@@ -899,6 +907,7 @@ public final class AppModel {
         book.kvp[KvpKey.reportSettings] =
             reportSettings == ReportSettings() ? nil : Self.encodeSingle(reportSettings)
         book.kvp[KvpKey.watchlist] = Self.encodeSlot(watchlist)
+        book.kvp[KvpKey.favouriteAccounts] = Self.encodeSlot(favouriteAccountIDs)
         book.kvp[KvpKey.priceTargets] = Self.encodeSlot(priceTargets)
         book.kvp[KvpKey.companyInfo] =
             companyInfo == CompanyInfo() ? nil : Self.encodeSingle(companyInfo)
@@ -911,6 +920,42 @@ public final class AppModel {
         book.kvp[KvpKey.taxSettings] = taxSettings.map { Self.encodeSingle($0) } ?? nil
         book.kvp[KvpKey.savingsChallenges] = Self.encodeSlot(savingsChallenges)
         book.kvp[KvpKey.emergencyRecords] = Self.encodeSlot(emergencyRecords)
+    }
+
+    // MARK: Favourite accounts
+
+    /// Whether an account is pinned to the sidebar's Favourites section.
+    public func isFavouriteAccount(_ id: GncGUID) -> Bool {
+        favouriteAccountIDs.contains(id)
+    }
+
+    /// Pins an account to (or unpins it from) the sidebar's Favourites, as one
+    /// undoable change persisted with the book.
+    public func toggleFavouriteAccount(_ id: GncGUID) {
+        if let index = favouriteAccountIDs.firstIndex(of: id) {
+            favouriteAccountIDs.remove(at: index)
+            commitKvpCollections(named: "Remove Favourite")
+        } else {
+            favouriteAccountIDs.append(id)
+            commitKvpCollections(named: "Add Favourite")
+        }
+    }
+
+    /// The favourite accounts as sidebar nodes (name, balance, colour), in the
+    /// order they were favourited. An id whose account no longer exists simply
+    /// doesn't appear — the slot keeps it, so undoing the account's deletion
+    /// restores the favourite too.
+    public var favouriteAccountNodes: [AccountNode] {
+        guard !favouriteAccountIDs.isEmpty else { return [] }
+        let wanted = Set(favouriteAccountIDs)
+        var found: [GncGUID: AccountNode] = [:]
+        var stack = accountTree
+        while let node = stack.popLast() {
+            if wanted.contains(node.id) { found[node.id] = node }
+            if found.count == wanted.count { break }
+            if let children = node.children { stack.append(contentsOf: children) }
+        }
+        return favouriteAccountIDs.compactMap { found[$0] }
     }
 
     /// Persists the collections and refreshes derived UI state, as one undoable
