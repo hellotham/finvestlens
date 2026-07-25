@@ -22,12 +22,13 @@ commits, ten Swift packages, 56,611 lines across 221 files, 1,179 tests, and a
 phase plan taken from P0 through P10.
 
 I typed very little of it. I directed it — through **Claude Code**, Anthropic's
-coding agent — and that turns out to be a skill with its own failure modes,
-which is the more interesting story.
+coding agent — and directing, it turns out, is a skill with failure modes of its
+own. They are the more interesting story.
 
-The method wasn't improvised. It's the one I set out in Chapters 2 and 3 of my
-book [*AI-dō*](https://christham.net/aidou/), and this is the largest thing I've
-built with it. Treat the rest of this as a field report on whether it holds up.
+The method was not improvised. It is the one I set out in Chapters 2 and 3 of my
+book [*AI-dō*](https://christham.net/aidou/) — the practice and the craft — and
+this is the largest thing I have built with it. Read the rest as a field report
+on whether the Way holds up.
 
 ---
 
@@ -339,14 +340,14 @@ English in the first German build.
 ## The method, chapter and verse
 
 [*AI-dō*](https://christham.net/aidou/) — *the Way of AI, grounded in practice* —
-is where this method is written down. FinvestLens is the first project on which
-I've run [Chapter 2](https://christham.net/aidou/productivity.html) and
-[Chapter 3](https://christham.net/aidou/software.html) at full size, which makes
-it a test rather than a demonstration. The mapping came out closer than I
-expected, so here it is explicitly.
+is where I wrote the method down. FinvestLens is the first time I have run
+[Chapter 2](https://christham.net/aidou/productivity.html) and
+[Chapter 3](https://christham.net/aidou/software.html) at full size. That makes
+it a test, not a demonstration. The mapping came out closer than I expected, so
+here it is explicitly.
 
-**ICE — Intent, Context, Expectations.** Chapter 3 separates the three things
-people usually smear together. *Intent* is what you want and the boundaries it
+**ICE — Intent, Context, Expectations.** Chapter 3 pulls apart the three
+things a request usually runs together. *Intent* is what you want and the boundaries it
 must respect, and you own it: here, the PRD's numbered requirements, kept loose
 enough that more than one implementation could satisfy them — the chapter's own
 test for whether you've smuggled a specification into a goal. *Context* is the
@@ -362,9 +363,8 @@ long.
 Meta-harness: the fan-out of independent agents in the review. Memory: 24
 Markdown files. Eval: 1,179 tests plus an oracle they can't argue with. The
 chapter notes that holding the model fixed and swapping only the harness has
-been measured moving a coding agent's success rate by more than twenty points —
-which matches the experience here, where the model was never the interesting
-variable.
+been measured moving a coding agent's success rate by more than twenty points.
+So it proved here: the model was never the interesting variable.
 
 **Patterns (§3.3).** The full-codebase review is two of them composed:
 parallelisation for the ten finder angles, evaluator–optimizer for the pass that
@@ -398,7 +398,8 @@ once been annoying, and having lived with it I want it everywhere documentation
 describes code. The other gap is §2.1's climb from prompt to skill to loop to
 shared tool. "Audit X against Y" earned its keep a dozen times over and never
 once got packaged as a skill — I retyped it, slightly differently, every time.
-The book tells you not to do that. Evidently I should read it.
+I wrote the rule and broke it anyway. Knowing the way and walking it are,
+evidently, different disciplines.
 
 ## What I'd tell someone trying this
 
