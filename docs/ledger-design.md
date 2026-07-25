@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Document status** | Design baseline v1.2 (25 Jul 2026) — **P10a/P10b/P10c built and green**; P10d (depth) remains |
+| **Document status** | Design baseline v1.3 (25 Jul 2026) — **P10a/P10b/P10c/P10d all built and green**; P10 complete |
 | **Scope** | A ledger-modelled command-line interface (`finlens`) over FinvestLens books, plus import/export of the [Ledger 3](https://ledger-cli.org) plain-text journal format |
 | **Research** | [ledger-format-reference.md](ledger-format-reference.md) (journal grammar, verified against the v3.4.1 manual + parser source) · [ledger-cli-reference.md](ledger-cli-reference.md) (CLI surface, verified against the manual, man page and C++ source) |
 | **Companions** | [PRD](prd.md) §5.14/§5.19 · [Architecture](architecture.md) · [Plan](plan.md) §13b |
@@ -52,7 +52,7 @@ surfaces. This design adds both halves of the bridge:
   reports them as skipped (with counts), and `print` on a journal source
   re-emits them verbatim.
 - **NG-L3** — A writable CLI (no `finlens add`/`xact --write`). Editing
-  stays in the app; the CLI's `xact` (if built, P10d) prints a draft only.
+  stays in the app; the CLI's `xact` prints a draft only (P10d).
 - **NG-L4** — Windows/Linux. The CLI is a macOS SPM executable (same
   platform floor as the packages it links).
 
@@ -269,11 +269,18 @@ second half.
 
 ### 5.4 Deliberately out (recorded, not forgotten)
 
-Value expressions beyond the query subset (`-l`, `-d`, `-F`, `--bold-if`),
-`select`, `xact` drafts, `convert`, `--budget`/`--forecast`,
-`--pivot`, `--anon`, plot outputs (`-j/-J`), `lisp`/`xml` outputs. Each is
-independently addable in P10d+ without reshaping the pipeline; the CLI
-reference documents their exact semantics for that day.
+P10d closed most of this list: `-l`/`-d` value expressions, `xact` drafts and
+the `--budget`/`--forecast` family all ship (see §7 and
+[cli.md](cli.md)). What remains out: format strings (`-F`, `--bold-if`),
+`select`, `convert`, `--pivot`, `--anon`, plot outputs (`-j/-J`), and
+`lisp`/`xml` outputs. Each is independently addable without reshaping the
+pipeline; the CLI reference documents their exact semantics for that day.
+
+The value-expression language is deliberately a small typed AST — the posting
+vocabulary, comparisons, regex match, arithmetic, `[date]` literals — grown to
+fit `-l`/`-d` rather than a port of ledger's ~80-function expression language.
+Unknown names are rejected at **parse** time, so a typo exits 1 instead of
+quietly matching nothing.
 
 ### 5.5 App integration
 
@@ -317,7 +324,7 @@ Sequenced so every phase lands releasable and testable on its own.
 | **P10a ✅ — Ledger codec core** | Journal model + parser + canonical writer in Interchange (grammar per the format reference: postings, amounts incl. decimal-comma + quoted commodities, costs, assertions, virtuals, metadata/tags, the living directive set, include/year/apply state machines; periodic/automated into extras; style learning for output) | Manual-example corpus parses and reprints stably; all error cases report file:line; unit suite green. |
 | **P10b ✅ — Book mapping + app import/export** | LedgerBookMapping both ways per §4 (guid/type metadata, `@@` legs, states, aux dates, assertion verification, virtual policy, import summary); deterministic export incl. `account`/`commodity` directives, P lines, `~` best-effort; File ▸ Import/Export menu items | Real-book export→import graph-equal (GUIDs/amounts/states/tags); real `ledger` binary reads the export (manual check); live round-trip harness green. |
 | **P10c ✅ — `finlens` core** | New CLI package: option/query/period parsing, three source loaders (read-only store init), report pipeline + renderers for the §5.2 command set, the interactive REPL (§5.3a), color/`-o`, exit codes | Golden-output suite green; `finlens bal` total == app net worth on the real book to the cent; read-only guarantee test green; REPL runs the same commands against once-loaded sources; `swift run finlens --help` documents every shipped flag. |
-| **P10d — Depth (demand-ordered)** | Valuation flags (`-V/-X/-B/-H`), periodic grouping (`-M --subtotal` …), `--budget` family over `~` extras/app Budgets, `xact` drafts, `-l/-d` mini-expressions, init file, man page (`docs/cli.md`) | Each item ships with its own goldens; none blocks the others. |
+| **P10d ✅ — Depth (demand-ordered)** | Valuation flags (`-V/-X/-B/-H`), periodic grouping (`-M --subtotal` …), `--budget` family over `~` extras/app Budgets, `xact` drafts, `-l/-d` mini-expressions, init file, man page (`docs/cli.md`) | Each item ships with its own goldens; none blocks the others. |
 
 **Delivered so far (25 Jul 2026).** P10a: `LedgerJournal`/`LedgerParser`/
 `LedgerWriter`/`LedgerAmountStyle` in Interchange — the full living grammar
@@ -356,9 +363,62 @@ Two conformance details the goldens caught: `--depth N` folds by *account
 path components* (not display rows), and `to/until SPEC` ends **before** that
 span — the same exclusivity as `-e`.
 
-**Estimated shape**: P10a and P10c are the two big lifts (a real parser; a
-real terminal report engine). P10b is mostly mapping tables + tests. P10d is
-à la carte.
+**P10d delivered (25 Jul 2026).** The depth pass, all of it:
+
+- **Value expressions** (`ValueExpression.swift`) — tokenizer + recursive
+  descent over `amount total date account payee note code cleared pending real
+  depth abs()`, the literals `123.45` / `"text"` / `/regex/` / `[smart date]`,
+  and `== != < <= > >= =~ !~ + - * / and|& or|| not|!` with parentheses.
+  Wired to `-l/--limit` (filters the calculation) and `-d/--display` (filters
+  the view only).
+- **Running totals moved into the pipeline.** They are snapshotted per
+  commodity over the whole filtered set *before* `-d`, `--head/--tail` and
+  `-S` reshape it, so a hidden or reordered row still contributes exactly
+  once. This also fixed a pre-existing `--head/--tail` bug where the ladder
+  restarted at the first shown row.
+- **Budget family** (`PeriodicEntries.swift`, `BudgetRenderers.swift`) —
+  a journal's `~ PERIOD` entries become templates (re-parsed through the codec
+  so the posting grammar is not duplicated); a `.finvestlens` book offers its
+  own Budgets collection in the same shape. `budget` prints actual / budgeted
+  / remaining / percent; `--budget` and `--unbudgeted` narrow balance and
+  register.
+- **`--forecast EXPR`** projects the templates forward from *after* the last
+  real posting while the predicate holds (`--forecast-years` caps it). The
+  generated transactions are passed to the pipeline as `extraTransactions` and
+  never added to the book — the REPL reuses one `Book`, and the CLI does not
+  write.
+- **`xact`** prints a draft modelled on the most recent payee match, with
+  bare or account-targeted amount substitution and the funding leg elided so
+  it always balances.
+- **Init file + environment** (`InitFile.swift`) — `~/.finlensrc` (or
+  `./.finlensrc`, `$FINLENS_INIT_FILE`, `--init-file`) and `FINLENS_*`
+  variables, both **under** argv. A stale rc file warns and is ignored rather
+  than locking the user out; `--no-init-file` skips both.
+- **Man page** — [cli.md](cli.md).
+
+25 more tests (53 in the CLI suite) pin the expression grammar, the `-l`
+vs `-d` distinction, the budget columns, forecast placement, `xact` drafts and
+the init-file precedence. Three fixes to existing code fell out of the work:
+
+- **`finlens print QUERY` ignored the query** and printed every transaction.
+  It filtered a whole-book export on a `guid` *metadata* key, but the export
+  writes the guid as a **note line** (only the parser produces metadata), so
+  nothing ever matched and the `else { return true }` fallback kept
+  everything. It now builds the journal from the matched postings — correct,
+  and it no longer converts 46,000 transactions to print five.
+- **`--head`/`--tail` restarted the running total** at the first shown row
+  (fixed by the pipeline-level snapshot above).
+- **`LedgerExport.styles(for:)`** is split out of `journal(from:)`, so
+  `equity` and `xact` no longer build a whole journal to format a handful of
+  amounts.
+
+One `FINLENS_*` conformance trap worth recording: `FINLENS_DEPTH=1` must not
+read as the bare flag `--depth`. The boolean coercion is applied only to
+options that genuinely take no value (`CLIParser.valuelessOptions`).
+
+**Estimated shape**: P10a and P10c were the two big lifts (a real parser; a
+real terminal report engine). P10b was mostly mapping tables + tests. P10d was
+à la carte, and is now done.
 
 ## 8. Risks
 
@@ -383,5 +443,5 @@ real terminal report engine). P10b is mostly mapping tables + tests. P10d is
 1. **Binary name** — `finlens`. ✅
 2. **Ledger environment compatibility** — `FINLENS_FILE` only; we do not
    read `LEDGER_FILE`/`.ledgerrc`. ✅
-3. **`--budget`/`--forecast`** — stays in P10d. ✅
+3. **`--budget`/`--forecast`** — stays in P10d. ✅ (shipped)
 4. **Interactive REPL** — **in scope**, ships with P10c (§5.3a). ✅

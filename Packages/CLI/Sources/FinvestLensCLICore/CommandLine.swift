@@ -24,6 +24,10 @@ public struct CLIInvocation: Sendable {
     /// `--help` / `--version` short-circuit everything else.
     public var wantsHelp = false
     public var wantsVersion = false
+    /// `--init-file PATH` / `--no-init-file` (the init file is read before
+    /// argv, so these two are resolved from argv alone).
+    public var initFile: String?
+    public var skipInitFile = false
 }
 
 /// The option set the core-80 subset needs (design §5.3).
@@ -70,6 +74,17 @@ public struct CLIOptions: Sendable {
     public var raw = false               // print --raw
     public var count = false             // accounts/payees/commodities --count
     public var latest = false            // prices --latest
+
+    // Predicates (P10d): value expressions over the posting vocabulary.
+    public var limit: String?            // -l/--limit  (filters calculation)
+    public var display: String?          // -d/--display (filters display only)
+
+    // Budget & forecast (P10d).
+    public var budget = false            // only budgeted accounts
+    public var addBudget = false         // actuals + budget lines
+    public var unbudgeted = false        // only accounts with no budget
+    public var forecast: String?         // --forecast EXPR (date predicate)
+    public var forecastYears: Int?
 }
 
 public enum CLIParseError: Error, CustomStringConvertible {
@@ -130,6 +145,8 @@ public enum CLIParser {
             switch name {
             case "--help", "-h": invocation.wantsHelp = true
             case "--version": invocation.wantsVersion = true
+            case "--init-file": invocation.initFile = try value(for: name, inline: inline)
+            case "--no-init-file": invocation.skipInitFile = true
 
             case "--file", "-f":
                 invocation.files.append(try value(for: name, inline: inline))
@@ -181,6 +198,15 @@ public enum CLIParser {
             case "--output", "-o": invocation.options.output = try value(for: name, inline: inline)
             case "--color", "--ansi": invocation.options.color = true
             case "--no-color": invocation.options.color = false
+            case "--limit", "-l": invocation.options.limit = try value(for: name, inline: inline)
+            case "--display", "-d": invocation.options.display = try value(for: name, inline: inline)
+            case "--budget": invocation.options.budget = true
+            case "--add-budget": invocation.options.addBudget = true
+            case "--unbudgeted": invocation.options.unbudgeted = true
+            case "--forecast", "--forecast-while":
+                invocation.options.forecast = try value(for: name, inline: inline)
+            case "--forecast-years":
+                invocation.options.forecastYears = try intValue(for: name, inline: inline)
             case "--raw": invocation.options.raw = true
             case "--count": invocation.options.count = true
             case "--latest": invocation.options.latest = true
@@ -214,6 +240,20 @@ public enum CLIParser {
         ["-C", "-U", "-R", "-r", "-V", "-B", "-H", "-E", "-n", "-s", "-A",
          "-w", "-D", "-W", "-M", "-Y", "-h"].contains(flag)
     }
+
+    /// Long options that take no value. `FINLENS_*` needs this to tell
+    /// `FINLENS_WIDE=true` (a flag) from `FINLENS_DEPTH=1` (a value that
+    /// happens to look like a boolean).
+    public static let valuelessOptions: Set<String> = [
+        "--help", "--version", "--no-init-file",
+        "--cleared", "--uncleared", "--pending", "--real", "--related",
+        "--market", "--basis", "--cost", "--historical",
+        "--daily", "--weekly", "--monthly", "--quarterly", "--yearly",
+        "--flat", "--empty", "--no-total", "--percent", "--collapse",
+        "--subtotal", "--average", "--wide",
+        "--color", "--ansi", "--no-color", "--raw", "--count", "--latest",
+        "--budget", "--add-budget", "--unbudgeted",
+    ]
 }
 
 extension CLIOptions {
@@ -255,5 +295,12 @@ extension CLIOptions {
         raw = raw || other.raw
         count = count || other.count
         latest = latest || other.latest
+        if other.limit != nil { limit = other.limit }
+        if other.display != nil { display = other.display }
+        budget = budget || other.budget
+        addBudget = addBudget || other.addBudget
+        unbudgeted = unbudgeted || other.unbudgeted
+        if other.forecast != nil { forecast = other.forecast }
+        if other.forecastYears != nil { forecastYears = other.forecastYears }
     }
 }

@@ -126,7 +126,7 @@ Phased delivery (full detail in [docs/plan.md](docs/plan.md)):
 - ✅ **Report-quality redesign (Jul 2026)** — statements at annual-report presentation standard (hierarchical face-and-notes built from the user's own chart of accounts, ASC 274 liquidity/maturity ordering, materiality folding, accounting typography with comparatives — including the Trial Balance), plus two presentation decks: a CFO-style **Financial Review** and a factsheet-style **Investment Review**, each with charts, callouts, and on-device insights that a deterministic validator keeps grounded in the slide's own figures. Plan and research: [report-redesign.md](docs/report-redesign.md).
 - ✅ **P8 Extended import (Jul 2026)** — SWIFT **MT940/MT942** and ISO 20022 **CAMT.053** statement import through the Import Matcher, with format auto-detection (extension + content sniffing); plus an import-matcher hardening pass validated on real bank exports — cross-account **transfer completion**, FITID-mismatch veto, one-to-one duplicate claiming, credit-card funding inference, and an Imbalance fallback feeding the Uncategorised sweep. *(Online bank sync skipped by decision — local-first; see deferred.md.)*
 - ✅ **P9 Planning & insights (Jul 2026)** — the **Planner** destination: a Debt Reduction Planner (avalanche/snowball, interest saved vs minimums), a transparent **Lifetime Planner** (five book-seeded buckets, editable assumptions, life events, today's-dollars view), and an editable-bracket **tax estimator** (AU FY defaults, franking/withholding recognition, CGT discount) — plus the **Spending Insights** comparison report with plain-language summaries, an explainable **wellbeing score** tile, the one-page **Financial Summary (passport)** PDF, **savings challenges** on goals, a local-auth-gated **Emergency Records** organizer, and a GnuCash-style **audit-log** sidecar. All estimates, clearly labelled — never advice. *(TXF export skipped: US-specific format, meaningless for an AU book.)*
-- 🚧 **P10 Ledger CLI & interchange (Jul 2026)** — **Ledger 3 journal import/export** with GnuCash-XML-grade round-trip fidelity (the real 46k-transaction book exports, re-imports and re-exports byte-identically, every balance to the cent), and **`finlens`** — a ledger-modelled, strictly read-only CLI over `.finvestlens` books, ledger journals and GnuCash files: `balance`, `register`, `print`, `csv`, `accounts`, `payees`, `commodities`, `prices`, `pricedb`, `stats`, `equity`, `cleared`, ledger's query language and period expressions, valuation flags, and an interactive REPL. Design and research: [ledger-design.md](docs/ledger-design.md), [ledger-format-reference.md](docs/ledger-format-reference.md), [ledger-cli-reference.md](docs/ledger-cli-reference.md). *(Depth items — `--budget`/`--forecast`, `xact`, value expressions — remain as P10d.)*
+- ✅ **P10 Ledger CLI & interchange (Jul 2026)** — **Ledger 3 journal import/export** with GnuCash-XML-grade round-trip fidelity (the real 46k-transaction book exports, re-imports and re-exports byte-identically, every balance to the cent), and **`finlens`** — a ledger-modelled, strictly read-only CLI over `.finvestlens` books, ledger journals and GnuCash files: `balance`, `register`, `print`, `csv`, `accounts`, `payees`, `commodities`, `prices`, `pricedb`, `stats`, `equity`, `cleared`, `budget`, `xact`, ledger's query language and period expressions, valuation flags, `-l`/`-d` value expressions, the `--budget`/`--forecast` family, an init file and `FINLENS_*` defaults, and an interactive REPL. Manual: [cli.md](docs/cli.md). Design and research: [ledger-design.md](docs/ledger-design.md), [ledger-format-reference.md](docs/ledger-format-reference.md), [ledger-cli-reference.md](docs/ledger-cli-reference.md).
 - ✅ **Full-codebase review pass (Jul 2026)** — a max-effort adversarial review of the finished implementation against the PRD, architecture, and plan (ten finder angles → per-candidate verification → gap sweep; 60 confirmed findings, all fixed the same day): money-correctness fixes (short-position stock splits, CAMT reversal signs verified against ISO 20022, decimal-comma parsing, return-of-capital imports), data-safety hardening (the NAS lock's heartbeat/break races, undo integrity across scheduled posting and Revert, strict whole-string money parsing in every sheet), duplicate-proof investment re-imports, correct bill statuses with expected-amount matching, the last two PRD *Should* gaps built (unusual-spend alerts, goal-to-bill links), and a memoisation sweep over the dashboard's hot paths. Narrative in [implemented.md](docs/implemented.md).
 
 ## Command line
@@ -140,12 +140,16 @@ swift build -c release --package-path Packages/CLI
 
 finlens -f Book.finvestlens bal ^Assets ^Liabilities
 finlens -f Book.finvestlens reg Groceries -p "last month"
+finlens -f Book.finvestlens reg Expenses -l 'amount > 500'   # value expressions
+finlens -f Book.finvestlens budget                           # actual vs budgeted
 finlens -f Book.finvestlens print > book.ledger     # ledger export, composably
 finlens -f Book.finvestlens                          # interactive REPL
 ```
 
-It also reads `.ledger` journals and `.gnucash` files, so the same reports
-work across all three. `finlens --help` lists every command and flag.
+It also reads `.ledger` journals and `.gnucash` files, so the same reports work
+across all three. Defaults live in `~/.finlensrc` or `FINLENS_*` variables.
+`finlens --help` lists every command and flag; [docs/cli.md](docs/cli.md) is
+the full manual.
 
 ## Platform requirements
 

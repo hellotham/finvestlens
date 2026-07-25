@@ -30,12 +30,12 @@ public struct CLIDriver {
         self.environment = environment
     }
 
-    public static let version = "finlens 0.1 (FinvestLens P10c)"
+    public static let version = "finlens 0.2 (FinvestLens P10d)"
 
     /// One whole invocation, argv-tail in, output + exit status out.
     public func run(arguments: [String]) -> CLIOutput {
         var output = CLIOutput()
-        let invocation: CLIInvocation
+        var invocation: CLIInvocation
         do {
             invocation = try CLIParser.parse(arguments)
         } catch {
@@ -48,9 +48,22 @@ public struct CLIDriver {
             output.text = Self.version + "\n"
             return output
         }
-        if invocation.wantsHelp || (invocation.command == nil && arguments.isEmpty) {
+        if invocation.wantsHelp || (invocation.command == nil && arguments.isEmpty
+            && environment["FINLENS_FILE"] == nil) {
             output.text = Self.helpText
             return output
+        }
+
+        // Init file and `FINLENS_*` defaults sit *under* argv: they are the
+        // base the command line overrides (see InitFile).
+        if !invocation.skipInitFile {
+            let defaults = InitFile.defaults(explicitPath: invocation.initFile,
+                                             environment: environment)
+            for warning in defaults.warnings { output.errorText += warning + "\n" }
+            var merged = defaults.options
+            merged.merge(invocation.options)
+            invocation.options = merged
+            if invocation.files.isEmpty { invocation.files = defaults.files }
         }
 
         let paths = SourceLoader.resolvePaths(invocation.files, environment: environment)
@@ -93,12 +106,52 @@ public struct CLIDriver {
                         loaded: LoadedSource) -> CLIOutput {
         var output = CLIOutput()
         let query = QueryParser.parse(terms)
-        if terms.contains(where: { $0.lowercased() == "expr" }) {
-            output.errorText += "finlens: 'expr' value expressions are not supported "
-                + "(see docs/ledger-design.md §5.4); the term was ignored\n"
+
+        // `-l/--limit` and `-d/--display` value expressions (P10d).
+        var limit: ValueExpression?
+        var displayExpression: ValueExpression?
+        do {
+            if let text = options.limit { limit = try ValueExpressionParser.parse(text) }
+            if let text = options.display { displayExpression = try ValueExpressionParser.parse(text) }
+        } catch {
+            output.errorText = "finlens: \(error)\n"
+            output.status = 1
+            return output
         }
-        let request = ReportRequest(options: options, query: query, today: today)
-        let pipeline = ReportPipeline(book: loaded.book, request: request)
+
+        // `--budget` / `--unbudgeted` narrow the account set for the ordinary
+        // reports (the `budget` command has its own columns instead).
+        var effectiveQuery = query
+        if options.budget || options.unbudgeted,
+           ["balance", "bal", "b", "register", "reg", "r"].contains(command.lowercased()) {
+            let narrowed = budgetFilteredTerms(terms, options: options, source: loaded)
+            if narrowed != terms { effectiveQuery = QueryParser.parse(narrowed) }
+        }
+
+        let request = ReportRequest(options: options, query: effectiveQuery, today: today,
+                                    limit: limit, displayExpression: displayExpression)
+
+        // `--forecast` reports generated postings alongside the real ones.
+        var forecast: [Transaction] = []
+        if let forecastText = options.forecast {
+            let templates = BudgetRenderers.templates(book: loaded.book,
+                                                      extras: loaded.extras, today: today)
+            if templates.isEmpty {
+                output.errorText += "finlens: --forecast needs periodic (~) entries or budgets\n"
+            } else {
+                do {
+                    forecast = try forecastTransactions(loaded.book, templates: templates,
+                                                        whileText: forecastText,
+                                                        years: options.forecastYears ?? 5)
+                } catch {
+                    output.errorText = "finlens: \(error)\n"
+                    output.status = 1
+                    return output
+                }
+            }
+        }
+        let pipeline = ReportPipeline(book: loaded.book, request: request,
+                                      extraTransactions: forecast)
 
         switch command.lowercased() {
         case "balance", "bal", "b":
@@ -125,6 +178,12 @@ public struct CLIDriver {
             output.text = Renderers.equity(pipeline, book: loaded.book)
         case "cleared":
             output.text = Renderers.cleared(pipeline, book: loaded.book)
+        case "budget":
+            output.text = BudgetRenderers.budget(pipeline, book: loaded.book, extras: loaded.extras)
+        case "xact", "entry", "draft":
+            let (text, status) = BudgetRenderers.xact(terms, book: loaded.book, today: today)
+            if status == 0 { output.text = text } else { output.errorText = text }
+            output.status = status
         case "source":
             // Parse-check: loading already succeeded, so this is a clean exit.
             output.text = "\(loaded.book.transactions.count) transactions, "
@@ -134,6 +193,70 @@ public struct CLIDriver {
             output.status = 1
         }
         return output
+    }
+
+    /// `--budget` restricts balance/register to budgeted accounts and
+    /// `--unbudgeted` to the rest. (`--add-budget` belongs to the `budget`
+    /// command, where it adds the unbudgeted accounts to the comparison.)
+    func budgetFilteredTerms(_ terms: [String], options: CLIOptions,
+                             source: LoadedSource) -> [String] {
+        guard options.budget || options.unbudgeted else { return terms }
+        let templates = BudgetRenderers.templates(book: source.book,
+                                                  extras: source.extras, today: today)
+        let budgeted = Set(templates.flatMap { $0.postings.map(\.account) })
+        guard !budgeted.isEmpty else { return terms }
+        let patterns = budgeted.map { "^" + NSRegularExpression.escapedPattern(for: $0) + "$" }
+        if options.budget { return terms + ["and", "("] + patterns + [")"] }
+        return terms + ["and", "not", "("] + patterns + [")"]
+    }
+
+    /// Forecast transactions generated from the periodic entries while the
+    /// `--forecast` predicate holds. They are returned, never added to the
+    /// book: the CLI is read-only and the REPL reuses one `Book`.
+    func forecastTransactions(_ book: Book, templates: [BudgetTemplate],
+                              whileText: String, years: Int) throws -> [Transaction] {
+        let calendar = PeriodExpression.utc
+        let lastReal = book.transactions.map(\.datePosted).max() ?? today
+        let horizon = calendar.date(byAdding: .year, value: max(1, years), to: lastReal) ?? lastReal
+        let generated = PeriodicEntries.forecast(templates, from: lastReal,
+                                                 limit: horizon, today: today)
+        guard !generated.isEmpty else { return [] }
+
+        // `--forecast EXPR` keeps generating while EXPR holds; ledger writes
+        // it over the date (`d<[2027]`), so `d` is spelled out for the parser.
+        let predicate = try ValueExpressionParser.parse(
+            whileText.replacingOccurrences(of: "d<", with: "date<")
+                .replacingOccurrences(of: "d>", with: "date>")
+                .replacingOccurrences(of: "d=", with: "date=")
+                .replacingOccurrences(of: "d ", with: "date "))
+
+        var accounts: [String: Account] = [:]
+        for account in book.accounts { accounts[account.fullName] = account }
+        let counterAccount = accounts["Equity:Forecast"]
+            ?? book.accounts.first { $0.type == .equity }
+
+        var result: [Transaction] = []
+        for entry in generated {
+            // A projection starts after the real data ends: the bucket the
+            // last real posting falls in is already history.
+            guard entry.date > lastReal, let account = accounts[entry.account] else { continue }
+            let currency = book.commodities.first { $0.mnemonic == entry.commodity }
+                ?? book.baseCurrency
+            let transaction = Transaction(currency: currency, datePosted: entry.date,
+                                          description: "Forecast")
+            let split = Split(account: account, value: entry.amount)
+            transaction.addSplit(split)
+            // The projection balances into equity: it is a what-if, not a
+            // booked double entry, but it must still balance to report.
+            if let counterAccount {
+                transaction.addSplit(Split(account: counterAccount, value: -entry.amount))
+            }
+            let context = ExpressionContext(split: split, transaction: transaction,
+                                            amount: entry.amount, total: 0)
+            guard predicate.matches(context, today: today) else { continue }
+            result.append(transaction)
+        }
+        return result
     }
 
     // MARK: REPL
@@ -232,6 +355,9 @@ public struct CLIDriver {
       stats                a summary of the matched postings
       equity               balances as one opening-balances transaction
       cleared              outstanding vs cleared balances, with last dates
+      budget               actual vs budgeted, remaining, and percent used
+      xact [DATE] PAYEE [ACCOUNT] AMOUNT…   a draft modelled on a past
+                           transaction, printed (never saved)
       source               parse-check the sources (exit 0/1)
 
     QUERY
@@ -259,8 +385,28 @@ public struct CLIDriver {
       --columns N  -w  --date-width/--payee-width/--account-width/--amount-width
       -y --date-format FMT   -o --output FILE   --color / --no-color
 
-    Value expressions (-l/-d/-F), select, xact, convert, --budget and
-    --forecast are not implemented; see docs/ledger-design.md §5.4.
+    EXPRESSIONS
+      -l, --limit EXPR     keep only postings where EXPR holds (affects totals)
+      -d, --display EXPR   show only rows where EXPR holds (totals unchanged)
+      EXPR reads: amount total date account payee note code cleared pending
+      real depth abs(x), with < <= > >= == != and & | ! and parentheses.
+      Literals: 12.50, "text", /regex/, [2026/07/01] or [last month].
+
+    BUDGET & FORECAST
+      --budget             only accounts a ~ entry (or a book Budget) covers
+      --unbudgeted         only accounts none covers (with actuals)
+      --add-budget         budget: add the unbudgeted accounts to the table
+      --forecast EXPR      project the ~ entries forward while EXPR holds
+      --forecast-years N   hard stop for the projection (default 5)
+
+    DEFAULTS
+      ~/.finlensrc (or ./.finlensrc, or --init-file PATH) holds one option per
+      line; FINLENS_* variables map to the same options (FINLENS_FILE names the
+      source). Both sit under the command line: a typed flag always wins.
+      --no-init-file ignores them. Full reference: docs/cli.md.
+
+    select, convert, and format strings (-F) are not implemented; see
+    docs/ledger-design.md §5.4.
 
     """
 }

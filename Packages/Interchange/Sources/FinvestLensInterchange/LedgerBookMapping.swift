@@ -25,11 +25,13 @@ public enum LedgerExport {
     /// commodity directives (metadata in their notes), `P` price lines,
     /// scheduled/budget templates as periodic entries would be P10d — then
     /// every transaction ordered by (date, book order).
-    public static func journal(from book: Book) -> LedgerJournal {
-        var journal = LedgerJournal()
-
-        // Commodities: suffix style with a space, precision from the
-        // smallest fraction — unambiguous and locale-free (design §4).
+    /// The display styles a book's commodities imply — suffix with a space,
+    /// precision from the smallest fraction (design §4). Split out from
+    /// `journal(from:)` so callers that only need to format a handful of
+    /// amounts (`finlens equity`, `finlens xact`) do not build a whole
+    /// journal for a 46,000-transaction book.
+    public static func styles(for book: Book) -> LedgerAmountStyles {
+        var styles = LedgerAmountStyles()
         // Sorted by mnemonic: registration order is not stable across a
         // round-trip (the base currency registers first on import), and the
         // export must be byte-stable for an unchanged book.
@@ -39,8 +41,16 @@ public enum LedgerExport {
             style.spaced = true
             style.precision = precision(of: commodity.smallestFraction)
             style.quoted = LedgerAmountSyntax.needsQuoting(commodity.mnemonic)
-            journal.styles.declare(commodity.mnemonic, style: style)
+            styles.declare(commodity.mnemonic, style: style)
+        }
+        return styles
+    }
 
+    public static func journal(from book: Book) -> LedgerJournal {
+        var journal = LedgerJournal()
+        journal.styles = styles(for: book)
+
+        for commodity in book.commodities.sorted(by: { $0.mnemonic < $1.mnemonic }) {
             var directive = LedgerCommodityDirective(symbol: commodity.mnemonic)
             directive.format = LedgerAmountSyntax.format(
                 LedgerAmount(commodity: commodity.mnemonic, quantity: 0),
@@ -120,7 +130,7 @@ public enum LedgerExport {
         return note
     }
 
-    static func ledgerTransaction(_ transaction: FinvestLensEngine.Transaction) -> LedgerTransaction {
+    public static func ledgerTransaction(_ transaction: FinvestLensEngine.Transaction) -> LedgerTransaction {
         var entry = LedgerTransaction(date: transaction.datePosted,
                                       payee: transaction.transactionDescription)
         entry.auxDate = transaction.statementDate
