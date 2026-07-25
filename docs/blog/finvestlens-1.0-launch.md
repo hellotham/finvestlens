@@ -21,10 +21,48 @@ The first commit landed on 12 July 2026. This one is 26 July. In between: 325
 commits, ten Swift packages, 56,611 lines across 221 files, 1,179 tests, and a
 phase plan taken from P0 through P10.
 
-I typed very little of it. I directed it — and that turns out to be a skill with
-its own failure modes, which is the more interesting story.
+I typed very little of it. I directed it — through **Claude Code**, Anthropic's
+coding agent — and that turns out to be a skill with its own failure modes,
+which is the more interesting story.
 
 ---
+
+## The setup, concretely
+
+Nothing here is exotic, and I'd rather state it plainly than let anyone imagine
+a secret ingredient:
+
+| | |
+|---|---|
+| **Agent** | Claude Code — working directly in the repository |
+| **Model** | Claude Opus 5 (`claude-opus-5`) |
+| **Language** | Swift 6 / SwiftUI, ten local Swift packages, one Xcode project |
+| **Oracle** | A real 46,553-transaction GnuCash book, GnuCash 5.16, and GnuCash's C/C++ source cloned locally |
+| **Sessions** | Many, across fourteen days — each beginning with no memory of the last |
+
+The tools that actually mattered, as distinct from the ones that merely existed:
+
+- **Shell and file editing.** The bulk of it: building, running the test suites,
+  `git`, `xcodebuild`, `swift build`, and reading and writing source directly.
+- **Subagents.** Independent agents spawned to work in parallel — the ten-angle
+  review below is the clearest case, with separate finders that couldn't see each
+  other's conclusions, then separate verifiers trying to knock the findings down.
+- **Web fetch.** Reading specifications rather than recalling them: the Ledger 3
+  manual, ISO 20022, Astro's and Tailwind's current docs. This caught at least
+  one real bug and prevented several version mistakes.
+- **The browser and the simulator.** Driving the built site and the running app
+  to check the result, rather than assuming the code implies the output.
+- **Persistent memory.** A directory of small Markdown files — one fact each —
+  that survive between sessions. There are 24 of them for this project.
+
+That last one is the least obvious and possibly the most important. Each session
+starts cold. What carries across is whatever was written down: that the standard
+test book lives in the repo root and may be freely mutated; that GnuCash's source
+is checked out at a particular path and is the porting oracle; that commits go
+straight to `main` with no model attribution; that one test in the Shared package
+hangs forever on a wedged system daemon and should be skipped. Small, dull,
+specific facts — the difference between an agent that resumes work and one that
+rediscovers the project every morning.
 
 ## The problem worth solving
 
@@ -126,6 +164,55 @@ whole implementation, then per-candidate verification, then a gap sweep for what
 the first pass missed. It surfaced 63 candidates. 60 were confirmed and fixed
 the same day; 2 were refuted, which matters just as much — an agent that never
 says "actually, that one's wrong" isn't reviewing, it's agreeing.
+
+## From the other side of the prompt
+
+I asked Claude to describe the same fortnight from its side, since it has a
+better view of why some instructions land and others don't. Lightly edited, and
+worth reading if you're trying this yourself:
+
+> **The specification is the thing that survives.** My context window empties
+> between sessions; the repository doesn't. A numbered requirement, an exit
+> criterion, an architecture decision with its reasoning — those are recoverable
+> in a way that "we discussed this on Tuesday" is not. When the plan says a
+> phase is done only when a stated criterion passes, I can check that myself
+> instead of asking. Documents aren't overhead in this arrangement; they're the
+> memory.
+>
+> **"Audit X against Y" changes what I'm actually doing.** "Implement cost
+> basis" is open-ended generation — I produce something plausible and neither of
+> us can tell how good it is without more work. "Audit our cost basis against
+> GnuCash's `gnc-lot.c` and fix every divergence" is a search-and-compare task
+> with ground truth sitting on disk. I can be wrong, but I can also be *shown*
+> wrong, quickly. The second kind of instruction is worth several of the first.
+>
+> **The failure mode to design around is plausibility.** Code that looks right,
+> tests that pass because they encode the same misunderstanding as the code, a
+> summary that reads like success. Nothing in generating text pushes back on
+> that. What pushes back is an external check: a real book, a reference
+> implementation, a published spec, a screenshot of the actual screen. Most of
+> the genuinely wrong things I produced here were caught by one of those four,
+> not by re-reading my own work.
+>
+> **Adversarial structure beats more effort.** In the full-codebase review, the
+> finders were separate agents that couldn't see each other's conclusions, and
+> the verifiers were told to refute rather than confirm. Two candidates were
+> refuted. Had one agent done all of it in sequence, I doubt either would have
+> been — momentum makes agreement cheap, and a review that agrees with itself
+> isn't a review.
+>
+> **My instrumentation is as fallible as my code.** Several times here a
+> measurement was wrong rather than the implementation: colours read
+> mid-animation, a `grep` matching a substring of the very thing it was meant to
+> exclude, a CSSOM walk that silently enumerated nothing. Each cost real time and
+> nearly produced a confident wrong conclusion. Checking *how* you're checking is
+> not paranoia; it's part of the task.
+>
+> **The judgement calls genuinely weren't mine to make.** Whether an Australian
+> book should carry a US tax export, whether a cloud bank connector belongs in a
+> local-first app, whether the dashboard looked right — I can lay out
+> considerations, but each of those is a decision about what the product *is*.
+> Every time one arrived, it came from the other side of the prompt.
 
 ## What only real data will ever find
 
