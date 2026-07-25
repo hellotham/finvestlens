@@ -1,0 +1,676 @@
+//
+//  HelpContent.swift
+//  FinvestLens — FeatureUI
+//
+//  The help book, as data. Every string here is a `LocalizedStringKey`, so the
+//  pages translate through the app's String Catalog like the rest of the UI —
+//  there is no separate HTML help bundle to keep in sync, and the same pages
+//  serve macOS, iPadOS and iOS.
+//
+//  Copyright (C) 2026 Christine Tham
+//  SPDX-License-Identifier: GPL-3.0-or-later
+//
+
+import SwiftUI
+
+/// One piece of a help page.
+public enum HelpBlock: Identifiable, @unchecked Sendable {
+    /// A paragraph of prose.
+    case text(LocalizedStringKey)
+    /// A sub-heading inside a topic.
+    case heading(LocalizedStringKey)
+    /// A bulleted list.
+    case bullets([LocalizedStringKey])
+    /// Numbered steps for a task the reader is meant to follow.
+    case steps([LocalizedStringKey])
+    /// A key/value table — shortcuts, search operators, menu paths.
+    case table([(LocalizedStringKey, LocalizedStringKey)])
+    /// A short aside worth setting apart.
+    case tip(LocalizedStringKey)
+
+    public var id: String {
+        switch self {
+        case .text(let key): "text\(key)"
+        case .heading(let key): "heading\(key)"
+        case .bullets(let items): "bullets\(items.count)\(items.first.map(String.init(describing:)) ?? "")"
+        case .steps(let items): "steps\(items.count)\(items.first.map(String.init(describing:)) ?? "")"
+        case .table(let rows): "table\(rows.count)\(rows.first.map { String(describing: $0.0) } ?? "")"
+        case .tip(let key): "tip\(key)"
+        }
+    }
+}
+
+public struct HelpTopic: Identifiable, @unchecked Sendable {
+    public let id: String
+    public let title: LocalizedStringKey
+    public let summary: LocalizedStringKey
+    public let symbol: String
+    /// Untranslated search terms — the topic's own English words plus obvious
+    /// synonyms, so search finds a page even when the reader types the term
+    /// they knew from GnuCash.
+    public let keywords: String
+    public let blocks: [HelpBlock]
+}
+
+public struct HelpSection: Identifiable, @unchecked Sendable {
+    public let id: String
+    public let title: LocalizedStringKey
+    public let topics: [HelpTopic]
+}
+
+public enum HelpBook {
+
+    public static let sections: [HelpSection] = [
+        HelpSection(id: "basics", title: "Basics", topics: [
+            gettingStarted, accounts, transactions, findingThings, keepingSafe,
+        ]),
+        HelpSection(id: "everyday", title: "Everyday money", topics: [
+            importing, smartImport, categorising, reconciling, scheduled, budgets, documents,
+        ]),
+        HelpSection(id: "growing", title: "Investments & planning", topics: [
+            investments, reports, planning, goals,
+        ]),
+        HelpSection(id: "more", title: "More", topics: [
+            business, emergencyRecords, interchange, shortcuts,
+        ]),
+    ]
+
+    public static var allTopics: [HelpTopic] { sections.flatMap(\.topics) }
+
+    public static func topic(id: String) -> HelpTopic? {
+        allTopics.first { $0.id == id }
+    }
+
+    // MARK: Basics
+
+    static let gettingStarted = HelpTopic(
+        id: "getting-started",
+        title: "Getting started",
+        summary: "Create a book, or bring one over from GnuCash.",
+        symbol: "sparkles",
+        keywords: "start begin new book open gnucash import migrate first",
+        blocks: [
+            .text("""
+                A **book** is your whole set of accounts and transactions, kept in one \
+                file you own. FinvestLens never uploads it anywhere.
+                """),
+            .heading("Start a book"),
+            .steps([
+                "Choose File ▸ New Book… (⌥⌘N) and pick where to keep the file.",
+                "Choose a starter chart of accounts, or start empty and add your own.",
+                "Add your bank and credit-card accounts, and enter their opening balances.",
+            ]),
+            .heading("Coming from GnuCash"),
+            .text("""
+                Choose File ▸ Import ▸ GnuCash… and pick your `.gnucash` file. Accounts, \
+                transactions, prices, scheduled transactions and business records all come \
+                across, and you can export back to GnuCash at any time.
+                """),
+            .tip("""
+                Everything you do is undoable with ⌘Z — including imports. If a change \
+                looks wrong, undo it rather than repairing it by hand.
+                """),
+        ])
+
+    static let accounts = HelpTopic(
+        id: "accounts",
+        title: "Accounts",
+        summary: "The chart of accounts, and how the sidebar is organised.",
+        symbol: "list.bullet.indent",
+        keywords: "account chart tree parent placeholder hidden favourite type asset liability equity income expense",
+        blocks: [
+            .text("""
+                Accounts form a tree. A parent account shows the total of everything \
+                beneath it, so you can group *Expenses:Car:Fuel* and *Expenses:Car:Insurance* \
+                under one *Car* heading and still see them separately.
+                """),
+            .heading("Account types"),
+            .table([
+                ("Asset", "What you own — bank accounts, cash, investments, property."),
+                ("Liability", "What you owe — credit cards, loans, mortgages."),
+                ("Income", "Money coming in — salary, dividends, interest."),
+                ("Expense", "Money going out — the categories you spend in."),
+                ("Equity", "Opening balances and retained earnings."),
+            ]),
+            .heading("Keeping the sidebar tidy"),
+            .bullets([
+                "**Favourites** pin the accounts you use most to the top of the sidebar.",
+                "**Placeholder** accounts group children but take no transactions of their own.",
+                "**Hidden** accounts stay out of the sidebar until you switch them back on.",
+                "The filter box at the top of the sidebar narrows the tree as you type.",
+            ]),
+        ])
+
+    static let transactions = HelpTopic(
+        id: "transactions",
+        title: "Recording transactions",
+        summary: "The register, splits, and the transaction inspector.",
+        symbol: "square.and.pencil",
+        keywords: "transaction register enter split memo transfer edit inspector double entry balance",
+        blocks: [
+            .text("""
+                Select an account in the sidebar to open its **register** — one row per \
+                transaction, with a running balance. The row at the bottom is where you \
+                type a new one.
+                """),
+            .heading("Entering a transaction"),
+            .steps([
+                "Type the date, then the description — earlier entries autocomplete as you type.",
+                "Choose the other account (the category, or where the money went).",
+                "Enter the amount and press ⏎.",
+            ]),
+            .text("""
+                Every transaction moves money **between two accounts**, so it always \
+                balances. That is what makes the reports add up.
+                """),
+            .heading("Splits"),
+            .text("""
+                A transaction can touch more than two accounts — a pay slip split into \
+                salary, tax and superannuation, or a shopping trip split across categories. \
+                Open the inspector (⌘E, or the toolbar's inspector button) to add splits.
+                """),
+            .tip("""
+                Transactions in a foreign currency, or with more than two splits, are \
+                edited in the inspector rather than inline — the register row shows a \
+                reminder when that applies.
+                """),
+        ])
+
+    static let findingThings = HelpTopic(
+        id: "finding",
+        title: "Finding transactions",
+        summary: "Search operators, saved searches, and jumping around.",
+        symbol: "magnifyingglass",
+        keywords: "search find filter query operator saved tag amount date jump",
+        blocks: [
+            .text("""
+                The search box above the register searches the description, amount and \
+                date. It also understands operators, which can be combined:
+                """),
+            .table([
+                ("`tag:holiday`", "Transactions carrying a tag."),
+                ("`account:Groceries`", "Postings to a matching account (`category:` also works)."),
+                ("`memo:refund`", "Text in the split memo."),
+                ("`desc:coles`", "Text in the description."),
+                ("`amount:>200`", "Amounts above (or `<` below) a figure."),
+                ("`from:-3m`", "On or after a date — or `today`, `-7d`, `-2w`, `-3m`, `-1y`."),
+                ("`to:2026/06/30`", "On or before a date."),
+                ("`type:transfer`", "A kind of transaction."),
+                ("`has:attachment`", "Only transactions with a document attached."),
+            ]),
+            .text("Put `-` in front of any term to exclude it — `-tag:work` hides work spending."),
+            .heading("Elsewhere"),
+            .bullets([
+                "**Find…** (⌘F) searches across every account, not just the open one.",
+                "**Find Account…** (⌘I) jumps straight to an account by name.",
+                "Save a search you keep repeating, and it comes back in the search menu.",
+            ]),
+        ])
+
+    static let keepingSafe = HelpTopic(
+        id: "safety",
+        title: "Saving and keeping the book safe",
+        summary: "Saving, autosave, locking, network drives, and the audit log.",
+        symbol: "lock.shield",
+        keywords: "save autosave lock nas smb network shared backup audit undo repair",
+        blocks: [
+            .heading("Saving"),
+            .text("""
+                Your changes are held in a working copy and written back to the file when \
+                you press ⌘S, when autosave runs, or when you close the book. Autosave and \
+                its interval live in Settings ▸ General.
+                """),
+            .heading("Sharing a book across machines"),
+            .text("""
+                A book can live on a NAS or shared folder. FinvestLens takes a lock while \
+                it is open so a second machine cannot overwrite your work; if the app \
+                behind a lock has gone away, you can break the lock and open anyway.
+                """),
+            .heading("Locking the screen"),
+            .text("""
+                Security ▸ Lock Now (⇧⌘L) hides the book until you authenticate. Turn on \
+                *Require Authentication to Open* to be asked every time.
+                """),
+            .heading("If something looks wrong"),
+            .bullets([
+                "⌘Z undoes anything, including an import.",
+                "**Book ▸ Repair Book** runs the same checks as GnuCash's Check & Repair, and changes nothing until you choose Clean Up.",
+                "An audit log is kept beside the book, recording each edit.",
+            ]),
+        ])
+
+    // MARK: Everyday money
+
+    static let importing = HelpTopic(
+        id: "import",
+        title: "Importing bank files",
+        summary: "CSV, QIF, OFX, MT940 and CAMT.053 — and how matching works.",
+        symbol: "square.and.arrow.down",
+        keywords: "import bank csv qif ofx qfx mt940 camt statement download duplicate match profile",
+        blocks: [
+            .text("""
+                Choose File ▸ Import Bank File… (⌥⌘I) and pick what your bank gave you. \
+                The format is detected from the file itself — CSV, QIF, OFX/QFX, SWIFT \
+                MT940/MT942 and ISO 20022 CAMT.053 are all read.
+                """),
+            .heading("The review screen"),
+            .text("""
+                Nothing is written until you say so. Each row shows what FinvestLens \
+                intends to do, and you can change the account, the category or the date \
+                before importing.
+                """),
+            .bullets([
+                "Rows you have already imported are marked as duplicates and skipped.",
+                "A payment that matches the other side of a transfer already in the book is completed rather than duplicated.",
+                "Rows nothing could categorise still import — parked in Imbalance for the Uncategorised review to sweep up later.",
+            ]),
+            .heading("CSV columns"),
+            .text("""
+                For CSV, tell FinvestLens which column is the date, description and amount. \
+                Save that as a profile and the next file from the same bank is set up for you.
+                """),
+        ])
+
+    static let smartImport = HelpTopic(
+        id: "smart-import",
+        title: "Reading PDFs with Apple Intelligence",
+        summary: "Turn statements, invoices and dividend notices into transactions.",
+        symbol: "wand.and.stars",
+        keywords: "pdf smart import apple intelligence ocr scan statement invoice dividend attachment",
+        blocks: [
+            .text("""
+                File ▸ Smart Import PDFs… (⇧⌘I) reads bank statements, dividend statements \
+                and invoices **on this device** and turns them into transactions for you to \
+                review. Nothing is sent anywhere.
+                """),
+            .heading("What it does"),
+            .bullets([
+                "Reads the rows out of the document, including scanned pages.",
+                "Matches each one to a transaction already in your book, in any account.",
+                "Links the PDF to that transaction, and suggests a category.",
+            ]),
+            .text("""
+                **Match Attachments…** (⇧⌘M) does the same for receipts you already have: \
+                pick the files, and each is paired with its transaction and filed.
+                """),
+            .tip("""
+                Always read the review screen. On-device reading is good but not perfect — \
+                statements with unsigned debit and credit columns and no running balance are \
+                the case most worth checking.
+                """),
+        ])
+
+    static let categorising = HelpTopic(
+        id: "categorise",
+        title: "Categorising and rules",
+        summary: "Auto-categorise from your own history, and write rules.",
+        symbol: "wand.and.rays",
+        keywords: "categorise categorize rule auto uncategorised imbalance payee learn bulk",
+        blocks: [
+            .heading("Auto-categorise"),
+            .text("""
+                FinvestLens learns from work you have already done: when a payee has been \
+                categorised before, it proposes the same treatment — including the split \
+                breakdown for things like salary or dividends. Where a payee is genuinely \
+                ambiguous it abstains rather than guessing.
+                """),
+            .heading("Rules"),
+            .text("""
+                A rule matches on the description, amount, account or tag and then sets a \
+                category, renames the transaction, adds tags, or links a payment to a bill. \
+                Rules run when you import, and you can apply them to history at any time.
+                """),
+            .heading("Bulk editing"),
+            .text("""
+                Select several transactions and use Bulk Edit to apply one change to all of \
+                them. Only the fields you switch on are changed; everything else is left \
+                alone.
+                """),
+        ])
+
+    static let reconciling = HelpTopic(
+        id: "reconcile",
+        title: "Reconciling an account",
+        summary: "Agree your book with a bank statement, to the cent.",
+        symbol: "checkmark.circle",
+        keywords: "reconcile reconciliation statement cleared balance tick difference",
+        blocks: [
+            .text("""
+                Reconciling proves your records match the bank's. Choose Book ▸ Reconcile \
+                Account… (⇧⌘R) with the account selected.
+                """),
+            .steps([
+                "Enter the statement's closing balance and date.",
+                "Tick the transactions that appear on the statement — matching ones are ticked for you.",
+                "When the difference reaches zero, choose Finish.",
+            ]),
+            .text("""
+                Finished transactions are marked **reconciled** and are protected from \
+                casual edits. If you need to go back, Re-open Last Reconciliation… returns \
+                them to cleared so you can work through the statement again.
+                """),
+            .tip("""
+                A difference that will not close is usually a missing transaction, a \
+                duplicate, or an amount typed with digits transposed. The running \
+                difference at the bottom tells you exactly how much you are looking for.
+                """),
+        ])
+
+    static let scheduled = HelpTopic(
+        id: "scheduled",
+        title: "Scheduled transactions and bills",
+        summary: "Recurring entries, reminders, and what is coming up.",
+        symbol: "calendar.badge.clock",
+        keywords: "scheduled recurring repeat bill reminder due loan mortgage formula",
+        blocks: [
+            .text("""
+                A scheduled transaction repeats on a pattern you choose — weekly, monthly, \
+                on a day of the month, or any interval. FinvestLens tells you when one is \
+                due and enters it when you confirm.
+                """),
+            .bullets([
+                "**Up Next** on the dashboard shows what is due and what is overdue.",
+                "Set a schedule to be created a few days early if you like to see it coming.",
+                "A schedule can use a **formula** — you are asked for the varying amount each time it falls due.",
+            ]),
+            .heading("Loans"),
+            .text("""
+                The Loan Calculator builds a repayment schedule and can create the \
+                scheduled payment for you, split into interest and principal.
+                """),
+            .heading("Bills"),
+            .text("""
+                A rule can mark a payment as settling a particular bill, so the reminder \
+                clears exactly rather than by guessing at the name.
+                """),
+        ])
+
+    static let budgets = HelpTopic(
+        id: "budgets",
+        title: "Budgets",
+        summary: "Plan what you mean to spend, then see how it went.",
+        symbol: "chart.pie",
+        keywords: "budget plan spending actual variance auto suggest",
+        blocks: [
+            .text("""
+                A budget sets a planned amount per account per period. Open it with \
+                Book ▸ Budget… (⌘B).
+                """),
+            .bullets([
+                "**Auto-budget** fills in amounts from what you actually spent.",
+                "**Suggest Budget** proposes monthly figures from six months of spending, using Apple Intelligence on this device.",
+                "The dashboard's Cashflow vs Budget card shows how the current period is tracking.",
+            ]),
+            .text("""
+                Budget-versus-actual is a report like any other, so you can export it or \
+                keep it as a favourite.
+                """),
+        ])
+
+    static let documents = HelpTopic(
+        id: "documents",
+        title: "Receipts and documents",
+        summary: "Attach files to transactions and keep the links working.",
+        symbol: "paperclip",
+        keywords: "attachment document receipt invoice link file folder relative path",
+        blocks: [
+            .text("""
+                Any transaction can have documents attached — a receipt, an invoice, a \
+                dividend statement. The Attachments panel beside the register shows the \
+                selected transaction's file.
+                """),
+            .heading("Where files live"),
+            .text("""
+                Set a document folder in Settings ▸ Documents. Files inside it are linked \
+                **relatively**, the same way GnuCash does it, so the book and its documents \
+                can move together — onto a NAS, or to a new Mac — without breaking.
+                """),
+            .bullets([
+                "**Link File…** points at a file where it already is.",
+                "**Add Web Link…** stores a URL instead of a file.",
+                "**Remove Link** unlinks only — your file is never deleted.",
+            ]),
+        ])
+
+    // MARK: Investments & planning
+
+    static let investments = HelpTopic(
+        id: "investments",
+        title: "Investments and prices",
+        summary: "Holdings, price updates, cost basis and targets.",
+        symbol: "chart.line.uptrend.xyaxis",
+        keywords: "investment security share stock price quote portfolio dividend capital gain cost basis ticker",
+        blocks: [
+            .text("""
+                A security account holds units — shares, units in a fund, or a currency. \
+                Buys, sells, dividends and returns of capital are recorded through the \
+                Stock Transaction sheet, which works out the cost basis and any gain for you.
+                """),
+            .heading("Prices"),
+            .bullets([
+                "**Update Prices** (⇧⌘U) fetches the latest quotes for everything you hold.",
+                "Yahoo and Stooq need no key; EODHD, Alpha Vantage, Finnhub and Twelve Data take a free API key, set in Settings ▸ Pricing.",
+                "Keys are kept in your keychain on this device — never in the book file.",
+            ]),
+            .heading("Price targets"),
+            .text("""
+                Set a target on a security and the dashboard tells you when the latest \
+                quote crosses it.
+                """),
+            .heading("Dividends and franking"),
+            .text("""
+                Record Dividend… books the cash and, where it applies, the franking \
+                credits — so the tax reports have what they need at the end of the year.
+                """),
+        ])
+
+    static let reports = HelpTopic(
+        id: "reports",
+        title: "Reports and statements",
+        summary: "Statements, charts, decks and the end-of-year pack.",
+        symbol: "doc.text",
+        keywords: "report statement balance sheet income profit loss trial cash flow pdf export deck review",
+        blocks: [
+            .text("""
+                Reports ▸ Reports… (⌘R) opens the gallery: balance sheet, income statement, \
+                trial balance, cash flow, budget, tax, investment and business reports.
+                """),
+            .bullets([
+                "Change the period and options at the top of any report.",
+                "Save a report with its settings as a **favourite** to come back to it.",
+                "Export any report as a PDF, or share it.",
+            ]),
+            .heading("Presentation decks"),
+            .text("""
+                **Financial Review** presents a period as a slide deck — one message per \
+                slide, with charts and commentary written on this device from the figures \
+                on the slide. **Investment Review** does the same for the portfolio.
+                """),
+            .heading("End of year"),
+            .text("""
+                The **Financial Year Pack** gathers the statements you need at tax time \
+                into one PDF, in reading order.
+                """),
+        ])
+
+    static let planning = HelpTopic(
+        id: "planning",
+        title: "Planning ahead",
+        summary: "Debts, a lifetime plan, tax estimates and a wellbeing score.",
+        symbol: "chart.line.flattrend.xyaxis",
+        keywords: "plan planner debt avalanche snowball retirement lifetime tax estimate wellbeing forecast",
+        blocks: [
+            .heading("Debt Reduction Planner"),
+            .text("""
+                Enter what you can put toward debts each month and compare **avalanche** \
+                (highest rate first) with **snowball** (smallest balance first) — you see \
+                the payoff date and the interest saved against paying minimums.
+                """),
+            .heading("Lifetime Planner"),
+            .text("""
+                A long-range projection seeded from your own book, with assumptions you can \
+                edit and one-off life events you can add. Figures can be shown in today's money.
+                """),
+            .heading("Tax estimator"),
+            .text("""
+                An estimate built from the accounts you mark as income and deductions, using \
+                editable brackets that default to Australian resident rates.
+                """),
+            .heading("Financial Wellbeing"),
+            .text("""
+                A transparent score from four measures in your own books — savings rate, \
+                months of spending covered by cash, non-mortgage debt against income, and \
+                the recent spending trend. Every component is shown, with how it was worked out.
+                """),
+            .tip("""
+                These are estimates from your own figures and assumptions. They are not \
+                financial or tax advice.
+                """),
+        ])
+
+    static let goals = HelpTopic(
+        id: "goals",
+        title: "Savings goals",
+        summary: "Set money aside toward something, and track the push.",
+        symbol: "target",
+        keywords: "goal saving target challenge set aside holiday emergency fund deposit",
+        blocks: [
+            .text("""
+                A goal earmarks part of an account toward something — a holiday, an \
+                emergency fund, a deposit. The money stays where it is; the goal just \
+                tracks how much of it is spoken for.
+                """),
+            .bullets([
+                "Add or withdraw against a goal as you save.",
+                "A goal can have a target amount and a target date, and shows what is left to go.",
+                "A **challenge** is a time-boxed push on one goal, if you like a deadline.",
+            ]),
+        ])
+
+    // MARK: More
+
+    static let business = HelpTopic(
+        id: "business",
+        title: "Small business",
+        summary: "Customers, suppliers, invoices, bills and billable time.",
+        symbol: "building.2",
+        keywords: "business customer vendor supplier invoice bill payment aging receivable payable job employee tax invoice time mileage",
+        blocks: [
+            .text("""
+                Business ▸ Customers, Vendors & Invoices… (⇧⌘B) opens the business hub: \
+                customers, vendors, employees, jobs, invoices, bills and billing terms.
+                """),
+            .heading("Invoicing"),
+            .steps([
+                "Create an invoice for a customer and add its line items.",
+                "Post it — that books the amount to accounts receivable.",
+                "When you are paid, use Process Payment to settle it.",
+            ]),
+            .heading("Reports"),
+            .bullets([
+                "**Receivable Aging** and **Payable Aging** show what is owed and how late it is.",
+                "An invoice can be printed as an Australian Tax Invoice.",
+                "A **credit note** reduces what is owed, rather than adding to it.",
+            ]),
+            .heading("Time and mileage"),
+            .text("""
+                Log billable hours or travel, then gather them onto a customer invoice.
+                """),
+        ])
+
+    static let emergencyRecords = HelpTopic(
+        id: "emergency",
+        title: "Emergency records",
+        summary: "Key details kept with the book, behind authentication.",
+        symbol: "cross.case",
+        keywords: "emergency record insurance policy contact account number authentication touch id",
+        blocks: [
+            .text("""
+                Emergency Records keeps the details someone would need in a hurry — \
+                insurance policies, account numbers, contacts — alongside the book rather \
+                than scattered across notes and drawers.
+                """),
+            .text("""
+                The screen asks for Touch ID or your password each time it opens, and the \
+                records stay inside your book file.
+                """),
+        ])
+
+    static let interchange = HelpTopic(
+        id: "interchange",
+        title: "GnuCash, Ledger and the command line",
+        summary: "Move your data in and out, and script reports.",
+        symbol: "terminal",
+        keywords: "gnucash ledger export import cli finlens command line journal interchange",
+        blocks: [
+            .heading("GnuCash"),
+            .text("""
+                FinvestLens reads and writes GnuCash XML, so you can move a book either \
+                way without losing detail — accounts, splits, prices, schedules and \
+                business records all survive the trip.
+                """),
+            .heading("Ledger journals"),
+            .text("""
+                File ▸ Export ▸ Ledger Journal… (⇧⌘E) writes a plain-text Ledger journal, \
+                and File ▸ Import ▸ Ledger Journal… reads one back.
+                """),
+            .heading("The finlens command line"),
+            .text("""
+                `finlens` is a read-only command-line reporter over your book, modelled on \
+                Ledger's. It is safe to run while the app has the book open — it takes no \
+                lock and never writes.
+                """),
+            .table([
+                ("`finlens -f Book.finvestlens bal`", "Account balances."),
+                ("`finlens -f Book.finvestlens reg Groceries`", "A register of matching postings."),
+                ("`finlens -f Book.finvestlens print`", "The book as a Ledger journal."),
+            ]),
+        ])
+
+    static let shortcuts = HelpTopic(
+        id: "shortcuts",
+        title: "Keyboard shortcuts",
+        summary: "Everything you can reach without the mouse.",
+        symbol: "keyboard",
+        keywords: "shortcut keyboard key command hotkey",
+        blocks: [
+            .heading("Books and files"),
+            .table([
+                ("⌥⌘N", "New book"),
+                ("⌘O", "Open a book"),
+                ("⌘S", "Save"),
+                ("⇧⌘W", "Close the book"),
+                ("⌥⌘I", "Import a bank file"),
+                ("⇧⌘I", "Smart Import PDFs"),
+                ("⇧⌘M", "Match attachments"),
+                ("⇧⌘E", "Export a Ledger journal"),
+            ]),
+            .heading("Moving around"),
+            .table([
+                ("⌥⌘1", "Dashboard"),
+                ("⌥⌘2", "Reports"),
+                ("⌥⌘3", "All transactions"),
+                ("⌘F", "Find transactions"),
+                ("⌘I", "Find an account"),
+            ]),
+            .heading("Working in the book"),
+            .table([
+                ("⌘N", "New transaction"),
+                ("⇧⌘N", "New transaction, all fields"),
+                ("⌘E", "Edit the selected transaction in the inspector"),
+                ("⇧⌘R", "Reconcile the selected account"),
+                ("⌘B", "Budget"),
+                ("⇧⌘U", "Update prices"),
+                ("⌘Z", "Undo"),
+            ]),
+            .heading("Windows and views"),
+            .table([
+                ("⌘D", "Dashboard"),
+                ("⌘R", "Reports in a new window"),
+                ("⇧⌘B", "Customers, vendors and invoices"),
+                ("⇧⌘L", "Lock the book now"),
+                ("⌘?", "This help"),
+                ("⌘,", "Settings"),
+            ]),
+        ])
+}

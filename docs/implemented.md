@@ -20,6 +20,43 @@ Companions: [PRD](prd.md) · [Architecture](architecture.md) · [Plan](plan.md) 
 
 ---
 
+## In-app help book (25 Jul 2026)
+
+The Help menu opened a 72-line sheet: a paragraph on getting started, the search
+operators, and a shortcut table that had **gone stale** (it listed ⌘N as "New
+book" — ⌘N is New Transaction; ⌥⌘N is New Book — plus ⌘T and ⌘J, which do not
+exist). It is now a proper help book: **20 topics in four sections**, with a
+topic sidebar, per-topic pages and search.
+
+**Built as data, not HTML.** `HelpContent.swift` is the book — sections of
+topics, each a list of typed blocks (`text`, `heading`, `bullets`, `steps`,
+`table`, `tip`) whose strings are `LocalizedStringKey`s. `HelpView.swift`
+renders them. Two consequences worth the choice: the pages **translate through
+the app's String Catalog** like every other string (all 230 new strings ship in
+the same eight languages), and the same code serves macOS, iPadOS and iOS.
+An Apple Help Book (`.help` bundle, indexed HTML, Help Viewer) was the
+alternative; it would have meant a parallel localization pipeline, a `hiutil`
+index to maintain, and nothing at all on iOS.
+
+Help is a **window** on macOS, not a sheet — the same HIG reasoning already
+applied to Reports and Reconcile: you read it *while* working. iOS keeps the
+sheet.
+
+Search matches a topic's title, summary **and** an untranslated English keyword
+list, so a reader who searches "reconcile" or "split" finds the page even when
+the UI is in German — the words they learned from GnuCash still work.
+
+Content covers the real feature set, checked against the code rather than
+memory: accounts and the chart, the register and splits, search operators,
+saving/locking/NAS/audit, bank import and the matcher, Smart Import, rules and
+auto-categorise, reconciling, schedules and bills, budgets, documents and
+relative links, investments and price providers, reports and decks, the
+planners, goals, business, emergency records, GnuCash/Ledger/`finlens`, and a
+shortcut reference **regenerated from the app's actual `keyboardShortcut`
+declarations**.
+
+---
+
 ## Localization — eight languages (25 Jul 2026)
 
 The app ships localized: **English, German, Spanish, French, Italian, Japanese,

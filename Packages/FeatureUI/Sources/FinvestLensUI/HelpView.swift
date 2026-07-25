@@ -2,71 +2,183 @@
 //  HelpView.swift
 //  FinvestLens — FeatureUI
 //
+//  The in-app help book: a topic list beside the page you are reading, with
+//  search. Pages come from ``HelpBook`` as `LocalizedStringKey`s, so they
+//  translate through the app's String Catalog and the same code serves macOS,
+//  iPadOS and iOS — there is no separate HTML help bundle to keep in sync.
+//
 //  Copyright (C) 2026 Christine Tham
 //  SPDX-License-Identifier: GPL-3.0-or-later
 //
 
 import SwiftUI
 
-/// A lightweight in-app help / keyboard-shortcut reference reached from the Help
-/// menu — FinvestLens has no bundled help book yet, so this is the "Help book /
-/// anchors" surface.
 public struct HelpView: View {
     @Environment(\.dismiss) private var dismiss
+    @State private var selection: String? = HelpBook.sections.first?.topics.first?.id
+    @State private var search = ""
 
     public init() {}
 
-    private struct Shortcut: Identifiable {
-        let id = UUID()
-        let keys: String
-        let action: String
+    /// Sections filtered by the search field. A topic matches on its title,
+    /// summary or keywords; an empty search shows everything.
+    private var visibleSections: [HelpSection] {
+        let needle = search.trimmingCharacters(in: .whitespaces).lowercased()
+        guard !needle.isEmpty else { return HelpBook.sections }
+        return HelpBook.sections.compactMap { section in
+            let topics = section.topics.filter { $0.matches(needle) }
+            return topics.isEmpty ? nil : HelpSection(id: section.id, title: section.title,
+                                                      topics: topics)
+        }
     }
 
-    private let shortcuts: [Shortcut] = [
-        .init(keys: "⌘N", action: "New book"),
-        .init(keys: "⌘O", action: "Open book"),
-        .init(keys: "⌘S", action: "Save"),
-        .init(keys: "⌘T", action: "New transaction"),
-        .init(keys: "⇧⌘N", action: "New account"),
-        .init(keys: "⌘E", action: "Edit selected transaction"),
-        .init(keys: "⌘J", action: "Jump to the other account"),
-        .init(keys: "⌘F", action: "Find transactions"),
-        .init(keys: "⌘I", action: "Find account"),
-        .init(keys: "⌥⌘I", action: "Import a bank file"),
-        .init(keys: "⇧⌘R", action: "Reconcile account"),
-        .init(keys: "⌘R", action: "Reports"),
-        .init(keys: "⌘B", action: "Budget"),
-        .init(keys: "⌘D", action: "Dashboard"),
-        .init(keys: "⇧⌘L", action: "Lock the book now"),
-    ]
-
     public var body: some View {
-        NavigationStack {
-            List {
-                Section("Getting started") {
-                    Text("Open a GnuCash file with File ▸ Import GnuCash…, or create a new book with ⌘N. Everything you do is undoable, and the book saves back to its file on ⌘S, autosave (Settings ▸ General), or when you close it.")
-                        .scaledFont(.callout)
-                }
-                Section("Search operators") {
-                    Text("The search box understands `tag:`, `account:`/`category:`, `memo:`, `desc:`, `amount:>N`/`<N`, `from:`/`to:` (a date, `today`, or `-7d`/`-2w`/`-3m`/`-1y`), `type:`, and `has:attachment`. Prefix any token with `-` to negate it.")
-                        .scaledFont(.callout)
-                }
-                Section("Keyboard shortcuts") {
-                    ForEach(shortcuts) { shortcut in
-                        LabeledContent(shortcut.action) {
-                            Text(shortcut.keys).monospaced().foregroundStyle(.secondary)
+        NavigationSplitView {
+            List(selection: $selection) {
+                ForEach(visibleSections) { section in
+                    Section(section.title) {
+                        ForEach(section.topics) { topic in
+                            Label(topic.title, systemImage: topic.symbol)
+                                .scaledFont(.callout)
+                                .tag(topic.id)
                         }
                     }
                 }
             }
+            .searchable(text: $search, prompt: Text("Search help"))
             .navigationTitle("FinvestLens Help")
-            .onEscapeCommand { dismiss() }
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
-                }
+            .navigationSplitViewColumnWidth(min: 220, ideal: 250)
+        } detail: {
+            if let topic = selection.flatMap(HelpBook.topic(id:)) {
+                HelpTopicPage(topic: topic)
+            } else {
+                ContentUnavailableView("Choose a topic",
+                                       systemImage: "book",
+                                       description: Text("Pick a page on the left, or search."))
             }
         }
-        .frame(minWidth: 420, minHeight: 480)
+        .onEscapeCommand { dismiss() }
+        .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Done") { dismiss() }
+            }
+        }
+        .frame(minWidth: 720, minHeight: 520)
+        .onChange(of: search) {
+            // Keep the reader on a page that is still in the list.
+            let visible = visibleSections.flatMap(\.topics).map(\.id)
+            if let selection, visible.contains(selection) { return }
+            selection = visible.first
+        }
+    }
+}
+
+private extension HelpTopic {
+    /// Matches against the reader's own language *and* the English keywords, so
+    /// searching for a term learned from GnuCash still finds the page.
+    func matches(_ needle: String) -> Bool {
+        for candidate in [String(describing: title), String(describing: summary), keywords] where
+            candidate.lowercased().contains(needle) {
+            return true
+        }
+        return false
+    }
+}
+
+/// One help page.
+struct HelpTopicPage: View {
+    let topic: HelpTopic
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Label(topic.title, systemImage: topic.symbol)
+                        .scaledFont(.largeTitle, weight: .semibold)
+                        .labelStyle(.titleAndIcon)
+                    Text(topic.summary)
+                        .scaledFont(.title3)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.bottom, 2)
+
+                ForEach(topic.blocks) { block in
+                    HelpBlockView(block: block)
+                }
+            }
+            .frame(maxWidth: 700, alignment: .leading)
+            .padding(24)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .textSelection(.enabled)
+    }
+}
+
+private struct HelpBlockView: View {
+    let block: HelpBlock
+
+    var body: some View {
+        switch block {
+        case .text(let key):
+            Text(key).scaledFont(.body)
+
+        case .heading(let key):
+            Text(key)
+                .scaledFont(.title3, weight: .semibold)
+                .padding(.top, 6)
+
+        case .bullets(let items):
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(Array(items.enumerated()), id: \.offset) { _, item in
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text(verbatim: "•").foregroundStyle(.secondary)
+                        Text(item).scaledFont(.body)
+                    }
+                }
+            }
+
+        case .steps(let items):
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(Array(items.enumerated()), id: \.offset) { index, item in
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text(verbatim: "\(index + 1).")
+                            .scaledFont(.body, weight: .semibold)
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                        Text(item).scaledFont(.body)
+                    }
+                }
+            }
+
+        case .table(let rows):
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(Array(rows.enumerated()), id: \.offset) { index, row in
+                    HStack(alignment: .firstTextBaseline, spacing: 16) {
+                        Text(row.0)
+                            .scaledFont(.callout)
+                            .frame(minWidth: 120, alignment: .leading)
+                        Text(row.1)
+                            .scaledFont(.callout)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .padding(.vertical, 6)
+                    if index < rows.count - 1 { Divider() }
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 4)
+            .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 10))
+
+        case .tip(let key):
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Image(systemName: "lightbulb")
+                    .foregroundStyle(.tint)
+                Text(key).scaledFont(.callout)
+            }
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(.tint.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+        }
     }
 }
