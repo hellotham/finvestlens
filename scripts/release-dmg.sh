@@ -11,7 +11,7 @@
 #  step, which is deliberately NOT automated: notarization needs an
 #  app-specific password, and that is stored once, by you, in your keychain:
 #
-#      xcrun notarytool store-credentials "$NOTARY_PROFILE" \
+#      xcrun notarytool store-credentials "hellotham-notary" \
 #          --apple-id "you@example.com" --team-id RPL5R637DS
 #
 #  It prompts for the app-specific password and stores it in the keychain.
@@ -29,7 +29,7 @@ APP_NAME="finvestlens"
 SCHEME="finvestlens"
 TEAM_ID="RPL5R637DS"
 SIGN_ID="Developer ID Application: Hello Tham Pty. Ltd. (${TEAM_ID})"
-NOTARY_PROFILE="${NOTARY_PROFILE:-finvestlens-notary}"
+NOTARY_PROFILE="${NOTARY_PROFILE:-hellotham-notary}"
 VOLUME_NAME="FinvestLens"
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -135,6 +135,26 @@ while IFS= read -r binary; do
 done < <(find "$APP" \( -name "*.appex" -o -name "*.app" \) -print)
 echo "  hardened runtime on every executable ✓"
 
+# ------------------------------------------------------- notarize the app
+
+# The app is notarized and stapled *before* the DMG is built. Stapling only
+# the DMG leaves the copy in /Applications without a local ticket, so a first
+# launch on an offline Mac has nothing to check against.
+if [[ $SKIP_NOTARIZE -eq 0 ]]; then
+    step "Notarizing the app (waits on Apple)"
+    ditto -c -k --keepParent "$APP" "$BUILD/app.zip"
+    xcrun notarytool submit "$BUILD/app.zip" \
+        --keychain-profile "$NOTARY_PROFILE" --wait 2>&1 \
+        | tee "$BUILD/notarize-app.log" | sed 's/^/  /'
+    grep -q "status: Accepted" "$BUILD/notarize-app.log" || {
+        id=$(awk '/id:/{print $2; exit}' "$BUILD/notarize-app.log")
+        echo "      xcrun notarytool log $id --keychain-profile $NOTARY_PROFILE"
+        fail "app notarization failed"
+    }
+    xcrun stapler staple "$APP" | sed 's/^/  /'
+    rm -f "$BUILD/app.zip"
+fi
+
 # ---------------------------------------------------------------------- dmg
 
 step "Building the disk image"
@@ -171,7 +191,7 @@ if [[ $SKIP_NOTARIZE -eq 1 ]]; then
     exit 0
 fi
 
-step "Notarizing (this waits on Apple; usually a few minutes)"
+step "Notarizing the disk image (waits on Apple)"
 xcrun notarytool submit "$DMG" \
     --keychain-profile "$NOTARY_PROFILE" \
     --wait 2>&1 | tee "$BUILD/notarize.log" | sed 's/^/  /'
@@ -189,6 +209,11 @@ xcrun stapler validate "$DMG" | sed 's/^/  /'
 
 step "Gatekeeper check"
 spctl --assess --type open --context context:primary-signature -vv "$DMG" 2>&1 | sed 's/^/  /'
+# And the app as a user actually receives it, mounted from the image.
+MOUNT=$(hdiutil attach "$DMG" -nobrowse -readonly | awk -F'\t' '/Volumes/{print $NF}')
+xcrun stapler validate "$MOUNT/FinvestLens.app" 2>&1 | sed 's/^/  /'
+spctl --assess --type execute -vv "$MOUNT/FinvestLens.app" 2>&1 | sed 's/^/  /'
+hdiutil detach "$MOUNT" -quiet
 
 step "Done"
 echo "  $DMG"
