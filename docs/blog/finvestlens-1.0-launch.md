@@ -7,7 +7,7 @@ description: >-
   found that no test suite would.
 date: 2026-07-26
 author: Hello Tham
-tags: [swift, swiftui, macos, accounting, gnucash, ai-assisted-development, open-source]
+tags: [swift, swiftui, macos, accounting, gnucash, ai-assisted-development, ai-do, open-source]
 ---
 
 ![FinvestLens](https://raw.githubusercontent.com/hellotham/finvestlens/main/website/public/images/og-card.png)
@@ -24,6 +24,10 @@ phase plan taken from P0 through P10.
 I typed very little of it. I directed it — through **Claude Code**, Anthropic's
 coding agent — and that turns out to be a skill with its own failure modes,
 which is the more interesting story.
+
+The method wasn't improvised. It's the one I set out in Chapters 2 and 3 of my
+book [*AI-dō*](https://christham.net/aidou/), and this is the largest thing I've
+built with it. Treat the rest of this as a field report on whether it holds up.
 
 ---
 
@@ -332,6 +336,70 @@ same trap catches any helper whose title parameter is typed `String` instead of
 `LocalizedStringKey` — which is why the dashboard card titles stayed stubbornly
 English in the first German build.
 
+## The method, chapter and verse
+
+[*AI-dō*](https://christham.net/aidou/) — *the Way of AI, grounded in practice* —
+is where this method is written down. FinvestLens is the first project on which
+I've run [Chapter 2](https://christham.net/aidou/productivity.html) and
+[Chapter 3](https://christham.net/aidou/software.html) at full size, which makes
+it a test rather than a demonstration. The mapping came out closer than I
+expected, so here it is explicitly.
+
+**ICE — Intent, Context, Expectations.** Chapter 3 separates the three things
+people usually smear together. *Intent* is what you want and the boundaries it
+must respect, and you own it: here, the PRD's numbered requirements, kept loose
+enough that more than one implementation could satisfy them — the chapter's own
+test for whether you've smuggled a specification into a goal. *Context* is the
+supporting material the agent needs to act: the real book, the GnuCash install,
+the C source checkout. *Expectations* is the contract — a checkable statement of
+what "done" means: the per-phase exit criteria, and the two gates that never
+moved. The chapter also warns that over-specifying backfires, because a model
+honours the top of a long instruction list and quietly contradicts the bottom.
+The phase plan worked because its criteria were *checkable*, not because it was
+long.
+
+**The stack (§3.2), filled in.** Model: Opus 5. Harness: Claude Code.
+Meta-harness: the fan-out of independent agents in the review. Memory: 24
+Markdown files. Eval: 1,179 tests plus an oracle they can't argue with. The
+chapter notes that holding the model fixed and swapping only the harness has
+been measured moving a coding agent's success rate by more than twenty points —
+which matches the experience here, where the model was never the interesting
+variable.
+
+**Patterns (§3.3).** The full-codebase review is two of them composed:
+parallelisation for the ten finder angles, evaluator–optimizer for the pass that
+tried to refute each candidate. That only works because of the rider in §2.6 —
+an evaluator–optimizer loop needs an external check the model cannot fool, since
+self-correction without an external signal leaves accuracy flat or worse. Every
+"audit X against Y" instruction in this project was me supplying that signal.
+
+**Memory (§2.5).** Structured notes and governed memory in the plainest possible
+form: one durable fact per file, with a policy about what earns a file at all.
+And compaction, not as a diagram — sessions genuinely ran out of context and
+resumed from a summary plus those files.
+
+**The confidence trap (§2.9).** Fluency is not accuracy; the easier something is
+to take in, the truer it feels. Everything above about plausible-but-wrong work
+is that effect with a codebase attached. The chapter's task-sorting ladder also
+predicted which parts of this project would stay mine: *find what's there* —
+lean in; *summarise or transform* — trust, then spot-check; *decide what
+matters* — form your own view first. All four things I decided **not** to build
+sit in that third category.
+
+**And everything is Markdown (§2.4).** The PRD, the architecture decisions, the
+phase plan, the memory files, the in-app help, this article.
+
+Where practice diverged is the more useful half. Chapter 3 argues past
+spec-driven development towards **spec-anchored, code-coupled** work — one spec
+per node, with drift as a blocking gate. I managed that in exactly one place:
+the website's CI regenerates the manual from the app's help source and fails the
+build if the committed copy differs. It is three lines of CI config, it has never
+once been annoying, and having lived with it I want it everywhere documentation
+describes code. The other gap is §2.1's climb from prompt to skill to loop to
+shared tool. "Audit X against Y" earned its keep a dozen times over and never
+once got packaged as a skill — I retyped it, slightly differently, every time.
+The book tells you not to do that. Evidently I should read it.
+
 ## What I'd tell someone trying this
 
 - **Write the spec first.** Numbered requirements and written exit criteria turn
@@ -361,6 +429,7 @@ any.
 - **[Download FinvestLens 1.0](https://github.com/hellotham/finvestlens/releases/latest)** — macOS 26 or later, free, GPL v3
 - **[The manual](https://hellotham.com/finvestlens/manual/)** — also in the app under Help (⌘?)
 - **[Source on GitHub](https://github.com/hellotham/finvestlens)** — including the PRD, architecture, phase plan and the full build narrative in `docs/`
+- **[AI-dō](https://christham.net/aidou/)** — the method this was built with, in full
 
 Coming from GnuCash? **File ▸ Import ▸ GnuCash…** brings your book across —
 accounts, transactions, prices, schedules, business records — and you can export
