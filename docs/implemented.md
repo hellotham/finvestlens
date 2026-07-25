@@ -1,12 +1,13 @@
-# Implemented — history, audits & fixes (P0–P7)
+# Implemented — history, audits & fixes (P0–P10)
 
-The record of what has been **built and verified**. **Every phase P0–P9 is
+The record of what has been **built and verified**. **Every phase P0–P10 is
 complete**: the engine, native document + NAS locking, GnuCash import/export,
 core UX, everyday finance, investments + multi-currency + quotes,
 sync/dashboard/alerts, Apple Intelligence, small-business features, extended
-statement import (SWIFT MT + ISO 20022), and the planning & insights layer —
-plus two **July 2026 redesigns**: usability & performance, and report
-quality. [deferred.md](deferred.md) lists the smaller open tails.
+statement import (SWIFT MT + ISO 20022), the planning & insights layer, and
+the Ledger journal codec + `finlens` CLI — plus two **July 2026 redesigns**:
+usability & performance, and report quality. [deferred.md](deferred.md) lists
+the smaller open tails.
 
 This file is the narrative: what each audit found, what was fixed, and how it
 was verified (mostly against a real GnuCash book — 46,553 transactions, 559
@@ -16,6 +17,92 @@ deferred.md.
 
 Companions: [PRD](prd.md) · [Architecture](architecture.md) · [Plan](plan.md) ·
 [Deferred](deferred.md).
+
+---
+
+## P10 — Ledger interchange & the `finlens` CLI (25 Jul 2026)
+
+The last phase: read/write the Ledger 3 journal format, and a ledger-modelled
+command line over the book. Design and research in
+[ledger-design.md](ledger-design.md), with the two specs it was written
+against — [ledger-format-reference.md](ledger-format-reference.md) (the
+grammar, from `doc/ledger3.texi` v3.4.1 and the C++ parser) and
+[ledger-cli-reference.md](ledger-cli-reference.md) (the CLI surface). The
+user-facing manual is [cli.md](cli.md).
+
+**P10a — the codec.** `LedgerJournal` / `LedgerParser` / `LedgerWriter` /
+`LedgerAmountStyle` in Interchange: first-character dispatch over the living
+grammar — postings with the hard two-space separator, `@`/`@@`/`(@)` costs,
+balance assertions evaluated in file order, balance assignments, `(unbalanced)`
+and `[balanced]` virtuals, `; key: value` and `; :tag:` metadata, the directive
+set with `include`/`year`/`apply` state machines, `~` periodic and `=`
+automated entries captured as extras, decimal-comma inference, and
+per-commodity display-style learning. Every error reports `file:line` and
+recovers to the next entry. Parse → write → parse is a fixed point.
+
+**P10b — book mapping.** `LedgerBookMapping` both ways (guid/type metadata,
+`@@` legs, reconcile states, aux dates, assertion verification, virtual policy,
+an import summary), a deterministic whole-book export, and File ▸ Import/Export
+▸ Ledger Journal… menu items.
+
+**Verified on the real reference book**: 46,553 transactions / 559 accounts /
+159,871 prices export to a 16.4 MB journal in ~3.0 s and re-import in ~7.1 s
+with **zero errors**, every balance matching to the cent, and
+export→import→export **byte-identical**. Two findings only real data could
+surface shaped the codec: commodity mnemonics contain spaces (`AT&T Top-up`),
+so metadata values and symbols are quoted; and the `commodity … format`
+sub-directive is authoritative for precision on import, because a whole-unit
+security can still hold fractional units.
+
+**P10c — the CLI.** A new `Packages/CLI` with a testable `FinvestLensCLICore`
+library and the thin `finlens` executable. Hand-rolled option parsing with
+ledger's interleaving and short clusters; the query grammar (account regexes
+with implicit OR, `and`/`or`/`not` with parens, `payee`/`@`, `tag`/`%`,
+`code`/`#`, `note`/`=`, trailing `for`/`since`/`until`/`show` sections); smart
+dates and period expressions with natural-boundary bucket alignment; a
+filter → value → sort pipeline honouring ledger's **exclusive** `--end`; and
+renderers for `balance`, `register`, `print`, `csv`, `accounts`, `payees`,
+`commodities`, `prices`, `pricedb`, `stats`, `equity`, `cleared` and `source`,
+plus the interactive REPL with `push`/`pop`/`reload`. The CLI is **strictly
+read-only** (ADR-L2): a read-only store connection, no lock, no working copy,
+no writes. Verified on the real book — **371 account balances match the engine
+exactly**, the file is byte-identical after a run, and no `.lock` appears.
+
+Two conformance details the goldens caught: `--depth N` folds by *account path
+components* (not display rows), and `to`/`until SPEC` ends **before** that span
+— the same exclusivity as `-e`.
+
+**P10d — depth.** `-l/--limit` and `-d/--display` value expressions over a
+small typed AST (the posting vocabulary, comparisons, regex match, arithmetic,
+`[date]` literals) — deliberately grown to fit, not a port of ledger's
+~80-function language; unknown names are rejected at *parse* time, so a typo
+exits 1 instead of quietly matching nothing. Running totals moved into the
+pipeline, snapshotted per commodity over the whole filtered set before `-d`,
+`--head`/`--tail` and `-S` reshape it. The `--budget` family over a journal's
+`~` entries (or a book's own Budgets), the `budget` command's four columns,
+`--forecast` projections that are reported but never added to the book, `xact`
+drafts, and the `.finlensrc` init file with `FINLENS_*` defaults sitting under
+argv.
+
+Three fixes to existing code fell out of P10d: **`finlens print QUERY` ignored
+the query** and printed everything (it filtered a whole-book export on a `guid`
+*metadata* key, but the export writes the guid as a note line — only the parser
+produces metadata — so nothing matched and the fallback kept all of it);
+`--head`/`--tail` restarted the running total at the first shown row; and
+`LedgerExport.styles(for:)` was split out of `journal(from:)` so `equity` and
+`xact` stop building a whole 46,000-transaction journal to format a few
+amounts. One conformance trap worth recording: `FINLENS_DEPTH=1` must not read
+as the bare flag `--depth`, so boolean coercion applies only to options that
+genuinely take no value.
+
+**Deliberately out** (recorded in ledger-design.md §5.4): format strings
+(`-F`, `--bold-if`), `select`, `convert`, `--pivot`, `--anon`, `-j`/`-J` plots,
+and `lisp`/`xml` output. Environment compatibility is `FINLENS_*` only — we do
+not read `LEDGER_FILE` or `.ledgerrc`.
+
+The env-gated acceptance harnesses are `LiveLedgerRoundTripTests` and
+`LiveCLIParityTests` (`FL_PERF_FILE` names the book, `FL_FINLENS` the binary);
+53 CLI unit tests pin the layouts, grammars and the read-only guarantee.
 
 ---
 

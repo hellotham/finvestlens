@@ -2,12 +2,12 @@
 
 | | |
 |---|---|
-| **Document status** | **All phases P0–P9 complete** (v1.0 was P0–P6, 13 July 2026; P7 business, P8 extended import, and P9 planning & insights since), **plus the Jul 2026 usability/performance and report-quality redesigns**. Online bank sync skipped to [deferred.md](deferred.md). |
-| **Last updated** | 2026-07-24 |
+| **Document status** | **All phases P0–P10 complete** (v1.0 was P0–P6, 13 July 2026; P7 business, P8 extended import, P9 planning & insights, and P10 ledger CLI & interchange since), **plus the Jul 2026 usability/performance and report-quality redesigns**. Online bank sync skipped to [deferred.md](deferred.md). |
+| **Last updated** | 2026-07-25 |
 | **Scope** | The build plan: phases, workstreams, tasks, dependencies, and exit criteria |
 | **Companions** | [PRD](prd.md) · [Architecture](architecture.md) · [Porting Strategy](porting.md) · [Implemented](implemented.md) · [Deferred backlog](deferred.md) · [Money study](enhancements-msmoney.md) · [Firefly study](enhancements-firefly.md) · [Frollo study](enhancements-frollo.md) |
 
-This is the authoritative **delivery schedule and status record**. It sequences the requirements from the [PRD](prd.md) (`FR-*`), the architecture decisions ([`ADR-*`](architecture.md)), and the porting map ([Porting §2](porting.md)) into ten phases (P0–P9), and records where each one stands. Each phase lists its **objective, workstreams/tasks, dependencies, deliverables, exit criteria, test focus, and risks**.
+This is the authoritative **delivery schedule and status record**. It sequences the requirements from the [PRD](prd.md) (`FR-*`), the architecture decisions ([`ADR-*`](architecture.md)), and the porting map ([Porting §2](porting.md)) into eleven phases (P0–P10), and records where each one stands. Each phase lists its **objective, workstreams/tasks, dependencies, deliverables, exit criteria, test focus, and risks**.
 
 ### Phase status
 
@@ -25,9 +25,9 @@ This is the authoritative **delivery schedule and status record**. It sequences 
 | **Report-quality redesign** | ✅ Complete (24 Jul 2026) | Statements at annual-report standard — face-and-notes presentation from the user's own tree, ASC 274 ordering, accounting typography, comparatives, incl. the Trial Balance — plus the Financial Review and Investment Review slide decks with validator-grounded on-device insights. Plan/research: [report-redesign.md](report-redesign.md); design: [architecture.md §5.6a](architecture.md); narrative in [implemented.md](implemented.md). |
 | **P8 — Extended import** | ✅ Complete (24 Jul 2026) | MT940/MT942 + CAMT.053 importers feed the Import Matcher; format auto-detection incl. content sniffing. Online bank sync (FR-XIO-07) **skipped by decision (24 Jul 2026)** — moved to [deferred.md](deferred.md) §5. |
 | **P9 — Planning & insights** | ✅ Complete (24 Jul 2026) | Debt & Lifetime planners, tax estimator, Spending Insights, wellbeing score, passport PDF, savings challenges, Emergency Records, audit log — design in [planning-design.md](planning-design.md). |
-| **P10 — Ledger CLI & interchange** | 🚧 **In progress** (P10a–P10c done 25 Jul 2026; only P10d depth remains) | Ledger 3 journal import/export + the read-only `finlens` CLI. Research + phased plan in [ledger-design.md](ledger-design.md) (format spec: [ledger-format-reference.md](ledger-format-reference.md), CLI spec: [ledger-cli-reference.md](ledger-cli-reference.md)). |
+| **P10 — Ledger CLI & interchange** | ✅ Complete (25 Jul 2026) — P10a–P10d all delivered | Ledger 3 journal import/export + the read-only `finlens` CLI. Research + phased plan in [ledger-design.md](ledger-design.md) (format spec: [ledger-format-reference.md](ledger-format-reference.md), CLI spec: [ledger-cli-reference.md](ledger-cli-reference.md)). |
 
-**Every phase P0–P9 is delivered**; a set of low-priority tails deferred *within* them is tracked, ranked, in [deferred.md](deferred.md). The narrative of what was built, with the audits and measurements behind it, is in [implemented.md](implemented.md).
+**Every phase P0–P10 is delivered**; a set of low-priority tails deferred *within* them is tracked, ranked, in [deferred.md](deferred.md). The narrative of what was built, with the audits and measurements behind it, is in [implemented.md](implemented.md).
 
 ---
 

@@ -1,11 +1,15 @@
-# Deferred backlog — open items within P0–P9
+# Deferred backlog — open items within P0–P10
 
-Work that was **in scope for the delivered phases (all of P0–P9)** but is
+Work that was **in scope for the delivered phases (all of P0–P10)** but is
 still open: deferred, partial, or not yet built. It is **ranked** — highest
 priority / readiest to pick up first.
 
 Two items were **skipped from the plan by decision** (online bank sync from
-P8, TXF export from P9) — §5 below. The 24 Jul 2026 backlog pass built
+P8, TXF export from P9) — §5 below. P10 shipped complete (25 Jul 2026); the
+ledger surface it deliberately left out (`select`, `convert`, format strings,
+`--pivot`, `--anon`, plot and lisp/xml output) is recorded in
+[ledger-design.md](ledger-design.md) §5.4, not here — none of it was ever in
+scope. The 24 Jul 2026 backlog pass built
 everything else that was buildable without external dependencies (credit
 notes, the round-trip fidelity tail, load-time warnings, the iOS rename/move
 flow, rule link-to-bill), and the 25 Jul 2026 full-codebase review pass closed
