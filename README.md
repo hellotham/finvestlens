@@ -151,6 +151,14 @@ across all three. Defaults live in `~/.finlensrc` or `FINLENS_*` variables.
 `finlens --help` lists every command and flag; [docs/cli.md](docs/cli.md) is
 the full manual.
 
+## Languages
+
+FinvestLens is localized into **English, German, Spanish, French, Italian,
+Japanese, Brazilian Portuguese and Simplified Chinese** — 1,126 UI strings,
+with accounting terminology following GnuCash's own conventions in each
+language, so a GnuCash user reads familiar words. Dates, numbers and currency
+follow the system locale.
+
 ## Platform requirements
 
 - macOS, iPadOS, iOS — minimum versions to be finalized (target current − 1 major).

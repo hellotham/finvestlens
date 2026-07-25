@@ -132,7 +132,7 @@ struct StockTransactionSheet: View {
         return balance * new / old
     }
 
-    private func accountPicker(_ label: String, selection: Binding<GncGUID?>,
+    private func accountPicker(_ label: LocalizedStringKey, selection: Binding<GncGUID?>,
                                nodes: [AccountNode], allowNone: Bool = false) -> some View {
         LabeledContent(label) {
             AccountField(prompt: allowNone ? "None" : "Account",

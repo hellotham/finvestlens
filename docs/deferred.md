@@ -31,7 +31,7 @@ Quality automation and validation that a shippable release needs.
 |---|---|---|
 | CI: app + Intelligence jobs on a hosted runner | NFR-08 / P0, P3 | `.github/workflows/ci.yml` now builds + tests the seven core packages and gates SPDX headers on every push/PR. The app + Intelligence jobs need **Xcode 26 / macOS 26**, which GitHub's hosted runners don't ship yet (the job is present but `continue-on-error`). Enable it once a macOS-26 runner is available (or a self-hosted one). |
 | Large-book perf validation (local + SMB/NFS) | NFR-02 / P1 | **Needs real NAS hardware** — open/scroll/import/save on a 100k-txn book over SMB/NFS. Also settles the one open architecture decision: GRDB **direct-mode vs always-working-copy** on local volumes (Architecture §10). |
-| Localization (string catalogs) | NFR-06 / P6 | **Needs translators** — accessibility labels done; the UI-string catalog + translations are not. |
+| Localization (string catalogs) | NFR-06 / P6 | ✅ **Done (25 Jul 2026).** `finvestlens/Localizable.xcstrings` carries all 1,126 UI strings in **de, es, fr, it, ja, pt-BR, zh-Hans**, with a second catalog for the Quick Look extension's own bundle. Key set verified against the compiler's `-emit-localized-strings` output — no missing keys, no dead entries. Professional review by native speakers is the remaining (optional) step. |
 
 ## 2 — User-facing gaps (high value, tractable)
 

@@ -854,9 +854,11 @@ struct FinancialYearPackSheet: View {
                     }
                 }
                 Section {
-                    Text("One PDF, in reading order — the income statement, statement "
-                         + "of financial position, changes in net worth, realised "
-                         + "gains, and dividends with franking credits.")
+                    Text("""
+                         One PDF, in reading order — the income statement, \
+                         statement of financial position, changes in net worth, \
+                         realised gains, and dividends with franking credits.
+                         """)
                         .scaledFont(.caption)
                         .foregroundStyle(.secondary)
                 }
