@@ -1,5 +1,6 @@
 ---
 import { site, nav, url } from '../data/site';
+import ThemeToggle from './ThemeToggle.astro';
 const path = Astro.url.pathname.replace(/\/$/, '');
 const isCurrent = (href: string) => path.endsWith(href.replace(/\/$/, ''));
 ---
@@ -32,9 +33,10 @@ const isCurrent = (href: string) => path.endsWith(href.replace(/\/$/, ''));
       }
       <a
         href={url('/download/')}
-        class="ml-2 hidden rounded-lg bg-ink-900 px-3.5 py-1.5 font-medium text-white transition-colors hover:bg-ink-700 sm:block dark:bg-white dark:text-ink-900 dark:hover:bg-ink-200"
+        class="mx-2 hidden rounded-lg bg-ink-900 px-3.5 py-1.5 font-medium text-white transition-colors hover:bg-ink-700 sm:block dark:bg-white dark:text-ink-900 dark:hover:bg-ink-200"
         >Get the app</a
       >
+      <ThemeToggle />
     </nav>
   </div>
 </header>

@@ -1,0 +1,94 @@
+---
+/**
+ * Auto / Light / Dark, as a segmented control.
+ *
+ * Three explicit options rather than a two-state switch, so "follow my system"
+ * stays reachable — the same choice the app itself offers under Appearance.
+ * Rendered as radios so it is keyboard- and screen-reader-navigable without any
+ * ARIA gymnastics; the script only reflects state that is already in the DOM.
+ */
+const options = [
+  {
+    value: 'auto',
+    label: 'Auto',
+    title: 'Follow the system appearance',
+    icon: 'M10 2a8 8 0 1 0 0 16 8 8 0 0 0 0-16Zm0 2v12a6 6 0 0 1 0-12Z',
+  },
+  {
+    value: 'light',
+    label: 'Light',
+    title: 'Always light',
+    icon: 'M10 5.5a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9ZM10 0a1 1 0 0 1 1 1v1.5a1 1 0 1 1-2 0V1a1 1 0 0 1 1-1Zm0 16a1 1 0 0 1 1 1v1.5a1 1 0 1 1-2 0V17a1 1 0 0 1 1-1ZM20 10a1 1 0 0 1-1 1h-1.5a1 1 0 1 1 0-2H19a1 1 0 0 1 1 1ZM3.5 10a1 1 0 0 1-1 1H1a1 1 0 1 1 0-2h1.5a1 1 0 0 1 1 1Zm13.6-6.6a1 1 0 0 1 0 1.4l-1.1 1.1a1 1 0 1 1-1.4-1.4l1.1-1.1a1 1 0 0 1 1.4 0ZM5.4 15.1a1 1 0 0 1 0 1.4l-1.1 1.1a1 1 0 0 1-1.4-1.4l1.1-1.1a1 1 0 0 1 1.4 0Zm11.7 2.5a1 1 0 0 1-1.4 0l-1.1-1.1a1 1 0 0 1 1.4-1.4l1.1 1.1a1 1 0 0 1 0 1.4ZM5.4 4.9a1 1 0 0 1-1.4 0L2.9 3.8a1 1 0 0 1 1.4-1.4l1.1 1.1a1 1 0 0 1 0 1.4Z',
+  },
+  {
+    value: 'dark',
+    label: 'Dark',
+    title: 'Always dark',
+    icon: 'M17.3 11.7A7.5 7.5 0 0 1 8.3 2.7a7.5 7.5 0 1 0 9 9Z',
+  },
+];
+---
+
+<fieldset
+  class="theme-toggle flex items-center gap-0.5 rounded-lg border border-ink-200 p-0.5 dark:border-ink-800"
+>
+  <legend class="sr-only">Colour theme</legend>
+  {
+    options.map((option) => (
+      <label
+        class="relative cursor-pointer"
+        title={option.title}
+        data-theme-option={option.value}
+      >
+        <input
+          type="radio"
+          name="theme"
+          value={option.value}
+          class="peer sr-only"
+          checked={option.value === 'auto'}
+        />
+        <span
+          class="flex h-7 w-7 items-center justify-center rounded-md text-ink-500 transition-colors peer-checked:bg-brand-50 peer-checked:text-brand-700 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-brand-500 hover:text-ink-800 dark:text-ink-400 dark:peer-checked:bg-brand-900/50 dark:peer-checked:text-brand-200 dark:hover:text-ink-100"
+        >
+          <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path d={option.icon} />
+          </svg>
+          <span class="sr-only">{option.label}</span>
+        </span>
+      </label>
+    ))
+  }
+</fieldset>
+
+<script is:inline>
+  (() => {
+    const groups = document.querySelectorAll('.theme-toggle');
+    if (!groups.length) return;
+
+    const current = () => (window.__themePreference ? window.__themePreference() : 'auto');
+
+    const reflect = (preference) => {
+      for (const group of groups) {
+        for (const input of group.querySelectorAll('input[name="theme"]')) {
+          input.checked = input.value === preference;
+        }
+      }
+    };
+
+    // The markup ships with Auto checked; correct it to the stored preference
+    // once the script runs.
+    reflect(current());
+
+    for (const group of groups) {
+      group.addEventListener('change', (event) => {
+        const input = event.target;
+        if (input && input.name === 'theme' && window.__setTheme) {
+          window.__setTheme(input.value);
+        }
+      });
+    }
+
+    // Keeps every rendered toggle in step, whichever one was used.
+    document.addEventListener('themechange', (event) => reflect(event.detail.preference));
+  })();
+</script>

@@ -1,6 +1,14 @@
 @import "tailwindcss";
 
 /*
+  `dark:` follows an attribute on <html>, not the media query directly. The
+  inline script in Base.astro resolves the reader's preference — explicit
+  light/dark, or the system setting when they have chosen Auto — and writes
+  data-theme before first paint, so there is no flash of the wrong theme.
+*/
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/*
   Design tokens, taken from the app itself: the icon's violet→coral gradient is
   the brand, and the type stack is the system font so the site reads like the
   Apple app it documents.
@@ -45,17 +53,28 @@
     -webkit-text-size-adjust: 100%;
   }
 
+  /* Native form controls, scrollbars and caret follow the resolved theme. */
+  :root,
+  :root[data-theme="light"] {
+    color-scheme: light;
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+  }
+
   body {
     @apply bg-white text-ink-800 antialiased;
     font-family: var(--font-sans);
   }
 
-  /* The site follows the reader's system appearance, like the app does. */
-  @media (prefers-color-scheme: dark) {
-    body {
-      @apply bg-ink-950 text-ink-200;
-    }
+  [data-theme="dark"] body {
+    @apply bg-ink-950 text-ink-200;
   }
+
+  /* No transition on the theme switch, deliberately. Animating the body's
+     background while every child's `dark:` colour flips instantly leaves the
+     page washed out for the length of the animation — text mid-way between
+     two themes, on a background that has not arrived yet. Instant is honest. */
 
   :focus-visible {
     @apply outline-2 outline-offset-2 outline-brand-500;
@@ -137,23 +156,21 @@
     font-family: var(--font-mono);
   }
 
-  @media (prefers-color-scheme: dark) {
-    .prose-doc {
-      @apply text-ink-300;
-    }
-    .prose-doc h2,
-    .prose-doc h3,
-    .prose-doc strong {
-      @apply text-white;
-    }
-    .prose-doc a {
-      @apply text-brand-300 decoration-brand-700;
-    }
-    .prose-doc code {
-      @apply bg-ink-800 text-ink-100;
-    }
-    .prose-doc kbd {
-      @apply border-ink-700 bg-ink-800 text-ink-200;
-    }
+  [data-theme="dark"] .prose-doc {
+    @apply text-ink-300;
+  }
+  [data-theme="dark"] .prose-doc h2,
+  [data-theme="dark"] .prose-doc h3,
+  [data-theme="dark"] .prose-doc strong {
+    @apply text-white;
+  }
+  [data-theme="dark"] .prose-doc a {
+    @apply text-brand-300 decoration-brand-700;
+  }
+  [data-theme="dark"] .prose-doc code {
+    @apply bg-ink-800 text-ink-100;
+  }
+  [data-theme="dark"] .prose-doc kbd {
+    @apply border-ink-700 bg-ink-800 text-ink-200;
   }
 }
