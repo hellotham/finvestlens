@@ -1,0 +1,287 @@
+---
+import Base from '../layouts/Base.astro';
+import DownloadButton from '../components/DownloadButton.astro';
+import { site, release, url } from '../data/site';
+
+const pillars = [
+  {
+    title: 'Real double-entry, not a spreadsheet',
+    body:
+      'Every transaction moves money between accounts and must balance. That is ' +
+      'what makes the reports add up — and what lets FinvestLens agree with ' +
+      'GnuCash to the cent on a 46,000-transaction book.',
+    icon: 'M4 6h12M4 10h12M4 14h7',
+  },
+  {
+    title: 'Your book is a file you own',
+    body:
+      'One SQLite document on your disk, iCloud Drive or a NAS. No account to ' +
+      'create, no server to trust, nothing uploaded. Open it, edit it, back it ' +
+      'up like any other file.',
+    icon: 'M3 5.5A1.5 1.5 0 0 1 4.5 4h3l1.5 2h6A1.5 1.5 0 0 1 16.5 7.5v7A1.5 1.5 0 0 1 15 16H4.5A1.5 1.5 0 0 1 3 14.5v-9Z',
+  },
+  {
+    title: 'Never locked in',
+    body:
+      'Import from GnuCash and export back, losslessly. Read and write plain-text ' +
+      'Ledger journals. Query the whole book from the command line. Your data ' +
+      'leaves as easily as it arrived.',
+    icon: 'M7 4h6l4 4v8a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z',
+  },
+];
+
+const features = [
+  {
+    kicker: 'Everyday',
+    title: 'Import a statement, and it lands where it should',
+    body:
+      'CSV, QIF, OFX/QFX, SWIFT MT940 and ISO 20022 CAMT.053 — the format is ' +
+      'detected from the file. Duplicates are caught, transfers between your own ' +
+      'accounts are completed rather than doubled, and payees you have categorised ' +
+      'before are categorised again the same way.',
+    image: 'transactions',
+    alt: 'The FinvestLens transaction register showing a list of transactions with running balances.',
+  },
+  {
+    kicker: 'Reporting',
+    title: 'Statements at annual-report standard',
+    body:
+      'Balance sheet, income statement, trial balance and cash flow, built from ' +
+      'your own chart of accounts with comparatives and accounting typography. ' +
+      'Plus two presentation decks — a CFO-style Financial Review and a factsheet ' +
+      'Investment Review — that write their own commentary on your Mac.',
+    image: 'reports',
+    alt: 'A FinvestLens report showing a financial statement with charts.',
+  },
+];
+
+const onDevice = {
+  kicker: 'On device',
+  title: 'Apple Intelligence reads your paperwork',
+  body:
+    'Point Smart Import at a PDF bank statement, dividend notice or invoice. It ' +
+    'is read on your Mac, matched to transactions already in your book, linked ' +
+    'and categorised — and nothing is sent anywhere.',
+  steps: [
+    ['Reads the rows', 'Including scanned pages, not just digital PDFs.'],
+    ['Finds the match', 'Against transactions already in your book, in any account.'],
+    ['Files it away', 'Links the document and suggests the category.'],
+  ],
+};
+
+const interop = [
+  ['GnuCash XML', 'Import and export, round-trip verified byte-identical'],
+  ['Ledger journals', 'Plain-text accounting in and out, GUIDs preserved'],
+  ['CSV · QIF · OFX/QFX', 'Bank and broker downloads, with saved column profiles'],
+  ['MT940 · CAMT.053', 'SWIFT and ISO 20022 statements, auto-detected'],
+  ['finlens CLI', 'A read-only, ledger-modelled reporter over your book'],
+  ['Shortcuts & widgets', 'App Intents, Spotlight, Control Center, Quick Look'],
+];
+---
+
+<Base title={site.name}>
+  <!-- Hero -->
+  <section class="relative overflow-hidden">
+    <div
+      class="pointer-events-none absolute inset-x-0 -top-40 h-[36rem] opacity-[0.13] blur-3xl brand-gradient"
+      aria-hidden="true"
+    >
+    </div>
+
+    <div class="relative mx-auto max-w-6xl px-5 pt-16 pb-8 sm:pt-24">
+      <div class="mx-auto max-w-3xl text-center">
+        <img
+          src={url('/images/icon-256.png')}
+          alt=""
+          width="104"
+          height="104"
+          class="mx-auto shadow-xl shadow-brand-500/25"
+        />
+        <h1
+          class="mt-8 text-[2.6rem] leading-[1.08] font-bold tracking-tight text-ink-900 sm:text-6xl dark:text-white"
+        >
+          Double-entry accounting<br />
+          <span class="brand-text">that belongs on a Mac.</span>
+        </h1>
+        <p class="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-ink-600 dark:text-ink-300">
+          FinvestLens brings the rigour of GnuCash's accounting engine to a native
+          Apple app — your accounts, investments and small business in one file
+          you own, on macOS, iPad and iPhone.
+        </p>
+        <div class="mt-9 flex flex-wrap items-center justify-center gap-4">
+          <DownloadButton />
+          <a
+            href={url('/features/')}
+            class="inline-flex items-center gap-1.5 rounded-xl border border-ink-300 px-6 py-3.5 text-base font-semibold text-ink-700 transition-colors hover:border-ink-400 hover:bg-ink-50 dark:border-ink-700 dark:text-ink-200 dark:hover:bg-ink-800"
+          >
+            See what it does
+          </a>
+        </div>
+        <p class="mt-5 text-sm text-ink-500 dark:text-ink-400">
+          {release.requirements} · Free software, GPL v3
+        </p>
+      </div>
+
+      <!-- Hero screenshot -->
+      <div class="relative mx-auto mt-16 max-w-5xl">
+        <div
+          class="overflow-hidden rounded-2xl border border-ink-200 bg-white shadow-2xl shadow-ink-900/10 dark:border-ink-800 dark:bg-ink-900"
+        >
+          <img
+            src={url('/images/screens/dashboard.png')}
+            alt="The FinvestLens dashboard: net worth trend, cash flow against budget, upcoming bills and portfolio allocation."
+            width="2400"
+            height="1500"
+            class="w-full"
+            loading="eager"
+          />
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Three pillars -->
+  <section class="mx-auto max-w-6xl px-5 py-20">
+    <div class="grid gap-10 md:grid-cols-3">
+      {
+        pillars.map((p) => (
+          <div>
+            <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-900/40 dark:text-brand-300">
+              <svg class="h-6 w-6" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d={p.icon} />
+              </svg>
+            </div>
+            <h2 class="mt-4 text-lg font-semibold tracking-tight text-ink-900 dark:text-white">
+              {p.title}
+            </h2>
+            <p class="mt-2 leading-relaxed text-ink-600 dark:text-ink-400">{p.body}</p>
+          </div>
+        ))
+      }
+    </div>
+  </section>
+
+  <!-- Alternating feature sections -->
+  <section class="border-y border-ink-200 bg-ink-50/60 dark:border-ink-800 dark:bg-ink-900/30">
+    <div class="mx-auto max-w-6xl space-y-24 px-5 py-24">
+      {
+        features.map((f, i) => (
+          <div class="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
+            <div class:list={[i % 2 ? 'lg:order-2' : '']}>
+              <p class="text-sm font-semibold tracking-wider text-brand-600 uppercase dark:text-brand-400">
+                {f.kicker}
+              </p>
+              <h2 class="mt-2 text-3xl font-bold tracking-tight text-ink-900 dark:text-white">
+                {f.title}
+              </h2>
+              <p class="mt-4 text-lg leading-relaxed text-ink-600 dark:text-ink-300">{f.body}</p>
+            </div>
+            <div class:list={[i % 2 ? 'lg:order-1' : '']}>
+              <div class="overflow-hidden rounded-xl border border-ink-200 bg-white shadow-xl shadow-ink-900/5 dark:border-ink-800 dark:bg-ink-900">
+                <img
+                  src={url(`/images/screens/${f.image}.png`)}
+                  alt={f.alt}
+                  width="2400"
+                  height="1500"
+                  class="w-full"
+                  loading="lazy"
+                />
+              </div>
+            </div>
+          </div>
+        ))
+      }
+    </div>
+  </section>
+
+  <!-- On-device band -->
+  <section class="mx-auto max-w-6xl px-5 py-24">
+    <div class="mx-auto max-w-2xl text-center">
+      <p class="text-sm font-semibold tracking-wider text-brand-600 uppercase dark:text-brand-400">
+        {onDevice.kicker}
+      </p>
+      <h2 class="mt-2 text-3xl font-bold tracking-tight text-ink-900 dark:text-white">
+        {onDevice.title}
+      </h2>
+      <p class="mt-4 text-lg leading-relaxed text-ink-600 dark:text-ink-300">{onDevice.body}</p>
+    </div>
+    <ol class="mt-12 grid gap-6 sm:grid-cols-3">
+      {
+        onDevice.steps.map(([name, desc], i) => (
+          <li class="rounded-xl border border-ink-200 p-6 dark:border-ink-800">
+            <span class="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-sm font-bold text-brand-700 dark:bg-brand-900/50 dark:text-brand-300">
+              {i + 1}
+            </span>
+            <h3 class="mt-4 font-semibold text-ink-900 dark:text-white">{name}</h3>
+            <p class="mt-1 text-ink-600 dark:text-ink-400">{desc}</p>
+          </li>
+        ))
+      }
+    </ol>
+  </section>
+
+  <!-- Interoperability -->
+  <section class="mx-auto max-w-6xl px-5 py-24">
+    <div class="mx-auto max-w-2xl text-center">
+      <h2 class="text-3xl font-bold tracking-tight text-ink-900 dark:text-white">
+        Built to let you leave
+      </h2>
+      <p class="mt-4 text-lg leading-relaxed text-ink-600 dark:text-ink-300">
+        An accounting app you cannot get your data out of is a trap. FinvestLens
+        reads and writes the formats the rest of the world uses.
+      </p>
+    </div>
+    <dl class="mt-14 grid gap-x-10 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
+      {
+        interop.map(([name, desc]) => (
+          <div class="border-l-2 border-brand-200 pl-4 dark:border-brand-800">
+            <dt class="font-semibold text-ink-900 dark:text-white">{name}</dt>
+            <dd class="mt-1 text-ink-600 dark:text-ink-400">{desc}</dd>
+          </div>
+        ))
+      }
+    </dl>
+  </section>
+
+  <!-- Privacy statement -->
+  <section class="mx-auto max-w-6xl px-5 pb-24">
+    <div
+      class="overflow-hidden rounded-2xl border border-ink-200 bg-white p-10 sm:p-14 dark:border-ink-800 dark:bg-ink-900/50"
+    >
+      <div class="mx-auto max-w-2xl text-center">
+        <h2 class="text-2xl font-bold tracking-tight text-ink-900 sm:text-3xl dark:text-white">
+          Your finances stay on your Mac
+        </h2>
+        <p class="mt-4 text-lg leading-relaxed text-ink-600 dark:text-ink-300">
+          There is no FinvestLens account, no analytics and no server. Documents
+          are read on device by Apple Intelligence. Price quotes are the only
+          network requests the app makes, and you choose whether to make them.
+        </p>
+        <a
+          href={url('/privacy/')}
+          class="mt-6 inline-block font-semibold text-brand-600 underline decoration-brand-300 underline-offset-4 hover:decoration-brand-500 dark:text-brand-300"
+          >Read the privacy policy</a
+        >
+      </div>
+    </div>
+  </section>
+
+  <!-- Closing CTA -->
+  <section class="mx-auto max-w-6xl px-5 pb-8">
+    <div class="brand-gradient rounded-2xl px-8 py-14 text-center sm:px-14">
+      <h2 class="text-3xl font-bold tracking-tight text-white">Bring your money into focus.</h2>
+      <p class="mx-auto mt-3 max-w-xl text-lg text-white/90">
+        Free software, signed and notarized by Apple. Import your GnuCash file and
+        pick up where you left off.
+      </p>
+      <div class="mt-8 flex flex-wrap items-center justify-center gap-4">
+        <DownloadButton variant="light" />
+        <a
+          href={url('/manual/')}
+          class="inline-flex items-center rounded-xl border border-white/40 px-6 py-3.5 font-semibold text-white transition-colors hover:bg-white/10"
+          >Read the manual</a
+        >
+      </div>
+    </div>
+  </section>
+</Base>

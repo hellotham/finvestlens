@@ -1,0 +1,17 @@
+---
+/**
+ * Renders the light markup the help book uses — **bold**, *italic* and
+ * `code` — as HTML. The source is our own content file, not user input.
+ */
+interface Props { text: string; }
+const { text } = Astro.props;
+
+const escape = (s: string) =>
+  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+const html = escape(text)
+  .replace(/`([^`]+)`/g, '<code>$1</code>')
+  .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+  .replace(/(^|[\s(])\*([^*\n]+)\*/g, '$1<em>$2</em>');
+---
+<Fragment set:html={html} />

@@ -1,0 +1,44 @@
+---
+import Base from '../../layouts/Base.astro';
+import PageHeader from '../../components/PageHeader.astro';
+import manual from '../../data/manual.json';
+import { url } from '../../data/site';
+---
+
+<Base
+  title="User manual"
+  description="The complete FinvestLens user manual — 20 topics covering accounts, transactions, importing, reconciling, investments, reports, planning and the command line."
+>
+  <PageHeader
+    eyebrow="Manual"
+    title="User manual"
+    lead="The same help book that ships inside the app, page for page. Every topic is also available offline from the Help menu (⌘?)."
+  />
+
+  <div class="mx-auto max-w-6xl px-5 py-16">
+    {
+      manual.sections.map((section) => (
+        <section class="mb-14">
+          <h2 class="text-sm font-semibold tracking-wider text-brand-600 uppercase dark:text-brand-400">
+            {section.title}
+          </h2>
+          <div class="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {section.topics.map((topic) => (
+              <a
+                href={url(`/manual/${topic.id}/`)}
+                class="group rounded-xl border border-ink-200 p-5 transition-all hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-lg hover:shadow-brand-500/5 dark:border-ink-800 dark:hover:border-brand-700"
+              >
+                <h3 class="font-semibold text-ink-900 group-hover:text-brand-700 dark:text-white dark:group-hover:text-brand-300">
+                  {topic.title}
+                </h3>
+                <p class="mt-1.5 text-sm leading-relaxed text-ink-600 dark:text-ink-400">
+                  {topic.summary}
+                </p>
+              </a>
+            ))}
+          </div>
+        </section>
+      ))
+    }
+  </div>
+</Base>

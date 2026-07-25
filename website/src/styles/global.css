@@ -1,0 +1,159 @@
+@import "tailwindcss";
+
+/*
+  Design tokens, taken from the app itself: the icon's violet→coral gradient is
+  the brand, and the type stack is the system font so the site reads like the
+  Apple app it documents.
+*/
+@theme {
+  --color-brand-50: #f6f4fd;
+  --color-brand-100: #ece7fb;
+  --color-brand-200: #dcd3f7;
+  --color-brand-300: #c3b3f0;
+  --color-brand-400: #a68ce6;
+  --color-brand-500: #8b7bd8;
+  --color-brand-600: #7860c4;
+  --color-brand-700: #654eab;
+  --color-brand-800: #54428c;
+  --color-brand-900: #463972;
+
+  --color-coral-300: #f7c9a8;
+  --color-coral-400: #f0a878;
+  --color-coral-500: #e88b52;
+  --color-coral-600: #d66f36;
+
+  --color-ink-50: #f8f8fa;
+  --color-ink-100: #f1f1f4;
+  --color-ink-200: #e3e3e9;
+  --color-ink-300: #c9c9d3;
+  --color-ink-400: #9494a5;
+  --color-ink-500: #6b6b7d;
+  --color-ink-600: #4d4d5c;
+  --color-ink-700: #3a3a46;
+  --color-ink-800: #24242e;
+  --color-ink-900: #16161d;
+  --color-ink-950: #0d0d12;
+
+  --font-sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+    "Helvetica Neue", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-white text-ink-800 antialiased;
+    font-family: var(--font-sans);
+  }
+
+  /* The site follows the reader's system appearance, like the app does. */
+  @media (prefers-color-scheme: dark) {
+    body {
+      @apply bg-ink-950 text-ink-200;
+    }
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-brand-500;
+  }
+}
+
+@layer components {
+  .brand-gradient {
+    background-image: linear-gradient(
+      135deg,
+      var(--color-brand-500) 0%,
+      #c98ba8 55%,
+      var(--color-coral-400) 100%
+    );
+  }
+
+  .brand-text {
+    background-image: linear-gradient(
+      120deg,
+      var(--color-brand-600) 0%,
+      #c07a94 55%,
+      var(--color-coral-600) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Long-form pages: the manual, privacy, about. */
+  .prose-doc {
+    @apply text-[1.0625rem] leading-[1.75] text-ink-700;
+  }
+  .prose-doc h2 {
+    @apply mt-12 mb-4 text-2xl font-semibold tracking-tight text-ink-900;
+  }
+  .prose-doc h3 {
+    @apply mt-9 mb-3 text-lg font-semibold tracking-tight text-ink-900;
+  }
+  .prose-doc p {
+    @apply my-4;
+  }
+  .prose-doc ul {
+    @apply my-4 space-y-2;
+  }
+  .prose-doc li {
+    @apply relative pl-6;
+  }
+  .prose-doc li::before {
+    content: "";
+    @apply absolute top-[0.7em] left-1.5 h-1.5 w-1.5 rounded-full bg-brand-400;
+  }
+  .prose-doc ol {
+    @apply my-4 list-decimal space-y-2 pl-6 marker:font-semibold marker:text-ink-400;
+  }
+  .prose-doc ol li {
+    @apply pl-1;
+  }
+  .prose-doc ol li::before {
+    content: none;
+  }
+  .prose-doc a {
+    @apply font-medium text-brand-600 underline decoration-brand-300 underline-offset-2 hover:decoration-brand-500;
+  }
+  .prose-doc strong {
+    @apply font-semibold text-ink-900;
+  }
+  .prose-doc code {
+    @apply rounded bg-ink-100 px-1.5 py-0.5 text-[0.9em] text-ink-800;
+    font-family: var(--font-mono);
+  }
+  .prose-doc pre {
+    @apply my-6 overflow-x-auto rounded-xl bg-ink-900 p-5 text-sm text-ink-100;
+  }
+  .prose-doc pre code {
+    @apply bg-transparent p-0 text-inherit;
+  }
+  .prose-doc kbd {
+    @apply rounded border border-ink-300 bg-ink-50 px-1.5 py-0.5 text-[0.85em] font-medium text-ink-700;
+    font-family: var(--font-mono);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .prose-doc {
+      @apply text-ink-300;
+    }
+    .prose-doc h2,
+    .prose-doc h3,
+    .prose-doc strong {
+      @apply text-white;
+    }
+    .prose-doc a {
+      @apply text-brand-300 decoration-brand-700;
+    }
+    .prose-doc code {
+      @apply bg-ink-800 text-ink-100;
+    }
+    .prose-doc kbd {
+      @apply border-ink-700 bg-ink-800 text-ink-200;
+    }
+  }
+}

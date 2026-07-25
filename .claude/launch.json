@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "website",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "preview", "--prefix", "website", "--", "--port", "4321"],
+      "port": 4321,
+      "url": "http://localhost:4321"
+    }
+  ]
+}

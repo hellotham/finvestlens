@@ -1,0 +1,87 @@
+---
+import Base from '../layouts/Base.astro';
+import PageHeader from '../components/PageHeader.astro';
+import DownloadButton from '../components/DownloadButton.astro';
+import { site, release, url } from '../data/site';
+---
+
+<Base
+  title="Download"
+  description={`Download FinvestLens ${release.version} for macOS — signed with a Developer ID and notarized by Apple.`}
+>
+  <PageHeader eyebrow="Download" title={`FinvestLens ${release.version}`} lead={release.requirements} />
+
+  <div class="mx-auto max-w-3xl px-5 py-16">
+    <div class="rounded-2xl border border-ink-200 p-8 text-center dark:border-ink-800">
+      <DownloadButton />
+      <p class="mt-4 text-sm text-ink-500 dark:text-ink-400">
+        {release.file} · {release.sizeLabel} · free software under the GPL v3
+      </p>
+    </div>
+
+    <div class="prose-doc mt-14">
+      <h2>Installing</h2>
+      <ol>
+        <li>Open the downloaded disk image.</li>
+        <li>Drag <strong>FinvestLens</strong> onto the Applications folder.</li>
+        <li>Open it from Applications.</li>
+      </ol>
+      <p>
+        Coming from GnuCash? Choose <strong>File ▸ Import ▸ GnuCash…</strong> and pick
+        your <code>.gnucash</code> file — accounts, transactions, prices, schedules and
+        business records all come across, and you can export back at any time.
+      </p>
+
+      <h2 id="signed">Signed and notarized</h2>
+      <p>
+        Every release is signed with Hello Tham’s Apple Developer ID and submitted
+        to Apple for notarization, so macOS opens it without a Gatekeeper warning.
+        You can check that for yourself before you install:
+      </p>
+      <pre><code>spctl --assess --type open --context context:primary-signature -vv {release.file}</code></pre>
+      <p>It should report:</p>
+      <pre><code>source=Notarized Developer ID
+origin={release.signedBy}</code></pre>
+      <p>And to verify the download arrived intact:</p>
+      <pre><code>shasum -a 256 {release.file}</code></pre>
+      <p class="break-all"><code>{release.sha256}</code></p>
+
+      <h2 id="whats-new">What’s in {release.version}</h2>
+      <p>
+        The first public release. Every planned phase is complete: the accounting
+        engine, the native document with NAS-safe locking, GnuCash import and
+        export, the register and chart of accounts, everyday finance, investments
+        and multi-currency, sync and dashboard, Apple Intelligence, small-business
+        features, extended statement import, the planning layer, and the Ledger
+        interchange with the <code>finlens</code> command line.
+      </p>
+      <p>
+        It has been exercised against a real GnuCash book of 46,553 transactions,
+        559 accounts and 102,706 prices — imported and compared side by side with
+        GnuCash 5.16, which it matches to the cent on net worth, every account
+        subtree, register running balances, the balance sheet and the investment
+        reports.
+      </p>
+
+      <h2>The command line</h2>
+      <p>
+        <code>finlens</code> is a read-only, ledger-modelled reporter over your book.
+        It is safe to run while the app has the book open — it takes no lock and
+        never writes. Build it from source:
+      </p>
+      <pre><code>swift build -c release --package-path Packages/CLI
+
+finlens -f Book.finvestlens bal ^Assets ^Liabilities
+finlens -f Book.finvestlens reg Groceries -p "last month"</code></pre>
+      <p>
+        Full details are in <a href={url('/manual/interchange/')}>the manual</a>.
+      </p>
+
+      <h2>Source code</h2>
+      <p>
+        FinvestLens is free software. The complete source is on
+        <a href={site.repo}>GitHub</a>, and you are welcome to build it yourself.
+      </p>
+    </div>
+  </div>
+</Base>

@@ -1,0 +1,77 @@
+---
+import Markish from './Markish.astro';
+
+interface Block {
+  type: string;
+  value?: string;
+  items?: string[];
+  rows?: [string, string][];
+}
+interface Props { blocks: Block[]; }
+const { blocks } = Astro.props;
+---
+
+<div class="prose-doc">
+  {
+    blocks.map((block) => {
+      if (block.type === 'heading') return <h2><Markish text={block.value ?? ''} /></h2>;
+      if (block.type === 'text') return <p><Markish text={block.value ?? ''} /></p>;
+      if (block.type === 'bullets')
+        return (
+          <ul>
+            {(block.items ?? []).map((item) => (
+              <li><Markish text={item} /></li>
+            ))}
+          </ul>
+        );
+      if (block.type === 'steps')
+        return (
+          <ol>
+            {(block.items ?? []).map((item) => (
+              <li><Markish text={item} /></li>
+            ))}
+          </ol>
+        );
+      if (block.type === 'table')
+        return (
+          <div class="my-6 overflow-hidden rounded-xl border border-ink-200 dark:border-ink-800">
+            <table class="w-full border-collapse text-left text-[0.95rem]">
+              <tbody>
+                {(block.rows ?? []).map(([key, value], i) => (
+                  <tr
+                    class:list={[
+                      i % 2 ? 'bg-ink-50/60 dark:bg-ink-900/40' : '',
+                      'border-b border-ink-200 last:border-0 dark:border-ink-800',
+                    ]}
+                  >
+                    <th
+                      scope="row"
+                      class="w-1/3 min-w-[9rem] px-4 py-3 align-top font-medium text-ink-900 dark:text-white"
+                    >
+                      <Markish text={key} />
+                    </th>
+                    <td class="px-4 py-3 align-top text-ink-600 dark:text-ink-300">
+                      <Markish text={value} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        );
+      if (block.type === 'tip')
+        return (
+          <aside class="my-6 flex gap-3 rounded-xl border border-brand-200 bg-brand-50/70 p-4 dark:border-brand-800/60 dark:bg-brand-900/20">
+            <svg class="mt-0.5 h-5 w-5 shrink-0 text-brand-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path d="M10 1a6 6 0 0 0-3.6 10.8c.4.3.6.7.6 1.2v.5h6v-.5c0-.5.2-.9.6-1.2A6 6 0 0 0 10 1Z" />
+              <path d="M7 16.5h6a.5.5 0 0 1 0 1l-.6.9a1.5 1.5 0 0 1-1.2.6H8.8a1.5 1.5 0 0 1-1.2-.6l-.6-.9a.5.5 0 0 1 0-1Z" />
+            </svg>
+            <p class="!my-0 text-[0.95rem] text-ink-700 dark:text-ink-300">
+              <Markish text={block.value ?? ''} />
+            </p>
+          </aside>
+        );
+      return null;
+    })
+  }
+</div>

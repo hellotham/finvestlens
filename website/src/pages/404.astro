@@ -1,0 +1,23 @@
+---
+import Base from '../layouts/Base.astro';
+import { url } from '../data/site';
+---
+<Base title="Page not found" description="That page does not exist.">
+  <div class="mx-auto max-w-2xl px-5 py-32 text-center">
+    <p class="text-sm font-semibold tracking-wider text-brand-600 uppercase dark:text-brand-400">404</p>
+    <h1 class="mt-2 text-4xl font-bold tracking-tight text-ink-900 dark:text-white">
+      That page does not exist
+    </h1>
+    <p class="mt-4 text-lg text-ink-600 dark:text-ink-300">
+      It may have moved, or the link may be wrong.
+    </p>
+    <div class="mt-8 flex flex-wrap justify-center gap-4">
+      <a href={url('/')} class="rounded-xl bg-ink-900 px-5 py-3 font-semibold text-white dark:bg-white dark:text-ink-900">
+        Go home
+      </a>
+      <a href={url('/manual/')} class="rounded-xl border border-ink-300 px-5 py-3 font-semibold text-ink-700 dark:border-ink-700 dark:text-ink-200">
+        Open the manual
+      </a>
+    </div>
+  </div>
+</Base>

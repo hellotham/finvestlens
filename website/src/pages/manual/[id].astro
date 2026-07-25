@@ -1,0 +1,109 @@
+---
+import Base from '../../layouts/Base.astro';
+import HelpBlocks from '../../components/HelpBlocks.astro';
+import manual from '../../data/manual.json';
+import { url } from '../../data/site';
+
+export function getStaticPaths() {
+  const flat = manual.sections.flatMap((s) =>
+    s.topics.map((t) => ({ ...t, sectionTitle: s.title }))
+  );
+  return flat.map((topic, i) => ({
+    params: { id: topic.id },
+    props: {
+      topic,
+      previous: i > 0 ? flat[i - 1] : null,
+      next: i < flat.length - 1 ? flat[i + 1] : null,
+    },
+  }));
+}
+
+const { topic, previous, next } = Astro.props;
+---
+
+<Base title={topic.title} description={topic.summary}>
+  <div class="mx-auto max-w-6xl px-5 py-12 lg:grid lg:grid-cols-[16rem_minmax(0,1fr)] lg:gap-14">
+    <!-- Contents -->
+    <aside class="mb-10 lg:mb-0">
+      <div class="lg:sticky lg:top-24">
+        <a
+          href={url('/manual/')}
+          class="text-sm font-medium text-ink-500 hover:text-brand-600 dark:text-ink-400"
+          >← All topics</a
+        >
+        <nav class="mt-5 space-y-6" aria-label="Manual contents">
+          {
+            manual.sections.map((section) => (
+              <div>
+                <h2 class="text-xs font-semibold tracking-wider text-ink-400 uppercase">
+                  {section.title}
+                </h2>
+                <ul class="mt-2 space-y-0.5">
+                  {section.topics.map((t) => (
+                    <li>
+                      <a
+                        href={url(`/manual/${t.id}/`)}
+                        aria-current={t.id === topic.id ? 'page' : undefined}
+                        class:list={[
+                          'block rounded-md px-2.5 py-1.5 text-sm transition-colors',
+                          t.id === topic.id
+                            ? 'bg-brand-50 font-semibold text-brand-700 dark:bg-brand-900/40 dark:text-brand-200'
+                            : 'text-ink-600 hover:bg-ink-100 hover:text-ink-900 dark:text-ink-400 dark:hover:bg-ink-800 dark:hover:text-white',
+                        ]}
+                      >
+                        {t.title}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))
+          }
+        </nav>
+      </div>
+    </aside>
+
+    <!-- Page -->
+    <article class="min-w-0">
+      <p class="text-sm font-semibold tracking-wider text-brand-600 uppercase dark:text-brand-400">
+        {topic.sectionTitle}
+      </p>
+      <h1 class="mt-2 text-4xl font-bold tracking-tight text-ink-900 dark:text-white">
+        {topic.title}
+      </h1>
+      <p class="mt-3 text-lg text-ink-600 dark:text-ink-300">{topic.summary}</p>
+
+      <div class="mt-10">
+        <HelpBlocks blocks={topic.blocks} />
+      </div>
+
+      <nav
+        class="mt-16 flex flex-col gap-4 border-t border-ink-200 pt-8 sm:flex-row sm:justify-between dark:border-ink-800"
+        aria-label="Pagination"
+      >
+        {
+          previous ? (
+            <a href={url(`/manual/${previous.id}/`)} class="group max-w-xs">
+              <span class="text-sm text-ink-500 dark:text-ink-400">← Previous</span>
+              <span class="mt-0.5 block font-semibold text-ink-800 group-hover:text-brand-600 dark:text-ink-100">
+                {previous.title}
+              </span>
+            </a>
+          ) : (
+            <span />
+          )
+        }
+        {
+          next && (
+            <a href={url(`/manual/${next.id}/`)} class="group max-w-xs sm:text-right">
+              <span class="text-sm text-ink-500 dark:text-ink-400">Next →</span>
+              <span class="mt-0.5 block font-semibold text-ink-800 group-hover:text-brand-600 dark:text-ink-100">
+                {next.title}
+              </span>
+            </a>
+          )
+        }
+      </nav>
+    </article>
+  </div>
+</Base>
