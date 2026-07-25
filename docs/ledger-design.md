@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Document status** | Design baseline v1.1 (25 Jul 2026) — **P10a/P10b built and green**; P10c (CLI) next |
+| **Document status** | Design baseline v1.2 (25 Jul 2026) — **P10a/P10b/P10c built and green**; P10d (depth) remains |
 | **Scope** | A ledger-modelled command-line interface (`finlens`) over FinvestLens books, plus import/export of the [Ledger 3](https://ledger-cli.org) plain-text journal format |
 | **Research** | [ledger-format-reference.md](ledger-format-reference.md) (journal grammar, verified against the v3.4.1 manual + parser source) · [ledger-cli-reference.md](ledger-cli-reference.md) (CLI surface, verified against the manual, man page and C++ source) |
 | **Companions** | [PRD](prd.md) §5.14/§5.19 · [Architecture](architecture.md) · [Plan](plan.md) §13b |
@@ -316,7 +316,7 @@ Sequenced so every phase lands releasable and testable on its own.
 |---|---|---|
 | **P10a ✅ — Ledger codec core** | Journal model + parser + canonical writer in Interchange (grammar per the format reference: postings, amounts incl. decimal-comma + quoted commodities, costs, assertions, virtuals, metadata/tags, the living directive set, include/year/apply state machines; periodic/automated into extras; style learning for output) | Manual-example corpus parses and reprints stably; all error cases report file:line; unit suite green. |
 | **P10b ✅ — Book mapping + app import/export** | LedgerBookMapping both ways per §4 (guid/type metadata, `@@` legs, states, aux dates, assertion verification, virtual policy, import summary); deterministic export incl. `account`/`commodity` directives, P lines, `~` best-effort; File ▸ Import/Export menu items | Real-book export→import graph-equal (GUIDs/amounts/states/tags); real `ledger` binary reads the export (manual check); live round-trip harness green. |
-| **P10c — `finlens` core** | New CLI package: option/query/period parsing, three source loaders (read-only store init), report pipeline + renderers for the §5.2 command set, the interactive REPL (§5.3a), color/`-o`, exit codes | Golden-output suite green; `finlens bal` total == app net worth on the real book to the cent; read-only guarantee test green; REPL runs the same commands against once-loaded sources; `swift run finlens --help` documents every shipped flag. |
+| **P10c ✅ — `finlens` core** | New CLI package: option/query/period parsing, three source loaders (read-only store init), report pipeline + renderers for the §5.2 command set, the interactive REPL (§5.3a), color/`-o`, exit codes | Golden-output suite green; `finlens bal` total == app net worth on the real book to the cent; read-only guarantee test green; REPL runs the same commands against once-loaded sources; `swift run finlens --help` documents every shipped flag. |
 | **P10d — Depth (demand-ordered)** | Valuation flags (`-V/-X/-B/-H`), periodic grouping (`-M --subtotal` …), `--budget` family over `~` extras/app Budgets, `xact` drafts, `-l/-d` mini-expressions, init file, man page (`docs/cli.md`) | Each item ships with its own goldens; none blocks the others. |
 
 **Delivered so far (25 Jul 2026).** P10a: `LedgerJournal`/`LedgerParser`/
@@ -335,6 +335,26 @@ findings shaped the codec: commodity mnemonics contain spaces
 (`AT&T Top-up`), so metadata values are quoted and symbols emit quoted; and
 the `commodity … format` sub-directive is authoritative for precision on
 import (a whole-unit security can still hold fractional units).
+
+**P10c delivered (25 Jul 2026).** A new macOS-only `Packages/CLI` with a
+`FinvestLensCLICore` library (so the pipeline is testable) and the thin
+`finlens` executable: hand-rolled option parsing with ledger's
+interleaving and short clusters; the query grammar (account regexes with
+implicit OR, and/or/not + parens, payee/@, tag/%, code/#, note/=, trailing
+`for`/`since`/`until`/`show` sections); smart dates and period expressions
+with natural-boundary bucket alignment; a filter → value → sort pipeline
+honouring ledger's **exclusive** `--end`; and renderers for balance (tree,
+20-column totals, chain elision, dashed grand total, `--flat`, path-component
+`--depth`), register (five columns, running total, `--related`, `--subtotal`,
+periodic grouping), print, csv, accounts/payees/commodities, prices/pricedb,
+stats, equity, cleared and source — plus the **interactive REPL** with
+`push`/`pop`/`reload`. Verified on the real book: **371 account balances
+match the engine exactly**, the file is byte-identical after a run, and no
+`.lock` is created. 28 CLI tests pin the layouts and grammars.
+
+Two conformance details the goldens caught: `--depth N` folds by *account
+path components* (not display rows), and `to/until SPEC` ends **before** that
+span — the same exclusivity as `-e`.
 
 **Estimated shape**: P10a and P10c are the two big lifts (a real parser; a
 real terminal report engine). P10b is mostly mapping tables + tests. P10d is
