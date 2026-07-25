@@ -77,3 +77,4 @@ dist/
 # Real bank statement exports used for local import testing (never commit).
 /imports/
 *.finvestlens.audit.log
+build/
