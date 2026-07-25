@@ -1,5 +1,7 @@
 # FinvestLens
 
+*Published by [Hello Tham](https://hellotham.com)*
+
 A native Apple double-entry accounting application for macOS, iPadOS, and iOS — a Swift reimplementation of the [GnuCash](https://www.gnucash.org) accounting engine, built to feel completely at home on Apple platforms.
 
 FinvestLens ports GnuCash's proven core accounting model into modern Swift, presenting it through **SwiftUI** and saving to its **own native document format** (a single SQLite `.finvestlens` file), while remaining interoperable with GnuCash through XML import and export. It is **native-first**: it opens and saves its own file — usable on local disk, iCloud, or a network share (NAS) — rather than adopting GnuCash's on-disk format.
@@ -162,7 +164,7 @@ pages serve macOS, iPadOS and iOS.
 ## Languages
 
 FinvestLens is localized into **English, German, Spanish, French, Italian,
-Japanese, Brazilian Portuguese and Simplified Chinese** — 1,126 UI strings,
+Japanese, Brazilian Portuguese and Simplified Chinese** — 1,353 UI strings,
 with accounting terminology following GnuCash's own conventions in each
 language, so a GnuCash user reads familiar words. Dates, numbers and currency
 follow the system locale.
@@ -172,6 +174,19 @@ follow the system locale.
 - macOS, iPadOS, iOS — minimum versions to be finalized (target current − 1 major).
 - Built with Swift and SwiftUI in Xcode.
 
+## Published by
+
+FinvestLens is published by **[Hello Tham Pty Ltd](https://hellotham.com)** — a
+boutique management consulting firm whose work is summed up in its own words as
+"Visualise Your Future": *"We help organisations around the world define and
+implement their vision and objectives."* The firm specialises in business and IT
+strategies, operating models, strategic roadmaps, enterprise architecture,
+analytics and business process design.
+
+Releases are signed and notarized under the Hello Tham Apple Developer identity
+(`Developer ID Application: Hello Tham Pty. Ltd.`), and the canonical source
+repository is [github.com/hellotham/finvestlens](https://github.com/hellotham/finvestlens).
+
 ## Licensing
 
 FinvestLens is free software, distributed under the **[GNU General Public License v3.0](LICENSE)** — the same copyleft family used by [GnuCash](https://www.gnucash.org) (which is licensed GPLv2-or-later). Using the GPL keeps FinvestLens license-compatible with GnuCash, so its concepts — and, where useful, its source — can be drawn on directly.
@@ -180,10 +195,10 @@ The GnuCash XML format is treated as an interchange specification. This is not a
 
 ## Status
 
-**Every phase P0–P9 is complete** — the core engine, native document + NAS locking, GnuCash import/export, core UX, everyday finance, investments/multi-currency/quotes, sync/dashboard/alerts, Apple Intelligence, small-business features, extended statement import (SWIFT MT + ISO 20022), and the planning & insights layer — **plus two July 2026 redesigns** (usability & performance, [usability-review.md](docs/usability-review.md) / [performance-review.md](docs/performance-review.md); and report quality, [report-redesign.md](docs/report-redesign.md)) **and a July 2026 full-codebase review pass** that adversarially verified the finished implementation against the PRD, architecture, and plan and fixed all 60 confirmed findings. What has been built is recorded in [implemented.md](docs/implemented.md); the few open tails (a macOS 26 CI runner, NAS-hardware perf validation, localization) are in [deferred.md](docs/deferred.md).
+**Every phase P0–P10 is complete** — the core engine, native document + NAS locking, GnuCash import/export, core UX, everyday finance, investments/multi-currency/quotes, sync/dashboard/alerts, Apple Intelligence, small-business features, extended statement import (SWIFT MT + ISO 20022), and the planning & insights layer — **plus two July 2026 redesigns** (usability & performance, [usability-review.md](docs/usability-review.md) / [performance-review.md](docs/performance-review.md); and report quality, [report-redesign.md](docs/report-redesign.md)) **and a July 2026 full-codebase review pass** that adversarially verified the finished implementation against the PRD, architecture, and plan and fixed all 60 confirmed findings. What has been built is recorded in [implemented.md](docs/implemented.md); the few open tails (a macOS 26 CI runner, NAS-hardware perf validation) are in [deferred.md](docs/deferred.md).
 
 Exercised against a real GnuCash book — 46,553 transactions, 559 accounts, 102,706 prices, multi-currency — imported and compared side by side with GnuCash 5.16, which it matches to the cent (net worth, every account subtree, register running balances, the balance sheet, and the investment reports). Interoperability is round-trip verified: a re-export is byte-identical, and GnuCash reads FinvestLens's exported file back.
 
 Performance is measured against that book, not a synthetic one. Opening it takes ~6.3s and a register edit ~0.26s (an account edit 0.067s), down from ~26s and several seconds; the general ledger scrolls all 46k transactions with jumps to either end instant. The 2026 redesign added a further layer: the register status strip is snapshotted in the same pass that builds the rows (was three full-book scans per render), QuickFill reads a per-revision cache (was a 46k-transaction sort per keystroke), price and settings edits snapshot only what they touch for undo (was a whole-book XML export), heavy reports are memoised per (parameters, book revision) and build behind a placeholder, and an `os_signpost` harness watches every hot path. The design behind those numbers — and what is still deliberately slow — is [architecture.md §10](docs/architecture.md#10-derived-state-and-performance).
 
-The test suites stand at **1,094 tests across the nine packages**, alongside env-gated live harnesses that re-run the real-book import, planning, and report-catalogue validations end to end. Not yet released. iOS can open, create, and edit books but not import or export (a deliberate non-goal — see the PRD). CI builds and tests the seven core packages (plus an SPDX-header gate covering every target) on every push; the app, Intelligence, and FeatureUI test jobs ride along allowed-to-fail until a hosted macOS 26 runner exists.
+The test suites stand at **1,179 tests across the ten packages**, alongside env-gated live harnesses that re-run the real-book import, planning, and report-catalogue validations end to end. Not yet released. iOS can open, create, and edit books but not import or export (a deliberate non-goal — see the PRD). CI builds and tests the seven core packages (plus an SPDX-header gate covering every target) on every push; the app, Intelligence, and FeatureUI test jobs ride along allowed-to-fail until a hosted macOS 26 runner exists.
