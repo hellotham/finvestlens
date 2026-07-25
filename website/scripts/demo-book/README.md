@@ -19,3 +19,20 @@ Two things to know before capturing screenshots:
   restore your real book over the demo — then put the setting back.
 - The book balances to exactly zero at cost (`finlens -f … bal -B`), which is
   worth re-checking after any edit to the generator.
+
+## Screenshots
+
+Both appearances ship (`-light.png` / `-dark.png`), and `Screenshot.astro`
+swaps them on the reader's colour scheme. To recapture, set
+`appearance.colorScheme` to `light` then `dark` in the app's defaults, and put
+the setting back afterwards.
+
+## Social card
+
+`website/scripts/og-card.swift` regenerates `public/images/og-card.png`
+(1200×630):
+
+```bash
+swiftc -O website/scripts/og-card.swift -o /tmp/ogcard
+/tmp/ogcard website/public/images/icon-256.png website/public/images/og-card.png
+```

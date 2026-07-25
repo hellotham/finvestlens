@@ -1,0 +1,34 @@
+---
+import { url } from '../data/site';
+
+interface Props {
+  /** Base name; -light.png and -dark.png must both exist. */
+  name: string;
+  alt: string;
+  width?: number;
+  height?: number;
+  eager?: boolean;
+}
+const { name, alt, width = 2400, height = 1361, eager = false } = Astro.props;
+---
+
+{/*
+  Both appearances of the app ship, and <picture> swaps them on the reader's
+  own colour scheme — so the screenshot always matches the page around it.
+*/}
+<div
+  class="overflow-hidden rounded-xl border border-ink-200 shadow-xl shadow-ink-900/5 dark:border-ink-800"
+>
+  <picture>
+    <source srcset={url(`/images/screens/${name}-dark.png`)} media="(prefers-color-scheme: dark)" />
+    <img
+      src={url(`/images/screens/${name}-light.png`)}
+      alt={alt}
+      width={width}
+      height={height}
+      class="block w-full"
+      loading={eager ? 'eager' : 'lazy'}
+      decoding={eager ? 'sync' : 'async'}
+    />
+  </picture>
+</div>

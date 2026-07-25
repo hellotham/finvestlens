@@ -2,18 +2,74 @@
 import '../styles/global.css';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
-import { site, url } from '../data/site';
+import { site, release, url } from '../data/site';
 
 interface Props {
   title: string;
   description?: string;
-  /** Page-level <h1> is set by the page itself; this is the <title>. */
+  /** Overrides the social card for one page. Site-root path. */
+  image?: string;
+  /** 'website' for pages, 'article' for manual topics. */
   ogType?: string;
+  noindex?: boolean;
 }
 
-const { title, description = site.description, ogType = 'website' } = Astro.props;
-const fullTitle = title === site.name ? `${site.name} — ${site.tagline}` : `${title} · ${site.name}`;
-const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://hellotham.github.io');
+const {
+  title,
+  description = site.description,
+  image = '/images/og-card.png',
+  ogType = 'website',
+  noindex = false,
+} = Astro.props;
+
+const fullTitle =
+  title === site.name ? `${site.name} — ${site.tagline}` : `${title} · ${site.name}`;
+const origin = Astro.site ?? new URL('https://hellotham.github.io');
+const canonical = new URL(Astro.url.pathname, origin);
+const socialImage = new URL(url(image), origin);
+
+// Structured data: what this is and who publishes it, stated outright rather
+// than left for a crawler to infer from the markup.
+const appSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: site.name,
+  description: site.description,
+  applicationCategory: 'FinanceApplication',
+  applicationSubCategory: 'Accounting',
+  operatingSystem: 'macOS 26, iPadOS 26, iOS 26',
+  softwareVersion: release.version,
+  downloadUrl: release.url,
+  fileSize: release.sizeLabel,
+  license: 'https://www.gnu.org/licenses/gpl-3.0.html',
+  isAccessibleForFree: true,
+  offers: { '@type': 'Offer', price: '0', priceCurrency: 'AUD' },
+  publisher: {
+    '@type': 'Organization',
+    name: site.publisher.legalName,
+    url: site.publisher.url,
+  },
+  url: new URL(url('/'), origin).href,
+  screenshot: new URL(url('/images/screens/dashboard-light.png'), origin).href,
+  featureList: [
+    'Double-entry bookkeeping',
+    'GnuCash import and export',
+    'Bank statement import (CSV, QIF, OFX, MT940, CAMT.053)',
+    'Investments, prices and capital gains',
+    'Financial statements and reports',
+    'Budgets and planning',
+    'Small-business invoicing',
+  ],
+};
+
+const orgSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: site.publisher.legalName,
+  alternateName: site.publisher.name,
+  url: site.publisher.url,
+  slogan: site.publisher.tagline,
+};
 ---
 
 <!doctype html>
@@ -24,19 +80,40 @@ const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://hellotham.g
     <title>{fullTitle}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical.href} />
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
+    <meta name="author" content={site.publisher.legalName} />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="theme-color" content="#8b7bd8" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0d0d12" media="(prefers-color-scheme: dark)" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="apple-mobile-web-app-title" content={site.name} />
+
     <link rel="icon" type="image/png" href={url('/images/icon-64.png')} />
     <link rel="apple-touch-icon" href={url('/images/icon-256.png')} />
-    <meta name="generator" content={Astro.generator} />
-    <meta name="theme-color" content="#8b7bd8" />
-    <meta name="author" content={site.publisher.legalName} />
+    <link rel="sitemap" href={url('/sitemap-index.xml')} />
 
+    <!-- Open Graph -->
     <meta property="og:type" content={ogType} />
     <meta property="og:site_name" content={site.name} />
     <meta property="og:title" content={fullTitle} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical.href} />
-    <meta property="og:image" content={new URL(url('/images/icon-512.png'), canonical).href} />
+    <meta property="og:locale" content="en_AU" />
+    <meta property="og:image" content={socialImage.href} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:alt" content={`${site.name} — ${site.tagline}`} />
+
+    <!-- Twitter / X -->
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={fullTitle} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={socialImage.href} />
+    <meta name="twitter:image:alt" content={`${site.name} — ${site.tagline}`} />
+
+    <script type="application/ld+json" set:html={JSON.stringify(appSchema)} is:inline />
+    <script type="application/ld+json" set:html={JSON.stringify(orgSchema)} is:inline />
   </head>
   <body class="flex min-h-full flex-col">
     <a
