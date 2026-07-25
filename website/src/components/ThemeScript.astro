@@ -1,0 +1,73 @@
+---
+/**
+ * Resolves the reader's theme and writes it to <html> *before first paint*.
+ *
+ * This has to be inline and in <head>, ahead of the stylesheet, or the page
+ * renders in the wrong theme for a frame — the flash every theme toggle has to
+ * design around. It is deliberately tiny and dependency-free for the same
+ * reason.
+ *
+ * Two separate ideas, easy to conflate:
+ *   localStorage.theme  — the *preference*: 'light', 'dark', or absent = auto.
+ *   data-theme          — the *resolved* theme actually being displayed.
+ */
+---
+
+<script is:inline>
+  (() => {
+    const STORAGE_KEY = 'theme';
+    const media = window.matchMedia('(prefers-color-scheme: dark)');
+
+    const preference = () => {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        return stored === 'light' || stored === 'dark' ? stored : 'auto';
+      } catch {
+        // Private browsing can throw on access; auto is a safe default.
+        return 'auto';
+      }
+    };
+
+    const resolve = (pref) => (pref === 'auto' ? (media.matches ? 'dark' : 'light') : pref);
+
+    const apply = (pref) => {
+      const theme = resolve(pref);
+      document.documentElement.dataset.theme = theme;
+      // Keep the browser chrome (address bar, notch area) in step.
+      for (const meta of document.querySelectorAll('meta[name="theme-color"]')) {
+        meta.setAttribute('content', theme === 'dark' ? '#0d0d12' : '#ffffff');
+        meta.removeAttribute('media');
+      }
+    };
+
+    apply(preference());
+
+    // While the reader is on Auto, follow the system if it changes underneath.
+    const followSystem = () => {
+      if (preference() === 'auto') apply('auto');
+    };
+    media.addEventListener('change', followSystem);
+
+    // macOS can switch appearance on a schedule, which often happens while the
+    // tab is in the background or in the back/forward cache — where the change
+    // event may never be delivered. Re-resolve when the page becomes visible
+    // again so Auto is never left showing yesterday's theme.
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) followSystem();
+    });
+    window.addEventListener('pageshow', followSystem);
+
+    // Shared with the toggle, which is the only other thing that sets this.
+    window.__setTheme = (pref) => {
+      try {
+        if (pref === 'auto') localStorage.removeItem(STORAGE_KEY);
+        else localStorage.setItem(STORAGE_KEY, pref);
+      } catch {
+        /* Preference just will not persist; the page still switches. */
+      }
+      apply(pref);
+      document.dispatchEvent(new CustomEvent('themechange', { detail: { preference: pref } }));
+    };
+    window.__themePreference = preference;
+  })();
+</script>

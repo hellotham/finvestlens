@@ -10,25 +10,35 @@ interface Props {
   eager?: boolean;
 }
 const { name, alt, width = 2400, height = 1361, eager = false } = Astro.props;
+const loading = eager ? 'eager' : 'lazy';
 ---
 
 {/*
-  Both appearances of the app ship, and <picture> swaps them on the reader's
-  own colour scheme — so the screenshot always matches the page around it.
+  Both appearances of the app ship. A <picture> with a prefers-color-scheme
+  source would follow the *system* only and ignore the theme toggle, so the
+  two images are stacked and CSS picks one — which keeps the screenshot in step
+  with the page whichever way the reader set the theme.
 */}
 <div
   class="overflow-hidden rounded-xl border border-ink-200 shadow-xl shadow-ink-900/5 dark:border-ink-800"
 >
-  <picture>
-    <source srcset={url(`/images/screens/${name}-dark.png`)} media="(prefers-color-scheme: dark)" />
-    <img
-      src={url(`/images/screens/${name}-light.png`)}
-      alt={alt}
-      width={width}
-      height={height}
-      class="block w-full"
-      loading={eager ? 'eager' : 'lazy'}
-      decoding={eager ? 'sync' : 'async'}
-    />
-  </picture>
+  <img
+    src={url(`/images/screens/${name}-light.png`)}
+    alt={alt}
+    width={width}
+    height={height}
+    class="block w-full dark:hidden"
+    loading={loading}
+    decoding={eager ? 'sync' : 'async'}
+  />
+  <img
+    src={url(`/images/screens/${name}-dark.png`)}
+    alt=""
+    aria-hidden="true"
+    width={width}
+    height={height}
+    class="hidden w-full dark:block"
+    loading={loading}
+    decoding={eager ? 'sync' : 'async'}
+  />
 </div>
