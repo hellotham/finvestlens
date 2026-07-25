@@ -1,0 +1,89 @@
+---
+import Base from '../layouts/Base.astro';
+import PageHeader from '../components/PageHeader.astro';
+import { site, url } from '../data/site';
+---
+
+<Base
+  title="About"
+  description={`FinvestLens is published by ${site.publisher.legalName}. A native Apple accounting app, free software under the GPL v3.`}
+>
+  <PageHeader eyebrow="About" title="About FinvestLens" lead="Why it exists, who publishes it, and the terms it comes under." />
+
+  <div class="mx-auto max-w-3xl px-5 py-16">
+    <div class="prose-doc">
+      <h2>Why it exists</h2>
+      <p>
+        GnuCash is a mature, trusted, free-software accounting package built on
+        rigorous double-entry bookkeeping. Its desktop interface, though, is GTK:
+        it does not look or behave like a Mac app, there is no iPad or iPhone
+        version, and none of the Apple platform conveniences are there.
+      </p>
+      <p>
+        FinvestLens exists to give people in the Apple ecosystem a first-class
+        native accounting app that keeps the correctness of GnuCash’s engine, feels
+        genuinely at home on the platform, runs on macOS, iPadOS and iOS from one
+        codebase, and stays interoperable so nobody is locked in.
+      </p>
+      <p>
+        It is <strong>not</strong> a fork of GnuCash. It is a clean, idiomatic Swift
+        reimplementation of GnuCash’s concepts and data model, designed for Apple
+        platforms from the ground up. Correctness is checked by importing a real
+        46,000-transaction GnuCash book and comparing every balance, report and
+        register against GnuCash itself.
+      </p>
+
+      <h2 id="publisher">Published by Hello Tham</h2>
+      <p>
+        FinvestLens is published by
+        <a href={site.publisher.url}>{site.publisher.legalName}</a>, a boutique
+        management consulting firm whose work is summed up in its own words as
+        “{site.publisher.tagline}”: <em>“We help organisations around the world
+        define and implement their vision and objectives.”</em>
+      </p>
+      <p>
+        The firm specialises in business and IT strategies, operating models,
+        strategic roadmaps, enterprise architecture, analytics and business process
+        design. Releases of FinvestLens are signed and notarized under its Apple
+        Developer identity.
+      </p>
+      <p>
+        More at <a href={site.publisher.url}>hellotham.com</a>.
+      </p>
+
+      <h2 id="licence">Licence</h2>
+      <p>
+        FinvestLens is free software, distributed under the
+        <strong>GNU General Public License v3.0</strong> — the same copyleft family
+        GnuCash uses. That keeps FinvestLens licence-compatible with GnuCash, so its
+        concepts and, where useful, its source can be drawn on directly.
+      </p>
+      <p>
+        The complete source is at <a href={site.repo}>github.com/hellotham/finvestlens</a>.
+        You may use, study, share and modify it under the terms of the licence.
+      </p>
+
+      <h2>A note on GnuCash</h2>
+      <p>
+        The GnuCash XML format is treated here as an interchange specification.
+        FinvestLens is not an official GnuCash product, and is not affiliated with
+        or endorsed by the GnuCash project. Our thanks to them all the same — the
+        model this app rests on is theirs.
+      </p>
+
+      <h2>Not financial advice</h2>
+      <p>
+        FinvestLens records and reports on your own figures. Its planners, tax
+        estimator and wellbeing score are estimates computed from your data and your
+        assumptions, always shown with their workings. They are not financial, tax
+        or investment advice, and no part of the app should be treated as such.
+      </p>
+
+      <h2>Get in touch</h2>
+      <p>
+        Questions, bugs and feature requests are welcome — see
+        <a href={url('/support/')}>support</a>.
+      </p>
+    </div>
+  </div>
+</Base>

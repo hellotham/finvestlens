@@ -1,0 +1,21 @@
+---
+import { release } from '../data/site';
+interface Props { variant?: 'light' | 'dark'; }
+const { variant = 'dark' } = Astro.props;
+---
+<a
+  href={release.url}
+  class:list={[
+    'inline-flex items-center gap-2.5 rounded-xl px-6 py-3.5 text-base font-semibold shadow-sm transition-transform hover:-translate-y-0.5',
+    variant === 'light'
+      ? 'bg-white text-ink-900 hover:bg-ink-100'
+      : 'bg-ink-900 text-white hover:bg-ink-800 dark:bg-white dark:text-ink-900 dark:hover:bg-ink-200',
+  ]}
+>
+  <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+    <path d="M10 2a1 1 0 0 1 1 1v7.6l2.3-2.3a1 1 0 1 1 1.4 1.4l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.4L9 10.6V3a1 1 0 0 1 1-1Z" />
+    <path d="M3 14a1 1 0 0 1 1 1v1h12v-1a1 1 0 1 1 2 0v1.5A1.5 1.5 0 0 1 16.5 18h-13A1.5 1.5 0 0 1 2 16.5V15a1 1 0 0 1 1-1Z" />
+  </svg>
+  Download for macOS
+  <span class="text-sm font-normal opacity-60">{release.sizeLabel}</span>
+</a>

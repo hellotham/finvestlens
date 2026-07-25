@@ -1,0 +1,86 @@
+---
+import Base from '../layouts/Base.astro';
+import PageHeader from '../components/PageHeader.astro';
+import { site, release, url } from '../data/site';
+
+const faqs = [
+  {
+    q: 'Can I move my GnuCash book across?',
+    a: 'Yes. File ▸ Import ▸ GnuCash… reads your .gnucash file — accounts, transactions, prices, scheduled transactions and business records. You can export back to GnuCash XML at any time, and the round trip is verified byte-identical.',
+  },
+  {
+    q: 'Where is my data stored?',
+    a: 'In one .finvestlens file wherever you put it — local disk, iCloud Drive or a NAS. There is no account and no server. Back it up like any other document.',
+  },
+  {
+    q: 'Can two people use the same book?',
+    a: 'Not simultaneously. A book on a shared drive is locked by whichever Mac has it open, with a heartbeat so a crashed session does not lock you out permanently. If the lock is stale you can break it and open anyway.',
+  },
+  {
+    q: 'Does it work offline?',
+    a: 'Entirely. The only network requests are the price quotes you explicitly ask for.',
+  },
+  {
+    q: 'Why does macOS not warn me when I open it?',
+    a: 'Because every release is signed with a Developer ID and notarized by Apple. You can verify that yourself — the commands are on the download page.',
+  },
+  {
+    q: 'Is there an iPhone or iPad version?',
+    a: 'The app runs on iPadOS and iOS from the same codebase and can open, create and edit books. Importing and exporting are macOS-only for now.',
+  },
+];
+---
+
+<Base
+  title="Support"
+  description="Get help with FinvestLens — documentation, frequently asked questions, and how to report a bug."
+>
+  <PageHeader eyebrow="Support" title="Help and support" lead="Start with the manual; if that does not answer it, get in touch." />
+
+  <div class="mx-auto max-w-3xl px-5 py-16">
+    <div class="grid gap-4 sm:grid-cols-3">
+      <a href={url('/manual/')} class="rounded-xl border border-ink-200 p-5 transition-colors hover:border-brand-300 dark:border-ink-800">
+        <h2 class="font-semibold text-ink-900 dark:text-white">User manual</h2>
+        <p class="mt-1 text-sm text-ink-600 dark:text-ink-400">20 topics, also in the app under Help.</p>
+      </a>
+      <a href={site.contact.issues} class="rounded-xl border border-ink-200 p-5 transition-colors hover:border-brand-300 dark:border-ink-800">
+        <h2 class="font-semibold text-ink-900 dark:text-white">Report a bug</h2>
+        <p class="mt-1 text-sm text-ink-600 dark:text-ink-400">Open an issue on GitHub.</p>
+      </a>
+      <a href={`mailto:${site.contact.email}`} class="rounded-xl border border-ink-200 p-5 transition-colors hover:border-brand-300 dark:border-ink-800">
+        <h2 class="font-semibold text-ink-900 dark:text-white">Email us</h2>
+        <p class="mt-1 text-sm break-all text-ink-600 dark:text-ink-400">{site.contact.email}</p>
+      </a>
+    </div>
+
+    <div class="prose-doc mt-14">
+      <h2>Frequently asked</h2>
+      {faqs.map((f) => (
+        <div class="mt-8">
+          <h3>{f.q}</h3>
+          <p>{f.a}</p>
+        </div>
+      ))}
+
+      <h2>Reporting a problem</h2>
+      <p>
+        The most useful report says what you did, what happened, and what you
+        expected instead. Please include the app version (FinvestLens ▸ About) and
+        your macOS version. You are running {release.version}.
+      </p>
+      <p>
+        <strong>Please do not attach your book file</strong> — it contains your
+        finances. If a specific transaction or account is involved, describe its
+        shape rather than sending the data.
+      </p>
+
+      <h2>Something wrong with a number?</h2>
+      <p>
+        Correctness reports are taken seriously. FinvestLens is checked against
+        GnuCash on a real 46,000-transaction book, so if a balance or report
+        disagrees with what you expect, that is worth telling us about — say which
+        report, which account and which period, and what figure you expected.
+      </p>
+    </div>
+  </div>
+</Base>

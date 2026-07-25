@@ -1,0 +1,150 @@
+---
+import Base from '../layouts/Base.astro';
+import PageHeader from '../components/PageHeader.astro';
+import { url } from '../data/site';
+
+const groups = [
+  {
+    id: 'core',
+    title: 'The accounting core',
+    lead: 'GnuCash’s model, rebuilt in Swift — and checked against it to the cent.',
+    items: [
+      ['Double-entry bookkeeping', 'Transactions of two or more splits that must balance to zero. The invariant is enforced by the engine, not by convention.'],
+      ['A hierarchical chart of accounts', 'Asset, Bank, Cash, Credit, Liability, Equity, Income, Expense, Receivable, Payable, Stock, Mutual Fund and Trading accounts, nested as deeply as you like.'],
+      ['Exact decimal money', 'Native Decimal arithmetic rounded to each commodity’s fraction — no binary floating-point drift on your balances.'],
+      ['Multi-currency', 'Accounts in any currency, with a price database and exchange-rate handling that values the whole book in yours.'],
+      ['Lots and capital gains', 'FIFO, LIFO or average cost, with a Stock Transaction assistant covering buys, sells, dividends, reinvestment, return of capital and splits — short positions included.'],
+      ['Undo everything', 'Every edit captures only what it is about to change. Imports, bulk edits and posted schedules all reverse cleanly.'],
+    ],
+  },
+  {
+    id: 'everyday',
+    title: 'Everyday money',
+    lead: 'The work of keeping a book that actually stays up to date.',
+    items: [
+      ['Bank and broker import', 'CSV with saved column profiles, QIF, OFX/QFX, SWIFT MT940/MT942 and ISO 20022 CAMT.053 — format detected from the file itself.'],
+      ['An import matcher that thinks', 'Duplicate detection on FITID plus amount and date with one-to-one claiming, destination accounts learned from payee history, and cross-account transfer completion instead of double entries.'],
+      ['Smart Import with Apple Intelligence', 'PDF statements, dividend notices and invoices read on device, matched to existing transactions, linked and categorised.'],
+      ['Rules', 'Trigger and action groups that categorise, rename, tag, or mark a payment as settling a particular bill — on import or applied to history.'],
+      ['Reconciliation', 'Enter the statement balance; matching transactions auto-clear, and the running difference tells you exactly what you are hunting.'],
+      ['Scheduled transactions', 'Any recurrence, with formula amounts you are prompted for, a loan calculator that builds the schedule, and bill reminders that clear exactly.'],
+      ['Budgets', 'Per-account planned amounts with rollover, auto-budget from actual spending, and a monthly proposal written on device.'],
+      ['Attachments', 'Receipts and invoices linked relatively — the same scheme GnuCash uses — so book and documents move together.'],
+    ],
+  },
+  {
+    id: 'invest',
+    title: 'Investments',
+    lead: 'A portfolio that values itself.',
+    items: [
+      ['Live and historical prices', 'Yahoo and Stooq need no key; EODHD, Alpha Vantage, Finnhub and Twelve Data take a free one, kept in your keychain — never in the book.'],
+      ['Historical backfill', 'Fill every gap in a security’s history from first holding to today, including delisted securities through EODHD.'],
+      ['Cost basis and realised gains', 'Computed per lot with the method you choose, with brokerage handled the way your tax return expects.'],
+      ['Dividends and franking credits', 'Recorded gross where it applies, so the tax reports have what they need at year end.'],
+      ['Price targets and watch lists', 'An alert on the dashboard when the latest quote crosses a target you set.'],
+    ],
+  },
+  {
+    id: 'reports',
+    title: 'Reports and statements',
+    lead: 'Presentation-standard output, not a data dump.',
+    items: [
+      ['The statements', 'Balance sheet, income statement, trial balance and cash flow — hierarchical face-and-notes built from your own chart of accounts, with comparatives and materiality folding.'],
+      ['Presentation decks', 'A CFO-style Financial Review and a factsheet Investment Review, with charts, callouts and commentary generated on device from the figures on the slide.'],
+      ['Financial Year Pack', 'Everything you need at tax time gathered into one PDF, in reading order.'],
+      ['Business reports', 'Receivable and payable aging, customer summaries and printable tax invoices.'],
+      ['Favourites', 'Save a report with its settings and come straight back to it.'],
+    ],
+  },
+  {
+    id: 'planning',
+    title: 'Planning and insight',
+    lead: 'Estimates from your own figures, always shown with their workings — never advice.',
+    items: [
+      ['Debt Reduction Planner', 'Avalanche against snowball, with the payoff date and the interest saved versus paying minimums.'],
+      ['Lifetime Planner', 'A long-range projection seeded from your book, with editable assumptions, one-off life events and a today’s-money view.'],
+      ['Tax estimator', 'Built from the accounts you mark as income and deductions, with editable brackets defaulting to Australian resident rates.'],
+      ['Spending insights', 'Period-on-period comparison in plain language, with unusual-spend alerts.'],
+      ['Financial wellbeing score', 'Four measures from your own books — savings rate, cash runway, debt to income, spending trend — each shown with how it was worked out.'],
+      ['Savings goals', 'Earmark part of an account toward something, with optional time-boxed challenges.'],
+    ],
+  },
+  {
+    id: 'business',
+    title: 'Small business',
+    lead: 'The GnuCash business layer, verified against it to the cent.',
+    items: [
+      ['Customers, vendors, employees and jobs', 'With billing terms and sales-tax tables.'],
+      ['Invoices and bills', 'Posted through A/R and A/P with payments, credit notes and aging.'],
+      ['Australian Tax Invoice', 'Printable, with GST stated the way the ATO expects.'],
+      ['Time and mileage', 'Log billable work, then gather it onto a customer invoice.'],
+    ],
+  },
+  {
+    id: 'platform',
+    title: 'Apple platform',
+    lead: 'Native, not a web app in a window.',
+    items: [
+      ['macOS, iPadOS and iOS', 'One SwiftUI codebase with layouts that suit each.'],
+      ['Eight languages', 'English, German, Spanish, French, Italian, Japanese, Brazilian Portuguese and Simplified Chinese, with accounting terms following GnuCash’s own conventions.'],
+      ['Widgets, Shortcuts and Spotlight', 'Net worth and upcoming bills on your desktop; App Intents for automation; Quick Look previews of your book.'],
+      ['Accessibility', 'Dynamic Type, VoiceOver labels throughout, full keyboard control.'],
+      ['NAS-safe sharing', 'Application-level locking with heartbeat and stale-lock detection, a local working copy, and atomic write-back.'],
+      ['Audit log', 'A GnuCash-style sidecar recording each edit beside the book.'],
+    ],
+  },
+];
+---
+
+<Base
+  title="Features"
+  description="Everything FinvestLens does: double-entry accounting, bank import, investments, reports, planning and small business — on macOS, iPad and iPhone."
+>
+  <PageHeader
+    eyebrow="Features"
+    title="What FinvestLens does"
+    lead="A complete double-entry accounting application — the engine, the everyday work of keeping a book, investments, reporting, planning and small business."
+  />
+
+  <nav aria-label="Sections" class="border-b border-ink-200 dark:border-ink-800">
+    <div class="mx-auto flex max-w-6xl flex-wrap gap-x-6 gap-y-2 px-5 py-4 text-sm">
+      {groups.map((g) => (
+        <a href={`#${g.id}`} class="font-medium text-ink-500 hover:text-brand-600 dark:text-ink-400 dark:hover:text-brand-300">
+          {g.title}
+        </a>
+      ))}
+    </div>
+  </nav>
+
+  <div class="mx-auto max-w-6xl px-5 py-16">
+    {
+      groups.map((group) => (
+        <section id={group.id} class="scroll-mt-20 border-b border-ink-200 py-12 first:pt-0 last:border-0 dark:border-ink-800">
+          <h2 class="text-2xl font-bold tracking-tight text-ink-900 sm:text-3xl dark:text-white">
+            {group.title}
+          </h2>
+          <p class="mt-2 max-w-2xl text-lg text-ink-600 dark:text-ink-300">{group.lead}</p>
+          <dl class="mt-8 grid gap-x-10 gap-y-7 md:grid-cols-2">
+            {group.items.map(([name, desc]) => (
+              <div>
+                <dt class="font-semibold text-ink-900 dark:text-white">{name}</dt>
+                <dd class="mt-1 leading-relaxed text-ink-600 dark:text-ink-400">{desc}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      ))
+    }
+  </div>
+
+  <div class="mx-auto max-w-6xl px-5 pb-20">
+    <div class="rounded-2xl border border-ink-200 bg-ink-50/60 p-8 text-center dark:border-ink-800 dark:bg-ink-900/30">
+      <p class="text-lg text-ink-700 dark:text-ink-200">
+        The full manual explains how to use all of this.
+      </p>
+      <a href={url('/manual/')} class="mt-4 inline-block font-semibold text-brand-600 underline decoration-brand-300 underline-offset-4 dark:text-brand-300">
+        Open the user manual
+      </a>
+    </div>
+  </div>
+</Base>

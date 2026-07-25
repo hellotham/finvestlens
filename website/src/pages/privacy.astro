@@ -1,0 +1,128 @@
+---
+import Base from '../layouts/Base.astro';
+import PageHeader from '../components/PageHeader.astro';
+import { site, url } from '../data/site';
+const updated = '25 July 2026';
+---
+
+<Base
+  title="Privacy"
+  description="FinvestLens privacy policy. There is no account, no analytics and no server — your book stays on your device."
+>
+  <PageHeader eyebrow="Legal" title="Privacy policy" lead={`Last updated ${updated}`} />
+
+  <div class="mx-auto max-w-3xl px-5 py-16">
+    <div
+      class="mb-12 rounded-2xl border border-brand-200 bg-brand-50/60 p-6 dark:border-brand-800/60 dark:bg-brand-900/20"
+    >
+      <p class="text-lg leading-relaxed text-ink-800 dark:text-ink-100">
+        <strong>The short version.</strong> FinvestLens has no account to sign up for,
+        no analytics, and no server of ours for your data to reach. Your book is a
+        file on your device. We never see it, and neither does anyone else.
+      </p>
+    </div>
+
+    <div class="prose-doc">
+      <h2>Who we are</h2>
+      <p>
+        FinvestLens is published by <a href={site.publisher.url}>{site.publisher.legalName}</a>
+        (“we”, “us”). For anything in this policy, write to
+        <a href={`mailto:${site.contact.email}`}>{site.contact.email}</a>.
+      </p>
+
+      <h2>What we collect</h2>
+      <p>
+        <strong>Nothing.</strong> We operate no servers for FinvestLens, run no
+        analytics or crash reporting, use no advertising or tracking SDKs, and have
+        no way to identify you. The app’s privacy manifest declares no collected data
+        types and no tracking domains.
+      </p>
+
+      <h2>Where your financial data lives</h2>
+      <p>
+        Your book is a single file you choose the location of — local disk, iCloud
+        Drive, or a network share. It is read and written by the app on your device
+        and nowhere else. Attachments you link are likewise files on your storage.
+      </p>
+      <p>
+        If you keep your book in iCloud Drive, it syncs between <em>your own</em>
+        devices through your Apple Account, under Apple’s terms and encryption. That
+        is a transfer between you and Apple; it does not involve us.
+      </p>
+
+      <h2>Apple Intelligence and document reading</h2>
+      <p>
+        Smart Import, categorisation suggestions, budget proposals and report
+        commentary are produced by Apple’s on-device foundation models. The
+        statements, invoices and dividend notices you point the app at are processed
+        <strong>on your device</strong>. Their contents are not sent to us or to any
+        third party by FinvestLens.
+      </p>
+
+      <h2>Network requests the app can make</h2>
+      <p>
+        FinvestLens makes network requests in exactly one situation: when you ask it
+        to fetch security prices or exchange rates. Those requests go to the quote
+        provider you choose:
+      </p>
+      <ul>
+        <li>Yahoo Finance and Stooq — no account or key required</li>
+        <li>EODHD (<code>eodhd.com</code>)</li>
+        <li>Alpha Vantage (<code>alphavantage.co</code>)</li>
+        <li>Finnhub (<code>finnhub.io</code>)</li>
+        <li>Twelve Data (<code>twelvedata.com</code>)</li>
+      </ul>
+      <p>
+        Such a request contains the ticker symbols and date ranges being priced. It
+        does not contain your balances, transactions, account names or any personal
+        detail. Each provider is an independent company with its own privacy policy,
+        which governs what it does with the request.
+      </p>
+      <p>
+        If you never fetch prices, the app makes no network requests at all. It works
+        entirely offline.
+      </p>
+
+      <h2>API keys and credentials</h2>
+      <p>
+        Keys for the keyed price providers are stored in the macOS Keychain on the
+        device you enter them on. They are never written into your book file and are
+        never transmitted anywhere except to the provider they belong to.
+      </p>
+
+      <h2>Local authentication</h2>
+      <p>
+        Where the app asks for Touch ID or your password — to open a protected book,
+        or to reach Emergency Records — that check is performed by macOS. FinvestLens
+        receives only a yes or no. It never sees your password or biometric data.
+      </p>
+
+      <h2>Children</h2>
+      <p>
+        FinvestLens is a general-purpose accounting application, not directed at
+        children, and collects no data from anyone.
+      </p>
+
+      <h2>Your rights</h2>
+      <p>
+        Rights of access, correction, deletion and portability apply to data a
+        publisher holds about you. We hold none. Your own data is in your own file:
+        you can read it, change it, export it to GnuCash XML or a Ledger journal, or
+        delete the file, all without asking us.
+      </p>
+
+      <h2>Changes to this policy</h2>
+      <p>
+        If this policy changes, the revised version will be published on this page
+        with a new date. Material changes will also be noted in the release notes.
+      </p>
+
+      <h2>Contact</h2>
+      <p>
+        <a href={`mailto:${site.contact.email}`}>{site.contact.email}</a> ·
+        <a href={url('/support/')}>Support</a> ·
+        <a href={site.publisher.url}>{site.publisher.legalName}</a>
+      </p>
+    </div>
+  </div>
+</Base>

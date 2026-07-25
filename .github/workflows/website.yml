@@ -1,0 +1,66 @@
+name: Deploy website
+
+# Builds the Astro site in website/ and publishes it to GitHub Pages.
+# Enable once under Settings ▸ Pages ▸ Source: GitHub Actions.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'website/**'
+      - 'Packages/FeatureUI/Sources/FinvestLensUI/HelpContent.swift'
+      - '.github/workflows/website.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time; let a running one finish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: website/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: website
+
+      - name: Regenerate the manual from the app's help book
+        # Keeps the online manual honest: it is generated from the same source
+        # the in-app help uses, so the two cannot drift apart.
+        run: node scripts/build-manual.mjs
+        working-directory: website
+
+      - name: Fail if the manual is out of date
+        run: git diff --exit-code src/data/manual.json
+        working-directory: website
+
+      - name: Build
+        run: npm run build
+        working-directory: website
+
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: website/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
