@@ -66,7 +66,7 @@ public enum LedgerAmountSyntax {
         return !"-+*/^&|=<>[](){}@.,;:?!\"".contains(character)
     }
 
-    static func needsQuoting(_ symbol: String) -> Bool {
+    public static func needsQuoting(_ symbol: String) -> Bool {
         symbol.isEmpty || !symbol.allSatisfy(isSymbolCharacter)
     }
 

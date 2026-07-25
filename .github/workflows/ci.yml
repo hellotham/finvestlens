@@ -4,7 +4,7 @@ name: CI
 # declares swift-tools-version 6.2, which ships with Xcode 26, so all jobs select
 # it explicitly rather than relying on the runner's default Xcode. The
 # correctness-critical packages (engine, persistence, interchange, quotes, rules,
-# reports, shared) build and test on their own; the full app target, the
+# reports, shared, cli) build and test on their own; the full app target, the
 # Intelligence package, AND FeatureUI (whose one test bundle links Intelligence)
 # additionally need the macOS 26 SDK (FoundationModels) and run in a separate,
 # allowed-to-fail job until GitHub ships a macOS 26 runner.
@@ -34,6 +34,7 @@ jobs:
           - Rules
           - Reports
           - Shared
+          - CLI
     steps:
       - uses: actions/checkout@v7
       - name: Select Xcode 26 (Swift 6.2)

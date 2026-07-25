@@ -254,6 +254,11 @@ public enum LedgerImport {
                                        placeholder: Bool, hidden: Bool,
                                        description: String?)] = [:]
         var accountsByPath: [String: Account] = [:]
+        /// For accounts with no `commodity=` metadata: the commodity their
+        /// own postings are denominated in. A foreign journal's
+        /// `Assets:Brokerage  10 BHP @@ 421.00 AUD` makes that account
+        /// BHP-denominated, which is what the reports need.
+        var commodityHints: [String: String] = [:]
 
         init(journal: LedgerJournal) {
             self.journal = journal
@@ -265,6 +270,17 @@ public enum LedgerImport {
             }
             for directive in journal.accountDirectives {
                 accountMetadata[directive.name] = Self.parseAccountNote(directive.note)
+            }
+
+            // Postings whose own amount differs from the transaction's
+            // balancing commodity name their account's commodity.
+            for transaction in journal.transactions {
+                for posting in transaction.postings {
+                    guard let cost = posting.cost, let amount = posting.amount,
+                          !amount.commodity.isEmpty,
+                          amount.commodity != cost.amount.commodity else { continue }
+                    commodityHints[posting.account] = amount.commodity
+                }
             }
 
             let book = Book(baseCurrency: baseCurrency())
@@ -495,7 +511,7 @@ public enum LedgerImport {
                 let type = metadata?.type
                     ?? parent?.type
                     ?? Self.inferredType(forRoot: components[0])
-                let commoditySymbol = metadata?.commodity
+                let commoditySymbol = metadata?.commodity ?? commodityHints[currentPath]
                 let accountCommodity = commoditySymbol.map { commodity(symbol: $0) }
                     ?? parent?.commodity
                     ?? book.baseCurrency

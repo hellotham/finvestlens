@@ -25,7 +25,7 @@ This is the authoritative **delivery schedule and status record**. It sequences 
 | **Report-quality redesign** | ✅ Complete (24 Jul 2026) | Statements at annual-report standard — face-and-notes presentation from the user's own tree, ASC 274 ordering, accounting typography, comparatives, incl. the Trial Balance — plus the Financial Review and Investment Review slide decks with validator-grounded on-device insights. Plan/research: [report-redesign.md](report-redesign.md); design: [architecture.md §5.6a](architecture.md); narrative in [implemented.md](implemented.md). |
 | **P8 — Extended import** | ✅ Complete (24 Jul 2026) | MT940/MT942 + CAMT.053 importers feed the Import Matcher; format auto-detection incl. content sniffing. Online bank sync (FR-XIO-07) **skipped by decision (24 Jul 2026)** — moved to [deferred.md](deferred.md) §5. |
 | **P9 — Planning & insights** | ✅ Complete (24 Jul 2026) | Debt & Lifetime planners, tax estimator, Spending Insights, wellbeing score, passport PDF, savings challenges, Emergency Records, audit log — design in [planning-design.md](planning-design.md). |
-| **P10 — Ledger CLI & interchange** | 🚧 **In progress** (P10a/P10b done 25 Jul 2026) | Ledger 3 journal import/export + the read-only `finlens` CLI. Research + phased plan in [ledger-design.md](ledger-design.md) (format spec: [ledger-format-reference.md](ledger-format-reference.md), CLI spec: [ledger-cli-reference.md](ledger-cli-reference.md)). |
+| **P10 — Ledger CLI & interchange** | 🚧 **In progress** (P10a–P10c done 25 Jul 2026; only P10d depth remains) | Ledger 3 journal import/export + the read-only `finlens` CLI. Research + phased plan in [ledger-design.md](ledger-design.md) (format spec: [ledger-format-reference.md](ledger-format-reference.md), CLI spec: [ledger-cli-reference.md](ledger-cli-reference.md)). |
 
 **Every phase P0–P9 is delivered**; a set of low-priority tails deferred *within* them is tracked, ranked, in [deferred.md](deferred.md). The narrative of what was built, with the audits and measurements behind it, is in [implemented.md](implemented.md).
 
@@ -301,7 +301,7 @@ journals, and GnuCash files.
 **Sub-phases** (each releasable; detail + exit criteria in the design doc §7):
 - ✅ **P10a** — Ledger codec core in Interchange (parser + canonical writer; fixed-point pinned).
 - ✅ **P10b** — Book ⟷ journal mapping, read-only store access, app File ▸ Import/Export menus; real-book round-trip verified byte-identical with zero errors. *(FR-XIO-09/10)*
-- **P10c** — the `finlens` CLI package: core-80 commands, query/period grammars, the interactive REPL, golden-output tests, read-only guarantee. *(FR-CLI-01..03, 05)*
+- ✅ **P10c** — the `finlens` CLI package: core-80 commands, query/period grammars, the interactive REPL, 28 golden/grammar tests, read-only guarantee; 371 real-book balances match the engine. *(FR-CLI-01..03, 05)*
 - **P10d** — depth on demand: valuation flags, periodic grouping, `--budget` family, `xact`, mini value-expressions. *(FR-CLI-04)*
 
 **Dependencies.** P1 (store), P3 (interchange patterns), P5 (PriceDB for valuation).
