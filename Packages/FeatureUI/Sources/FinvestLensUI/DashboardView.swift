@@ -527,8 +527,9 @@ struct DashboardView: View {
                            empty: "No expenses in this period.")
     }
 
-    private func treemapCard(title: String, systemImage: String,
-                             lines: [ReportLine], total: Decimal, empty: String) -> some View {
+    private func treemapCard(title: LocalizedStringKey, systemImage: String,
+                             lines: [ReportLine], total: Decimal,
+                             empty: LocalizedStringKey) -> some View {
         let items = lines
             .filter { $0.amount > 0 }
             .sorted { $0.amount > $1.amount }
@@ -1198,11 +1199,14 @@ struct DashboardView: View {
 
 /// A titled dashboard card.
 private struct Card<Content: View>: View {
-    let title: String
+    // LocalizedStringKey, not String: `Text(String)` is the verbatim
+    // initialiser and would never look the title up in the catalog.
+    let title: LocalizedStringKey
     let systemImage: String
     @ViewBuilder let content: Content
 
-    init(_ title: String, systemImage: String, @ViewBuilder content: () -> Content) {
+    init(_ title: LocalizedStringKey, systemImage: String,
+         @ViewBuilder content: () -> Content) {
         self.title = title
         self.systemImage = systemImage
         self.content = content()

@@ -1749,7 +1749,7 @@ struct RegisterView: View {
     /// Values come from the engine's existing `BalanceFilter`, so they agree
     /// with the sidebar and the reports to the cent.
     private func summaryBar(_ s: AppModel.RegisterSummary) -> some View {
-        func cell(_ label: String, _ value: Decimal) -> some View {
+        func cell(_ label: LocalizedStringKey, _ value: Decimal) -> some View {
             HStack(spacing: 4) {
                 Text(label).foregroundStyle(.secondary)
                 Text(AmountFormat.string(value, code: s.currencyCode))
@@ -2405,8 +2405,10 @@ struct ScheduleTransactionSheet: View {
                     // The thing worth saying: this schedules the *next* one. The
                     // transaction in front of you already exists and is not
                     // about to be posted again.
-                    Text("The first occurrence will be the next one after this "
-                         + "transaction’s date. This transaction is left alone.")
+                    Text("""
+                         The first occurrence will be the next one after this \
+                         transaction’s date. This transaction is left alone.
+                         """)
                         .scaledFont(.caption)
                         .foregroundStyle(.secondary)
                 }

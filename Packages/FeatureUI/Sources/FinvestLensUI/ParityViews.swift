@@ -424,7 +424,8 @@ struct CreateLoanPaymentSheet: View {
         .frame(minWidth: 420, minHeight: 320)
     }
 
-    private func accountPicker(_ label: String, _ selection: Binding<GncGUID?>) -> some View {
+    private func accountPicker(_ label: LocalizedStringKey,
+                               _ selection: Binding<GncGUID?>) -> some View {
         LabeledContent(label) {
             AccountField(nodes: model.postableAccounts, selection: selection)
         }

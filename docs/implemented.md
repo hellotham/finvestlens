@@ -20,6 +20,62 @@ Companions: [PRD](prd.md) · [Architecture](architecture.md) · [Plan](plan.md) 
 
 ---
 
+## Localization — eight languages (25 Jul 2026)
+
+The app ships localized: **English, German, Spanish, French, Italian, Japanese,
+Brazilian Portuguese and Simplified Chinese**. 1,126 UI strings, translated
+throughout, with accounting terminology following GnuCash's own conventions per
+language (Buchung / opération / 勘定科目 / 分录 …) so a GnuCash user reads
+familiar words.
+
+**Where the catalog lives, and why.** SwiftUI resolves `Text("…")` against
+`Bundle.main`, so a single `Localizable.xcstrings` in the **app target** serves
+the whole `FeatureUI` package too. That is what made this tractable: **zero**
+call-site churn across 89 view files — no `bundle: .module` on every `Text`,
+`Section`, `Toggle`, `.navigationTitle` (several of which have no `bundle:`
+overload at all). The Quick Look extension is a separate bundle, so it carries
+its own two-string catalog. `STRING_CATALOG_GENERATE_SYMBOLS = NO`: the key set
+collides on case and trailing ellipses (`Add Record` / `Add Record…`), and we
+look strings up by literal, never by generated symbol.
+
+**The key list is the compiler's, not a guess.** A hand-rolled extractor got
+the work started, but the authority is
+`swift build -Xswiftc -emit-localized-strings`, whose `.stringsdata` is exactly
+what the runtime will look up — including the typed format specifiers
+(`%@`, `%lld`) that interpolated strings compile to. Diffing the catalog
+against it drove the count to **zero missing keys and zero dead entries**, and
+caught five classes of bug a source scan cannot:
+
+- **`Text("a " + "b")` is not localizable at all.** Swift resolves the
+  concatenation to `Text(String)` — the *verbatim* initialiser — so the
+  compiler emits no key. Two long help strings had silently opted out; they are
+  now single literals.
+- **Helpers typed `String` swallow localization the same way.** `Card`,
+  `treemapCard`, the register's status-bar `cell`, and two `accountPicker`
+  helpers all took `String` and passed it to `Text`/`LabeledContent`. That is
+  why the dashboard card titles, the register column headers and the
+  `Present:` / `Cleared:` / `Reconciled:` strip stayed English in the first
+  German build. All now take `LocalizedStringKey`.
+- **Ternary branches** — `Text(cond ? "a" : "b")` — are two keys, and neither
+  is the first token after the paren.
+- `TableColumn`, `CommandMenu`, `SharePreview` and `ColorPicker` are
+  localizable APIs that a naive `Text(`/`Button(` sweep misses.
+- Chart `.value("Security", …)` labels and App Intent titles are keys too.
+
+**Deliberately not translated**: the app name, `PDF`, the URL placeholder and
+the copyright line are marked `shouldTranslate: false`. The Text Size slider's
+`A` and the reconcile column's `R` are typographic samples, not words. An App
+Intent that returns a plain `String` cannot be reached by a catalog at all and
+is left in English.
+
+Verified by launching the app under `-AppleLanguages` for German, Japanese and
+French and reading the result: sidebar, menus, register columns, status bar,
+inspector and toolbar all render translated, with number and currency
+formatting following the locale (`53.941,18` in German, `53 941,18 $AU` in
+French).
+
+---
+
 ## P10 — Ledger interchange & the `finlens` CLI (25 Jul 2026)
 
 The last phase: read/write the Ledger 3 journal format, and a ledger-modelled
