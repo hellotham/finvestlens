@@ -168,7 +168,7 @@ FinvestLens $VERSION
 Drag FinvestLens to the Applications folder, then open it from there.
 
 FinvestLens is free software under the GNU General Public License v3.0.
-Source: https://github.com/ChristineTham/finvestlens
+Source: https://github.com/hellotham/finvestlens
 EOF
 
 rm -f "$DMG"
