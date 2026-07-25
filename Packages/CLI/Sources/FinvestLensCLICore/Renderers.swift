@@ -66,11 +66,11 @@ public enum Renderers {
             }
     }
 
-    static func pad(_ text: String, to width: Int) -> String {
+    public static func pad(_ text: String, to width: Int) -> String {
         text.count >= width ? text : String(repeating: " ", count: width - text.count) + text
     }
 
-    static func padRight(_ text: String, to width: Int) -> String {
+    public static func padRight(_ text: String, to width: Int) -> String {
         text.count >= width ? String(text.prefix(width)) : text + String(repeating: " ", count: width - text.count)
     }
 
@@ -234,7 +234,6 @@ public enum Renderers {
             ?? max(12, width - dateWidth - payeeWidth - amountWidth * 2 - 4)
 
         var lines: [String] = []
-        var running: [String: Decimal] = [:]
         var lastTransaction: GncGUID?
 
         let postings = pipeline.postings()
@@ -248,7 +247,7 @@ public enum Renderers {
         }
 
         for posting in postings {
-            running[posting.commodity.mnemonic, default: 0] += posting.amount
+            let running = posting.runningTotals
             let sameTransaction = lastTransaction == posting.transaction.guid
             lastTransaction = posting.transaction.guid
 
@@ -342,16 +341,19 @@ public enum Renderers {
         if options.raw, let journal = extras.journals.first {
             return LedgerWriter.write(journal)
         }
-        // Only the matched transactions, through the canonical writer.
-        let matched = Set(pipeline.postings().map(\.transaction.guid))
-        var journal = LedgerExport.journal(from: book)
-        journal.transactions = journal.transactions.filter { entry in
-            guard let guid = entry.metadata.first(where: { $0.key == "guid" })?.value else { return true }
-            return matched.contains(where: { $0.hexString == guid })
+        // Only the matched transactions, in report order, through the
+        // canonical writer. Built from the postings rather than by filtering
+        // a whole-book export: that both respects the query (the export
+        // writes its guid as a note line, so a metadata filter matched
+        // nothing and kept everything) and skips converting 46,000
+        // transactions to print five. Forecast rows come along for free.
+        var seen = Set<GncGUID>()
+        var journal = LedgerJournal()
+        journal.styles = LedgerExport.styles(for: book)
+        for posting in pipeline.postings()
+        where seen.insert(posting.transaction.guid).inserted {
+            journal.transactions.append(LedgerExport.ledgerTransaction(posting.transaction))
         }
-        journal.accountDirectives = []
-        journal.commodityDirectives = []
-        journal.prices = []
         return LedgerWriter.write(journal)
     }
 
@@ -485,7 +487,7 @@ public enum Renderers {
     public static func equity(_ pipeline: ReportPipeline, book: Book) -> String {
         let totals = pipeline.balances()
         var journal = LedgerJournal()
-        journal.styles = LedgerExport.journal(from: book).styles
+        journal.styles = LedgerExport.styles(for: book)
         var entry = LedgerTransaction(date: pipeline.request.today, payee: "Opening Balances")
         entry.state = .cleared
         var equityTotals: [String: Decimal] = [:]

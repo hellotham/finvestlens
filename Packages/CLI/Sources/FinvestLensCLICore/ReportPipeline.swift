@@ -22,6 +22,10 @@ public struct ReportPosting {
     /// commodity it is stated in.
     public var amount: Decimal
     public var commodity: Commodity
+    /// The running total, per commodity, at this posting — snapshotted over
+    /// the whole filtered set before `-d`, `--head/--tail` and `-S` reshape
+    /// it, so a hidden or reordered row still contributes exactly once.
+    public var runningTotals: [String: Decimal] = [:]
     public var date: Date { transaction.datePosted }
     public var account: Account? { split.account }
 }
@@ -30,21 +34,33 @@ public struct ReportRequest {
     public var options: CLIOptions
     public var query: ParsedQuery
     public var today: Date
+    /// Parsed `-l/--limit` and `-d/--display` value expressions (P10d).
+    public var limit: ValueExpression?
+    public var displayExpression: ValueExpression?
 
-    public init(options: CLIOptions, query: ParsedQuery, today: Date) {
+    public init(options: CLIOptions, query: ParsedQuery, today: Date,
+                limit: ValueExpression? = nil, displayExpression: ValueExpression? = nil) {
         self.options = options
         self.query = query
         self.today = today
+        self.limit = limit
+        self.displayExpression = displayExpression
     }
 }
 
 public struct ReportPipeline {
     public let book: Book
     public let request: ReportRequest
+    /// Transactions reported alongside the book's own but never added to it —
+    /// `--forecast`'s projections. The CLI is read-only (design NG-L3), and
+    /// the REPL holds one `Book` across many commands, so a forecast must not
+    /// leave anything behind for the next command to see.
+    public let extraTransactions: [Transaction]
 
-    public init(book: Book, request: ReportRequest) {
+    public init(book: Book, request: ReportRequest, extraTransactions: [Transaction] = []) {
         self.book = book
         self.request = request
+        self.extraTransactions = extraTransactions
     }
 
     /// The reporting commodity: `-X CODE` wins, else the book's base.
@@ -98,8 +114,10 @@ public struct ReportPipeline {
         let options = request.options
         let predicate = request.query.predicate
         var result: [ReportPosting] = []
+        var runningForPredicates = Decimal(0)
 
-        for transaction in book.transactions.sorted(by: { $0.datePosted < $1.datePosted }) {
+        let all = extraTransactions.isEmpty ? book.transactions : book.transactions + extraTransactions
+        for transaction in all.sorted(by: { $0.datePosted < $1.datePosted }) {
             if let begin = bounds.begin, transaction.datePosted < begin { continue }
             if let end = bounds.end, transaction.datePosted >= end { continue }
 
@@ -131,7 +149,40 @@ public struct ReportPipeline {
                    !display.matches(QuerySubject(split: split, transaction: transaction)) {
                     continue
                 }
-                result.append(valued(split: split, transaction: transaction))
+                let posting = valued(split: split, transaction: transaction)
+                // `--limit EXPR` filters what enters the calculation; the
+                // running total it sees is the one built so far.
+                if let limit = request.limit {
+                    runningForPredicates += posting.amount
+                    let context = ExpressionContext(split: split, transaction: transaction,
+                                                    amount: posting.amount,
+                                                    total: runningForPredicates)
+                    guard limit.matches(context, today: request.today) else {
+                        runningForPredicates -= posting.amount
+                        continue
+                    }
+                }
+                result.append(posting)
+            }
+        }
+
+        // Running totals are fixed here, while the set is complete and in
+        // date order: everything below only hides or reorders rows.
+        var running: [String: Decimal] = [:]
+        for index in result.indices {
+            running[result[index].commodity.mnemonic, default: 0] += result[index].amount
+            result[index].runningTotals = running
+        }
+
+        // `-d/--display` hides rows without changing those totals.
+        if let display = request.displayExpression {
+            var soFar = Decimal(0)
+            result = result.filter { posting in
+                soFar += posting.amount
+                let context = ExpressionContext(split: posting.split,
+                                                transaction: posting.transaction,
+                                                amount: posting.amount, total: soFar)
+                return display.matches(context, today: request.today)
             }
         }
 
