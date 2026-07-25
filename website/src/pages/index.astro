@@ -1,6 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 import DownloadButton from '../components/DownloadButton.astro';
+import Screenshot from '../components/Screenshot.astro';
 import { site, release, url } from '../data/site';
 
 const pillars = [
@@ -124,18 +125,11 @@ const interop = [
 
       <!-- Hero screenshot -->
       <div class="relative mx-auto mt-16 max-w-5xl">
-        <div
-          class="overflow-hidden rounded-2xl border border-ink-200 bg-white shadow-2xl shadow-ink-900/10 dark:border-ink-800 dark:bg-ink-900"
-        >
-          <img
-            src={url('/images/screens/dashboard.png')}
-            alt="The FinvestLens dashboard: net worth trend, cash flow against budget, upcoming bills and portfolio allocation."
-            width="2400"
-            height="1500"
-            class="w-full"
-            loading="eager"
-          />
-        </div>
+        <Screenshot
+          name="dashboard"
+          eager
+          alt="The FinvestLens dashboard: net worth trend, wellbeing score, portfolio allocation, performance and recent activity."
+        />
       </div>
     </div>
   </section>
@@ -177,16 +171,7 @@ const interop = [
               <p class="mt-4 text-lg leading-relaxed text-ink-600 dark:text-ink-300">{f.body}</p>
             </div>
             <div class:list={[i % 2 ? 'lg:order-1' : '']}>
-              <div class="overflow-hidden rounded-xl border border-ink-200 bg-white shadow-xl shadow-ink-900/5 dark:border-ink-800 dark:bg-ink-900">
-                <img
-                  src={url(`/images/screens/${f.image}.png`)}
-                  alt={f.alt}
-                  width="2400"
-                  height="1500"
-                  class="w-full"
-                  loading="lazy"
-                />
-              </div>
+              <Screenshot name={f.image} alt={f.alt} />
             </div>
           </div>
         ))

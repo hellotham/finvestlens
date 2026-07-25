@@ -21,7 +21,7 @@ export function getStaticPaths() {
 const { topic, previous, next } = Astro.props;
 ---
 
-<Base title={topic.title} description={topic.summary}>
+<Base title={topic.title} description={topic.summary} ogType="article">
   <div class="mx-auto max-w-6xl px-5 py-12 lg:grid lg:grid-cols-[16rem_minmax(0,1fr)] lg:gap-14">
     <!-- Contents -->
     <aside class="mb-10 lg:mb-0">
