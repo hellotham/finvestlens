@@ -24,7 +24,7 @@ const {
 
 const fullTitle =
   title === site.name ? `${site.name} — ${site.tagline}` : `${title} · ${site.name}`;
-const origin = Astro.site ?? new URL('https://hellotham.github.io');
+const origin = Astro.site ?? new URL('https://hellotham.com');
 const canonical = new URL(Astro.url.pathname, origin);
 const socialImage = new URL(url(image), origin);
 

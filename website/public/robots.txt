@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://hellotham.github.io/finvestlens/sitemap-index.xml
+Sitemap: https://hellotham.com/finvestlens/sitemap-index.xml
