@@ -151,6 +151,14 @@ across all three. Defaults live in `~/.finlensrc` or `FINLENS_*` variables.
 `finlens --help` lists every command and flag; [docs/cli.md](docs/cli.md) is
 the full manual.
 
+## Help
+
+The Help menu (⌘?) opens an in-app help book — 20 topics across Basics,
+Everyday money, Investments & planning, and More — with a topic sidebar and
+search. It is written as data rather than HTML, so the pages are translated
+into every supported language alongside the rest of the interface, and the same
+pages serve macOS, iPadOS and iOS.
+
 ## Languages
 
 FinvestLens is localized into **English, German, Spanish, French, Italian,

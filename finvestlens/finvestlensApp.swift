@@ -323,7 +323,13 @@ struct finvestlensApp: App {
                     .disabled(!model.isOpen)
             }
             CommandGroup(replacing: .help) {
-                Button("FinvestLens Help") { model.showingHelp = true }
+                Button("FinvestLens Help") {
+                    #if os(macOS)
+                    openWindow(id: "help")
+                    #else
+                    model.showingHelp = true
+                    #endif
+                }
                     .keyboardShortcut("?", modifiers: .command)
             }
             CommandMenu("Security") {
@@ -346,6 +352,15 @@ struct finvestlensApp: App {
                 .finvestLensAppearance()
         }
         .defaultSize(width: 760, height: 560)
+
+        // Help is a reference workspace you read *while* working, so it gets its
+        // own window rather than a sheet over the book (same reasoning as
+        // Reports). iOS keeps the sheet — see ContentView.
+        WindowGroup("FinvestLens Help", id: "help") {
+            HelpView()
+                .finvestLensAppearance()
+        }
+        .defaultSize(width: 860, height: 620)
 
         // Reconcile is a prolonged, multistep task — HIG says a dedicated window,
         // not a sheet, so the account register stays visible behind it.
