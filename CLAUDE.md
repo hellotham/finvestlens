@@ -16,7 +16,16 @@ swift test --package-path Packages/Engine --filter AutoClearTests   # one suite 
 swift test --package-path Packages/Shared --skip writeReadRoundTripThroughAppGroup
 ```
 
-The Shared `--skip` matters: that test round-trips through the real App Group container and can block forever on a wedged `containermanagerd`. If a test run hangs, `pkill swiftpm-testing-helper` also frees the `.build` lock.
+The Shared `--skip` matters: that test round-trips through the real App Group container and can block forever on a wedged `containermanagerd`. If a test run hangs, `pkill swiftpm-testing-helper` also frees the `.build` lock. Every suite uses Swift Testing (`@Test` / `#expect`) — there is no XCTest anywhere.
+
+The full pre-commit sweep:
+
+```bash
+for p in Engine Persistence Interchange Quotes Rules Reports Intelligence FeatureUI CLI; do
+  swift test --package-path "Packages/$p" || break
+done
+swift test --package-path Packages/Shared --skip writeReadRoundTripThroughAppGroup
+```
 
 The app (both platforms must build before committing):
 
@@ -27,7 +36,7 @@ xcodebuild build -scheme finvestlens -destination 'generic/platform=iOS Simulato
 
 The CLI builds with `swift build -c release --package-path Packages/CLI` (binary at `Packages/CLI/.build/release/finlens`); [docs/cli.md](docs/cli.md) is its manual. It is read-only **by design** — never add a command that writes to a book.
 
-Website (`website/`, Astro 7 + Tailwind 4, served at `hellotham.com/finvestlens/`): `npm ci`, then `npm run dev` / `npm run build`. After editing the in-app help (`Packages/FeatureUI/Sources/FinvestLensUI/HelpContent.swift`), run `node scripts/build-manual.mjs` in `website/` and commit the regenerated `src/data/manual.json` — CI fails if it drifts.
+Website (`website/`, Astro 7 + Tailwind 4, served at `hellotham.com/finvestlens/`): `npm ci`, then `npm run dev` / `npm run build`. After editing the in-app help (`Packages/FeatureUI/Sources/FinvestLensUI/HelpContent.swift`), run `node scripts/build-manual.mjs` in `website/` and commit the regenerated `src/data/manual.json` — CI fails if it drifts. The site serves under the `/finvestlens` base path: route every internal href and asset through `url()` from `src/data/site.ts`, never a bare absolute path (those 404 on Pages).
 
 Release DMG: `scripts/release-dmg.sh` (archive → notarize + staple the app → build, sign, notarize + staple the DMG; uses the `hellotham-notary` keychain profile).
 
@@ -51,4 +60,4 @@ The single string catalog lives in the **app target** (`finvestlens/Localizable.
 - Every Swift source carries `// SPDX-License-Identifier: GPL-3.0-or-later` — CI gates it.
 - Commit straight to `main` — no feature branches, no Co-Authored-By or model-attribution trailers. Run the package suites and both app builds first.
 - After adding or changing `Engine` types, clear dependent packages' `.build` directories and the app's DerivedData `Build` folder — stale module caches will happily link old package code.
-- `imports/` (real bank exports) and `Ashley Bears.finvestlens` (a real book used as the standard manual-test fixture; changes to it may be left permanent) are gitignored **real financial data**: never commit them and never let their contents reach fixtures, screenshots, or the website. Public imagery comes from the synthetic generator in `website/scripts/demo-book/`.
+- `imports/` (real bank exports) and `Ashley Bears.finvestlens` (a real book used as the standard manual-test fixture; changes to it may be left permanent) are gitignored **real financial data**: never commit them and never let their contents reach fixtures, screenshots, or the website. Public imagery comes from the synthetic generator in `website/scripts/demo-book/`. Before capturing app imagery, disable session restore (`defaults write com.hellotham.finvestlensapp finvestlens.reopenLastBook -bool false`, restore afterwards) — it defaults to on and will silently reopen the last-used real book over a demo book.
