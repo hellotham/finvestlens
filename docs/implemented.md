@@ -935,8 +935,10 @@ GnuCash-source reference where relevant:
   three accounts.
 - **CI** (NFR-08) — `.github/workflows/ci.yml`: a matrix job builds + tests the
   seven core packages and an SPDX-header gate on every push/PR; the app +
-  Intelligence build job is present but `continue-on-error` until a hosted
-  macOS-26 / Xcode-26 runner exists.
+  Intelligence build job rode along `continue-on-error` until a hosted
+  macOS-26 / Xcode-26 runner existed. *(Resolved 26 Jul 2026: GitHub ships
+  `macos-26` runners — all ten packages test there and the unsigned app build,
+  both platforms, is required.)*
 
 Every code item above ships with unit tests (or, for the GnuCash SX/budget
 import, a real-book verification); each package suite and the full app build

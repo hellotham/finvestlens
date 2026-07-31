@@ -29,7 +29,7 @@ Quality automation and validation that a shippable release needs.
 
 | Item | FR / Phase | Notes |
 |---|---|---|
-| CI: app + Intelligence jobs on a hosted runner | NFR-08 / P0, P3 | ✅ **Done (26 Jul 2026).** GitHub ships `macos-26` arm64 runners; `.github/workflows/ci.yml` now runs there — all ten packages build and test (Intelligence's live-model tests skip themselves off-device), SPDX headers are gated, and the unsigned app + extensions build is a required job with `continue-on-error` removed. |
+| CI: app + Intelligence jobs on a hosted runner | NFR-08 / P0, P3 | ✅ **Done (26 Jul 2026).** GitHub ships `macos-26` arm64 runners; `.github/workflows/ci.yml` now runs there — all ten packages build and test (Intelligence's live-model tests skip themselves off-device), SPDX headers are gated, and the unsigned app + extensions build (macOS and iOS Simulator) is a required job. |
 | Large-book perf validation (local + SMB/NFS) | NFR-02 / P1 | **Needs real NAS hardware** — open/scroll/import/save on a 100k-txn book over SMB/NFS. Also settles the one open architecture decision: GRDB **direct-mode vs always-working-copy** on local volumes (Architecture §10). |
 | Localization (string catalogs) | NFR-06 / P6 | ✅ **Done (25 Jul 2026).** `finvestlens/Localizable.xcstrings` carries all 1,126 UI strings in **de, es, fr, it, ja, pt-BR, zh-Hans**, with a second catalog for the Quick Look extension's own bundle. Key set verified against the compiler's `-emit-localized-strings` output — no missing keys, no dead entries. Professional review by native speakers is the remaining (optional) step. |
 
