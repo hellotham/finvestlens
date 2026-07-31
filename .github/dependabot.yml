@@ -1,0 +1,8 @@
+# Keeps the workflows' action pins current in one place instead of by hand —
+# checkout had already drifted to different majors across the two workflows.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

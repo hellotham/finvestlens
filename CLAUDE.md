@@ -13,10 +13,7 @@ Everything needs Swift 6.2 (Xcode 26). Ten local SPM packages live under `Packag
 ```bash
 swift test --package-path Packages/Engine                      # one package's suite
 swift test --package-path Packages/Engine --filter AutoClearTests   # one suite or test
-swift test --package-path Packages/Shared --skip writeReadRoundTripThroughAppGroup
 ```
-
-The Shared `--skip` matters: that test round-trips through the real App Group container and can block forever on a wedged `containermanagerd`. If a test run hangs, `pkill swiftpm-testing-helper` also frees the `.build` lock. Every suite uses Swift Testing (`@Test` / `#expect`) — there is no XCTest anywhere.
 
 The full pre-commit sweep:
 
@@ -26,6 +23,8 @@ for p in Engine Persistence Interchange Quotes Rules Reports Intelligence Featur
 done
 swift test --package-path Packages/Shared --skip writeReadRoundTripThroughAppGroup
 ```
+
+The Shared `--skip` matters: that test round-trips through the real App Group container and can block forever on a wedged `containermanagerd`. If a test run hangs, `pkill swiftpm-testing-helper` also frees the `.build` lock. Every suite uses Swift Testing (`@Test` / `#expect`) — there is no XCTest anywhere.
 
 The app (both platforms must build before committing):
 
@@ -57,7 +56,7 @@ The single string catalog lives in the **app target** (`finvestlens/Localizable.
 
 ## Conventions
 
-- Every Swift source carries `// SPDX-License-Identifier: GPL-3.0-or-later` — CI gates it.
+- Every Swift source in `Packages/`, the app target, and the extensions carries `// SPDX-License-Identifier: GPL-3.0-or-later` — CI gates exactly those roots; the `website/scripts/` tooling sits outside the gate.
 - Commit straight to `main` — no feature branches, no Co-Authored-By or model-attribution trailers. Run the package suites and both app builds first.
 - After adding or changing `Engine` types, clear dependent packages' `.build` directories and the app's DerivedData `Build` folder — stale module caches will happily link old package code.
 - `imports/` (real bank exports) and `Ashley Bears.finvestlens` (a real book used as the standard manual-test fixture; changes to it may be left permanent) are gitignored **real financial data**: never commit them and never let their contents reach fixtures, screenshots, or the website. Public imagery comes from the synthetic generator in `website/scripts/demo-book/`. Before capturing app imagery, disable session restore (`defaults write com.hellotham.finvestlensapp finvestlens.reopenLastBook -bool false`, restore afterwards) — it defaults to on and will silently reopen the last-used real book over a demo book.

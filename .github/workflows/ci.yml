@@ -1,19 +1,19 @@
 name: CI
 
-# Builds and tests the Swift packages on every push / PR (NFR-08). Every package
-# declares swift-tools-version 6.2 and targets the macOS 26 SDK, so every job
-# runs on the macos-26 image — test bundles link macOS-26-only symbols
-# (FoundationModels, the Swift 6.2 runtime's new conformances) and refuse to
-# load on older hosts. Each job still selects the newest Xcode 26 explicitly
-# rather than trusting the runner's default. Intelligence's live-model tests
-# skip themselves when Apple Intelligence is unavailable, so the suite stays
-# deterministic on runners.
+# Tests every package and builds the app on every push / PR (NFR-08). All
+# macOS jobs run on macos-26: the test bundles link macOS-26-only frameworks
+# (FoundationModels) and Swift 6.2 runtime symbols, so they refuse to load on
+# older hosts — and the image's default toolchain is already the current
+# Xcode 26, so no explicit selection is needed. Intelligence's live-model
+# tests skip themselves when Apple Intelligence is unavailable.
 
 on:
   push:
     branches: [main]
+    paths-ignore: ['**/*.md', 'docs/**', 'website/**', 'LICENSE']
   pull_request:
     branches: [main]
+    paths-ignore: ['**/*.md', 'docs/**', 'website/**', 'LICENSE']
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -39,20 +39,12 @@ jobs:
           - CLI
     steps:
       - uses: actions/checkout@v7
-      - name: Select newest Xcode 26 (Swift 6.2)
-        run: |
-          app=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
-          if [ -z "$app" ]; then
-            echo "::error::No Xcode 26 found on the runner; packages need Swift tools 6.2."
-            ls -d /Applications/Xcode_*.app 2>/dev/null || true
-            exit 1
-          fi
-          echo "Selecting $app"
-          sudo xcode-select -s "$app"
       - name: Swift version
         run: swift --version
       - name: Build
         working-directory: Packages/${{ matrix.package }}
+        # Not redundant with the test step: nothing in CLI's test target
+        # depends on the finlens executable, so only `swift build` compiles it.
         run: swift build
       - name: Test
         working-directory: Packages/${{ matrix.package }}
@@ -79,23 +71,16 @@ jobs:
   app:
     name: Build app + extensions (unsigned)
     runs-on: macos-26
+    strategy:
+      fail-fast: false
+      matrix:
+        destination:
+          - 'platform=macOS'
+          - 'generic/platform=iOS Simulator'
     steps:
       - uses: actions/checkout@v7
-      - name: Select newest Xcode 26 (Swift 6.2 / macOS 26 SDK)
-        run: |
-          app=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
-          if [ -z "$app" ]; then
-            echo "::error::No Xcode 26 found on the runner; the app needs the macOS 26 SDK."
-            ls -d /Applications/Xcode_*.app 2>/dev/null || true
-            exit 1
-          fi
-          echo "Selecting $app"
-          sudo xcode-select -s "$app"
-      - name: Swift version
-        run: swift --version
-      - name: Build app + extensions (unsigned)
-        run: |
+      - run: |
           xcodebuild build \
             -scheme finvestlens \
-            -destination 'platform=macOS' \
+            -destination '${{ matrix.destination }}' \
             CODE_SIGNING_ALLOWED=NO
