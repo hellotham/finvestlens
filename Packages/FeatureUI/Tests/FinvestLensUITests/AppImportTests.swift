@@ -153,7 +153,7 @@ struct AppImportTests {
         try Data(xml.utf8).write(to: source)
 
         let model = AppModel()
-        model.importGnuCashBook(from: source, saveAs: destination)
+        await model.importGnuCashBook(from: source, saveAs: destination)
         #expect(model.documentError == nil)
         try #require(model.isOpen)
 

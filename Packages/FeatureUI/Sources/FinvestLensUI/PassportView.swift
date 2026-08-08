@@ -164,7 +164,7 @@ struct PassportPage: View {
                     AreaMark(x: .value("Date", point.date),
                              y: .value("Net worth", NSDecimalNumber(decimal: point.netWorth).doubleValue))
                         .interpolationMethod(.monotone)
-                        .foregroundStyle(.linearGradient(colors: [.accentColor.opacity(0.2), .clear],
+                        .foregroundStyle(.linearGradient(colors: [Color.appAccent.opacity(0.2), .clear],
                                                          startPoint: .top, endPoint: .bottom))
                 }
                 .frame(height: 130)

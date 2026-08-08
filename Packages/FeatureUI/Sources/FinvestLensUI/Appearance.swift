@@ -36,6 +36,22 @@ public enum ColorSchemePreference: String, CaseIterable, Identifiable, Sendable 
 
 /// The selectable UI accent colours (macOS-style). Each adapts to light/dark for
 /// legible contrast in both. Lavender/mauve is the default.
+public extension Color {
+    /// The app's own theme colour as a concrete `Color`.
+    ///
+    /// For anything that takes a `ShapeStyle`, use `.tint` — it reads the
+    /// `.tint(…)` the app sets in `AppearanceRoot`. This exists only for the
+    /// handful of APIs that demand a real `Color` and cannot accept a style,
+    /// such as `chartForegroundStyleScale`. **Never `Color.accentColor`**: that
+    /// resolves the AccentColor asset, which is deliberately empty, so it
+    /// silently falls back to the *system* accent and paints macOS blue into a
+    /// lavender app.
+    static var appAccent: Color {
+        let raw = UserDefaults.standard.string(forKey: AppearanceKey.accent)
+        return (AppAccent(rawValue: raw ?? "") ?? .lavender).color
+    }
+}
+
 public enum AppAccent: String, CaseIterable, Identifiable, Sendable {
     case lavender, blue, teal, green, yellow, orange, pink, red, graphite
 
@@ -104,6 +120,41 @@ enum TextStyleMetrics {
     static func weight(_ style: Font.TextStyle) -> Font.Weight {
         style == .headline ? .semibold : .regular
     }
+
+    /// The point size after the app's Text Size preference **and, on iOS, the
+    /// system's Dynamic Type setting** — the two multiply. `Font.system(size:)`
+    /// is a fixed size, so before this every label on iOS ignored the person's
+    /// text-size setting entirely; routing the preference-adjusted base
+    /// through `UIFontMetrics` keeps the app slider *and* honours theirs.
+    /// macOS has no Dynamic Type; the preference is the whole story there.
+    /// Floors: HIG Accessibility — 10 pt minimum on macOS, 11 pt on iOS.
+    static func scaledSize(_ style: Font.TextStyle, appScale: CGFloat) -> CGFloat {
+        let base = max(10, size(style) * appScale)
+        #if canImport(UIKit)
+        return max(11, UIFontMetrics(forTextStyle: uiStyle(style)).scaledValue(for: base))
+        #else
+        return base
+        #endif
+    }
+
+    #if canImport(UIKit)
+    private static func uiStyle(_ style: Font.TextStyle) -> UIFont.TextStyle {
+        switch style {
+        case .largeTitle: .largeTitle
+        case .title: .title1
+        case .title2: .title2
+        case .title3: .title3
+        case .headline: .headline
+        case .subheadline: .subheadline
+        case .body: .body
+        case .callout: .callout
+        case .footnote: .footnote
+        case .caption: .caption1
+        case .caption2: .caption2
+        default: .body
+        }
+    }
+    #endif
 }
 
 /// The app-wide font-size multiplier, published through the environment so
@@ -124,13 +175,17 @@ public extension EnvironmentValues {
 /// (including macOS, which ignores Dynamic Type).
 struct ScaledFont: ViewModifier {
     @Environment(\.appFontScale) private var scale
+    // Read so a Dynamic Type change re-evaluates every scaled font — the
+    // UIFontMetrics call reads the live setting, but only an environment
+    // dependency makes SwiftUI come back and ask again.
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let style: Font.TextStyle
     let weight: Font.Weight?
     let design: Font.Design?
 
     func body(content: Content) -> some View {
         content.font(.system(
-            size: TextStyleMetrics.size(style) * scale,
+            size: TextStyleMetrics.scaledSize(style, appScale: scale),
             weight: weight ?? TextStyleMetrics.weight(style),
             design: design ?? .default))
     }
@@ -188,9 +243,13 @@ public struct AppearanceModifier: ViewModifier {
             .tint((AppAccent(rawValue: accentRaw) ?? .lavender).color)
             // Explicit scaling — macOS ignores Dynamic Type. Publish the factor
             // for `.scaledFont(...)` and scale the default font so text that
-            // relies on the body style (lists, forms, labels) scales too.
+            // relies on the body style (lists, forms, labels) scales too. The
+            // default font goes through the same Dynamic-Type-aware sizing as
+            // `.scaledFont` — a fixed size here was what disabled the iOS
+            // text-size setting for every unstyled label in the app.
             .environment(\.appFontScale, fontScale)
-            .environment(\.font, .system(size: TextStyleMetrics.size(.body) * fontScale))
+            .environment(\.font, .system(
+                size: TextStyleMetrics.scaledSize(.body, appScale: fontScale)))
             // The date-format preference: every displayed date reads this, so a
             // change in Settings re-renders them all (see DateDisplay.swift).
             .environment(\.appDateFormat, dateFormat)
@@ -259,8 +318,11 @@ struct ReportMasthead: View {
 /// per-security scatters) — anchored on the accent so charts read as one
 /// family instead of SwiftUI's default rainbow.
 enum ReportPalette {
-    static let categorical: [Color] = [
-        .accentColor, .teal, .indigo, .orange, .purple,
-        .pink, .mint, .brown, .cyan, .yellow,
-    ]
+    /// Computed, not `static let`: `.appAccent` reads the user's pick at
+    /// evaluation time, and a stored array would freeze the first value for
+    /// the whole session.
+    static var categorical: [Color] {
+        [.appAccent, .teal, .indigo, .orange, .purple,
+         .pink, .mint, .brown, .cyan, .yellow]
+    }
 }

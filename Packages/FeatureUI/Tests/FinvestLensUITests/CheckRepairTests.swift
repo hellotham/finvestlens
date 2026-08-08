@@ -64,7 +64,7 @@ struct CheckRepairTests {
     }
 
     @Test("GnuCash import with issues offers cleanup instead of the plain alert")
-    func importOffersCleanup() throws {
+    func importOffersCleanup() async throws {
         let root = GncGUID.random().hexString
         let bank = GncGUID.random().hexString
         let xml = """
@@ -107,7 +107,7 @@ struct CheckRepairTests {
 
         let model = AppModel()
         defer { model.close() }
-        model.importGnuCashBook(from: source, saveAs: destination)
+        await model.importGnuCashBook(from: source, saveAs: destination)
 
         #expect(model.infoMessage == nil)                       // no plain alert
         let proposal = try #require(model.pendingCleanup)

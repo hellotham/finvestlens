@@ -122,7 +122,7 @@ struct AccountMatchPicker: View {
                 HStack(spacing: 6) {
                     Image(systemName: selection.contains(node.id)
                           ? "checkmark.square.fill" : "square")
-                        .foregroundStyle(selection.contains(node.id) ? Color.accentColor : .secondary)
+                        .foregroundStyle(selection.contains(node.id) ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
                     Text(label).scaledFont(.body)
                     Spacer(minLength: 0)
                 }

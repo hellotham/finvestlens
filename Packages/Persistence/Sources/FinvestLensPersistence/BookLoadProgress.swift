@@ -49,13 +49,16 @@ public struct BookLoadProgress: Sendable, Equatable {
         /// than leave a bar sitting under "Reading prices" for seconds.
         case finishing
 
-        /// Shown under the bar. Present tense: it names what is happening now.
-        public var label: String {
+        /// Present tense: names what is happening now. Combined with
+        /// ``BookLoadProgress/verb`` rather than hard-coding a direction — a
+        /// GnuCash import writes a freshly-parsed book through this same bar,
+        /// and "Reading transactions" would be backwards while it does.
+        var noun: String {
             switch self {
-            case .accounts: "Reading accounts"
-            case .transactions: "Reading transactions"
-            case .prices: "Reading prices"
-            case .finishing: "Preparing your accounts"
+            case .accounts: "accounts"
+            case .transactions: "transactions"
+            case .prices: "prices"
+            case .finishing: ""   // finishing has its own full caption below
             }
         }
     }
@@ -67,12 +70,22 @@ public struct BookLoadProgress: Sendable, Equatable {
     public var total: Int
     /// Overall progress, 0...1, across every stage — what the bar shows.
     public var fraction: Double
+    /// What this report's operation is doing — "Reading" for a store read,
+    /// "Writing" for a write-back, "Parsing" for the GnuCash XML pass an
+    /// import makes before it writes. Shown before ``Stage/noun``.
+    public var verb: String
 
-    public init(stage: Stage, completed: Int, total: Int, fraction: Double) {
+    public init(stage: Stage, completed: Int, total: Int, fraction: Double, verb: String = "Reading") {
         self.stage = stage
         self.completed = completed
         self.total = total
         self.fraction = fraction
+        self.verb = verb
+    }
+
+    /// Shown under the bar, e.g. "Writing transactions".
+    public var label: String {
+        stage == .finishing ? "Preparing your accounts" : "\(verb) \(stage.noun)"
     }
 }
 

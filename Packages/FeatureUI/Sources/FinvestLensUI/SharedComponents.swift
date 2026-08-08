@@ -62,6 +62,17 @@ struct StatusOverlay: View {
         .animation(.snappy, value: model.toast)
         .animation(.snappy, value: model.quoteProgress == nil)
         .allowsHitTesting(false)
+        // A toast is feedback that vanishes on its own — VoiceOver users get
+        // it spoken, or they get nothing: the chip is gone before it can be
+        // reached. Failures interrupt (they are the answer to "did it work?");
+        // successes queue behind whatever is being read.
+        .onChange(of: model.toast) { _, toast in
+            guard let toast else { return }
+            var announcement = AttributedString(toast.message)
+            announcement.accessibilitySpeechAnnouncementPriority =
+                toast.kind == .failure ? .high : .default
+            AccessibilityNotification.Announcement(announcement).post()
+        }
     }
 
     private func chip<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {

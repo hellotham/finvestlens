@@ -30,13 +30,21 @@ import FinvestLensEngine
 public enum GnuCashXMLImporter {
 
     /// Imports from raw file `data`, transparently decompressing gzip.
-    public static func importBook(from data: Data) throws -> ImportResult {
+    ///
+    /// `progress`, if given, is called as the parse runs — see
+    /// ``GnuCashImportProgress``. Called from whatever thread `importBook`
+    /// runs on; the caller hops to the main actor inside it.
+    public static func importBook(from data: Data,
+                                  progress: (@Sendable (GnuCashImportProgress) -> Void)? = nil) throws -> ImportResult {
         guard !data.isEmpty else { throw ImportError.emptyData }
         let xml = try Gzip.decompressIfNeeded(data)
 
         let parser = XMLParser(data: xml)
         parser.shouldProcessNamespaces = false
         let delegate = Delegate()
+        if let progress {
+            delegate.reporter = ParseReporter(xml: xml, emit: progress)
+        }
         parser.delegate = delegate
 
         guard parser.parse() else {
@@ -44,6 +52,7 @@ public enum GnuCashXMLImporter {
                 ?? "line \(parser.lineNumber)"
             throw ImportError.malformedXML(message)
         }
+        delegate.reporter?.finished()
 
         var result = try delegate.assemble()
 
@@ -60,8 +69,9 @@ public enum GnuCashXMLImporter {
     }
 
     /// Imports from a file URL.
-    public static func importBook(from url: URL) throws -> ImportResult {
-        try importBook(from: Data(contentsOf: url))
+    public static func importBook(from url: URL,
+                                  progress: (@Sendable (GnuCashImportProgress) -> Void)? = nil) throws -> ImportResult {
+        try importBook(from: Data(contentsOf: url), progress: progress)
     }
 }
 
@@ -80,6 +90,11 @@ private final class Delegate: NSObject, XMLParserDelegate {
     private var transactions: [Transaction] = []
     private var prices: [Price] = []
     private var summary = ImportSummary()
+
+    /// Set by ``GnuCashXMLImporter/importBook(from:progress:)`` when someone is
+    /// watching; `nil` otherwise so an unobserved parse (tests, CLI) pays
+    /// nothing for a pre-count nobody can see.
+    var reporter: ParseReporter?
 
     // Parse state.
     private var stack: [String] = []
@@ -127,6 +142,14 @@ private final class Delegate: NSObject, XMLParserDelegate {
     private var slotContainer: String?
     private var slotRoots: [SlotNode] = []
     private var slotStack: [SlotNode] = []
+    /// Nesting beyond ``maxSlotDepth`` is counted here and dropped, not built:
+    /// `kvpValue(of:)` converts the tree recursively (and a deep class tree
+    /// even *deallocates* recursively), so an unbounded depth hands a crafted
+    /// file a stack overflow. Real GnuCash books nest a handful of levels —
+    /// budgets are the deepest at four; 64 is comfortably past anything a real
+    /// book writes and comfortably inside any stack.
+    private var slotOverflow = 0
+    private static let maxSlotDepth = 64
     private var bookKvp = KvpFrame()
 
     private final class SlotNode {
@@ -185,13 +208,18 @@ private final class Delegate: NSObject, XMLParserDelegate {
             slotContainer = name
         case "slot":
             guard slotContainer != nil else { break }
+            if slotOverflow > 0 || slotStack.count >= Self.maxSlotDepth {
+                slotOverflow += 1   // counted so the closes pair up, never built
+                break
+            }
             let node = SlotNode()
             if let parent = slotStack.last { parent.children.append(node) } else { slotRoots.append(node) }
             slotStack.append(node)
         case "slot:value":
-            guard slotContainer != nil else { break }
+            guard slotContainer != nil, slotOverflow == 0 else { break }
             let type = attributes["type"] ?? "string"
-            if let parent = slotStack.last, parent.valueType == "list" {
+            if let parent = slotStack.last, parent.valueType == "list",
+               slotStack.count < Self.maxSlotDepth {
                 // A bare list element: it has no <slot> wrapper, so the value
                 // element becomes its own child node.
                 let node = SlotNode()
@@ -229,7 +257,9 @@ private final class Delegate: NSObject, XMLParserDelegate {
         case "cmdty:space": setCommodityField(space: value)
         case "cmdty:id": setCommodityField(id: value)
         case "cmdty:name": commodity?.name = value
-        case "cmdty:fraction": commodity?.fraction = Int(value)
+        // A fraction of 0 or less trips `Commodity`'s precondition and takes
+        // the process down; a one-line file is enough. Treat it as absent.
+        case "cmdty:fraction": commodity?.fraction = gnuCashPositiveInt(value)
         case "cmdty:xcode": commodity?.xcode = value
         case "cmdty:get_quotes": commodity?.getQuotes = true   // presence flag
         case "cmdty:quote_source": commodity?.quoteSource = value
@@ -242,9 +272,9 @@ private final class Delegate: NSObject, XMLParserDelegate {
         case "act:type": account?.type = value
         case "act:code": account?.code = value
         case "act:description": account?.descriptionText = value
-        case "act:commodity-scu": account?.scu = Int(value)
+        case "act:commodity-scu": account?.scu = gnuCashPositiveInt(value)
         case "act:parent": account?.parentGUID = GncGUID(hex: value)
-        case "gnc:account": finishAccount()
+        case "gnc:account": finishAccount(); reporter?.accountFinished()
 
         // Transaction fields.
         case "trn:id": transaction?.guid = GncGUID(hex: value)
@@ -256,14 +286,17 @@ private final class Delegate: NSObject, XMLParserDelegate {
             } else {
                 setTransactionDate(value)
             }
-        case "gnc:transaction": finishTransaction()
+        case "gnc:transaction":
+            let splitsInThisTransaction = transaction?.pendingSplits.count ?? 0
+            finishTransaction()
+            reporter?.transactionFinished(splitsInThisTransaction: splitsInThisTransaction)
 
         // Price fields.
         case "price:id": price?.guid = GncGUID(hex: value)
         case "price:source": price?.source = value
         case "price:type": price?.type = value
         case "price:value": price?.value = GnuCashNumeric.parse(value)
-        case "price": finishPrice()
+        case "price": finishPrice(); reporter?.priceFinished()
 
         // Split fields.
         case "split:id": split?.guid = GncGUID(hex: value)
@@ -277,13 +310,14 @@ private final class Delegate: NSObject, XMLParserDelegate {
 
         // KVP slots (preserved verbatim, ADR-4).
         case "slot:key":
-            slotStack.last?.key = value
+            if slotOverflow == 0 { slotStack.last?.key = value }
         case "gdate":
-            if slotContainer != nil { slotStack.last?.scalar = value }
+            if slotContainer != nil, slotOverflow == 0 { slotStack.last?.scalar = value }
         case "slot:value":
             // Scalar text; frames/lists keep "" and use children instead.
             // gdate/timespec scalars were already set by their child element.
-            guard slotContainer != nil else { break }
+            // Anything inside the overflow region belongs to a dropped slot.
+            guard slotContainer != nil, slotOverflow == 0 else { break }
             if let node = slotStack.last, node.openedByValue {
                 // A bare list element closes here — capture its scalar and pop.
                 if !value.isEmpty { node.scalar = value }
@@ -292,7 +326,9 @@ private final class Delegate: NSObject, XMLParserDelegate {
                 slotStack.last?.scalar = value
             }
         case "slot":
-            if slotContainer != nil, !slotStack.isEmpty { slotStack.removeLast() }
+            guard slotContainer != nil else { break }
+            if slotOverflow > 0 { slotOverflow -= 1 }
+            else if !slotStack.isEmpty { slotStack.removeLast() }
         case "act:slots", "trn:slots", "split:slots", "cmdty:slots", "book:slots",
              "lot:slots", "invoice:slots":
             finishSlotContainer(name)
@@ -961,4 +997,14 @@ struct EntryBuilder {
 struct LotBuilder {
     var guid: GncGUID?; var accountGUID: GncGUID?; var title = ""; var notes = ""; var closed = false
     var kvp = KvpFrame()
+}
+
+/// A positive integer, or `nil`. GnuCash writes commodity fractions and SCUs as
+/// plain integers, and `Int("0")` is `0` rather than `nil` — so a hostile or
+/// corrupt book could put a zero straight into `Commodity`, whose initialiser
+/// has `precondition(smallestFraction >= 1)`. That is a process-killing trap,
+/// live in Release, reachable from a one-line file.
+func gnuCashPositiveInt(_ text: String) -> Int? {
+    guard let value = Int(text), value >= 1 else { return nil }
+    return value
 }

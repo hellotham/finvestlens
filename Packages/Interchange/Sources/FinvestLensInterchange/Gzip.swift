@@ -118,8 +118,14 @@ public enum Gzip {
     }
 
     private static func inflate(_ source: Data, sizeHint: Int) throws -> Data {
-        var capacity = max(sizeHint, 64 * 1024)
         let ceiling = 1 << 30 // 1 GiB guard
+        // Clamped *before* the allocation, not just on the growth path: the
+        // hint comes from the gzip ISIZE trailer, which the file controls, so
+        // a 31-byte file could otherwise ask for 4 GiB and abort the process.
+        // The +1 matters too — ISIZE is exact for a well-formed member, so
+        // sizing to it exactly made `written < capacity` false on the first
+        // pass and inflated every legitimate book twice.
+        var capacity = min(max(sizeHint, 64 * 1024) + 1, ceiling)
 
         while true {
             let destination = UnsafeMutablePointer<UInt8>.allocate(capacity: capacity)

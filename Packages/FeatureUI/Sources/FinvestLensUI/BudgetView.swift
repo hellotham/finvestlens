@@ -118,7 +118,7 @@ private struct BudgetRow: View {
                     .foregroundStyle(.secondary)
             }
             ProgressView(value: min(1.0, max(0, actual.fractionUsed ?? 0)))
-                .tint(actual.isOverBudget ? (isIncome ? .green : .red) : .accentColor)
+                .tint(actual.isOverBudget ? (isIncome ? .green : .red) : .appAccent)
             if actual.isOverBudget {
                 // Income landing above its plan is favourable — "over budget"
                 // is overspending language, wrong for earning more than planned.

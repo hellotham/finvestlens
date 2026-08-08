@@ -260,34 +260,29 @@ public struct LockView: View {
     }
 }
 
-/// Shown while a book is being read. The read runs off the main actor, so this
-/// view actually animates — the point of it is that a large book no longer looks
-/// like a click that did nothing.
+/// The bar + caption shared by ``OpeningBookView`` and ``ImportingBookView`` —
+/// both watch a ``BookLoadProgress`` fill in from off the main actor, and
+/// differ only in title and the indeterminate-phase caption; the stage label
+/// ("Reading transactions"/"Writing prices"/…) is already in the progress.
 ///
-/// The bar is determinate once the loader has sized the book, and indeterminate
-/// until then: the first report cannot arrive before the row counts are in, and
-/// a bar sitting at zero says "stuck" where a spinner says "working".
-public struct OpeningBookView: View {
-    let url: URL
+/// The bar is determinate once the operation has sized the book, and
+/// indeterminate until then: the first report cannot arrive before the row
+/// counts are known, and a bar sitting at zero says "stuck" where a spinner
+/// says "working".
+private struct BookProgressView: View {
+    let title: String
+    let indeterminateDetail: String
     let progress: BookLoadProgress?
-    @Environment(\.appFontScale) private var appFontScale
-
-    public init(url: URL, progress: BookLoadProgress? = nil) {
-        self.url = url
-        self.progress = progress
-    }
-
-    private var bookName: String { url.deletingPathExtension().lastPathComponent }
 
     /// "Reading transactions… 12,000 of 46,553" — the count is what makes the
     /// wait legible: it says the book is big, not that the app is hung.
     private var detail: String {
-        guard let progress else { return "Reading accounts, transactions and prices." }
-        guard progress.total > 0 else { return progress.stage.label + "…" }
-        return "\(progress.stage.label)… \(progress.completed.formatted(.number)) of \(progress.total.formatted(.number))"
+        guard let progress else { return indeterminateDetail }
+        guard progress.total > 0 else { return progress.label + "…" }
+        return "\(progress.label)… \(progress.completed.formatted(.number)) of \(progress.total.formatted(.number))"
     }
 
-    public var body: some View {
+    var body: some View {
         VStack(spacing: 16) {
             if let progress {
                 ProgressView(value: progress.fraction, total: 1)
@@ -305,7 +300,7 @@ public struct OpeningBookView: View {
                     .controlSize(.large)
                     .frame(maxWidth: 320)
             }
-            Text("Opening \(bookName)…")
+            Text(title)
                 .scaledFont(.title3, weight: .semibold)
             Text(detail)
                 .foregroundStyle(.secondary)
@@ -315,9 +310,56 @@ public struct OpeningBookView: View {
         }
         .padding(48)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Opening \(bookName)")
-        .accessibilityValue(progress.map { "\(Int($0.fraction * 100)) percent" } ?? "")
+    }
+}
+
+/// Shown while a book is being read. The read runs off the main actor, so this
+/// view actually animates — the point of it is that a large book no longer looks
+/// like a click that did nothing.
+public struct OpeningBookView: View {
+    let url: URL
+    let progress: BookLoadProgress?
+
+    public init(url: URL, progress: BookLoadProgress? = nil) {
+        self.url = url
+        self.progress = progress
+    }
+
+    private var bookName: String { url.deletingPathExtension().lastPathComponent }
+
+    public var body: some View {
+        BookProgressView(title: "Opening \(bookName)…",
+                         indeterminateDetail: "Reading accounts, transactions and prices.",
+                         progress: progress)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Opening \(bookName)")
+            .accessibilityValue(progress.map { "\(Int($0.fraction * 100)) percent" } ?? "")
+    }
+}
+
+/// Shown while a GnuCash file is being imported: parsing the XML and writing
+/// the parsed book into a fresh document are each sized and instrumented —
+/// see ``GnuCashImportProgress``/``ParseReporter`` and
+/// ``SQLiteDocumentStore/write(_:progress:)`` — and shown end to end as one
+/// bar (parsing is the first half, writing the second).
+public struct ImportingBookView: View {
+    let url: URL
+    let progress: BookLoadProgress?
+
+    public init(url: URL, progress: BookLoadProgress? = nil) {
+        self.url = url
+        self.progress = progress
+    }
+
+    private var bookName: String { url.lastPathComponent }
+
+    public var body: some View {
+        BookProgressView(title: "Importing \(bookName)…",
+                         indeterminateDetail: "Parsing the GnuCash file.",
+                         progress: progress)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Importing \(bookName)")
+            .accessibilityValue(progress.map { "\(Int($0.fraction * 100)) percent" } ?? "")
     }
 }
 
@@ -385,6 +427,12 @@ public struct FinvestLensRootView: View {
             AccountsSidebar(model: model)
                 .navigationTitle("Accounts")
         } detail: {
+            // Editing an existing transaction happens in the register row
+            // itself (see `RegisterView`), not in a pane beside it: the row
+            // opens out into its splits and its cells become fields. A pane
+            // here was a second sidebar competing with the attachments panel,
+            // and as a split-view column it widened the *window* to make room —
+            // off the side of the display, where the editor could not be seen.
             detailPane
         }
         .overlay(alignment: .bottom) { StatusOverlay(model: model) }
@@ -467,19 +515,6 @@ public struct FinvestLensRootView: View {
                     Label("Import", systemImage: "square.and.arrow.down")
                 }
                 .help("Import a bank file, read PDFs, or auto-categorise")
-            }
-        }
-        // Editing a transaction happens in a trailing inspector, not a modal, so
-        // the register stays visible for cross-referencing (HIG). Selecting a
-        // different row re-loads the editor via `.id`.
-        .inspector(isPresented: Binding(
-            get: { model.editingTransactionID != nil },
-            set: { if !$0 { model.editingTransactionID = nil } }
-        )) {
-            if let id = model.editingTransactionID {
-                TransactionEditorSheet(model: model, editingID: id, inInspector: true)
-                    .id(id)
-                    .inspectorColumnWidth(min: 340, ideal: 400, max: 560)
             }
         }
         .sheet(item: $model.presentedPanel) { panel in
@@ -1108,34 +1143,34 @@ enum RegisterEnd {
 /// needs, and Description (the one unconstrained column) takes the rest.
 /// Shared by the Basic and journal tables so the styles line up.
 enum RegisterColumns {
-    // Responsive breakpoints. Nothing is ever clipped: as width shrinks, columns
-    // *fold into extra lines* of the surviving columns rather than truncate —
-    // Account/Transfer under the description, then Balance under the amount,
-    // then Date under the description. The thresholds guarantee the remaining
-    // columns' minimum widths always fit.
-    static func showsSide(_ width: CGFloat, _ scale: CGFloat) -> Bool { width >= 640 * scale }
-    static func showsBalance(_ width: CGFloat, _ scale: CGFloat) -> Bool { width >= 500 * scale }
-    static func showsDate(_ width: CGFloat, _ scale: CGFloat) -> Bool { width >= 380 * scale }
+    private static func metrics(_ width: CGFloat, _ scale: CGFloat) -> RegisterMetrics {
+        RegisterMetrics(width: width, scale: scale)
+    }
 
-    private static func clamp(_ value: CGFloat, _ lo: CGFloat, _ hi: CGFloat,
-                              _ scale: CGFloat) -> CGFloat {
-        min(max(value, lo * scale), hi * scale)
+    static func showsSide(_ width: CGFloat, _ scale: CGFloat) -> Bool {
+        metrics(width, scale).showsSide
+    }
+    static func showsBalance(_ width: CGFloat, _ scale: CGFloat) -> Bool {
+        metrics(width, scale).showsBalance
+    }
+    static func showsDate(_ width: CGFloat, _ scale: CGFloat) -> Bool {
+        metrics(width, scale).showsDate
     }
 
     static func date(_ width: CGFloat, _ scale: CGFloat) -> CGFloat {
-        clamp(width * 0.09, 74, 120, scale)
+        metrics(width, scale).date
     }
     static func account(_ width: CGFloat, _ scale: CGFloat) -> CGFloat {
-        clamp(width * 0.14, 70, 240, scale)
+        metrics(width, scale).account
     }
     static func transfer(_ width: CGFloat, _ scale: CGFloat) -> CGFloat {
-        clamp(width * 0.16, 80, 300, scale)
+        metrics(width, scale).transfer
     }
     static func amount(_ width: CGFloat, _ scale: CGFloat) -> CGFloat {
-        clamp(width * 0.10, 78, 160, scale)
+        metrics(width, scale).amount
     }
     static func balance(_ width: CGFloat, _ scale: CGFloat) -> CGFloat {
-        clamp(width * 0.11, 86, 170, scale)
+        metrics(width, scale).balance
     }
 }
 
@@ -1195,7 +1230,6 @@ struct ReconcileBadge: View {
                 .imageScale(.small)
         }
         .buttonStyle(.plain)
-        .help(Self.word(glyph))
         .accessibilityLabel("Reconciliation status")
         .accessibilityValue(Self.word(glyph))
         .accessibilityHint("Activate to change")
@@ -1213,7 +1247,7 @@ struct ReconcileBadge: View {
 
     static func color(_ glyph: String) -> Color {
         switch glyph {
-        case "c": .accentColor
+        case "c": .appAccent   // the banned shorthand hid here; appAccent follows the app's tint
         case "y": .green
         case "f": .cyan
         case "v": .red
@@ -1233,30 +1267,21 @@ struct ReconcileBadge: View {
 }
 
 struct RegisterView: View {
-    @Environment(\.appDateFormat) private var dateFormat
-    @Environment(\.appFontScale) private var appFontScale
     @Bindable var model: AppModel
-    @State private var selection: Set<GncGUID> = []
     @State private var filterShown = false
     @State private var goToDateShown = false
-    /// The register's current width, for folding side columns on narrow windows.
-    @State private var registerWidth: CGFloat = 800
-    /// Focusing any field makes its row the selection (GnuCash's current row).
-    private func select(_ rowID: GncGUID) {
-        if selection != [rowID] { selection = [rowID] }
-    }
     /// GnuCash's View ▸ Double Line, renamed Show Details. A preference
     /// rather than per-register state, so it survives moving between accounts.
     @AppStorage("registerDoubleLine") private var doubleLine = false
     /// Every transaction opened out into its legs — the journal read, in the
-    /// same table (RD1: one register, not three styles).
+    /// same table (FR-REG-03: one register, not three styles).
     @AppStorage("registerShowAllSplits") private var showAllSplits = false
     #if os(macOS)
     @Environment(\.openWindow) private var openWindow
     #endif
     /// Whether the attachments sidebar is shown (persisted like Double Line).
     @AppStorage("registerAttachmentsShown") private var attachmentsShown = false
-    /// Set by the ⌘↑/⌘↓ shortcuts; the scrolling view consumes and clears it.
+    /// Set by the ⌘↑/⌘↓ shortcuts; the table consumes and clears it.
     @State private var jump: RegisterEnd?
 
     var body: some View {
@@ -1274,6 +1299,13 @@ struct RegisterView: View {
                             }
                         }
                     }
+                // The panel stays put while a row is edited in place. The old
+                // condition hid it whenever `editingTransactionID` was set —
+                // right for the removed trailing *inspector*, which fought the
+                // panel for width, but the in-row editor takes no width at
+                // all, so hiding the panel on click-to-edit just made the
+                // whole register reflow: a layout shift delivered by the very
+                // feature whose contract is that nothing moves.
                 if attachmentsShown {
                     Divider()
                     AttachmentsPanel(model: model)
@@ -1437,307 +1469,18 @@ struct RegisterView: View {
                 Button("Add a Transaction (⌘N)") { model.requestQuickEntry() }
             }
         } else {
-            registerTable
+            // The register itself — selection, in-place editing, expansion,
+            // and scrolling all live there. macOS draws it as a GnuCash-style
+            // sheet (RegisterSheet.swift); iOS keeps the SwiftUI Table
+            // (RegisterTable.swift).
+            #if os(macOS)
+            RegisterSheet(model: model, jump: $jump)
+            #else
+            RegisterTableView(model: model, jump: $jump)
+            #endif
         }
     }
 
-    private var registerTable: some View {
-        ScrollViewReader { proxy in
-            registerTableBody
-                .onAppear { showPendingOrNewest(proxy) }
-                .onChange(of: model.selectedAccountID) { showPendingOrNewest(proxy) }
-                .onChange(of: model.pendingRegisterSplitID) { showPendingOrNewest(proxy) }
-                .onChange(of: jump) { _, target in
-                    guard let target else { return }
-                    scroll(proxy, to: target)
-                    jump = nil
-                }
-        }
-        // Quantised to 8pt: live-resize otherwise fires a body pass (and a
-        // full column-width recompute) for every pixel.
-        .onGeometryChange(for: CGFloat.self) { ($0.size.width / 8).rounded() * 8 } action: { registerWidth = $0 }
-    }
-
-    /// Lands on the row a jump asked for, or the newest when nothing did.
-    ///
-    /// The pending row is consumed whichever way this goes: it names one split
-    /// of one account, so leaving it set would let it re-apply to a register it
-    /// was never meant for. If it isn't in these rows — a jump made while a
-    /// journal style was showing — fall back to the newest rather than nothing.
-    private func showPendingOrNewest(_ proxy: ScrollViewProxy) {
-        guard let target = model.consumePendingRegisterSelection() else {
-            scroll(proxy, to: .newest)
-            return
-        }
-        guard model.registerRows.contains(where: { $0.id == target }) else {
-            scroll(proxy, to: .newest)
-            return
-        }
-        selection = [target]
-        proxy.scrollTo(target, anchor: .center)
-    }
-
-    /// Click-to-sort, kept honest with the Sort menu: both read and write
-    /// ``AppModel/registerSort``, so clicking the Date header and picking Date
-    /// from the menu are the same setting, and the header arrow shows whichever
-    /// way it was set. The comparator itself is never applied — the model sorts,
-    /// as it always has, and the binding is just the header's handle on it.
-    private var tableSortOrder: Binding<[KeyPathComparator<AutoSplitRow>]> {
-        Binding(
-            get: {
-                switch model.registerSort {
-                case .date: [KeyPathComparator(\AutoSplitRow.date,
-                                               order: model.registerSortReversed ? .reverse : .forward)]
-                case .description: [KeyPathComparator(\AutoSplitRow.description,
-                                                      order: model.registerSortReversed ? .reverse : .forward)]
-                case .amount: [KeyPathComparator(\AutoSplitRow.amount,
-                                                 order: model.registerSortReversed ? .reverse : .forward)]
-                default: []
-                }
-            },
-            set: { comparators in
-                guard let first = comparators.first else {
-                    model.registerSort = .standard
-                    model.registerSortReversed = false
-                    return
-                }
-                if first.keyPath == \AutoSplitRow.date { model.registerSort = .date }
-                else if first.keyPath == \AutoSplitRow.description { model.registerSort = .description }
-                else if first.keyPath == \AutoSplitRow.amount { model.registerSort = .amount }
-                model.registerSortReversed = first.order == .reverse
-            })
-    }
-
-    /// The transaction opened out into its legs: whichever one the selected
-    /// row belongs to (a leg keeps its transaction open). With Show All
-    /// Splits everything is already open, so no single expansion is needed.
-    private var expandedTransactionID: GncGUID? {
-        guard !showAllSplits, let first = selection.first else { return nil }
-        return model.transactionID(ofSplit: first)
-    }
-
-    // Responsive folds (see RegisterColumns): side columns → description line,
-    // balance → under the amount, date → description line. Nothing clips.
-    private var showsSide: Bool { RegisterColumns.showsSide(registerWidth, appFontScale) }
-    private var showsBalance: Bool { RegisterColumns.showsBalance(registerWidth, appFontScale) }
-    private var showsDate: Bool { RegisterColumns.showsDate(registerWidth, appFontScale) }
-
-    private var registerTableBody: some View {
-        // Basic and Auto-Split share this table: with nothing expanded the rows
-        // are identical, so the two styles are pixel-for-pixel the same until a
-        // transaction is selected and its legs unfold beneath it.
-        Table(model.autoSplitRows(expanding: expandedTransactionID, expandAll: showAllSplits),
-              selection: $selection, sortOrder: tableSortOrder) {
-            if showsDate {
-                TableColumn("Date", value: \.date) { row in
-                    if let main = row.main {
-                        InlineTextCell(value: dateFormat.short(main.date),
-                                       onFocus: { select(row.id) }) { text in
-                            if let date = dateFormat.parseShort(text) {
-                                model.inlineSetDate(splitID: row.id, to: date)
-                            }
-                        }
-                    }
-                }
-                .width(RegisterColumns.date(registerWidth, appFontScale))
-            }
-            // Description is the flexible column: everything else is pinned near
-            // its content width, so spare width lands here.
-            TableColumn("Description", value: \.description) { row in
-                if let main = row.main {
-                    VStack(alignment: .leading, spacing: 1) {
-                        HStack(spacing: 4) {
-                            if main.hasDocument {
-                                Image(systemName: "paperclip")
-                                    .imageScale(.small)
-                                    .foregroundStyle(.secondary)
-                                    .help("Has an attachment — open the Attachments sidebar")
-                            }
-                            InlineTextCell(value: main.description,
-                                           onFocus: { select(row.id) }) {
-                                model.inlineSetDescription(splitID: row.id, to: $0)
-                            }
-                        }
-                        // Folded columns surface as caption lines instead of
-                        // vanishing: date on very narrow windows, then transfer
-                        // (and the subtree account).
-                        if !showsDate {
-                            Text(dateFormat.short(main.date))
-                                .scaledFont(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        if !showsSide, !main.transfer.isEmpty {
-                            Text("→ \(main.transfer)")
-                                .scaledFont(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        if !showsSide, model.registerIncludesSubaccounts, !main.accountName.isEmpty {
-                            Text(main.accountName)
-                                .scaledFont(.caption)
-                                .foregroundStyle(.tertiary)
-                        }
-                        // Double Line: memo and notes as live fields on every
-                        // row, GnuCash-style.
-                        if doubleLine {
-                            InlineTextCell(value: main.memo, placeholder: "Memo",
-                                           onFocus: { select(row.id) }) {
-                                model.inlineSetMemo(splitID: row.id, to: $0)
-                            }
-                            InlineTextCell(value: main.notes, placeholder: "Notes",
-                                           onFocus: { select(row.id) }) {
-                                model.inlineSetNotes(splitID: row.id, to: $0)
-                            }
-                        }
-                    }
-                } else {
-                    // An expanded leg: the account it posts to, indented under
-                    // its transaction, with action · memo beneath — composed the
-                    // same way the journal styles compose their leg detail. The
-                    // selected leg edits in place: its account and memo.
-                    VStack(alignment: .leading, spacing: 1) {
-                        AccountPickerButton(label: row.legAccount, nodes: model.postableAccounts) {
-                            model.inlineSetLegAccount(splitID: row.id, to: $0)
-                        }
-                        InlineTextCell(value: row.legMemo, placeholder: "Memo",
-                                       onFocus: { select(row.id) }) {
-                            model.inlineSetMemo(splitID: row.id, to: $0)
-                        }
-                    }
-                    .padding(.leading, 18 * appFontScale)
-                }
-            }
-            // Which account a row posted to, which only a subtree register has
-            // to answer — in a single-account register every row is the same
-            // account and the column would say nothing.
-            if showsSide, model.registerIncludesSubaccounts {
-                TableColumn("Account") { row in
-                    if let main = row.main {
-                        Text(main.accountName).scaledFont(.body).foregroundStyle(.secondary)
-                    }
-                }
-                .width(RegisterColumns.account(registerWidth, appFontScale))
-            }
-            if showsSide {
-                TableColumn("Transfer") { row in
-                    if let main = row.main {
-                        if model.isSimpleTransfer(splitID: row.id) {
-                            // Re-categorise in place: move the counter leg.
-                            AccountPickerButton(label: main.transfer, nodes: model.postableAccounts) {
-                                model.inlineSetTransfer(splitID: row.id, to: $0)
-                            }
-                        } else {
-                            Text(main.transfer).scaledFont(.body).foregroundStyle(.secondary)
-                                .help("Multi-split or multi-currency — edit in the inspector (⌘E)")
-                        }
-                    }
-                }
-                .width(RegisterColumns.transfer(registerWidth, appFontScale))
-            }
-            TableColumn("R") { row in
-                ReconcileBadge(glyph: row.main?.reconcile ?? row.legReconcile) {
-                    model.cycleReconcileState(splitID: row.id)
-                }
-            }
-            .width(24 * appFontScale)
-            TableColumn("Amount", value: \.amount) { row in
-                if let main = row.main {
-                    VStack(alignment: .trailing, spacing: 1) {
-                        if model.isSimpleTransfer(splitID: row.id) {
-                            InlineTextCell(value: "\(main.amount)", trailing: true,
-                                           onFocus: { select(row.id) }) { text in
-                                if let value = EditableSplit.strictDecimal(
-                                    text.trimmingCharacters(in: .whitespaces)) {
-                                    model.inlineSetAmount(splitID: row.id, to: value)
-                                }
-                            }
-                            .monospacedDigit()
-                        } else {
-                            Text(AmountFormat.string(main.amount, code: currencyCode))
-                                .scaledFont(.body)
-                                .monospacedDigit()
-                                .foregroundStyle(main.amount < 0 ? .red : .primary)
-                                .accessibilityLabel(AmountFormat.spoken(main.amount, code: currencyCode))
-                        }
-                        // The folded Balance column: under the amount, not gone.
-                        if !showsBalance, let balance = main.runningBalance {
-                            Text(AmountFormat.string(balance, code: currencyCode))
-                                .scaledFont(.caption)
-                                .monospacedDigit()
-                                .foregroundStyle(.secondary)
-                                .accessibilityLabel("Balance \(AmountFormat.spoken(balance, code: currencyCode))")
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-                } else {
-                    Text(AmountFormat.string(row.legAmount, code: row.legCurrencyCode))
-                        .scaledFont(.body)
-                        .monospacedDigit()
-                        .foregroundStyle(row.legAmount < 0 ? .red : .secondary)
-                        .frame(maxWidth: .infinity, alignment: .trailing)
-                }
-            }
-            .width(RegisterColumns.amount(registerWidth, appFontScale))
-            .alignment(.numeric)
-            // Balance has no sort on purpose: each row's balance is the
-            // account's balance *as of that posting*, computed in date order —
-            // ordering by it would order by an artefact.
-            if showsBalance {
-                TableColumn("Balance") { row in
-                    // Absent on legs, and for a subtree spanning several
-                    // commodities, where a running total would mean nothing.
-                    if let balance = row.main?.runningBalance {
-                        Text(AmountFormat.string(balance, code: currencyCode))
-                            .scaledFont(.body)
-                            .monospacedDigit()
-                            .frame(maxWidth: .infinity, alignment: .trailing)
-                            .accessibilityLabel("Balance \(AmountFormat.spoken(balance, code: currencyCode))")
-                    } else if row.main != nil {
-                        Text("—").foregroundStyle(.tertiary)
-                            .frame(maxWidth: .infinity, alignment: .trailing)
-                            .accessibilityLabel("No running balance")
-                    }
-                }
-                .width(RegisterColumns.balance(registerWidth, appFontScale))
-                .alignment(.numeric)
-            }
-        }
-        .tableColumnHeaders(.visible)
-        // A dense financial table reads better with a crisp cutoff where rows
-        // scroll under the glass toolbar than with the default soft fade.
-        .scrollEdgeEffectStyle(.hard, for: .top)
-        // A VoiceOver rotor to jump straight between unreconciled postings in a
-        // long ledger, rather than swiping through every row.
-        .accessibilityRotor("Unreconciled") {
-            ForEach(model.registerRows) { row in
-                if ReconcileBadge.word(row.reconcile) == "Not reconciled" {
-                    AccessibilityRotorEntry(row.description, id: row.id)
-                }
-            }
-        }
-        .contextMenu(forSelectionType: GncGUID.self) { ids in
-            TransactionActions(model: model, splitID: ids.first, selectionSplitIDs: ids)
-        }
-        // The transaction editor is now a trailing inspector (see RootHost) so
-        // the register stays visible while editing (HIG).
-        .sheet(item: $model.schedulingTransactionID) { id in
-            ScheduleTransactionSheet(model: model, transactionID: id)
-        }
-        .onChange(of: selection) {
-            model.selectedSplitIDs = selection
-        }
-        #if os(macOS)
-        // Esc clears the selection (a second Esc while typing — the first ends
-        // the field's editing session).
-        .onExitCommand { selection = [] }
-        #endif
-    }
-
-    /// Rows are ordered oldest first, so the newest posting is the last row.
-    private func scroll(_ proxy: ScrollViewProxy, to end: RegisterEnd) {
-        let target = end == .newest ? model.registerRows.last?.id : model.registerRows.first?.id
-        guard let target else { return }
-        proxy.scrollTo(target, anchor: end == .newest ? .bottom : .top)
-    }
 
     private var selectedName: String {
         model.postableAccounts.first { $0.id == model.selectedAccountID }?.name
@@ -1791,13 +1534,18 @@ struct RegisterView: View {
 /// Tools ▸ General Ledger (a separate tool there too, not a register style).
 struct GeneralLedgerView: View {
     @Bindable var model: AppModel
-    @State private var editingTransactionID: GncGUID?
     @State private var jump: RegisterEnd?
 
     var body: some View {
-        JournalView(model: model, accountID: nil,
-                    editingTransactionID: $editingTransactionID, jump: $jump)
+        // The same register as the accounts, over the whole book (FR-REG-09)
+        // — one editing dialect everywhere.
+        #if os(macOS)
+        RegisterSheet(model: model, wholeBook: true, jump: $jump)
             .navigationTitle("All Transactions")
+        #else
+        RegisterTableView(model: model, wholeBook: true, jump: $jump)
+            .navigationTitle("All Transactions")
+        #endif
     }
 }
 
@@ -1814,9 +1562,113 @@ struct JournalView: View {
     /// Double Line: the detail lines (heading notes, per-leg action · memo) —
     /// the same preference the Basic-table styles use.
     @AppStorage("registerDoubleLine") private var doubleLine = false
-    /// Focusing any field makes its row the selection (GnuCash's current row).
-    private func select(_ rowID: GncGUID) {
-        if selection != [rowID] { selection = [rowID] }
+
+    /// The journal edits exactly the way the register does: one
+    /// ``TransactionDraft``, one cursor cell, ⏎ saves, ⎋ cancels. The old
+    /// journal had its own editing dialect — always-live per-cell fields that
+    /// committed each keystroke straight into the book, and an account button
+    /// that opened a popover — which is precisely the "two different UIs for
+    /// editing transactions" this redesign exists to remove. A journal
+    /// transaction is already opened out (each leg is a row), so the draft is
+    /// always expanded and there is nothing to expand or collapse: no layout
+    /// shift, the cells just come alive.
+    @State private var draft: TransactionDraft?
+    /// The journal's cursor — same one-`FocusState`-enum pattern as the
+    /// register (see ``RegisterCell``).
+    @FocusState private var cursor: TransactionEditField?
+    @State private var saveError: String?
+
+    private var metrics: RegisterMetrics {
+        RegisterMetrics(width: tableWidth, scale: appFontScale)
+    }
+
+    /// The transaction whose cells are live: the drafted one, else the single
+    /// selected row's. Selecting any leg wakes the whole transaction —
+    /// GnuCash's cursor spans the transaction, not one row of it.
+    private func isLive(_ row: JournalRow) -> Bool {
+        if let draft { return draft.transactionID == row.transactionID }
+        guard selection.count == 1, let id = selection.first else { return false }
+        return id == row.id || id == row.transactionID
+            || rowTransactionID(of: id) == row.transactionID
+    }
+
+    private func rowTransactionID(of rowID: GncGUID) -> GncGUID? {
+        model.transactionID(ofSplit: rowID) ?? rowID
+    }
+
+    private func beginEdit(_ row: JournalRow) {
+        if selection != [row.id], draft?.transactionID != row.transactionID {
+            selection = [row.id]
+        }
+        guard draft?.transactionID != row.transactionID else { return }
+        draft = TransactionDraft(model: model, transactionID: row.transactionID, expanded: true)
+    }
+
+    private func cancelEdit() {
+        draft = nil
+        cursor = nil
+    }
+
+    private func saveEdit() {
+        guard let draft else { return }
+        guard draft.isBalanced else {
+            saveError = draft.lines.allSatisfy(\.quantityIsValid)
+                ? String(localized: "The splits don’t balance — off by \(AmountFormat.string(draft.imbalance, code: model.reportCurrency.mnemonic)).")
+                : String(localized: "A quantity isn’t a number — clear it or fix it.")
+            return
+        }
+        do {
+            try model.updateTransaction(
+                id: draft.transactionID, date: draft.date, description: draft.description,
+                currency: draft.currencyOverride
+                    ?? model.transactionCurrency(for: draft.lines.compactMap(\.accountID)),
+                splits: draft.lines.filter { $0.accountID != nil }.map(\.asInput),
+                tags: draft.parsedTags, notes: draft.notes)
+            cancelEdit()
+        } catch {
+            saveError = error.localizedDescription
+        }
+    }
+
+    /// The draft line a leg row edits — matched by split identity, which is
+    /// what survives the draft reordering or dropping legs.
+    private func draftLine(for row: JournalRow) -> Int? {
+        draft?.lines.firstIndex { $0.splitID == row.id }
+    }
+
+    private func isDrafting(_ row: JournalRow) -> Bool {
+        draft?.transactionID == row.transactionID
+    }
+
+    /// ⇥ order: the heading's fields, then each leg's, in visual order,
+    /// skipping folded columns — the same contract as the register row.
+    private func fieldOrder(rows: [JournalRow]) -> [TransactionEditField] {
+        guard let draft else { return [] }
+        var fields: [TransactionEditField] = []
+        if showsDate { fields.append(.date) }
+        fields.append(.description)
+        if doubleLine { fields.append(.notes) }
+        for row in rows where !row.isHeading && row.transactionID == draft.transactionID {
+            guard let index = draftLine(for: row) else { continue }
+            let lineID = draft.lines[index].id
+            fields.append(.splitAccount(lineID))
+            if doubleLine { fields.append(.splitMemo(lineID)) }
+            fields.append(.splitAmount(lineID))
+        }
+        return fields
+    }
+
+    private func moveCursor(rows: [JournalRow], backwards: Bool) {
+        let order = fieldOrder(rows: rows)
+        guard !order.isEmpty else { return }
+        guard let current = cursor, let index = order.firstIndex(of: current) else {
+            cursor = order.first
+            return
+        }
+        let next = backwards
+            ? (index == 0 ? order.count - 1 : index - 1)
+            : (index + 1) % order.count
+        cursor = order[next]
     }
 
     var body: some View {
@@ -1863,18 +1715,22 @@ struct JournalView: View {
         Table(rows, selection: $selection) {
             if showsDate {
                 TableColumn("Date") { row in
-                    if let date = row.date {
-                        if row.isHeading {
-                            InlineTextCell(value: dateFormat.short(date),
-                                           onFocus: { select(row.id) }) { text in
-                                if let parsed = dateFormat.parseShort(text) {
-                                    model.inlineSetDate(transactionID: row.transactionID, to: parsed)
-                                }
-                            }
-                        } else {
-                            Text(dateFormat.short(date))
-                                .scaledFont(.body).fontWeight(.medium)
-                        }
+                    if row.isHeading {
+                        RegisterCell(value: isDrafting(row)
+                                        ? dateFormat.short(draft?.date ?? row.date ?? .now)
+                                        : row.date.map { dateFormat.short($0) } ?? "",
+                                     field: isDrafting(row) ? .date : nil,
+                                     cursor: $cursor,
+                                     metrics: metrics,
+                                     onFocus: { beginEdit(row) },
+                                     onEdit: { text in
+                                         if let parsed = dateFormat.parseShort(text) {
+                                             draft?.date = parsed
+                                         }
+                                     })
+                    } else if let date = row.date {
+                        Text(dateFormat.short(date))
+                            .scaledFont(.body).fontWeight(.medium)
                     }
                 }
                 .width(RegisterColumns.date(tableWidth, appFontScale))
@@ -1893,9 +1749,13 @@ struct JournalView: View {
                                     .imageScale(.small)
                                     .foregroundStyle(.secondary)
                             }
-                            InlineTextCell(value: row.text, onFocus: { select(row.id) }) {
-                                model.inlineSetDescription(transactionID: row.transactionID, to: $0)
-                            }
+                            RegisterCell(value: isDrafting(row) ? (draft?.description ?? "")
+                                                                : row.text,
+                                         field: isDrafting(row) ? .description : nil,
+                                         cursor: $cursor,
+                                         metrics: metrics,
+                                         onFocus: { beginEdit(row) },
+                                         onEdit: { draft?.description = $0 })
                         }
                         if !showsDate, let date = row.date {
                             Text(dateFormat.short(date))
@@ -1903,19 +1763,44 @@ struct JournalView: View {
                                 .foregroundStyle(.secondary)
                         }
                         if doubleLine {
-                            InlineTextCell(value: row.notes, placeholder: "Notes",
-                                           onFocus: { select(row.id) }) {
-                                model.inlineSetNotes(transactionID: row.transactionID, to: $0)
-                            }
+                            RegisterCell(value: isDrafting(row) ? (draft?.notes ?? "")
+                                                                : row.notes,
+                                         placeholder: "Notes", muted: true,
+                                         field: isDrafting(row) ? .notes : nil,
+                                         cursor: $cursor,
+                                         metrics: metrics,
+                                         onFocus: { beginEdit(row) },
+                                         onEdit: { draft?.notes = $0 })
                         }
                     } else {
-                        AccountPickerButton(label: row.text, nodes: model.postableAccounts) {
-                            model.inlineSetLegAccount(splitID: row.id, to: $0)
-                        }
-                        if doubleLine {
-                            InlineTextCell(value: row.memo, placeholder: "Memo",
-                                           onFocus: { select(row.id) }) {
-                                model.inlineSetMemo(splitID: row.id, to: $0)
+                        // A leg's account: the same combo cell as the register's
+                        // Transfer column. At rest it is drawn text; the popover
+                        // button it replaces was a control at rest and a focus
+                        // fight when open.
+                        if let index = draftLine(for: row), isDrafting(row),
+                           let line = draft?.lines[safe: index] {
+                            AccountComboCell(accountID: line.accountID,
+                                             nodes: model.postableAccounts,
+                                             field: .splitAccount(line.id),
+                                             cursor: $cursor,
+                                             metrics: metrics,
+                                             onPick: { draft?.lines[index].accountID = $0 },
+                                             onReturn: saveEdit)
+                            if doubleLine {
+                                RegisterCell(value: line.memo, placeholder: "Memo",
+                                             muted: true,
+                                             field: .splitMemo(line.id),
+                                             cursor: $cursor,
+                                             metrics: metrics,
+                                             onEdit: { draft?.lines[index].memo = $0 })
+                            }
+                        } else {
+                            RegisterCell(value: row.text, muted: true,
+                                         isEditable: false, metrics: metrics)
+                            if doubleLine {
+                                RegisterCell(value: row.memo, placeholder: "Memo",
+                                             muted: true,
+                                             isEditable: false, metrics: metrics)
                             }
                         }
                     }
@@ -1931,7 +1816,28 @@ struct JournalView: View {
             }
             .width(24 * appFontScale)
             TableColumn("Amount") { row in
-                if let amount = row.amount {
+                if row.isHeading {
+                    // The heading's Amount cell is blank — except while its
+                    // transaction is being edited out of balance, when it
+                    // carries the same warning the register's Balance cell
+                    // does. A cell that is already there; no line appears.
+                    if isDrafting(row), let draft, draft.imbalance != 0 {
+                        Label(AmountFormat.string(draft.imbalance, code: row.currencyCode),
+                              systemImage: "exclamationmark.triangle.fill")
+                            .labelStyle(.titleAndIcon)
+                            .scaledFont(.caption).monospacedDigit()
+                            .foregroundStyle(.orange)
+                            .help("Out of balance — the splits do not sum to zero")
+                            .frame(maxWidth: .infinity, alignment: .trailing)
+                    }
+                } else if let index = draftLine(for: row), isDrafting(row),
+                          let line = draft?.lines[safe: index] {
+                    RegisterCell(value: line.amountText,
+                                 alignment: .trailing, monospaced: true,
+                                 field: .splitAmount(line.id), cursor: $cursor,
+                                 metrics: metrics,
+                                 onEdit: { draft?.setAmountText($0, at: index) })
+                } else if let amount = row.amount {
                     VStack(alignment: .trailing, spacing: 1) {
                         Text(AmountFormat.string(amount, code: row.currencyCode))
                             .scaledFont(.body)
@@ -1982,8 +1888,23 @@ struct JournalView: View {
                                    selectionSplitIDs: splitIDs)
             }
         }
-        // Editing an existing transaction is a trailing inspector (wired on the
-        // root split view), not a sheet — so nothing here for editingTransactionID.
+        // ⏎ saves the draft, exactly as in the register. There is no Save
+        // button here either.
+        .onSubmit(of: .text) { saveEdit() }
+        // Same AppKit-level ⇥ capture as the register: the key never reaches
+        // per-field handlers on macOS.
+        .captureTabs(while: draft != nil, onTab: { moveCursor(rows: rows, backwards: $0) })
+        // Edit Transaction… / ⌘E: same entry point as the register — the id
+        // lands in the model, the journal wakes that transaction's cells. (The
+        // old wiring still pointed at the removed trailing inspector, so ⌘E in
+        // the journal did nothing at all.)
+        .onChange(of: model.editingTransactionID) { _, id in
+            guard let id, draft?.transactionID != id,
+                  let heading = rows.first(where: { $0.isHeading && $0.transactionID == id })
+            else { return }
+            beginEdit(heading)
+            cursor = .description
+        }
         .sheet(item: $model.schedulingTransactionID) { id in
             ScheduleTransactionSheet(model: model, transactionID: id)
         }
@@ -1995,9 +1916,31 @@ struct JournalView: View {
                 return row.isHeading ? model.anySplitID(ofTransaction: row.transactionID) : id
             })
             model.selectedSplitIDs = splitIDs
+            // Moving off the drafted transaction abandons the draft, the way
+            // leaving a row does in GnuCash — and in the register upstairs.
+            if let draft, !selection.isEmpty,
+               !selection.contains(where: { rowTransactionID(of: $0) == draft.transactionID }) {
+                cancelEdit()
+            }
+            // Selecting a single row puts the cursor in its transaction —
+            // journal rows are already opened out, so the draft is the
+            // selection, and its lines give the leg cells focus identities.
+            if selection.count == 1, let id = selection.first, draft == nil,
+               let row = rows.first(where: { $0.id == id }) {
+                beginEdit(row)
+            }
+        }
+        .alert("Couldn’t save", isPresented: Binding(
+            get: { saveError != nil }, set: { if !$0 { saveError = nil } })) {
+            Button("OK", role: .cancel) { saveError = nil }
+        } message: {
+            Text(saveError ?? "")
         }
         #if os(macOS)
-        .onExitCommand { selection = [] }
+        // ⎋ abandons the edit, then clears the selection — the register's order.
+        .onExitCommand {
+            if draft != nil { cancelEdit() } else { selection = [] }
+        }
         #endif
     }
 }
@@ -2035,7 +1978,11 @@ public struct TransactionActions: View {
 
     public var body: some View {
         Group {
-            Button("Edit Transaction…") { model.editingTransactionID = txnID }
+            Button("Edit Transaction…") {
+                // Unanimated on purpose — HIG Motion: "In apps, generally avoid
+                // adding motion to UI interactions that occur frequently."
+                model.editingTransactionID = txnID
+            }
                 .keyboardShortcut("e", modifiers: .command)
                 .disabled(needsRow)
             Button("Go to Other Account") {
@@ -2883,7 +2830,7 @@ struct NewAccountSheet: View {
 /// Internal rather than private so the round-trip below can be tested: this
 /// type is the only thing standing between a transaction and its rewrite on
 /// save, and the fields it forgets are the fields the save destroys.
-struct EditableSplit: Identifiable {
+struct EditableSplit: Identifiable, Equatable {
     let id = UUID()
 
     /// The split this row came from, or `nil` for a leg the user just added.
@@ -2962,10 +2909,6 @@ struct EditableSplit: Identifiable {
 struct TransactionEditorSheet: View {
     @Bindable var model: AppModel
     var editingID: GncGUID?
-    /// True when hosted in the register's trailing inspector rather than a sheet:
-    /// closing then just clears the selection (collapsing the inspector) and must
-    /// NOT call `dismiss()`, which in that context would close the whole window.
-    var inInspector = false
     /// A source document to record: shown in Quick Look beside the editor,
     /// prefills a new transaction, and is attached to whatever the editor
     /// commits (a new transaction, or one adopted via "Link to Existing…").
@@ -2987,7 +2930,6 @@ struct TransactionEditorSheet: View {
     @State private var notes = ""
     @State private var tagsText = ""
     @State private var lines: [EditableSplit] = [EditableSplit(), EditableSplit()]
-    @FocusState private var descriptionFocused: Bool
     @State private var commitError: String?
     @State private var invoicePickerShown = false
     @State private var analyzingInvoice = false
@@ -3009,7 +2951,48 @@ struct TransactionEditorSheet: View {
     /// its own. Set by the converter's Apply, or by loading such a transaction.
     @State private var fxCurrencyOverride: Commodity?
     @Environment(\.appFontScale) private var appFontScale
+    @Environment(\.appDateFormat) private var dateFormat
     private var amountWidth: CGFloat { 100 * appFontScale }
+
+    // The hosted register row's plumbing: its cursor, its measured width, and
+    // a stable identity for the synthetic row it hangs on.
+    @FocusState private var cursor: TransactionEditField?
+    @State private var rowWidth: CGFloat = 640
+    @State private var rowSize: CGSize = CGSize(width: 640, height: 200)
+    @State private var hostRowID = GncGUID.random()
+
+    /// Everything on screen comes from the draft binding while editing, so the
+    /// row itself only has to exist and keep a stable identity.
+    private var hostRow: AutoSplitRow {
+        AutoSplitRow(legID: hostRowID, account: "", memo: "", action: "",
+                     reconcile: "", amount: 0, currencyCode: "")
+    }
+
+    private var rowMetrics: RegisterMetrics {
+        RegisterMetrics(width: rowWidth, scale: appFontScale)
+    }
+
+    /// The sheet's state, seen as the register's draft. The getter assembles
+    /// it from the fields the aux flows (prefill, invoice analysis, adopt, FX
+    /// converter) already write; the setter routes the row's edits back into
+    /// them. One source of truth, viewed two ways.
+    private var rowDraft: Binding<TransactionDraft?> {
+        Binding(
+            get: {
+                TransactionDraft(transactionID: editingID ?? hostRowID,
+                                 date: date, description: description,
+                                 notes: notes, tagsText: tagsText, lines: lines,
+                                 currencyOverride: fxCurrencyOverride)
+            },
+            set: { new in
+                guard let new else { return }
+                date = new.date
+                description = new.description
+                notes = new.notes
+                tagsText = new.tagsText
+                lines = new.lines
+            })
+    }
 
     private var parsedTags: [String] {
         tagsText.split(whereSeparator: { $0 == "," || $0 == " " })
@@ -3055,6 +3038,11 @@ struct TransactionEditorSheet: View {
         return nil
     }
 
+    /// Never in the inspector: the preview wants 320pt of its own beside a form
+    /// that already wants 340, which is wider than the inspector column can be —
+    /// the window would have to grow to show it. The register's attachments
+    /// panel is where an existing attachment is previewed; this pane is for the
+    /// sheet, where a document being recorded has to be readable as it is keyed.
     private var showsDocumentPane: Bool {
         #if os(macOS)
         guard let documentURL else { return false }
@@ -3068,7 +3056,11 @@ struct TransactionEditorSheet: View {
         NavigationStack {
             HStack(spacing: 0) {
                 editorForm
-                    .frame(minWidth: inInspector ? nil : 480)
+                    // Wide enough that the hosted row keeps its Transfer/
+                    // Account column (the fold threshold is 640·scale) — a
+                    // sheet that folded the account cells away would have no
+                    // way to pick accounts.
+                    .frame(minWidth: 660)
                 #if os(macOS)
                 if showsDocumentPane, let documentURL {
                     Divider()
@@ -3078,8 +3070,7 @@ struct TransactionEditorSheet: View {
                 #endif
             }
         }
-        .frame(minWidth: inInspector ? nil : (showsDocumentPane ? 940 : 560),
-               minHeight: inInspector ? nil : 540)
+        .frame(minWidth: showsDocumentPane ? 1020 : 700, minHeight: 540)
     }
 
     private var editorForm: some View {
@@ -3093,88 +3084,76 @@ struct TransactionEditorSheet: View {
                         }
                     }
                 }
-                DatePicker("Date", selection: $date, displayedComponents: .date)
-                TextField("Description", text: $description)
-                    .focused($descriptionFocused)
-                if !isEditing {
-                    let suggestions = model.descriptionSuggestions(prefix: description)
-                    if !suggestions.isEmpty {
-                        Menu("Fill from recent…") {
-                            ForEach(suggestions, id: \.self) { suggestion in
-                                Button(suggestion) { applyTemplate(suggestion) }
+                // The register row itself — the same view the account register
+                // edits with, opened out, hosted beside the document. One
+                // editing UI, not a resembling copy: same cells, same cursor,
+                // same ⇥ order, same ⏎ saves / ⎋ cancels. ("Having two
+                // different UIs for editing transactions will confuse the
+                // user" — this sheet was the second UI.) The sheet's own
+                // machinery — prefill, adopt-existing, invoice splitting, the
+                // FX converter — keeps writing the same state; the row simply
+                // becomes how that state is edited by hand.
+                Section {
+                    TransactionRowView(
+                        model: model,
+                        row: hostRow,
+                        metrics: rowMetrics,
+                        accounts: model.postableAccounts,
+                        currencyCode: displayCurrency.mnemonic,
+                        showsAccountColumn: false,
+                        showsBalanceColumn: true,
+                        isExpanded: true,
+                        isSelected: true,
+                        restSplits: [],
+                        showsSecondLine: true,
+                        dateText: { dateFormat.short($0) },
+                        parseDate: { dateFormat.parseShort($0) },
+                        draft: rowDraft,
+                        cursor: $cursor,
+                        focusAccountID: nil,
+                        cycleReconcile: { _ in },
+                        beginEdit: {},
+                        expandEdit: {},
+                        save: commit,
+                        cancel: close)
+                        .equatable()
+                        .onGeometryChange(for: CGSize.self) { $0.size } action: {
+                            rowSize = $0
+                            rowWidth = ($0.width / 8).rounded() * 8
+                        }
+                        .contentShape(.rect)
+                        // Same outer-edge spatial tap as the register — the
+                        // only position gestures reliably fire from.
+                        .onTapGesture { point in
+                            let target = RegisterTapMap.target(
+                                point: point, rowSize: rowSize, metrics: rowMetrics,
+                                draft: rowDraft.wrappedValue,
+                                isExpanded: true, showsSecondLine: true,
+                                showsAccountColumn: false, showsBalanceColumn: true,
+                                focusAccountID: nil,
+                                accounts: model.postableAccounts,
+                                currencyCode: displayCurrency.mnemonic,
+                                restSplitCount: 0)
+                            switch target {
+                            case .cursor(let field): cursor = field
+                            case .removeSplit(let at): lines.remove(at: at)
+                            case .appendSplit: lines.append(EditableSplit())
+                            default: break
                             }
                         }
-                    }
                 }
 
-                // GnuCash's Notes: the second line of a double-line register,
-                // and the only home for the 18,641 notes this book already
-                // carries — they round-tripped through import and export
-                // faithfully while being impossible to read.
-                TextField("Notes", text: $notes, axis: .vertical)
-                    .lineLimit(1...4)
-
-                Section("Splits") {
-                    // Two rows per split, as GnuCash shows them: the posting,
-                    // then its own memo and action. Two sibling rows rather
-                    // than a VStack — nesting the posting row inside a stack
-                    // takes it out of the Form's own row layout, and the
-                    // account Picker's intrinsic width (the longest of 559 full
-                    // account names) then overflows the sheet on both sides.
-                    // Two lines per split, as GnuCash shows them: the posting,
-                    // then that split's own memo and action. Labels are hidden
-                    // and the prompts carry the naming — a Form row that keeps
-                    // its labels is split into a label column and a content
-                    // column sized across every row, and the account picker
-                    // (as wide as the longest of 559 full account paths) then
-                    // drags that column wider than the sheet.
-                    ForEach($lines) { $line in
-                        VStack(alignment: .leading, spacing: 4) {
-                            HStack(spacing: 8) {
-                                // The split's role, from its amount's sign —
-                                // the label lives OUTSIDE the field.
-                                Text(line.amount > 0 ? "Debit"
-                                     : (line.amount < 0 ? "Credit" : "Account"))
-                                    .scaledFont(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .frame(width: 52 * appFontScale, alignment: .leading)
-                                AccountField(nodes: model.postableAccounts,
-                                             selection: $line.accountID)
-                                TextField("Amount", text: $line.amountText,
-                                          prompt: Text("Amount"))
-                                    .labelsHidden()
-                                    .multilineTextAlignment(.trailing)
-                                    .frame(width: amountWidth)
-                            }
-                            HStack(spacing: 8) {
-                                TextField("Memo", text: $line.memo, prompt: Text("Memo"))
-                                    .labelsHidden()
-                                TextField("Action", text: $line.action, prompt: Text("Action"))
-                                    .labelsHidden()
-                                    .frame(width: amountWidth)
-                            }
-                            .scaledFont(.caption)
-                            .foregroundStyle(.secondary)
-                            // GnuCash's Edit Exchange Rate, only where there is
-                            // one: a leg posting to another commodity has two
-                            // amounts, and the second was carried blind.
-                            if let unit = foreignUnit(of: line) {
-                                HStack(spacing: 8) {
-                                    Text(rateDescription(of: line, unit: unit))
-                                        .foregroundStyle(.secondary)
-                                    Spacer(minLength: 0)
-                                    TextField("Quantity", text: $line.quantityText,
-                                              prompt: Text(unit))
-                                        .labelsHidden()
-                                        .multilineTextAlignment(.trailing)
-                                        .frame(width: amountWidth)
+                Section {
+                    if !isEditing {
+                        let suggestions = model.descriptionSuggestions(prefix: description)
+                        if !suggestions.isEmpty {
+                            Menu("Fill from recent…") {
+                                ForEach(suggestions, id: \.self) { suggestion in
+                                    Button(suggestion) { applyTemplate(suggestion) }
                                 }
-                                .scaledFont(.caption)
                             }
                         }
                     }
-                    .onDelete { lines.remove(atOffsets: $0) }
-                    Button("Add Split", systemImage: "plus") { lines.append(EditableSplit()) }
                     if model.isIntelligenceAvailable {
                         Button {
                             #if os(macOS)
@@ -3192,19 +3171,14 @@ struct TransactionEditorSheet: View {
                         .disabled(analyzingInvoice)
                         .help("Read an invoice PDF and split this transaction across its line items")
                     }
-                }
-
-                Section("Tags") {
-                    TextField("Comma-separated tags", text: $tagsText)
-                    // Fed by `Book.allTags`, which existed and was tested with
-                    // no caller: the field was free text, so reusing a tag
-                    // meant remembering how you spelled it and a typo quietly
-                    // made a second one.
-                    let suggestions = model.tagSuggestions(prefix: tagFragment,
-                                                           excluding: parsedTags)
-                    if !suggestions.isEmpty {
+                    // Fed by `Book.allTags`: the Tags cell is free text, so
+                    // reusing a tag means remembering how you spelled it — the
+                    // menu completes the tag in progress instead.
+                    let tagSuggestions = model.tagSuggestions(prefix: tagFragment,
+                                                              excluding: parsedTags)
+                    if !tagSuggestions.isEmpty {
                         Menu("Add existing tag…") {
-                            ForEach(suggestions.prefix(20), id: \.self) { tag in
+                            ForEach(tagSuggestions.prefix(20), id: \.self) { tag in
                                 Button(tag) { appendTag(tag) }
                             }
                         }
@@ -3259,6 +3233,21 @@ struct TransactionEditorSheet: View {
                 }
             }
             .onAppear(perform: loadIfNeeded)
+            // Same AppKit-level ⇥ capture as the register (the key never
+            // reaches per-field handlers on macOS).
+            .captureTabs(while: true) { backwards in
+                guard let draft = rowDraft.wrappedValue else { return }
+                let order = draft.fieldOrder(metrics: rowMetrics,
+                                             expandedOnScreen: true,
+                                             showsSecondLine: true,
+                                             showsBalanceColumn: true,
+                                             focusAccountID: nil,
+                                             accounts: model.postableAccounts,
+                                             currencyCode: displayCurrency.mnemonic)
+                if let next = draft.nextField(after: cursor, backwards: backwards, in: order) {
+                    cursor = next
+                }
+            }
             .fileImporter(isPresented: $invoicePickerShown,
                           allowedContentTypes: [.pdf]) { result in
                 if case .success(let url) = result { analyzeInvoice(url) }
@@ -3576,7 +3565,8 @@ struct TransactionEditorSheet: View {
                          EditableSplit(amountText: NSDecimalNumber(decimal: amount).stringValue)]
             }
         }
-        focusSoon { descriptionFocused = true }
+        // The cursor opens in the description, as the register's ⌘E does.
+        cursor = .description
     }
 
     private func applyTemplate(_ suggestion: String) {
@@ -3586,13 +3576,12 @@ struct TransactionEditorSheet: View {
         }
     }
 
-    /// Closes the editor. In the inspector, clearing the model's editing id
-    /// collapses the pane (its binding tracks that id) — and we must not call
-    /// `dismiss()`, which would dismiss the window scene. In a sheet, `dismiss()`
-    /// closes it.
+    /// Closes the editor, and clears the register's editing id with it — the
+    /// same transaction is not left open out in the register behind a sheet
+    /// that has just been dismissed.
     private func close() {
         model.editingTransactionID = nil
-        if !inInspector { dismiss() }
+        dismiss()
     }
 
     private func commit() {
@@ -3640,7 +3629,7 @@ struct EditAccountSheet: View {
     @State private var isPlaceholder = false
     @State private var isHidden = false
     @State private var hasColor = false
-    @State private var color: Color = .accentColor
+    @State private var color: Color = .appAccent
     @State private var parentID: GncGUID?
     @State private var originalParentID: GncGUID?
     @FocusState private var nameFocused: Bool

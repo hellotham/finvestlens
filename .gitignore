@@ -71,10 +71,23 @@ dist/
 /*.gnucash.*
 
 # Personal test book (imported from Ashley Bears.gnucash; changes left permanent).
-/Ashley Bears.finvestlens
-/Ashley Bears.lock
+# Real financial data — by type, not by name. These were root-anchored literals
+# naming one book, so a second book, or the same book saved into a subdirectory
+# for a repro, was committable. `.lock` files carry the author's username and
+# hostname, so they are excluded too.
+*.finvestlens
+*.finvestlens-shm
+*.finvestlens-wal
+*.lock
 
 # Real bank statement exports used for local import testing (never commit).
 /imports/
 *.finvestlens.audit.log
 build/
+
+# Hookify rules are personal/local (the plugin reads them; they are not shared).
+.claude/*.local.md
+
+# Build/test artifacts.
+*.profraw
+__pycache__/

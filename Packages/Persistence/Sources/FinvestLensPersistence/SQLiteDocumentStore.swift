@@ -28,6 +28,7 @@ public final class SQLiteDocumentStore {
     /// Opens (creating if needed) a store at `path` and migrates its schema.
     public init(path: String) throws {
         dbQueue = try DatabaseQueue(path: path)
+        try Self.requireOwnSchema(dbQueue)
         try Self.migrator.migrate(dbQueue)
         changeCounter = try dbQueue.read { db in
             try Int64.fetchOne(db, sql: "SELECT value FROM meta WHERE key = 'changeCounter'")
@@ -44,6 +45,7 @@ public final class SQLiteDocumentStore {
         var configuration = Configuration()
         configuration.readonly = true
         dbQueue = try DatabaseQueue(path: path, configuration: configuration)
+        try Self.requireOwnSchema(dbQueue)
         changeCounter = try dbQueue.read { db in
             try Int64.fetchOne(db, sql: "SELECT value FROM meta WHERE key = 'changeCounter'")
                 .flatMap { $0 } ?? 0
@@ -51,6 +53,21 @@ public final class SQLiteDocumentStore {
     }
 
     // MARK: Schema
+
+    /// Refuses a database populated with someone else's tables — notably a
+    /// GnuCash SQLite-backend book, which `migrate` would otherwise graft our
+    /// schema onto and then read back as an empty book. A database with no
+    /// tables at all (empty file) is ours to migrate.
+    private static func requireOwnSchema(_ dbQueue: DatabaseQueue) throws {
+        let tables = try dbQueue.read { db in
+            try String.fetchAll(db, sql: "SELECT name FROM sqlite_master WHERE type = 'table'")
+        }
+        guard !tables.isEmpty, !tables.contains("meta") else { return }
+        let looksLikeGnuCash = tables.contains("gnclock")
+            || (tables.contains("splits") && tables.contains("slots"))
+        throw FinvestLensDocument.DocumentError.notAFinvestLensBook(
+            looksLikeGnuCash ? .gnuCashSQLite : .unrecognized)
+    }
 
     private static var migrator: DatabaseMigrator {
         var migrator = DatabaseMigrator()
@@ -271,7 +288,13 @@ public final class SQLiteDocumentStore {
 
     /// Replaces the entire database contents with a snapshot of `book` and bumps
     /// the change counter, in a single transaction.
-    public func write(_ book: Book) throws {
+    ///
+    /// `progress`, if given, is called as the write runs — the counterpart to
+    /// ``read(progress:)``'s ``BookLoadProgress``, so a GnuCash import (which
+    /// writes a freshly-parsed book that can run to hundreds of thousands of
+    /// rows) can show a bar instead of a frozen window. Called from whatever
+    /// thread `write` runs on; the caller hops to the main actor inside it.
+    public func write(_ book: Book, progress: (@Sendable (BookLoadProgress) -> Void)? = nil) throws {
         try dbQueue.write { db in
             for table in ["split", "txn", "account", "commodity", "price",
                           "invoice_entry", "invoice", "lot_split", "lot", "job",
@@ -279,6 +302,10 @@ public final class SQLiteDocumentStore {
                           "taxtable_entry", "taxtable", "billterm"] {
                 try db.execute(sql: "DELETE FROM \(table)")
             }
+
+            var reporter: WriteReporter?
+            if let progress { reporter = WriteReporter(book: book, emit: progress) }
+            reporter?.startingAccounts()
 
             for commodity in book.commodities {
                 try db.execute(sql: """
@@ -310,7 +337,9 @@ public final class SQLiteDocumentStore {
                     ])
             }
 
-            for txn in book.transactions {
+            reporter?.startTransactions()
+            var splitsWritten = 0
+            for (txnIndex, txn) in book.transactions.enumerated() {
                 try db.execute(sql: """
                     INSERT INTO txn
                     (guid, currencyNamespace, currencyMnemonic, datePosted, dateEntered,
@@ -334,9 +363,12 @@ public final class SQLiteDocumentStore {
                             split.memo, split.action, Serialize.kvp(split.kvp),
                         ])
                 }
+                splitsWritten += txn.splits.count
+                reporter?.builtTransactions(txnIndex + 1, splitsCompleted: splitsWritten)
             }
 
-            for price in book.prices {
+            reporter?.startPrices()
+            for (priceIndex, price) in book.prices.enumerated() {
                 try db.execute(sql: """
                     INSERT INTO price
                     (guid, commodityNamespace, commodityMnemonic, currencyNamespace, currencyMnemonic,
@@ -348,6 +380,7 @@ public final class SQLiteDocumentStore {
                         Serialize.namespace(price.currency.namespace), price.currency.mnemonic,
                         price.date, Serialize.decimal(price.value), price.source, price.type,
                     ])
+                reporter?.builtPrices(priceIndex + 1)
             }
 
             try Self.writeBusiness(book, into: db)
@@ -360,6 +393,7 @@ public final class SQLiteDocumentStore {
             let bookKvp = Serialize.kvp(book.kvp)
             try db.execute(sql: "INSERT OR REPLACE INTO meta (key, value) VALUES ('bookKvp', ?)",
                            arguments: [bookKvp])
+            reporter?.finished()
         }
     }
 

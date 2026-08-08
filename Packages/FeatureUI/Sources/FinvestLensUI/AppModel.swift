@@ -191,6 +191,16 @@ public final class AppModel {
     /// True while a book is being opened.
     public var isOpening: Bool { openingURL != nil }
 
+    /// The GnuCash file currently being imported, or `nil`. Parsing and the
+    /// write-back both run off the main actor — on a large export (the
+    /// Ashley Bears book: 46k transactions, 103k prices) each can run to
+    /// several seconds, same as opening a book. Drives ``ImportingBookView``
+    /// through the same ``loadProgress``.
+    public private(set) var importingURL: URL?
+
+    /// True while a GnuCash file is being imported.
+    public var isImporting: Bool { importingURL != nil }
+
     /// Records a report from the loader, dropping any that would move the bar
     /// backwards.
     ///
@@ -324,6 +334,28 @@ public final class AppModel {
             descriptionRecencyRevision = derivedRevision
         }
         return descriptionRecencyCache
+    }
+
+    @ObservationIgnored private var unreconciledRowsCache: [RegisterRow] = []
+    @ObservationIgnored private var unreconciledRowsRevision = -1
+
+    /// The register rows a VoiceOver rotor jumps between: the unreconciled ones.
+    ///
+    /// Memoised on ``derivedRevision`` for the same reason every other
+    /// derivation here is. The rotor's `ForEach` is rebuilt on *every* body
+    /// pass — every click, every keystroke, every selection change — and it was
+    /// walking all 140,000 register rows and running a string switch on each,
+    /// which is O(rows) work per interaction on a screen that shows thirty of
+    /// them. This makes it O(rows) once per book change instead, which is what
+    /// GnuCash does throughout: derive once into memory, invalidate on edit.
+    var unreconciledRegisterRows: [RegisterRow] {
+        if unreconciledRowsRevision != derivedRevision {
+            unreconciledRowsCache = registerRows.filter {
+                ReconcileBadge.word($0.reconcile) == "Not reconciled"
+            }
+            unreconciledRowsRevision = derivedRevision
+        }
+        return unreconciledRowsCache
     }
 
     /// The sidebar's current destination (an app area or an account). The
@@ -772,11 +804,19 @@ public final class AppModel {
     public var showingHelp = false
 
     /// A user-facing document error (open/new/import failed). When
-    /// ``DocumentError/lockedURL`` is set the UI offers "Break Lock" recovery.
+    /// ``DocumentError/lockedURL`` is set the UI offers "Break Lock" recovery;
+    /// when ``DocumentError/gnuCashImportURL`` is set it offers "Import…" —
+    /// the user tried to *open* a GnuCash book, which only imports.
     public struct DocumentError: Identifiable, Sendable {
         public let id = UUID()
         public var message: String
         public var lockedURL: URL?
+        public var gnuCashImportURL: URL?
+        /// Set alongside `lockedURL` when it names a GnuCash-import
+        /// *destination* rather than a book to open directly — recovery
+        /// re-imports this source into it with the lock broken, instead of
+        /// opening `lockedURL`.
+        public var lockedImportSource: URL?
     }
     /// The most recent document-operation failure, surfaced as an alert.
     public var documentError: DocumentError?
@@ -1105,7 +1145,11 @@ public final class AppModel {
             }
         } catch {
             endBookAccess()
-            documentError = DocumentError(message: error.localizedDescription)
+            if case FinvestLensDocument.DocumentError.notAFinvestLensBook(let kind) = error {
+                documentError = Self.foreignBookError(kind, at: url)
+            } else {
+                documentError = DocumentError(message: error.localizedDescription)
+            }
             return
         }
         recordLoadProgress(BookLoadProgress(stage: .finishing, completed: 0, total: 0, fraction: 1))
@@ -1385,11 +1429,34 @@ public final class AppModel {
             // A recent whose file has gone is dead weight: drop it now rather
             // than leave the user to hit the same error on every launch.
             if Self.isMissingFileError(error) { removeRecent(url) }
-            documentError = DocumentError(
-                message: Self.isLockedError(error)
-                    ? "“\(url.lastPathComponent)” is locked by another FinvestLens instance. If that instance crashed, you can break the lock and open anyway."
-                    : error.localizedDescription,
-                lockedURL: Self.isLockedError(error) ? url : nil)
+            if case FinvestLensDocument.DocumentError.notAFinvestLensBook(let kind) = error {
+                documentError = Self.foreignBookError(kind, at: url)
+            } else {
+                documentError = DocumentError(
+                    message: Self.isLockedError(error)
+                        ? "“\(url.lastPathComponent)” is locked by another FinvestLens instance. If that instance crashed, you can break the lock and open anyway."
+                        : error.localizedDescription,
+                    lockedURL: Self.isLockedError(error) ? url : nil)
+            }
+        }
+    }
+
+    /// The message for opening a file that is not a `.finvestlens` book —
+    /// GnuCash books get pointed (or handed straight) to the import flow
+    /// instead of a raw SQLite error.
+    static func foreignBookError(_ kind: FinvestLensDocument.ForeignFileKind,
+                                 at url: URL) -> DocumentError {
+        switch kind {
+        case .gnuCashBook:
+            return DocumentError(
+                message: "“\(url.lastPathComponent)” is a GnuCash book. FinvestLens keeps books in its own .finvestlens format — import it to create a native copy, and you can export back to GnuCash at any time.",
+                gnuCashImportURL: url)
+        case .gnuCashSQLite:
+            return DocumentError(
+                message: "“\(url.lastPathComponent)” was saved with GnuCash’s SQLite backend, which FinvestLens can’t read. In GnuCash, choose File ▸ Save As… with the XML format, then use File ▸ Import ▸ GnuCash… here.")
+        case .unrecognized:
+            return DocumentError(
+                message: "“\(url.lastPathComponent)” isn’t a FinvestLens book.")
         }
     }
 
@@ -1404,11 +1471,20 @@ public final class AppModel {
     }
 
     /// Imports a GnuCash XML file as a new native book, reporting the summary
-    /// (or the failure) through ``infoMessage`` / ``documentError``.
-    public func importGnuCashBook(from source: URL, saveAs destination: URL) {
+    /// (or the failure) through ``infoMessage`` / ``documentError``. A locked
+    /// `destination` (someone else's document at that path) offers "Break
+    /// Lock and Import" the way opening a locked book does, rather than a
+    /// raw lock error — pass `breakStaleLock: true` to retry through it.
+    public func importGnuCashBook(from source: URL, saveAs destination: URL,
+                                  breakStaleLock: Bool = false) async {
         guard saveAndCloseIfOpen() else { return }
+        if isImporting { return }
+        importingURL = source
+        loadProgress = nil
+        defer { importingURL = nil; loadProgress = nil }
         do {
-            let summary = try importGnuCash(from: source, saveAs: destination)
+            let summary = try await importGnuCash(from: source, saveAs: destination,
+                                                  breakStaleLock: breakStaleLock)
             recordLastBook(destination)
             let note = "Imported \(summary.accountCount) accounts and \(summary.transactionCount) transactions from “\(source.lastPathComponent)”."
             // Offer Check & Repair when the imported book has issues
@@ -1419,7 +1495,13 @@ public final class AppModel {
                 infoMessage = note
             }
         } catch {
-            documentError = DocumentError(message: "Couldn’t import “\(source.lastPathComponent)”: \(error.localizedDescription)")
+            if Self.isLockedError(error) {
+                documentError = DocumentError(
+                    message: "“\(destination.lastPathComponent)” is locked by another FinvestLens instance. If that instance crashed, you can break the lock and import anyway.",
+                    lockedURL: destination, lockedImportSource: source)
+            } else {
+                documentError = DocumentError(message: "Couldn’t import “\(source.lastPathComponent)”: \(error.localizedDescription)")
+            }
         }
     }
 
@@ -1444,13 +1526,18 @@ public final class AppModel {
     }
 
     /// Imports a GnuCash file and saves it as a new native document.
+    ///
+    /// Parsing the XML and writing the result both run off the main actor
+    /// (``DocumentLoader``, the same executor a book open uses) — a large
+    /// GnuCash export takes seconds to parse and write, and the window
+    /// cannot repaint while that runs on the main actor.
     @discardableResult
-    public func importGnuCash(from source: URL, saveAs destination: URL) throws -> ImportSummary {
-        let result = try GnuCashXMLImporter.importBook(from: source)
-        let doc = try FinvestLensDocument.create(at: destination,
-                                                 baseCurrency: result.book.commodities.first ?? .aud)
-        // Replace the fresh document's book with the imported one and save.
-        try replaceBook(of: doc, with: result.book)
+    public func importGnuCash(from source: URL, saveAs destination: URL,
+                              breakStaleLock: Bool = false) async throws -> ImportSummary {
+        let (doc, summary) = try await performGnuCashImport(
+            source: source, destination: destination, breakStaleLock: breakStaleLock) { progress in
+                Task { @MainActor [weak self] in self?.recordLoadProgress(progress) }
+            }
         document = doc
         reloadKvpCollections()
         refreshAll()
@@ -1458,7 +1545,7 @@ public final class AppModel {
         startDocumentMaintenance()
         observeExternalChanges()
         resetUndoStack()
-        return result.summary
+        return summary
     }
 
     /// Serialises the current book to GnuCash XML (`FR-EXP-01`), optionally
@@ -2366,5 +2453,48 @@ public final class AppModel {
         // losing 100k+ prices from a real GnuCash import.
         doc.replaceBook(book)
         try doc.save()
+    }
+}
+
+/// Parses a GnuCash file and writes it into a fresh document, off the main
+/// actor — the counterpart to ``FinvestLensDocument/load(at:breakStaleLock:progress:)``
+/// for import. `Book` is deliberately not `Sendable` (Architecture ADR), so the
+/// whole pipeline runs in one isolation domain and the result crosses back to
+/// the caller as a `sending` value, same as opening a book.
+///
+/// `progress` sees the whole import as one bar: parsing the XML is the first
+/// half, writing the parsed book into the fresh document the second. Neither
+/// half is measured against the other (Interchange's parse and Persistence's
+/// write are different kinds of work), so the split is an even 50/50 rather
+/// than a claimed measurement.
+@DocumentLoader
+private func performGnuCashImport(
+    source: URL, destination: URL, breakStaleLock: Bool = false,
+    progress: @escaping @Sendable (BookLoadProgress) -> Void
+) throws -> sending (document: FinvestLensDocument, summary: ImportSummary) {
+    let result = try GnuCashXMLImporter.importBook(from: source) { parsed in
+        progress(BookLoadProgress(stage: mapImportStage(parsed.stage),
+                                  completed: parsed.completed, total: parsed.total,
+                                  fraction: parsed.fraction * 0.5, verb: "Parsing"))
+    }
+    let doc = try FinvestLensDocument.create(at: destination,
+                                             baseCurrency: result.book.commodities.first ?? .aud,
+                                             breakStaleLock: breakStaleLock)
+    doc.replaceBook(result.book)
+    try doc.save { written in
+        progress(BookLoadProgress(stage: written.stage, completed: written.completed,
+                                  total: written.total,
+                                  fraction: 0.5 + written.fraction * 0.5, verb: written.verb))
+    }
+    return (doc, result.summary)
+}
+
+/// `GnuCashImportProgress` (Interchange) has no notion of `BookLoadProgress`'s
+/// `.finishing` stage — it only ever reports the three it counts elements for.
+private func mapImportStage(_ stage: GnuCashImportStage) -> BookLoadProgress.Stage {
+    switch stage {
+    case .accounts: .accounts
+    case .transactions: .transactions
+    case .prices: .prices
     }
 }

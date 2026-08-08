@@ -170,7 +170,7 @@ struct ReportDocumentView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 } icon: {
                     Image(systemName: "text.bubble")
-                        .foregroundStyle(Color.accentColor)
+                        .foregroundStyle(.tint)
                 }
             }
         }
@@ -193,7 +193,7 @@ struct ReportDocumentView: View {
                     .foregroundStyle(by: .value("Kind", "Expenses"))
                     .position(by: .value("Kind", "Expenses"))
             }
-            .chartForegroundStyleScale(["Income": Color.accentColor,
+            .chartForegroundStyleScale(["Income": Color.appAccent,
                                         "Expenses": Color.red.opacity(0.75)])
             .frame(height: 200)
         case .line(let points):
@@ -204,7 +204,7 @@ struct ReportDocumentView: View {
                 AreaMark(x: .value("Date", point.date),
                          y: .value("Net Worth", point.netWorth))
                     .interpolationMethod(.monotone)
-                    .foregroundStyle(.linearGradient(colors: [.accentColor.opacity(0.3), .clear],
+                    .foregroundStyle(.linearGradient(colors: [Color.appAccent.opacity(0.3), .clear],
                                                      startPoint: .top, endPoint: .bottom))
             }
             .frame(height: 200)
@@ -213,7 +213,7 @@ struct ReportDocumentView: View {
                 BarMark(x: .value("Period", interval.start),
                         y: .value("Average",
                                   NSDecimalNumber(decimal: interval.average).doubleValue))
-                    .foregroundStyle(Color.accentColor)
+                    .foregroundStyle(.tint)
             }
             .frame(height: 200)
         case .allocation(let slices):
@@ -248,7 +248,7 @@ struct ReportDocumentView: View {
                             Text(line).scaledFont(.callout)
                         } icon: {
                             Image(systemName: "sparkles")
-                                .foregroundStyle(Color.accentColor)
+                                .foregroundStyle(.tint)
                         }
                     }
                     Text("Commentary is generated on-device from the figures above.")

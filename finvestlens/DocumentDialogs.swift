@@ -44,7 +44,7 @@ enum DocumentDialogs {
 
     /// File ▸ Import GnuCash…: pick the GnuCash XML, then where to save the
     /// converted native book.
-    static func importGnuCash(_ model: AppModel) {
+    static func importGnuCash(_ model: AppModel) async {
         let open = NSOpenPanel()
         open.title = "Import GnuCash File"
         open.message = "Choose a GnuCash file (XML, optionally gzip-compressed)."
@@ -52,7 +52,13 @@ enum DocumentDialogs {
         open.allowsOtherFileTypes = true
         open.allowsMultipleSelection = false
         guard open.runModal() == .OK, let source = open.url else { return }
+        await importGnuCash(model, source: source)
+    }
 
+    /// The save-panel half of the GnuCash import — also the entry when the
+    /// source is already known (the user tried to File ▸ Open a GnuCash book
+    /// and chose Import from the recovery alert).
+    static func importGnuCash(_ model: AppModel, source: URL) async {
         let save = NSSavePanel()
         save.title = "Save Imported Book"
         save.message = "Choose where to save the converted FinvestLens book."
@@ -62,7 +68,7 @@ enum DocumentDialogs {
         save.canCreateDirectories = true
         guard save.runModal() == .OK, let destination = save.url else { return }
 
-        model.importGnuCashBook(from: source, saveAs: destination)
+        await model.importGnuCashBook(from: source, saveAs: destination)
     }
 
     /// File ▸ Import Ledger Journal…: pick the journal, then where to save

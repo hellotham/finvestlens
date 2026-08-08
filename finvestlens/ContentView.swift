@@ -42,6 +42,8 @@ struct RootHost: View {
         Group {
             if let openingURL = model.openingURL {
                 OpeningBookView(url: openingURL, progress: model.loadProgress)
+            } else if let importingURL = model.importingURL {
+                ImportingBookView(url: importingURL, progress: model.loadProgress)
             } else if model.isOpen && model.isLocked {
                 LockView(model: model)
             } else if model.isOpen, let url = model.documentURL {
@@ -66,11 +68,16 @@ struct RootHost: View {
                 CheckRepairSheet(model: model, proposal: proposal)
             }
         }
-        .alert("Couldn’t open book",
+        .alert(model.documentError?.lockedImportSource != nil ? "Couldn’t import" : "Couldn’t open book",
                isPresented: Binding(get: { model.documentError != nil },
                                     set: { if !$0 { model.documentError = nil } }),
                presenting: model.documentError) { error in
-            if let lockedURL = error.lockedURL {
+            if let source = error.lockedImportSource, let destination = error.lockedURL {
+                Button("Break Lock and Import") {
+                    Task { await model.importGnuCashBook(from: source, saveAs: destination, breakStaleLock: true) }
+                }
+                Button("Cancel", role: .cancel) {}
+            } else if let lockedURL = error.lockedURL {
                 Button("Open Read-Only") {
                     Task { await model.openReadOnly(at: lockedURL) }
                 }
@@ -78,6 +85,13 @@ struct RootHost: View {
                     Task { await model.openBook(at: lockedURL, breakStaleLock: true) }
                 }
                 Button("Cancel", role: .cancel) {}
+            } else if let source = error.gnuCashImportURL {
+                #if os(macOS)
+                Button("Import…") { Task { await DocumentDialogs.importGnuCash(model, source: source) } }
+                Button("Cancel", role: .cancel) {}
+                #else
+                Button("OK", role: .cancel) {}
+                #endif
             } else {
                 Button("OK", role: .cancel) {}
             }

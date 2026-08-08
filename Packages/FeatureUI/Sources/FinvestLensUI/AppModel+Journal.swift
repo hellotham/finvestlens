@@ -159,6 +159,31 @@ extension AppModel {
         return rows
     }
 
+    /// The leg rows of one transaction — what an opened-out line draws beneath
+    /// itself.
+    ///
+    /// Per transaction, on demand, rather than building every register row's
+    /// legs up front: only the handful of rows actually on screen ask, and a
+    /// transaction has a handful of splits. Building them for the whole
+    /// register cost an O(rows) pass on every single view update, which on a
+    /// 140,000-row register is what made selecting a row feel slow.
+    ///
+    /// Every leg is returned, the focus account's included — an opened-out line
+    /// is the transaction journal's view of the transaction, and hiding the leg
+    /// you are looking from makes a two-split transaction look one-sided.
+    public func legRows(ofTransaction id: GncGUID) -> [AutoSplitRow] {
+        guard let book, let txn = book.transaction(with: id) else { return [] }
+        return txn.splits.map { split in
+            AutoSplitRow(legID: split.guid,
+                         account: split.account?.fullName ?? "—",
+                         memo: split.memo,
+                         action: split.action,
+                         reconcile: split.reconcileState.rawValue,
+                         amount: split.value,
+                         currencyCode: txn.currency.mnemonic)
+        }
+    }
+
     /// GnuCash's Auto-Split Ledger (`FR-REG-03`): exactly the Basic register —
     /// same rows, columns and running balance — with the transaction you are
     /// looking at opened out into its legs beneath its row.

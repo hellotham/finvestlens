@@ -112,7 +112,18 @@ public enum InitFile {
         func absorb(_ tokens: [String], from source: String) {
             guard !tokens.isEmpty else { return }
             do {
-                let parsed = try CLIParser.parse(tokens)
+                var parsed = try CLIParser.parse(tokens)
+                // `--output` is the one option that makes finlens write to a
+                // path — and `./.finlensrc` is read from whatever directory
+                // the tool is run in. A dropped-in rc file redirecting output
+                // is an arbitrary file overwrite wearing a convenience
+                // feature; the redirect stays a per-invocation, typed-at-the-
+                // prompt decision (ledger's own docs place --output in argv).
+                if let redirected = parsed.options.output {
+                    parsed.options.output = nil
+                    warnings.append("finlens: ignoring --output \(redirected) in \(source) "
+                        + "(--output is command-line only)")
+                }
                 options.merge(parsed.options)
                 files += parsed.files
                 if let stray = parsed.command {

@@ -14,6 +14,11 @@ import FinvestLensShared
 import WidgetKit
 #endif
 
+/// The tail of the widget-write chain — extensions cannot hold stored
+/// properties, so it lives at file scope. Main-actor confined: only
+/// `publish(_:)` reads or replaces it.
+@MainActor private var widgetPublishTail: Task<Void, Never>?
+
 @MainActor
 extension AppModel {
 
@@ -24,6 +29,29 @@ extension AppModel {
     /// so it is cheap enough to call on save / open / close. It is deliberately
     /// *not* wired into `refreshAll()` (every edit), because the widget only
     /// needs the persisted picture.
+    /// Writes the snapshot off the main actor, then refreshes the widgets.
+    ///
+    /// The write goes to the App Group container, and that `open(2)` can block
+    /// in the kernel indefinitely when `containermanagerd` is wedged — the same
+    /// hazard that makes the Shared package's round-trip test hang. On the main
+    /// actor it froze the whole app mid-open, with the progress bar full and
+    /// nothing left to do: the book had loaded, and the last act of loading it
+    /// was a file write that never returned.
+    ///
+    /// Detached tasks have no order between them, so each publish chains on
+    /// the one before it — a close-then-open (placeholder, then real book)
+    /// must never leave the older snapshot as the last rename to land.
+    private func publish(_ snapshot: WidgetSnapshot) {
+        let previous = widgetPublishTail
+        widgetPublishTail = Task.detached(priority: .utility) {
+            await previous?.value
+            snapshot.write()
+            #if canImport(WidgetKit)
+            await MainActor.run { WidgetCenter.shared.reloadAllTimelines() }
+            #endif
+        }
+    }
+
     public func publishWidgetData() {
         // Test processes have no app bundle: WidgetKit/UNUserNotificationCenter
         // throw NSExceptions there ("bundleProxyForCurrentProcess is nil") and
@@ -31,10 +59,7 @@ extension AppModel {
         // reliable tell across XCTest and swift-testing runners.
         guard Bundle.main.bundleIdentifier != nil else { return }
         guard let book else {
-            WidgetSnapshot.placeholder.write()
-            #if canImport(WidgetKit)
-            WidgetCenter.shared.reloadAllTimelines()
-            #endif
+            publish(.placeholder)
             Task { await AlertNotificationScheduler.cancelAll() }
             return
         }
@@ -66,17 +91,14 @@ extension AppModel {
 
         let name = documentURL?.deletingPathExtension().lastPathComponent ?? "FinvestLens"
 
-        WidgetSnapshot(
+        let snapshot = WidgetSnapshot(
             bookName: name,
             netWorth: AmountFormat.string(netWorth, code: currency.mnemonic),
             upcomingBills: billsLine,
             alerts: Array(alertItems),
             updatedAt: now
-        ).write()
-
-        #if canImport(WidgetKit)
-        WidgetCenter.shared.reloadAllTimelines()
-        #endif
+        )
+        publish(snapshot)
 
         Task { await AlertNotificationScheduler.sync(alerts: allAlerts, asOf: now) }
     }

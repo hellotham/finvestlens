@@ -53,7 +53,7 @@ struct LinkedDocumentsView: View {
     private func row(_ doc: AppModel.LinkedDocument) -> some View {
         HStack(spacing: 10) {
             Image(systemName: doc.isWeb ? "link" : (doc.exists ? "doc.fill" : "doc.badge.gearshape"))
-                .foregroundStyle(doc.exists ? Color.accentColor : .secondary)
+                .foregroundStyle(doc.exists ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
             VStack(alignment: .leading, spacing: 2) {
                 Text(doc.description.isEmpty ? "(no description)" : doc.description)
                     .scaledFont(.body)

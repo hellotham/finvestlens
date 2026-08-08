@@ -574,7 +574,7 @@ struct DashboardView: View {
                                     .scaledFont(.caption).monospacedDigit().foregroundStyle(.secondary)
                             }
                             ProgressView(value: min(1, max(0, actual.fractionUsed ?? 0)))
-                                .tint(actual.isOverBudget ? .red : .accentColor)
+                                .tint(actual.isOverBudget ? .red : .appAccent)
                         }
                     }
                 }
@@ -1006,7 +1006,7 @@ struct DashboardView: View {
                             .scaledFont(.caption).monospacedDigit().foregroundStyle(.secondary)
                     }
                     ProgressView(value: min(1, max(0, fraction)))
-                        .tint(fraction >= 1 ? .green : .accentColor)
+                        .tint(fraction >= 1 ? .green : .appAccent)
                 }
             }
             if model.savingsGoals.count > 6 {

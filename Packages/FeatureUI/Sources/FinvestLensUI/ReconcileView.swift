@@ -113,7 +113,7 @@ struct ReconcileView: View {
                     } label: {
                         HStack {
                             Image(systemName: item.isCleared ? "checkmark.circle.fill" : "circle")
-                                .foregroundStyle(item.isCleared ? Color.accentColor : Color.secondary)
+                                .foregroundStyle(item.isCleared ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
                                 .accessibilityHidden(true)
                             Text(dateFormat.short(item.date))
                                 .foregroundStyle(.secondary)

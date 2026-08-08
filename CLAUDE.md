@@ -33,6 +33,18 @@ xcodebuild build -scheme finvestlens -destination 'platform=macOS' CODE_SIGNING_
 xcodebuild build -scheme finvestlens -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO
 ```
 
+Those are build-only checks. To **run** the macOS app, build it signed instead:
+
+```bash
+xcodebuild build -scheme finvestlens -destination 'platform=macOS' -allowProvisioningUpdates
+```
+
+`CODE_SIGNING_ALLOWED=NO` embeds no entitlements at all, so the app loses its
+`com.apple.security.application-groups` claim — and `publishWidgetData()` touches
+`~/Library/Group Containers/…` on every open, save and close. macOS reads that as one app
+reading another's data and puts up "would like to access data from other apps"; the ad-hoc
+signature changes with every build, so TCC forgets the grant and asks again every launch.
+
 The CLI builds with `swift build -c release --package-path Packages/CLI` (binary at `Packages/CLI/.build/release/finlens`); [docs/cli.md](docs/cli.md) is its manual. It is read-only **by design** — never add a command that writes to a book.
 
 Website (`website/`, Astro 7 + Tailwind 4, served at `hellotham.com/finvestlens/`): `npm ci`, then `npm run dev` / `npm run build`. After editing the in-app help (`Packages/FeatureUI/Sources/FinvestLensUI/HelpContent.swift`), run `node scripts/build-manual.mjs` in `website/` and commit the regenerated `src/data/manual.json` — CI fails if it drifts. The site serves under the `/finvestlens` base path: route every internal href and asset through `url()` from `src/data/site.ts`, never a bare absolute path (those 404 on Pages).
@@ -53,6 +65,117 @@ Live harnesses in the FeatureUI test target skip themselves unless env vars are 
 ## Localization
 
 The single string catalog lives in the **app target** (`finvestlens/Localizable.xcstrings`) — SwiftUI resolves package `Text()` against `Bundle.main`, so package code needs no bundle plumbing (the Quick Look extension has its own catalog). Eight languages. The authority for the key set is the compiler: `swift build -Xswiftc -emit-localized-strings` output, not grep. Two traps silently opt strings out of localization: string concatenation inside `Text(...)` (picks the verbatim `String` initializer, emits no key) and helper parameters typed `String` where `LocalizedStringKey` is meant.
+
+## Working rules
+
+These are not preferences. Each one is here because it was broken, at cost.
+
+- **A direct instruction is the task.** "Redesign it", "research X", "consult the
+  GnuCash source", "check the HIG" are the work itself, not context for it. Do not
+  substitute a smaller change you are more confident of. If an instruction seems
+  wrong, say so in one sentence and then carry it out.
+- **Never cite a source you have not opened in this session.** Naming GnuCash,
+  the HIG, or any document from memory and presenting it as research is a
+  fabrication. Open it, quote it, link it.
+  - GnuCash: `~/Repositories/gnucash-reference`. It is a **sparse** checkout —
+    the register UI is not there by default. `git sparse-checkout add
+    gnucash/register` first. The register's own design is in
+    `gnucash/register/ledger-core/split-register-layout.c`.
+  - Apple HIG: `developer.apple.com/design/human-interface-guidelines/…` is
+    JavaScript-rendered. `WebFetch` returns the page *title only* and nothing
+    else — that is not a failed fetch, it is a silent empty one. Use the Browser
+    pane (`preview_start` with the URL, then `get_page_text`).
+- **Prove a diagnosis before asserting it, especially when blaming a framework.**
+  "SwiftUI's List does that" is the shape of an excuse. Check this app's own
+  values first — a wrong colour, size or spacing is nearly always ours. Saying
+  "the list draws that blue selection" when the blue was `Color.accentColor` in
+  our own view cost an entire round trip and was said twice.
+- **Report only what was observed.** "Verified" means run and seen. If the GUI
+  could not be driven, say the change is unverified and name what needs trying.
+- **A prohibition binds everything you delegate.** A subagent inherits none of
+  this conversation: it has the same tools and none of the instructions. Every
+  constraint the user has set — no chips, do not touch `imports/`, do not commit,
+  read-only — must be restated *inside the subagent's prompt*, because nothing
+  else will carry it there. This was learned the hard way: chips were forbidden
+  and two still appeared — the transcript shows the main loop itself spawned
+  one and a delegated agent the other. A `PreToolUse` gate
+  (`.claude/hooks/no-chips.py`) now blocks that tool wherever it is invoked,
+  because a `Stop` hook reads only *this* session's transcript and a subagent's
+  tool calls never appear in it — a rule that cannot be enforced where the work
+  happens is not enforced at all.
+- **A claim carries its receipt.** "Builds", "tests pass", "verified",
+  "committed", "consulted X" are reports of events. Make them only in the same
+  turn as the command or observation that proves them, and name what was *not*
+  run ("iOS build not attempted", "unverified on screen — needs a look"). One
+  session wrote "verified" 96 times; the handful that were false — sources
+  cited from memory, GUI behaviour never seen — are why the user now checks.
+- **Directives do not expire.** An instruction from three turns ago that was
+  never carried out is still the task. A turn may only end by doing it or by
+  saying explicitly "X remains undone because Y" — silence is a false
+  completion report.
+
+Enforcement for all of the above lives in `.claude/settings.json`:
+`directive-checklist.py` restates directives at prompt time,
+`check-directives.py` blocks a stop that skipped a directive (scanning the last
+five user turns) or asserted unevidenced work, `no-chips.py` blocks chips
+everywhere including subagents, and the `hookify.*.local.md` rules gate
+`Color.accentColor`, unsigned launches, UI review gates, and framework-blame.
+These gates are the user's, not yours: never weaken or bypass one except on an
+explicit instruction, and treat a rejection as a defect list, not an obstacle.
+
+## Theming
+
+The app's colour is set with `.tint(…)` in `Appearance.swift` — lavender by
+default, user-selectable. **`Color.accentColor` is banned in this codebase.** It
+does not read `.tint`; it resolves `Assets.xcassets/AccentColor.colorset`. That
+colorset is now **filled with lavender** — not for code to read, but because it
+is the only thing that recolours what the *system* draws (list/table selection
+emphasis, focus rings, default buttons), which otherwise painted macOS blue
+into a purple app. It is static: a user-selected in-app accent moves `.tint`
+but not the system-drawn parts. In code, use `.tint` as a `ShapeStyle`
+(`.foregroundStyle(.tint)`, `.strokeBorder(.tint, …)`, `.fill(.tint)`), or
+`Color.appAccent` where a concrete `Color` is required — never
+`Color.accentColor`.
+
+Inline editing follows the HIG pages quoted above: a cell at rest carries no
+border and no fill; focus adds a ring and nothing else. A field must occupy the
+same box in both states, or the row moves when it is edited. Placeholder text is
+not a label — HIG *Text fields*: "it can also be useful to include a separate
+label describing the field".
+
+## Review gates
+
+UI work is not done until both have been run and their findings reported:
+
+- **Accessibility** — VoiceOver labels on every non-text control, focus order
+  matching visual order, Dynamic Type via `scaledFont`, contrast on any custom
+  colour, keyboard reachability for anything the mouse can do.
+- **Security** — for this app that is mainly data handling: never let `imports/`
+  or a real book reach fixtures, screenshots, logs or the website; no financial
+  data in error messages that get published.
+
+Run them before saying a change is finished, not when asked twice.
+
+## Skills
+
+Project skills live in `.claude/skills/`. These mappings are standing
+instructions — when the moment arrives, invoking the skill *is* the requested
+work, not extra scope:
+
+- **`/preflight`** before every commit — package suites, both platform builds,
+  help-manual drift, SPDX. "Commit and push" implies it.
+- **`/ui-review`** before reporting any UI change finished — executes both
+  Review gates above with file:line receipts.
+- **`/relaunch`** after visual changes — signed build, graceful quit, relaunch,
+  release immediately; the user does the looking.
+- **`/code-review`** after a substantive implementation, scaled to the change.
+  `/code-review ultra` (cloud, multi-agent, billed) is **user-triggered only**:
+  suggest it before releases; never attempt to launch it.
+- Useful installed extras: the `code-simplifier` agent after large
+  implementations; `/feature-dev` for multi-file features; `frontend-design`,
+  `tailwind-4`, and `seo-audit` apply to `website/` only, never the app.
+  Avoid `/commit-push-pr` — it opens PRs and this repo commits straight to
+  `main`.
 
 ## Conventions
 

@@ -11,6 +11,7 @@
 
 import Foundation
 import GRDB
+import FinvestLensEngine
 
 /// Sizes a load and emits throttled progress through it.
 ///
@@ -92,6 +93,82 @@ struct LoadReporter {
 
     /// Emits at most once per whole percent. `force` is for the endpoints, which
     /// must be seen even if they round to a percent already reported.
+    private mutating func report(_ progress: BookLoadProgress, force: Bool = false) {
+        let percent = Int((progress.fraction * 100).rounded(.down))
+        guard force || percent > lastPercent else { return }
+        lastPercent = percent
+        emit(progress)
+    }
+}
+
+/// Sizes a **write** and emits throttled progress through it — the counterpart
+/// to ``LoadReporter`` for the path a GnuCash import takes, which can write a
+/// freshly-parsed book running to hundreds of thousands of rows. Unlike a
+/// read, the row counts are already in memory (the `Book` being written), so
+/// there is no up-front query to size the bar.
+///
+/// Reuses ``LoadWeight``: writing is different work from reading (SQL binds
+/// vs `Decimal` parsing and object construction), but the *relative* cost of
+/// a split vs a transaction vs a price is a reasonable stand-in, and only the
+/// proportions matter for a bar that just needs to advance at a steady rate.
+struct WriteReporter {
+
+    private let emit: @Sendable (BookLoadProgress) -> Void
+
+    private let splitCount: Int
+    private let txnCount: Int
+    private let priceCount: Int
+
+    private let totalWork: Double
+    private var workBefore: Double = 0
+    private var lastPercent = -1
+
+    init(book: Book, emit: @escaping @Sendable (BookLoadProgress) -> Void) {
+        self.emit = emit
+        txnCount = book.transactions.count
+        splitCount = book.transactions.reduce(0) { $0 + $1.splits.count }
+        priceCount = book.prices.count
+
+        let work = Double(splitCount) * LoadWeight.perSplit
+            + Double(txnCount) * LoadWeight.perTransaction
+            + Double(priceCount) * LoadWeight.perPrice
+        totalWork = max(work, 1)
+    }
+
+    mutating func startingAccounts() {
+        report(.init(stage: .accounts, completed: 0, total: 0, fraction: 0, verb: "Writing"), force: true)
+    }
+
+    mutating func startTransactions() {
+        workBefore = 0
+    }
+
+    /// `splitsCompleted` is the running split count across every transaction
+    /// written so far — transactions and their splits are written together,
+    /// one INSERT loop, so both costs land under the one `transactions` stage.
+    mutating func builtTransactions(_ completed: Int, splitsCompleted: Int) {
+        let done = Double(splitsCompleted) * LoadWeight.perSplit
+            + Double(completed) * LoadWeight.perTransaction
+        report(.init(stage: .transactions, completed: completed, total: txnCount,
+                     fraction: done / totalWork, verb: "Writing"))
+    }
+
+    mutating func startPrices() {
+        workBefore = Double(splitCount) * LoadWeight.perSplit
+            + Double(txnCount) * LoadWeight.perTransaction
+    }
+
+    mutating func builtPrices(_ completed: Int) {
+        let done = workBefore + Double(completed) * LoadWeight.perPrice
+        report(.init(stage: .prices, completed: completed, total: priceCount,
+                     fraction: done / totalWork, verb: "Writing"))
+    }
+
+    mutating func finished() {
+        report(.init(stage: .prices, completed: priceCount, total: priceCount,
+                     fraction: 1, verb: "Writing"), force: true)
+    }
+
     private mutating func report(_ progress: BookLoadProgress, force: Bool = false) {
         let percent = Int((progress.fraction * 100).rounded(.down))
         guard force || percent > lastPercent else { return }

@@ -145,7 +145,7 @@ struct MatchAttachmentsSheet: View {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
                     Image(systemName: matched ? "doc.badge.plus" : "questionmark.circle")
-                        .foregroundStyle(matched ? Color.accentColor : .secondary)
+                        .foregroundStyle(matched ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
                     Text(match.fileName).fontWeight(.medium)
                         .lineLimit(1).truncationMode(.middle)
                         .textSelection(.enabled)

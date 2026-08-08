@@ -113,7 +113,7 @@ struct finvestlensApp: App {
                     .disabled(!model.isOpen || !model.hasUnsavedChanges)
                 Divider()
                 #if os(macOS)
-                Button("Import GnuCash…") { DocumentDialogs.importGnuCash(model) }
+                Button("Import GnuCash…") { Task { await DocumentDialogs.importGnuCash(model) } }
                 Button("Import Ledger Journal…") { DocumentDialogs.importLedger(model) }
                 #endif
                 Button("Export GnuCash…") { model.exportRequested = true }
@@ -252,8 +252,11 @@ struct finvestlensApp: App {
                     .help(model.intelligenceUnavailableReason
                           ?? "Pick receipts and statements — each is matched to its transaction, linked, and categorised")
                 Divider()
+                // ⌥⌘0, with the ⌥⌘1/2/3 go-to family: ⌘D belongs to Duplicate
+                // Transaction (the HIG-standard editing shortcut), and a
+                // menu-bar ⌘D was silently shadowing it in the register.
                 Button("Dashboard") { model.selectedAccountID = nil }
-                    .keyboardShortcut("d", modifiers: .command)
+                    .keyboardShortcut("0", modifiers: [.command, .option])
                     .disabled(!model.isOpen)
             }
             CommandMenu("Reports") {

@@ -230,7 +230,7 @@ private struct GoalRow: View {
                     .monospacedDigit().foregroundStyle(.secondary)
             }
             ProgressView(value: goal.fractionComplete)
-                .tint(goal.isComplete ? .green : .accentColor)
+                .tint(goal.isComplete ? .green : .appAccent)
             HStack {
                 if let accountName { Text(accountName).font(.caption).foregroundStyle(.secondary) }
                 Spacer()

@@ -75,7 +75,11 @@ struct AttachmentsPanel: View {
             .help("Every attachment in the book, with its transaction")
         }
         .padding(12)
-        .frame(width: 290, alignment: .topLeading)
+        // A range, not a fixed width: this panel is one of the register's
+        // trailing panes, and a hard 290 is 290 the transaction editor's
+        // inspector cannot have — which on a full-width window means the window
+        // has to grow to fit the editor, off the side of the display.
+        .frame(minWidth: 210, idealWidth: 290, maxWidth: 290, alignment: .topLeading)
         // One size for every control — mixed large/small/icon-only buttons made
         // the panel read as three different UIs.
         .controlSize(.small)

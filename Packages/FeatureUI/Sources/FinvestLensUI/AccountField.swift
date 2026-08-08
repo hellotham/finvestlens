@@ -103,7 +103,7 @@ struct AccountField: View {
         .padding(.vertical, 3)
         .background(
             RoundedRectangle(cornerRadius: 6)
-                .strokeBorder(Color.accentColor, lineWidth: 1.5)
+                .strokeBorder(.tint, lineWidth: 1.5)
         )
         .onChange(of: focused) { _, isFocused in
             guard !isFocused else { return }
@@ -164,6 +164,219 @@ struct AccountField: View {
         } else {
             searching = false
         }
+    }
+}
+
+/// The register's account cell: GnuCash's ComboCell, as a text field with a
+/// native suggestions dropdown.
+///
+/// Semantics ported from `gnucash/register/register-gnome/combocell-gnome.c`:
+/// typing runs a type-ahead search over full account names, capped at 30
+/// matches (`MAX_NUM_MATCHES`, `gnc_combo_cell_type_ahead_search`); an emptied
+/// field offers the whole list rather than the first thirty; ⎋ with an edit in
+/// progress reverts the cell to its stored value and only an unchanged cell's
+/// ⎋ falls through to cancel the row (`gnc_combo_cell_direct_update`,
+/// `GDK_KEY_Escape`); ⇥ commits the current match before the cursor moves.
+/// HIG *Combo boxes*: the field is "populated with a meaningful default value
+/// from the list" — the leg's current account — and the suggestion rows are no
+/// wider than the field.
+///
+/// One divergence, on purpose: ⏎ resolves the typed text *and saves the
+/// transaction* — GnuCash's `activate_cursor` commits the whole row too, and
+/// the register's contract is that Return is the save button.
+///
+/// The dropdown is `.textInputSuggestions`, not a popover: a popover takes key
+/// focus, and a cell that loses its field the moment it offers choices is the
+/// focus fight that sank the earlier account pickers in table cells.
+struct AccountComboCell: View {
+    /// The leg's current account — the value ⎋ reverts to.
+    let accountID: GncGUID?
+    var placeholder: LocalizedStringKey = "Account"
+    let nodes: [AccountNode]
+    /// Whether this cell can take the cursor (its row is selected/edited).
+    var isEditable = true
+    /// This cell's identity in the shared cursor (see ``RegisterCell``).
+    var field: TransactionEditField
+    /// The shared cursor — one per register surface.
+    var cursor: FocusState<TransactionEditField?>.Binding
+    let metrics: RegisterMetrics
+    var onFocus: () -> Void = {}
+    /// Writes the chosen account into the draft.
+    let onPick: (GncGUID) -> Void
+    /// ⏎ once the text resolves — the register saves the transaction.
+    var onReturn: () -> Void = {}
+
+    @State private var query = ""
+    @State private var hasTyped = false
+    @State private var browseShown = false
+
+    private var isFocused: Bool { cursor.wrappedValue == field }
+    private var currentName: String { AccountSearch.name(of: accountID, in: nodes) }
+    /// The GnuCash cap: past thirty rows a combo popup stops being a shortlist.
+    private var matches: [AccountNode] {
+        Array(AccountSearch.matches(hasTyped ? query : "", in: nodes).prefix(30))
+    }
+
+    var body: some View {
+        Group {
+            if isEditable {
+                cell
+            } else {
+                // The cursor cannot land here: drawn text only. `field` is
+                // non-optional, so this cell cannot go nil-static the way
+                // ``RegisterCell`` does — this branch is its gate.
+                restText
+            }
+        }
+        .scaledFont(.body)
+        .lineLimit(1)
+        .padding(.horizontal, metrics.cellPaddingH)
+        .padding(.vertical, metrics.cellPaddingV)
+        .overlay {
+            if isFocused {
+                RoundedRectangle(cornerRadius: metrics.cellCorner)
+                    .strokeBorder(.tint, lineWidth: 2)
+            }
+        }
+    }
+
+    /// The stored account as quiet text — the rest presentation for a cell
+    /// whose row is not selected, occupying the field's exact box.
+    private var restText: some View {
+        Text(currentName)
+            .truncationMode(.middle)
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private var cell: some View {
+        // HIG *Combo boxes*: "Not supported in iOS" — so only macOS gets the
+        // native suggestions dropdown. iOS keeps the same typed completion
+        // (GnuCash's own default is no auto-popup) and offers the list behind
+        // a browse chevron instead.
+        #if os(macOS)
+        // Suggestions only on the focused combo: installing the suggestion
+        // session on every visible row's field is the prime suspect for the
+        // dead click region (never tested against the outer-tap design).
+        if isFocused {
+            fieldBase
+                .textInputSuggestions {
+                    ForEach(matches) { node in
+                        Text(node.fullName)
+                            .textInputCompletion(node.fullName)
+                    }
+                }
+        } else {
+            fieldBase
+        }
+        #else
+        HStack(spacing: 2) {
+            fieldBase
+            if isFocused {
+                Button {
+                    browseShown = true
+                } label: {
+                    Image(systemName: "chevron.up.chevron.down")
+                        .imageScale(.small)
+                        .foregroundStyle(.tertiary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Browse accounts")
+                .popover(isPresented: $browseShown) {
+                    NavigationStack {
+                        List(matches) { node in
+                            Button {
+                                commit(node)
+                                browseShown = false
+                            } label: {
+                                Text(node.fullName)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                        }
+                        .searchable(text: $query)
+                        .navigationTitle(Text(placeholder))
+                    }
+                    .frame(minWidth: 320, minHeight: 360)
+                }
+            }
+        }
+        #endif
+    }
+
+    /// A real field, always present, hit-gated like every register cell. At
+    /// rest it shows the account name as quiet text; focused, it is the combo.
+    private var fieldBase: some View {
+        TextField(placeholder, text: $query)
+            .textFieldStyle(.plain)
+            .truncationMode(.middle)
+            .foregroundStyle(isFocused || currentName.isEmpty
+                             ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary))
+            .focused(cursor, equals: field)
+            .allowsHitTesting(false)   // see RegisterCell — the row maps taps
+            .onAppear { if !isFocused { query = currentName } }
+            .onChange(of: currentName) { _, now in if !isFocused { query = now } }
+            .onChange(of: isFocused) { was, now in
+                if now {
+                    query = currentName
+                    hasTyped = false
+                    onFocus()
+                } else if was {
+                    // The cursor can leave without a key this cell sees — the
+                    // register's ⇥ monitor, or a click on another cell.
+                    // GnuCash's combo commits on leave; so does this one.
+                    resolve()
+                }
+            }
+            .onChange(of: query) { old, now in
+                guard old != now, isFocused else { return }
+                hasTyped = true
+                // A suggestion pick sets the text to the full name; treat an
+                // exact name as picked so the draft never trails the cell.
+                if let exact = exactMatch(now) { commit(exact) }
+            }
+            // ⏎ belongs to this cell, not the row's save handler, until the
+            // text is resolved into an account.
+            .submitScope()
+            .onSubmit { resolveThenReturn() }
+            .onKeyPress(keys: [.escape]) { _ in
+                guard hasTyped else { return .ignored }  // unchanged ⎋ cancels the row
+                query = currentName                      // changed ⎋ reverts the cell
+                hasTyped = false
+                return .handled
+            }
+    }
+
+    private func exactMatch(_ text: String) -> AccountNode? {
+        nodes.first { $0.fullName.caseInsensitiveCompare(text) == .orderedSame }
+    }
+
+    /// Typed text → account: an exact name, else the best type-ahead match.
+    /// An emptied or matchless edit commits nothing — GnuCash's strict combo
+    /// refuses rather than guesses (`gnc_combo_cell_leave` keeps a changed
+    /// value only when it is in the list) — and the text falls back to the
+    /// stored account, so the cell never lies about where the leg posts.
+    @discardableResult
+    private func resolve() -> Bool {
+        if let exact = exactMatch(query) { commit(exact); return true }
+        if hasTyped, !query.trimmingCharacters(in: .whitespaces).isEmpty,
+           let best = matches.first {
+            commit(best)
+            return true
+        }
+        query = currentName
+        hasTyped = false
+        return accountID != nil
+    }
+
+    private func resolveThenReturn() {
+        if resolve() { onReturn() }
+    }
+
+    private func commit(_ node: AccountNode) {
+        if node.id != accountID { onPick(node.id) }
+        query = node.fullName
+        hasTyped = false
     }
 }
 

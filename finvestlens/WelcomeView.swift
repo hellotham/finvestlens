@@ -201,7 +201,7 @@ struct WelcomeView: View {
             .controlSize(.large)
             #if os(macOS)
             Button("Migrating from GnuCash? Import your file…") {
-                DocumentDialogs.importGnuCash(model)
+                Task { await DocumentDialogs.importGnuCash(model) }
             }
             .buttonStyle(.link)
             .font(.system(size: 12.5 * appFontScale, design: .rounded))

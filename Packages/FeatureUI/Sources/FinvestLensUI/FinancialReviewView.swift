@@ -117,7 +117,7 @@ struct FinancialReviewSheet: View {
                 HStack(spacing: 6) {
                     ForEach(slides.indices, id: \.self) { slideIndex in
                         Circle()
-                            .fill(slideIndex == index ? Color.accentColor : Color.secondary.opacity(0.35))
+                            .fill(slideIndex == index ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary.opacity(0.35)))
                             .frame(width: 7, height: 7)
                             .onTapGesture { withAnimation { index = slideIndex } }
                             .accessibilityLabel("Slide \(slideIndex + 1)")
@@ -188,7 +188,7 @@ struct SlideCard: View {
             Text(slide.kicker.uppercased())
                 .scaledFont(.caption, weight: .semibold)
                 .kerning(1.2)
-                .foregroundStyle(Color.accentColor)
+                .foregroundStyle(.tint)
                 .padding(.bottom, 6)
             Text(story?.headline ?? slide.headline)
                 .scaledFont(.title, weight: .bold)
@@ -208,7 +208,7 @@ struct SlideCard: View {
                         .fixedSize(horizontal: false, vertical: true)
                 } icon: {
                     Image(systemName: "sparkles")
-                        .foregroundStyle(Color.accentColor)
+                        .foregroundStyle(.tint)
                 }
                 .padding(.top, 10)
             }
@@ -261,7 +261,7 @@ struct SlideCard: View {
                 AreaMark(x: .value("Date", point.date),
                          y: .value("Net worth", asDouble(point.netWorth)))
                     .interpolationMethod(.monotone)
-                    .foregroundStyle(.linearGradient(colors: [.accentColor.opacity(0.25), .clear],
+                    .foregroundStyle(.linearGradient(colors: [Color.appAccent.opacity(0.25), .clear],
                                                      startPoint: .top, endPoint: .bottom))
             }
         case .waterfall(let steps):
@@ -278,7 +278,7 @@ struct SlideCard: View {
                 BarMark(x: .value("Amount", asDouble(bar.current)),
                         y: .value("Category", bar.label))
                     .foregroundStyle(asDouble(bar.current) < 0 ? Color.red.opacity(0.75)
-                                                               : Color.accentColor)
+                                                               : Color.appAccent)
                     .cornerRadius(3)
                 if let prior = bar.prior {
                     PointMark(x: .value("Prior", asDouble(prior)),
@@ -293,7 +293,7 @@ struct SlideCard: View {
                 BarMark(x: .value("Month", month.month, unit: .month),
                         y: .value("Net", asDouble(month.income - month.expenses)))
                     .foregroundStyle(month.income >= month.expenses
-                                     ? Color.accentColor : Color.red.opacity(0.75))
+                                     ? AnyShapeStyle(.tint) : AnyShapeStyle(.red.opacity(0.75)))
                     .cornerRadius(2)
             }
         case .allocation(let holdings):
@@ -312,7 +312,7 @@ struct SlideCard: View {
 
     private func color(for kind: WaterfallStep.Kind) -> Color {
         switch kind {
-        case .anchor: Color.accentColor
+        case .anchor: Color.appAccent
         case .rise: Color.green.opacity(0.8)
         case .fall: Color.red.opacity(0.75)
         }

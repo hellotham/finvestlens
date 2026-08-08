@@ -174,7 +174,7 @@ struct QuotesView: View {
                 if isSelected { selection.remove(commodity) } else { selection.insert(commodity) }
             } label: {
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
+                    .foregroundStyle(isSelected ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
                     .imageScale(.large)
             }
             .buttonStyle(.plain)

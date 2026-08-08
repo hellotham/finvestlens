@@ -38,6 +38,17 @@ public final class FinvestLensDocument {
         case conflict          // the shared file changed underneath us
         case alreadyOpen
         case readOnly          // opened read-only (someone else holds the lock)
+        /// The file is recognisably not a `.finvestlens` book — refused before
+        /// any lock or working copy is created, so a GnuCash export surfaces as
+        /// guidance instead of a raw SQLite "file is not a database" error.
+        case notAFinvestLensBook(ForeignFileKind)
+    }
+
+    /// What a refused file looked like, for targeted guidance.
+    public enum ForeignFileKind: Equatable, Sendable {
+        case gnuCashBook       // GnuCash XML, plain or gzip-compressed
+        case gnuCashSQLite     // GnuCash's own SQLite backend
+        case unrecognized      // anything else that is not a SQLite database
     }
 
     /// True when the book was opened **read-only** (`FR-DAT-06`): no lock was
@@ -102,25 +113,68 @@ public final class FinvestLensDocument {
 
     // MARK: Open / create
 
+    /// SQLite databases begin with these 16 bytes (`"SQLite format 3\0"`).
+    private static let sqliteMagic = Data("SQLite format 3".utf8) + [0]
+
+    /// Refuses files that are recognisably not `.finvestlens` books *before*
+    /// any lock or working copy exists. A zero-length file passes — SQLite
+    /// treats an empty file as a valid empty database, and refusing it here
+    /// would change what ``create(at:baseCurrency:)`` recovery paths accept.
+    private static func requireSQLiteBook(at fileURL: URL) throws {
+        guard let handle = try? FileHandle(forReadingFrom: fileURL) else { return }
+        defer { try? handle.close() }
+        let head = (try? handle.read(upToCount: 512)) ?? Data()
+        if head.isEmpty || head.starts(with: sqliteMagic) { return }
+        throw DocumentError.notAFinvestLensBook(classifyForeign(head: head, url: fileURL))
+    }
+
+    private static func classifyForeign(head: Data, url: URL) -> ForeignFileKind {
+        let isGnuCashName = url.pathExtension.lowercased() == "gnucash"
+        let isGzip = head.count >= 2
+            && head[head.startIndex] == 0x1f && head[head.startIndex + 1] == 0x8b
+        if isGzip {
+            // GnuCash saves gzip-compressed XML by default. Persistence has no
+            // inflater to peek inside, so the extension is the evidence.
+            return isGnuCashName ? .gnuCashBook : .unrecognized
+        }
+        if let text = String(data: head, encoding: .utf8), text.contains("<gnc-v2") {
+            return .gnuCashBook
+        }
+        return isGnuCashName ? .gnuCashBook : .unrecognized
+    }
+
     /// Creates a new, empty document at `fileURL` and opens it.
     ///
     /// The document file is written *before* the lock is acquired: in a
     /// sandboxed app the sibling `.lock` file is reachable only through the
     /// related-item grant, which needs the primary document to exist.
-    public static func create(at fileURL: URL, baseCurrency: Commodity = .aud) throws -> FinvestLensDocument {
+    ///
+    /// If a file already exists at `fileURL`, a **live** lock on it always
+    /// refuses, and a **stale** one refuses too unless `breakStaleLock` is
+    /// set — checked before anything is written, since a file at this path
+    /// could be someone else's real, currently-open document and the write
+    /// below is not reversible.
+    public static func create(at fileURL: URL, baseCurrency: Commodity = .aud,
+                              breakStaleLock: Bool = false) throws -> FinvestLensDocument {
+        let lock = FileLock(documentURL: fileURL)
+        if let holder = lock.currentHolder(), !lock.isStale() || !breakStaleLock {
+            throw FileLock.LockError.alreadyLocked(holder)
+        }
+
         let workingCopyURL = Self.makeWorkingCopyURL()
         let store = try SQLiteDocumentStore(path: workingCopyURL.path)
         let book = Book(baseCurrency: baseCurrency)
         try store.write(book)
         try Self.replaceItem(at: fileURL, withContentsOf: workingCopyURL)
 
-        let lock = FileLock(documentURL: fileURL)
         let lockHeld: Bool
         do {
-            lockHeld = try Self.acquireLockIfPossible(lock, breakStaleLock: false)
+            lockHeld = try Self.acquireLockIfPossible(lock, breakStaleLock: breakStaleLock)
         } catch {
             // A live lock on a file we just created — don't leave an
-            // unlockable orphan behind.
+            // unlockable orphan behind. (Pre-existing content at this path
+            // was already refused above, before any write, so this only
+            // ever removes a file this call itself just wrote.)
             try? FileManager.default.removeItem(at: fileURL)
             throw error
         }
@@ -140,6 +194,7 @@ public final class FinvestLensDocument {
     /// are the rest. Omit it and nothing is metered.
     public static func open(at fileURL: URL, breakStaleLock: Bool = false,
                             progress: (@Sendable (BookLoadProgress) -> Void)? = nil) throws -> FinvestLensDocument {
+        try requireSQLiteBook(at: fileURL)
         let lock = FileLock(documentURL: fileURL)
         let lockHeld = try Self.acquireLockIfPossible(lock, breakStaleLock: breakStaleLock)
 
@@ -166,6 +221,7 @@ public final class FinvestLensDocument {
     /// is refused; the shared file is never touched.
     public static func openReadOnly(at fileURL: URL,
                                     progress: (@Sendable (BookLoadProgress) -> Void)? = nil) throws -> FinvestLensDocument {
+        try requireSQLiteBook(at: fileURL)
         let lock = FileLock(documentURL: fileURL)     // constructed but never acquired
         let workingCopyURL = Self.makeWorkingCopyURL()
         try Self.copyItem(from: fileURL, to: workingCopyURL)
@@ -216,7 +272,11 @@ public final class FinvestLensDocument {
 
     /// Writes the working copy back to the shared file, atomically and under the
     /// lock, after verifying the shared file has not changed beneath us.
-    public func save() throws {
+    ///
+    /// `progress`, if given, is called as the write of a large book runs (a
+    /// GnuCash import writing a book it just parsed, notably) — see
+    /// ``SQLiteDocumentStore/write(_:progress:)``.
+    public func save(progress: (@Sendable (BookLoadProgress) -> Void)? = nil) throws {
         // A read-only session never touches the shared file (FR-DAT-06).
         if isReadOnly { throw DocumentError.readOnly }
         // Detect an out-of-band change to the shared file (bypassed lock, etc.).
@@ -227,7 +287,7 @@ public final class FinvestLensDocument {
             }
         }
 
-        try store.write(book)                                   // in-memory → working copy
+        try store.write(book, progress: progress)                // in-memory → working copy
         try Self.replaceItem(at: fileURL, withContentsOf: workingCopyURL)  // atomic write-back
         baselineFingerprint = try Self.fingerprint(of: fileURL)
         hasUnsavedChanges = false
@@ -414,4 +474,23 @@ final class DocumentPresenter: NSObject, NSFilePresenter, @unchecked Sendable {
     var presentedItemOperationQueue: OperationQueue { queue }
 
     func presentedItemDidChange() { onChange() }
+}
+
+/// Fallback wording for consumers that surface `localizedDescription`
+/// directly (the `finlens` CLI, generic error paths). The app builds richer,
+/// filename-bearing messages of its own in the UI layer. Cases that predate
+/// this conformance return `nil` so their existing surfaced text is unchanged.
+extension FinvestLensDocument.DocumentError: LocalizedError {
+    public var errorDescription: String? {
+        switch self {
+        case .notAFinvestLensBook(.gnuCashBook):
+            return "This is a GnuCash book. FinvestLens keeps books in its own format — use File ▸ Import ▸ GnuCash… to bring it across."
+        case .notAFinvestLensBook(.gnuCashSQLite):
+            return "This is a GnuCash SQLite-backend book. In GnuCash, save it as XML first, then import it."
+        case .notAFinvestLensBook(.unrecognized):
+            return "The file is not a FinvestLens book."
+        case .conflict, .alreadyOpen, .readOnly:
+            return nil
+        }
+    }
 }

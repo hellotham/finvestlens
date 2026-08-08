@@ -287,7 +287,7 @@ struct ReportGallery: View {
                     }
                     .padding(12)
                     .frame(maxWidth: 440, alignment: .leading)
-                    .background(Color.accentColor.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+                    .background(.tint.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
                 }
                 .buttonStyle(.plain)
                 Button {
@@ -302,7 +302,7 @@ struct ReportGallery: View {
                     }
                     .padding(12)
                     .frame(maxWidth: 440, alignment: .leading)
-                    .background(Color.accentColor.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+                    .background(.tint.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
                 }
                 .buttonStyle(.plain)
                 if !model.securityAccountNodes.isEmpty {
@@ -318,7 +318,7 @@ struct ReportGallery: View {
                         }
                         .padding(12)
                         .frame(maxWidth: 440, alignment: .leading)
-                        .background(Color.accentColor.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+                        .background(.tint.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
                     }
                     .buttonStyle(.plain)
                 }
@@ -335,7 +335,7 @@ struct ReportGallery: View {
                     }
                     .padding(12)
                     .frame(maxWidth: 440, alignment: .leading)
-                    .background(Color.accentColor.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+                    .background(.tint.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
                 }
                 .buttonStyle(.plain)
                 ForEach(ReportKind.Group.allCases, id: \.self) { group in
@@ -422,7 +422,7 @@ struct ReportGallery: View {
             }
             .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.accentColor.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+            .background(.tint.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
         }
         .buttonStyle(.plain)
         .contextMenu {
