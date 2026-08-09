@@ -32,10 +32,19 @@
 //  wash, no dark emphasized fill, focus ring only) hold throughout.
 //
 //  iOS keeps the SwiftUI Table register (RegisterTable.swift) — this sheet is
-//  AppKit. KNOWN LIMITATION, tracked for follow-up: the sheet exposes itself
-//  to accessibility as a single table element (no per-row AX rows/cells yet),
-//  and the reconcile cell is mouse-only; the unreconciled rotor from the
-//  Table port has no NSView equivalent yet.
+//  AppKit, so everything a framework would have given it for free is built by
+//  hand here:
+//
+//   * Accessibility is a real `NSAccessibilityTable` — a row proxy per
+//     transaction, a cell proxy per column, selection reflected both ways,
+//     and an "Unreconciled" `NSAccessibilityCustomRotor`. The tree is built
+//     on the first AX query and dropped when the rows change, so a session
+//     with no assistive client pays nothing.
+//   * The mouse-only gestures have keys: ⌥⌘R cycles reconcile, ⌥⌘A adds a
+//     split, ⌥⌘⌫ removes the one under the cursor. VoiceOver reaches the
+//     same acts through each row's custom actions.
+//   * Dynamic Type reaches the header strip and the suggestions popup, which
+//     are separate views and had stayed at fixed 11/12pt.
 //
 
 #if os(macOS)
@@ -422,6 +431,7 @@ private final class SheetView: NSView, NSTextFieldDelegate {
     // The one editor (gnucash-item-edit)
     private let itemEdit = ItemEditField()
     private let suggestions = SuggestionsController()
+    private lazy var unreconciledRotor = UnreconciledRotor(sheet: self)
     private var comboTyped = false
     nonisolated(unsafe) private var scrollObserver: NSObjectProtocol?
 
@@ -461,13 +471,161 @@ private final class SheetView: NSView, NSTextFieldDelegate {
         }
     }
 
-    // MARK: Accessibility (single-element for now — see the header note)
+    // MARK: Accessibility (NSAccessibilityTable — rows, cells, actions, rotor)
 
-    override func isAccessibilityElement() -> Bool { true }
+    /// The row proxies VoiceOver navigates. Built on the **first** accessibility
+    /// query and dropped whenever the row set changes: a register holds tens of
+    /// thousands of transactions, and a session with no assistive client must
+    /// not pay to materialise a tree nothing is reading.
+    private var axRowCache: [SheetAXRow]?
+
+    fileprivate var axRows: [SheetAXRow] {
+        if let axRowCache { return axRowCache }
+        let built = rows.indices.map { SheetAXRow(sheet: self, index: $0) }
+        axRowCache = built
+        return built
+    }
+
+    /// Called wherever the row set or its geometry changes. Cheap when no
+    /// assistive client has ever asked (the cache is still nil).
+    private func invalidateAccessibilityTree() {
+        guard axRowCache != nil else { return }
+        axRowCache = nil
+        NSAccessibility.post(element: self, notification: .rowCountChanged)
+    }
+
+    override func isAccessibilityElement() -> Bool { false }
     override func accessibilityRole() -> NSAccessibility.Role? { .table }
     override func accessibilityLabel() -> String? {
         wholeBook ? String(localized: "All Transactions")
                   : String(localized: "Transactions")
+    }
+    /// Rows, plus the one item editor whenever it is on screen: replacing the
+    /// default children with row proxies alone would hide the live field from
+    /// VoiceOver at exactly the moment someone is typing into it.
+    override func accessibilityChildren() -> [Any]? {
+        itemEdit.isHidden ? axRows : axRows + [itemEdit]
+    }
+    override func accessibilityRows() -> [Any]? { axRows }
+    override func accessibilityVisibleRows() -> [Any]? {
+        guard let clip = enclosingScrollView?.contentView else { return axRows }
+        let visible = clip.bounds
+        let first = firstBlock(atOrAfter: visible.minY)
+        guard first < rows.count else { return [] }
+        var last = first
+        while last + 1 < rows.count, yOffsets[last + 1] < visible.maxY { last += 1 }
+        return Array(axRows[first...last])
+    }
+    override func accessibilitySelectedRows() -> [Any]? {
+        axRows.filter { axIsSelected($0.index) }
+    }
+    override func accessibilityRowCount() -> Int { rows.count }
+    override func accessibilityColumnCount() -> Int { SheetColumn.allCases.count }
+
+    /// The AppKit equivalent of the Table register's `.accessibilityRotor`:
+    /// VO-⌘-arrow jumps between transactions that are not yet reconciled.
+    override func accessibilityCustomRotors() -> [NSAccessibilityCustomRotor] {
+        guard !wholeBook else { return [] }   // journal rows carry no reconcile
+        let rotor = NSAccessibilityCustomRotor(
+            label: String(localized: "Unreconciled"),
+            itemSearchDelegate: unreconciledRotor)
+        return [rotor]
+    }
+
+    // MARK: Accessibility — facts the row proxies read
+
+    fileprivate var axRowCount: Int { rows.count }
+
+    fileprivate func axIsSelected(_ index: Int) -> Bool {
+        rows.indices.contains(index) && selection.contains(rows[index].txn)
+    }
+
+    /// The row as VoiceOver reads it — the same sentence the Table register
+    /// speaks (`TransactionRowView.rowSummary`), so the two platforms agree.
+    fileprivate func axRowSummary(_ index: Int) -> String {
+        guard rows.indices.contains(index) else { return "" }
+        let base = rows[index].base
+        var parts = [dateFormat?.short(base.date) ?? "", base.description]
+        if !base.transferName.isEmpty { parts.append(base.transferName) }
+        if !base.isHeadingOnly {
+            parts.append(AmountFormat.string(base.amount, code: currencyCode))
+        }
+        if base.hasDocument { parts.append(String(localized: "has attachment")) }
+        if let balance = base.runningBalance {
+            parts.append(String(localized:
+                "balance \(AmountFormat.string(balance, code: currencyCode))"))
+        }
+        if !base.isHeadingOnly { parts.append(ReconcileBadge.word(base.reconcile)) }
+        return parts.filter { !$0.isEmpty }.joined(separator: ", ")
+    }
+
+    fileprivate func axCellText(_ column: SheetColumn, at index: Int) -> String {
+        guard rows.indices.contains(index) else { return "" }
+        let base = rows[index].base
+        switch column {
+        case .date: return dateFormat?.short(base.date) ?? ""
+        case .handle: return ""
+        case .description: return base.description
+        case .transfer: return base.isHeadingOnly ? "" : base.transferName
+        case .reconcile:
+            return base.isHeadingOnly ? "" : ReconcileBadge.word(base.reconcile)
+        case .amount:
+            return base.isHeadingOnly
+                ? "" : AmountFormat.string(base.amount, code: currencyCode)
+        case .balance:
+            return base.runningBalance.map {
+                AmountFormat.string($0, code: currencyCode)
+            } ?? ""
+        }
+    }
+
+    fileprivate func axScreenRect(ofBlock index: Int) -> NSRect {
+        guard let window, rows.indices.contains(index) else { return .zero }
+        return window.convertToScreen(convert(blockRect(index), to: nil))
+    }
+
+    fileprivate func axScreenRect(of column: SheetColumn, block index: Int) -> NSRect {
+        guard let window, rows.indices.contains(index) else { return .zero }
+        let rect = frames.rect(column, y: yOffsets[index], height: lineHeight)
+        return window.convertToScreen(convert(rect, to: nil))
+    }
+
+    // MARK: Accessibility — actions the row proxies perform
+
+    fileprivate func axSelect(_ index: Int) {
+        guard rows.indices.contains(index) else { return }
+        requestSelection([rows[index].txn], anchor: index, lead: index)
+        _ = scrollToVisible(blockRect(index))
+        window?.makeFirstResponder(self)
+    }
+
+    fileprivate func axEdit(_ index: Int) {
+        guard rows.indices.contains(index) else { return }
+        axSelect(index)
+        // A dirty, unbalanced draft elsewhere refuses to be left; don't then
+        // open an editor on a row the sheet declined to select.
+        guard selectedTxn == rows[index].txn else { return }
+        editExpanded()
+    }
+
+    fileprivate func axCanReconcile(_ index: Int) -> Bool {
+        rows.indices.contains(index) && rows[index].base.anchorSplit != nil
+    }
+
+    fileprivate func axCycleReconcile(_ index: Int) {
+        guard rows.indices.contains(index),
+              let split = rows[index].base.anchorSplit else { return }
+        model.cycleReconcileState(splitID: split)
+        damageBlock(ofTxn: rows[index].txn)
+    }
+
+    /// Reconcile states a rotor treats as still needing attention: GnuCash's
+    /// `n` (and the empty state), never `c`/`y`/`f`/`v`.
+    fileprivate func axIsUnreconciled(_ index: Int) -> Bool {
+        guard rows.indices.contains(index) else { return false }
+        let base = rows[index].base
+        guard !base.isHeadingOnly else { return false }
+        return !["c", "y", "f", "v"].contains(base.reconcile)
     }
 
     // MARK: Inputs from SwiftUI (updateNSView)
@@ -489,6 +647,11 @@ private final class SheetView: NSView, NSTextFieldDelegate {
             monoFont = NSFont.monospacedDigitSystemFont(ofSize: 13 * fontScale,
                                                         weight: .regular)
             smallFont = NSFont.systemFont(ofSize: 11 * fontScale)
+            // The header strip and the suggestions popup are separate views;
+            // they scale with the register or Dynamic Type stops at its edge.
+            suggestions.fontScale = fontScale
+            header?.fontScale = fontScale
+            header?.superview?.needsLayout = true
             rebuildGeometry()
             needsDisplay = true
             positionEditor()
@@ -570,6 +733,7 @@ private final class SheetView: NSView, NSTextFieldDelegate {
         if let c = cursor, cellRect(of: c) == nil { setCursor(nil) }
         mirrorSelection()
         rebuildGeometry()
+        invalidateAccessibilityTree()
         needsDisplay = true
         positionEditor()
     }
@@ -1090,6 +1254,9 @@ private final class SheetView: NSView, NSTextFieldDelegate {
         selectedTxn = txns.count == 1 ? txns.first : nil
         damageBlocks(before.union(txns))
         mirrorSelection()
+        if before != txns {
+            NSAccessibility.post(element: self, notification: .selectedRowsChanged)
+        }
         if armsOnSelection, draft == nil, let txn = selectedTxn {
             beginEdit(transaction: txn, expanded: false)
             damageBlock(ofTxn: txn)
@@ -1239,14 +1406,59 @@ private final class SheetView: NSView, NSTextFieldDelegate {
     }
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
-        if event.modifierFlags.contains(.command),
-           !event.modifierFlags.contains(.shift),
-           event.charactersIgnoringModifiers?.lowercased() == "e",
-           selectedTxn != nil || draft != nil {
+        let flags = event.modifierFlags
+            .intersection([.command, .shift, .option, .control])
+        let key = event.charactersIgnoringModifiers?.lowercased()
+
+        if flags == .command, key == "e", selectedTxn != nil || draft != nil {
             editExpanded()
             return true
         }
+        // Three gestures were mouse-only: the R column, the Add Split line and
+        // the split remove hotspot are pixel targets no keyboard could reach.
+        // GnuCash makes reconcile a tab stop that cycles the flag the moment
+        // the cursor enters it (`gnc_recn_cell_enter`, recncell.c) — we keep
+        // its cell but require an explicit key, because changing stored data
+        // as a side effect of moving focus is a trap for anyone tabbing
+        // through. ⌥ ⌘ keeps all three clear of the app's existing bindings.
+        if flags == [.command, .option] {
+            if key == "r" { return cycleReconcileUnderCursor() }
+            if key == "a" { return appendSplitByKey() }
+            if event.keyCode == 51 { return removeSplitUnderCursor() }   // ⌫
+        }
         return super.performKeyEquivalent(with: event)
+    }
+
+    /// ⌥⌘R — cycle the reconcile state of the leg under the cursor, else of
+    /// the selected transaction. The mouse spelling is a click in the R column.
+    private func cycleReconcileUnderCursor() -> Bool {
+        if let cursor, let id = lineID(of: cursor.field), let d = draft,
+           let line = d.lines.first(where: { $0.id == id }), let split = line.splitID {
+            model.cycleReconcileState(splitID: split)
+            damageBlock(ofTxn: d.transactionID)
+            return true
+        }
+        guard let txn = selectedTxn, let index = indexByTxn[txn],
+              axCanReconcile(index) else { return false }
+        axCycleReconcile(index)
+        return true
+    }
+
+    /// ⌥⌘A — the Add Split line's keyboard equivalent.
+    private func appendSplitByKey() -> Bool {
+        guard draft?.isExpanded == true else { return false }
+        appendLine()
+        return true
+    }
+
+    /// ⌥⌘⌫ — the remove hotspot's keyboard equivalent, on the leg holding the
+    /// cursor. Two legs is the floor, exactly as the hotspot enforces.
+    private func removeSplitUnderCursor() -> Bool {
+        guard let cursor, let id = lineID(of: cursor.field), let d = draft,
+              d.lines.count > 2, d.lines.contains(where: { $0.id == id })
+        else { return false }
+        removeLine(id)
+        return true
     }
 
     // MARK: Cursor + the one editor (gnc_item_edit_configure/update)
@@ -1839,6 +2051,222 @@ private final class SheetView: NSView, NSTextFieldDelegate {
     }
 }
 
+// MARK: - Accessibility proxies (the sheet draws rows; AX needs objects)
+
+/// One VoiceOver row per transaction block. Holds nothing but an index — every
+/// label, value and frame is asked of the sheet at the moment AX wants it, so
+/// a proxy can never go stale against the drawn register.
+// These proxies are deliberately **not** `@MainActor` classes. They override
+// AppKit's accessibility entry points, and `NSAccessibilityElement` — unlike
+// `NSView` — carries no main-actor annotation, so an override cannot claim
+// isolation its superclass does not have. Every hop is therefore explicit,
+// the same shape the suggestions table's `NSTableViewDataSource` uses above,
+// and each method binds plain locals first so a non-Sendable `self` is never
+// sent into the closure. AX calls arrive on the main thread, which is what
+// makes both the `assumeIsolated` hops and the `@unchecked Sendable` sound.
+
+/// One VoiceOver row per transaction block. Holds nothing but an index — every
+/// label, value and frame is asked of the sheet at the moment AX wants it, so
+/// a proxy can never go stale against the drawn register.
+///
+/// The `NSAccessibilityElement` *class* conforms to `NSAccessibility`, not to
+/// the same-named protocol (`NSAccessibilityElementProtocol` in Swift) that a
+/// rotor's `ItemResult` demands, so that conformance is declared here. Both of
+/// its requirements — `accessibilityFrame`, `accessibilityParent` — are met.
+private final class SheetAXRow: NSAccessibilityElement, NSAccessibilityElementProtocol,
+                                @unchecked Sendable {
+    private weak var sheet: SheetView?
+    let index: Int
+    private var cellCache: [SheetAXCell]?
+
+    @MainActor
+    init(sheet: SheetView, index: Int) {
+        self.sheet = sheet
+        self.index = index
+        super.init()
+        setAccessibilityParent(sheet)
+    }
+
+    // No `accessibilityRoleDescription` override: AppKit's own description for
+    // `.row` is already localised into every system language, which a string
+    // of ours would only be in the eight the catalog carries.
+    override func accessibilityRole() -> NSAccessibility.Role? { .row }
+    /// Spelled out because the protocol wants a non-optional `String` and the
+    /// inherited `NSAccessibility` version disagrees on optionality.
+    override func accessibilityIdentifier() -> String { "register-row-\(index)" }
+    override func accessibilityIndex() -> Int { index }
+    override func isAccessibilityElement() -> Bool { true }
+
+    override func accessibilityLabel() -> String? {
+        let (sheet, index) = (self.sheet, self.index)
+        return MainActor.assumeIsolated { sheet?.axRowSummary(index) }
+    }
+
+    override func accessibilityFrame() -> NSRect {
+        let (sheet, index) = (self.sheet, self.index)
+        return MainActor.assumeIsolated { sheet?.axScreenRect(ofBlock: index) ?? .zero }
+    }
+
+    override func isAccessibilitySelected() -> Bool {
+        let (sheet, index) = (self.sheet, self.index)
+        return MainActor.assumeIsolated { sheet?.axIsSelected(index) ?? false }
+    }
+
+    override func setAccessibilitySelected(_ selected: Bool) {
+        guard selected else { return }
+        let (sheet, index) = (self.sheet, self.index)
+        MainActor.assumeIsolated { sheet?.axSelect(index) }
+    }
+
+    override func accessibilityChildren() -> [Any]? {
+        if cellCache == nil {
+            let (sheet, index) = (self.sheet, self.index)
+            let built: [SheetAXCell]? = MainActor.assumeIsolated {
+                guard let sheet else { return nil }
+                return SheetColumn.allCases
+                    .filter { $0 != .handle }       // the handle is decoration
+                    .map { SheetAXCell(sheet: sheet, rowIndex: index, column: $0) }
+            }
+            // Parenting happens out here, where `self` is simply self.
+            built?.forEach { $0.setAccessibilityParent(self) }
+            cellCache = built
+        }
+        return cellCache
+    }
+
+    /// Everything the mouse can do to a row, offered to VoiceOver's actions
+    /// menu — the gestures themselves (a click in the R column, the remove
+    /// hotspot) are pixel targets an assistive client cannot reach.
+    override func accessibilityCustomActions() -> [NSAccessibilityCustomAction] {
+        let (sheet, index) = (self.sheet, self.index)
+        var actions = [
+            NSAccessibilityCustomAction(name: String(localized: "Edit Transaction")) {
+                MainActor.assumeIsolated { sheet?.axEdit(index) }
+                return true
+            },
+        ]
+        let canReconcile = MainActor.assumeIsolated {
+            sheet?.axCanReconcile(index) ?? false
+        }
+        if canReconcile {
+            actions.append(NSAccessibilityCustomAction(
+                name: String(localized: "Cycle Reconcile State")) {
+                MainActor.assumeIsolated { sheet?.axCycleReconcile(index) }
+                return true
+            })
+        }
+        return actions
+    }
+}
+
+/// One cell of a row. Reads its text from the sheet on demand, same as the row.
+private final class SheetAXCell: NSAccessibilityElement, @unchecked Sendable {
+    private weak var sheet: SheetView?
+    private let rowIndex: Int
+    private let column: SheetColumn
+
+    @MainActor
+    init(sheet: SheetView, rowIndex: Int, column: SheetColumn) {
+        self.sheet = sheet
+        self.rowIndex = rowIndex
+        self.column = column
+        super.init()
+    }
+
+    override func accessibilityRole() -> NSAccessibility.Role? { .cell }
+    override func isAccessibilityElement() -> Bool { true }
+    override func accessibilityLabel() -> String? { column.title }
+
+    override func accessibilityValue() -> Any? {
+        // Typed as String, not Any: only a Sendable value may cross the hop.
+        let (sheet, rowIndex, column) = (self.sheet, self.rowIndex, self.column)
+        let text: String? = MainActor.assumeIsolated {
+            sheet?.axCellText(column, at: rowIndex)
+        }
+        return text
+    }
+
+    override func accessibilityFrame() -> NSRect {
+        let (sheet, rowIndex, column) = (self.sheet, self.rowIndex, self.column)
+        return MainActor.assumeIsolated {
+            sheet?.axScreenRect(of: column, block: rowIndex) ?? .zero
+        }
+    }
+}
+
+/// A drawn column heading, as a button VoiceOver can read and press. Sorting
+/// is also on the toolbar's Sort menu, so this is perception, not the only path.
+private final class SheetAXColumnHeader: NSAccessibilityElement, @unchecked Sendable {
+    private weak var header: SheetHeaderView?
+    private let column: SheetColumn
+
+    @MainActor
+    init(header: SheetHeaderView, column: SheetColumn) {
+        self.header = header
+        self.column = column
+        super.init()
+        setAccessibilityParent(header)
+    }
+
+    override func accessibilityRole() -> NSAccessibility.Role? {
+        column.sortable ? .button : .staticText
+    }
+    override func isAccessibilityElement() -> Bool { true }
+    override func accessibilityLabel() -> String? { column.title }
+    override func isAccessibilityEnabled() -> Bool { column.sortable }
+
+    override func accessibilityValue() -> Any? {
+        let (header, column) = (self.header, self.column)
+        let text: String? = MainActor.assumeIsolated { header?.axSortDescription(column) }
+        return text
+    }
+
+    override func accessibilityFrame() -> NSRect {
+        let (header, column) = (self.header, self.column)
+        return MainActor.assumeIsolated { header?.axScreenRect(of: column) ?? .zero }
+    }
+
+    override func accessibilityPerformPress() -> Bool {
+        guard column.sortable else { return false }
+        let (header, column) = (self.header, self.column)
+        MainActor.assumeIsolated { header?.axSort(column) }
+        return true
+    }
+}
+
+/// AppKit's rotor equivalent of the Table register's `.accessibilityRotor`.
+/// The conformance is `@MainActor`-isolated rather than `nonisolated`: the
+/// result is an `ItemResult`, which is not `Sendable`, so it cannot be handed
+/// back out of a `MainActor.assumeIsolated` block. AX calls arrive on the main
+/// thread anyway.
+@MainActor
+private final class UnreconciledRotor:
+    NSObject, @MainActor NSAccessibilityCustomRotorItemSearchDelegate {
+    private weak var sheet: SheetView?
+
+    init(sheet: SheetView) {
+        self.sheet = sheet
+        super.init()
+    }
+
+    func rotor(
+        _ rotor: NSAccessibilityCustomRotor,
+        resultFor parameters: NSAccessibilityCustomRotor.SearchParameters
+    ) -> NSAccessibilityCustomRotor.ItemResult? {
+        guard let sheet else { return nil }
+        let forward = parameters.searchDirection == .next
+        let current = (parameters.currentItem?.targetElement as? SheetAXRow)?.index
+        let start = current ?? (forward ? -1 : sheet.axRowCount)
+        let candidates = forward
+            ? Array(stride(from: start + 1, to: sheet.axRowCount, by: 1))
+            : Array(stride(from: start - 1, through: 0, by: -1))
+        guard let hit = candidates.first(where: { sheet.axIsUnreconciled($0) }),
+              sheet.axRows.indices.contains(hit)
+        else { return nil }
+        return NSAccessibilityCustomRotor.ItemResult(targetElement: sheet.axRows[hit])
+    }
+}
+
 // MARK: - The one text field
 
 /// Chromeless single-line field: the sheet draws the focus ring and the
@@ -1873,6 +2301,8 @@ private final class SuggestionsController: NSObject, NSTableViewDataSource,
     private var table = NSTableView()
     private var matches: [AccountNode] = []
     var onPick: ((AccountNode) -> Void)?
+    /// Dynamic Type: the popup is its own window, so it has to be told.
+    var fontScale: CGFloat = 1
 
     var isVisible: Bool { panel?.isVisible ?? false }
     var highlighted: AccountNode? {
@@ -1888,12 +2318,13 @@ private final class SuggestionsController: NSObject, NSTableViewDataSource,
             return
         }
         let panel = ensurePanel()
+        table.rowHeight = ceil(19 * fontScale)
         table.reloadData()
         if table.selectedRow < 0, !matches.isEmpty {
             table.selectRowIndexes([0], byExtendingSelection: false)
         }
         let rowHeight = table.rowHeight + table.intercellSpacing.height
-        let height = min(CGFloat(matches.count) * rowHeight + 4, 240)
+        let height = min(CGFloat(matches.count) * rowHeight + 4, ceil(240 * fontScale))
         let screenRect = window.convertToScreen(fieldRectInWindow)
         panel.setFrame(CGRect(x: screenRect.minX,
                               y: screenRect.minY - height - 2,
@@ -1963,7 +2394,7 @@ private final class SuggestionsController: NSObject, NSTableViewDataSource,
         MainActor.assumeIsolated {
             guard matches.indices.contains(row) else { return nil }
             let text = NSTextField(labelWithString: matches[row].fullName)
-            text.font = NSFont.systemFont(ofSize: 12)
+            text.font = NSFont.systemFont(ofSize: 12 * fontScale)
             text.lineBreakMode = .byTruncatingMiddle
             return text
         }
@@ -1987,13 +2418,53 @@ private final class SheetHeaderView: NSView {
         }
     }
     var onSort: ((SheetColumn) -> Void)?
+    var fontScale: CGFloat = 1 {
+        didSet { if fontScale != oldValue { needsDisplay = true } }
+    }
+
+    /// The strip grows with Dynamic Type, or large text clips against 26pt.
+    var preferredHeight: CGFloat { ceil(SheetMetrics.headerHeight * fontScale) }
 
     override var isFlipped: Bool { true }
+
+    // MARK: Accessibility — the headings are drawn, so AX needs objects
+
+    override func isAccessibilityElement() -> Bool { false }
+    override func accessibilityRole() -> NSAccessibility.Role? { .group }
+    override func accessibilityLabel() -> String? {
+        String(localized: "Column headers")
+    }
+    override func accessibilityChildren() -> [Any]? {
+        if let axHeaderCache { return axHeaderCache }
+        let built = SheetColumn.allCases
+            .filter { !$0.title.isEmpty }
+            .map { SheetAXColumnHeader(header: self, column: $0) }
+        axHeaderCache = built
+        return built
+    }
+    private var axHeaderCache: [SheetAXColumnHeader]?
+
+    fileprivate func axScreenRect(of column: SheetColumn) -> NSRect {
+        guard let window else { return .zero }
+        let rect = frames.rect(column, y: 0, height: bounds.height)
+        return window.convertToScreen(convert(rect, to: nil))
+    }
+
+    fileprivate func axSort(_ column: SheetColumn) {
+        guard column.sortable else { return }
+        onSort?(column)
+    }
+
+    fileprivate func axSortDescription(_ column: SheetColumn) -> String? {
+        guard let sortState, sortState.column == column else { return nil }
+        return sortState.reversed ? String(localized: "sorted descending")
+                                  : String(localized: "sorted ascending")
+    }
 
     override func draw(_ dirtyRect: NSRect) {
         NSColor.windowBackgroundColor.setFill()
         dirtyRect.fill()
-        let font = NSFont.systemFont(ofSize: 11, weight: .medium)
+        let font = NSFont.systemFont(ofSize: 11 * fontScale, weight: .medium)
         for column in SheetColumn.allCases {
             let rect = frames.rect(column, y: 0, height: bounds.height)
             let para = NSMutableParagraphStyle()
@@ -2065,11 +2536,11 @@ private final class SheetContainerView: NSView {
 
     override func layout() {
         super.layout()
-        let header = CGRect(x: 0, y: bounds.height - SheetMetrics.headerHeight,
-                            width: bounds.width, height: SheetMetrics.headerHeight)
-        headerView.frame = header
+        let headerHeight = headerView.preferredHeight
+        headerView.frame = CGRect(x: 0, y: bounds.height - headerHeight,
+                                  width: bounds.width, height: headerHeight)
         scrollView.frame = CGRect(x: 0, y: 0, width: bounds.width,
-                                  height: bounds.height - SheetMetrics.headerHeight)
+                                  height: bounds.height - headerHeight)
         // The shell's entry/summary bars arrive as safe-area insets; keep the
         // last transaction scrollable above them.
         scrollView.contentInsets = NSEdgeInsets(top: 0, left: 0,
