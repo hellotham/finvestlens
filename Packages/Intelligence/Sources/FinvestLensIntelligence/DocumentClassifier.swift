@@ -37,6 +37,33 @@ public enum FinancialDocumentKind: String, Sendable, CaseIterable {
 /// never be the step that fails a whole import batch.
 public enum DocumentClassifier {
 
+    /// Whether a document is a security paying its holder — a dividend, an ETF
+    /// or trust distribution, a capital-note interest payment.
+    ///
+    /// This decides *direction*: money coming in rather than going out. Get it
+    /// wrong and the document is hunted for among purchases, so a distribution
+    /// sitting in the book on the right day for the right amount is never
+    /// found. That is not hypothetical — it cost 10 of 17 real statements
+    /// before this existed.
+    ///
+    /// Two independent signals are required, which is what keeps a shop
+    /// receipt out: what is being paid (a dividend or a distribution), and the
+    /// registry vocabulary that only a holding statement uses. Requiring
+    /// *franking* language instead was the original rule, and Australian
+    /// paperwork does not cooperate with it — a NAB capital-note advice says
+    /// "distribution" and never "dividend", while a Vanguard advice says
+    /// "dividend" and never "franked". Each failed a different half of that
+    /// test; both name a payment date and a record date.
+    public static func isSecurityIncome(_ text: String) -> Bool {
+        let lower = text.lowercased()
+        func containsAny(_ needles: [String]) -> Bool { needles.contains { lower.contains($0) } }
+        let payment = containsAny(["dividend", "distribution"])
+        let registry = containsAny(["payment date", "record date", "franking", "franked",
+                                    "imputation", "ex-date", "ex date", "securities held",
+                                    "units held", "holder identification", "reinvestment plan"])
+        return payment && registry
+    }
+
     /// Deterministic fallback. Order matters: a "dividend statement" contains
     /// the word "statement", so dividends are recognised first.
     public static func classifyByKeywords(_ text: String) -> FinancialDocumentKind {

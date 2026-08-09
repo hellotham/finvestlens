@@ -8,7 +8,7 @@ FinvestLens is a native Apple double-entry accounting app (macOS 26 / iPadOS 26 
 
 ## Commands
 
-Everything needs Swift 6.2 (Xcode 26). Ten local SPM packages live under `Packages/`; each builds and tests on its own.
+Everything needs Swift 6.2 (Xcode 26). Eleven local SPM packages live under `Packages/`; each builds and tests on its own.
 
 ```bash
 swift test --package-path Packages/Engine                      # one package's suite
@@ -18,7 +18,7 @@ swift test --package-path Packages/Engine --filter AutoClearTests   # one suite 
 The full pre-commit sweep:
 
 ```bash
-for p in Engine Persistence Interchange Quotes Rules Reports Intelligence FeatureUI CLI; do
+for p in Engine Persistence Interchange Quotes Rules Reports Intelligence FeatureUI CLI Lab; do
   swift test --package-path "Packages/$p" || break
 done
 swift test --package-path Packages/Shared --skip writeReadRoundTripThroughAppGroup
@@ -46,6 +46,8 @@ reading another's data and puts up "would like to access data from other apps"; 
 signature changes with every build, so TCC forgets the grant and asks again every launch.
 
 The CLI builds with `swift build -c release --package-path Packages/CLI` (binary at `Packages/CLI/.build/release/finlens`); [docs/cli.md](docs/cli.md) is its manual. It is read-only **by design** — never add a command that writes to a book.
+
+Everything headless that *writes* belongs to **`finlab`** instead (`Packages/Lab`, binary at `Packages/Lab/.build/release/finlab`, manual in [docs/lab.md](docs/lab.md)): GnuCash→book import, price refresh, document ingestion, and the open/save benchmarks. It is the only package that depends on `FeatureUI`, deliberately — it drives the real `AppModel`, so a maintenance run exercises the same matching and categorisation code the app does instead of a copy that can drift.
 
 Website (`website/`, Astro 7 + Tailwind 4, served at `hellotham.com/finvestlens/`): `npm ci`, then `npm run dev` / `npm run build`. After editing the in-app help (`Packages/FeatureUI/Sources/FinvestLensUI/HelpContent.swift`), run `node scripts/build-manual.mjs` in `website/` and commit the regenerated `src/data/manual.json` — CI fails if it drifts. The site serves under the `/finvestlens` base path: route every internal href and asset through `url()` from `src/data/site.ts`, never a bare absolute path (those 404 on Pages).
 

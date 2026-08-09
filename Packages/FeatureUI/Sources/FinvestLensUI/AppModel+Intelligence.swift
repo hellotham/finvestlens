@@ -222,6 +222,15 @@ extension AppModel {
         .bank, .cash, .credit, .asset, .liability, .receivable, .payable,
     ]
 
+    /// How far from a document's own date a transaction may sit and still be
+    /// the one it belongs to.
+    ///
+    /// Wide enough for a card purchase to settle and for a receipt date to be
+    /// read a day or two out; narrow enough that it still means something on a
+    /// book with tens of thousands of transactions, where an amount alone
+    /// identifies nothing.
+    static let matchWindowDays = 14
+
     private static func isMoneyLeg(_ split: Split) -> Bool {
         split.account.map { attachmentMoneyTypes.contains($0.type) && !$0.isWash } ?? false
     }
@@ -335,8 +344,9 @@ extension AppModel {
 
             match.documentDate = candidateDates.first
             match.candidateAmounts = (doc.amount.map { [$0] } ?? []) + doc.fallbackAmounts
-            // A dividend statement pays IN; every other document is a purchase.
-            let spending = doc.dividend == nil
+            // A dividend or distribution statement pays IN; every other
+            // document is a purchase.
+            let spending = !doc.isIncome
             match.vendor = doc.invoice?.vendor
             match.currencyHint = doc.currencyHint
             if let already = attachedByName[url.lastPathComponent.lowercased()] {
@@ -418,6 +428,13 @@ extension AppModel {
         var note: String?
         var dividend: DividendStatementDetails?
         var invoice: InvoiceAnalysis?
+        /// The document is a security paying its holder, so the money moves
+        /// *in*. Read from the text itself rather than inferred from whether
+        /// ``dividend`` came back: extraction can decline a statement it
+        /// cannot parse, and a declined dividend statement is still not a
+        /// purchase. Inferring it meant one failed model call turned a
+        /// distribution into something hunted for among the week's spending.
+        var isIncome = false
         /// Money-looking amounts scanned from the OCR text (largest first) —
         /// the match fallback when the model can't name a total.
         var fallbackAmounts: [Decimal] = []
@@ -456,8 +473,12 @@ extension AppModel {
             doc.note = "Couldn’t read the file."
             return doc
         }
-        let lower = text.lowercased()
-        if lower.contains("dividend"), lower.contains("frank") || lower.contains("imputation") {
+        // Shared with every other place that has to tell an income document
+        // from a purchase, rather than a second keyword test living here —
+        // this one used to demand both "dividend" and franking language, which
+        // no ETF or capital-note distribution statement satisfies.
+        doc.isIncome = DocumentClassifier.isSecurityIncome(text)
+        if doc.isIncome {
             doc.dividend = try? await DividendExtractor.extract(text: String(text.prefix(4000)))
         }
         if doc.dividend == nil || (doc.dividend?.netPayment ?? 0) <= 0 {
@@ -611,8 +632,25 @@ extension AppModel {
     }
 
     /// The already-linked transaction an amount most plausibly refers to: the
-    /// one closest to the document date (else closest to now), within a year.
-    private func linkedCandidate(amount: Decimal, spending: Bool, near date: Date?) -> Transaction? {
+    /// one closest to the document date, and near it.
+    ///
+    /// This once searched a whole year either side, on the reasoning that the
+    /// point was diagnosis and the amount narrowed it enough. On a real book
+    /// the amount does not narrow it at all. Everyday spending is full of
+    /// common round totals, so on 46,578 transactions *some* already-linked
+    /// transaction of $18.00 or $9.00 is essentially always within a year —
+    /// and the note it produced read "Matches 13/3/2026 · Coles Supermarkets
+    /// · −$18.00" for a café receipt dated 20 January. Confidently wrong, and
+    /// worse than saying nothing: it invites someone to believe their receipt
+    /// has been found where it has not.
+    ///
+    /// So when the document has a date, the candidate must be near it — the
+    /// same ``matchWindowDays`` a real match must satisfy, because a claim of
+    /// "this is your transaction, already linked" should have to clear the
+    /// same bar as a claim of "this is your transaction". Only a document
+    /// whose date could not be read at all falls back to the loose search,
+    /// where there is nothing better to go on.
+    func linkedCandidate(amount: Decimal, spending: Bool, near date: Date?) -> Transaction? {
         guard let book else { return nil }
         let reference = date ?? Date()
         var best: (txn: Transaction, distance: TimeInterval)?
@@ -623,7 +661,8 @@ extension AppModel {
             let distance = abs(txn.datePosted.timeIntervalSince(reference))
             if best == nil || distance < best!.distance { best = (txn, distance) }
         }
-        guard let best, best.distance <= 365 * 86_400 else { return nil }
+        let limit = date == nil ? 365.0 * 86_400 : Double(Self.matchWindowDays) * 86_400
+        guard let best, best.distance <= limit else { return nil }
         return best.txn
     }
 
@@ -684,7 +723,7 @@ extension AppModel {
             if let date {
                 days = abs(calendar.dateComponents([.day], from: calendar.startOfDay(for: date),
                                                    to: calendar.startOfDay(for: txn.datePosted)).day ?? 999)
-                guard days <= 14 else { continue }
+                guard days <= Self.matchWindowDays else { continue }
             } else {
                 days = 0
             }

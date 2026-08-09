@@ -20,6 +20,14 @@ import FinvestLensInterchange
 import FinvestLensIntelligence
 @testable import FinvestLensUI
 
+/// A `yyyy-MM-dd` day, for tests that care which day something is on.
+private func day(_ text: String) -> Date? {
+    let formatter = DateFormatter()
+    formatter.dateFormat = "yyyy-MM-dd"
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    return formatter.date(from: text)
+}
+
 private func tempURL() -> URL {
     FileManager.default.temporaryDirectory
         .appendingPathComponent(UUID().uuidString)
@@ -145,6 +153,47 @@ struct IntelligenceIntegrationTests {
 
         // Idempotent: a second pass changes nothing.
         #expect(model.reconcileMatchedDuplicates(results) == 0)
+    }
+
+    @Test("An already-linked transaction is only blamed when it is near the document")
+    func linkedCandidateStaysNearTheDocument() throws {
+        // Found on a real 46,578-transaction book: the "…but that transaction
+        // already has an attachment" note searched a year either side on the
+        // reasoning that the amount narrowed it enough. Everyday spending is
+        // full of common round totals, so it always found *something* — a café
+        // receipt from January was reported as matching a supermarket purchase in
+        // March. The note has to clear the same date bar as a real match.
+        let url = tempURL()
+        defer { try? FileManager.default.removeItem(at: url) }
+        let model = AppModel()
+        try model.newDocument(at: url)
+        defer { model.close() }
+
+        let card = try #require(model.addAccount(name: "Card", type: .credit))
+        let shopping = try #require(model.addAccount(name: "Shopping", type: .expense))
+        let january = try #require(day("2026-01-20"))
+        let march = try #require(day("2026-03-13"))
+
+        // One $18.00 purchase, months away from the document, already linked.
+        let far = try model.addTransaction(
+            date: march, description: "SUPERMARKET", currency: .aud,
+            splits: [SplitInput(accountID: card, value: -18), SplitInput(accountID: shopping, value: 18)])
+        model.setDocumentLink("other.png", for: far)
+
+        // Nothing within the window of a 20 January receipt for $18.00.
+        #expect(model.linkedCandidate(amount: 18, spending: true, near: january) == nil)
+        // With no readable document date there is nothing better to go on, so
+        // the loose search still answers.
+        #expect(model.linkedCandidate(amount: 18, spending: true, near: nil) != nil)
+
+        // A second $18.00 purchase, this time three days from the receipt, is
+        // exactly what the note is for.
+        let threeDaysLater = try #require(day("2026-01-23"))
+        let near = try model.addTransaction(
+            date: threeDaysLater, description: "CAFE", currency: .aud,
+            splits: [SplitInput(accountID: card, value: -18), SplitInput(accountID: shopping, value: 18)])
+        model.setDocumentLink("receipt.png", for: near)
+        #expect(model.linkedCandidate(amount: 18, spending: true, near: january)?.guid == near)
     }
 
     @Test("Budget suggestions create or update the monthly budget")

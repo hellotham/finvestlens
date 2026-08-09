@@ -20,6 +20,155 @@ Companions: [PRD](prd.md) · [Architecture](architecture.md) · [Plan](plan.md) 
 
 ---
 
+## Large-book validation on real NAS hardware, and `finlab` (10 Aug 2026)
+
+The last item in [deferred.md](deferred.md) §1 that said "needs real NAS
+hardware". A live GnuCash book was imported to an SMB share and worked on
+headlessly: prices refreshed, four months of receipts and dividend statements
+matched, attached and categorised.
+
+### `finlab` — the write side of the command line
+
+`finlens` is read-only by design (ADR-L2), and that promise was worth keeping,
+so none of this was added to it. `Packages/Lab` is a new package whose binary
+`finlab` carries four verbs — `import`, `bench`, `prices`, `documents` —
+documented in [lab.md](lab.md).
+
+It is the only package that depends on **FeatureUI**, deliberately.
+Attachment matching, smart categorisation and quote fetching all live on
+`AppModel`, which despite its module imports no SwiftUI and was already driven
+headlessly by that package's own tests. Driving it means a maintenance run
+exercises the code the app runs, rather than a second implementation free to
+drift from it. The app target and `finlab` are two thin shells over one model.
+
+### NFR-02 measured
+
+A 46,578-transaction / 103,365-posting / 559-account / 54 MB book, on an SMB
+share (`//nas3._smb._tcp.local`, 23.9 MB/s read, 57.5 MB/s write) and on the
+local SSD.
+
+| | Local SSD | SMB share |
+| --- | --- | --- |
+| GnuCash import (8.1 MB gzip → 127 MB XML) | — | 32.3 s (20.8 s parse + 11.5 s write-back) |
+| Open read-only (copy + read) | 1.82 s | 3.51 s |
+| ├ copy to local working copy | 0 ms | 972 ms |
+| ├ open SQLite + migrate | 1 ms | 1 ms |
+| └ materialise the book | 1.75 s | 1.60 s |
+| Open read-write (lock + copy + read) | 1.87 s | 5.08 s |
+| Whole-book write to local SQLite | 8.80 s | 8.81 s |
+| Save (fingerprint ×2 + write-back) | 9.22 s | 15.40 s |
+| **Read SQLite directly across the wire** | — | **40.56 s** |
+
+Import fidelity was checked by reading both files with `finlens stats`: unique
+payees, accounts, transactions, postings, uncleared postings and date span all
+identical.
+
+### The open architecture decision, closed
+
+Whether to skip the working-copy hop on local volumes (§6.2) is settled:
+**always working-copy, and direct mode is not built.**
+
+- **Locally there is nothing to win.** The hop costs **0 ms**, because copying
+  a file on APFS is a clone.
+- **Remotely it costs 11.6×.** Reading the same book without the hop took
+  **40.56 s against 3.51 s**, and only 1.96 s of that was CPU — the rest is
+  SQLite's small random reads each paying network latency, which is the exact
+  hazard §6 opens with.
+
+A trade-off with no upside on one side and an order of magnitude on the other
+is not a trade-off. ADR-8 stands unqualified.
+
+Two things the numbers say about where time actually goes: the **whole-book
+write is 8.8 s and identical on both volumes**, so a save is dominated by
+serialisation rather than by the network — incremental persistence
+(architecture.md §5.2) is the lever if save latency ever matters, not faster
+IO. And the network part of a save is ~6 s of a 15 s total, which is the two
+full-file SHA-256 fingerprints plus the temp copy and replace: four traversals
+of a 54 MB file, not one.
+
+### Four months of documents, matched and filed
+
+Jan–Apr 2026, through `AppModel.matchAttachments` — the app's own matcher.
+
+| | Documents | Matched | Attached | Categorised |
+| --- | --- | --- | --- | --- |
+| Receipts and invoices | 183 (97 duplicates skipped) | 164 (90%) | 164 | 152 |
+| Dividend / distribution statements | 17 (2 already linked) | 14 (82%) | 13 | 11 |
+
+The book afterwards: **46,578 transactions, unchanged** — nothing was created
+or destroyed. Postings 103,365 → 103,558 and accounts 492 → 499, both from
+itemised invoice splits and the dividend income accounts created on demand.
+Uncategorised postings in `Imbalance-AUD` fell **438 → 277**: 161 legs left the
+wash account for real categories.
+
+Worth knowing when checking that figure: the wash account's *balance* moves
+**further from zero** when categorisation succeeds, which reads like damage and
+is the opposite. The legs being removed are the positive counter-legs of card
+spending, so taking them out makes a negative balance more negative. The way to
+confirm a run did no harm is that the balance moved by exactly the sum of the
+legs that left, and that the transaction count did not change at all.
+
+What is left unmatched is left honestly. Of 19 receipts: **8 are
+foreign-currency** (6 NZD, 2 MYR), where no amount printed on the receipt can
+ever equal the AUD posting; the other **11 have no corresponding transaction in
+the book at all** — checked by searching the Jan–Apr postings for each amount
+and finding none. Of 4 statements, all four are a *second file* for a payment
+its twin already claimed (PL8, NAB and Telstra each arrive under two
+filenames), which is the correct outcome for one payment.
+
+### Two matcher defects, found only because real documents were used
+
+**Distributions were hunted among purchases.** `parseAttachment` decided a
+document was income by requiring the text to contain "dividend" *and*
+("frank" or "imputation"). Australian registries do not cooperate: a NAB
+capital-note advice says "distribution" and never "dividend"; a Vanguard
+advice says "dividend" and never "franked". Each failed a different half of
+the test, fell through to the invoice path, and was searched for as money
+going *out* — so a distribution sitting in the book on the exact day for the
+exact amount was never found. Verified two ways: from the documents' own
+vocabulary (`payment date` and `record date` appear in every one of them, while
+"dividend" and "franked" each appear in only some), and from the book — for six
+of the failing statements the deposit was present on exactly the day the advice
+named, for exactly the amount it stated, and still went unmatched.
+
+The test now lives in `DocumentClassifier.isSecurityIncome` beside the
+classifier that already existed for this and was going unused, and requires
+two independent signals: what is being paid, and registry vocabulary. It took
+dividend matching from **6/17 to 14/17**. Direction is also now read from the
+document rather than inferred from `dividend != nil`, so a model call that
+declines a statement no longer turns it into a purchase.
+
+**"…already has an attachment" was confidently wrong.** That note searched a
+year either side for a linked transaction of the same amount, on the reasoning
+that the amount narrowed it enough. On 46,578 transactions it does not narrow
+it at all — everyday spending is full of common round totals — so the note
+reported a café receipt dated in January as matching a supermarket purchase
+almost two months later, and named an unrelated shop for another. A claim
+that "this is your transaction, already linked" now has to clear the same
+14-day bar as a claim that "this is your transaction"; only a document whose
+date could not be read at all still falls back to the loose search.
+
+### Defects found and fixed
+
+- **`documents` leaked the book lock.** A headless session drives no
+  heartbeat, so a leaked lock does not merely linger — it stays *fresh* for
+  its full 90-second staleness window and refuses the next run, including an
+  immediate retry, rather than letting it break the lock.
+- **A destination file that does not exist yet has no volume.** Probing the
+  *file* to decide local-vs-network threw and fell back to "local", reporting
+  an SMB share as local for as long as it took to notice. Probing the
+  enclosing directory as a fallback fixes it.
+- **Modification time is not a document date, and the failure is not
+  random.** In the real statement tree most genuine Jan–Apr documents carried
+  May–July mtimes (bulk-downloaded later) while a pile of 2024–2025 statements
+  carried January 2026 mtimes (bulk-downloaded then) — sorting on mtime gets
+  both halves wrong. `DocumentDate` reads names most-semantic-first instead, so
+  a registry's own `period end 31 january 2026` outranks the
+  `2026-05-01_17-25-58` download stamp in the same filename. Nineteen 2024–2025
+  Plato statements were being pulled into the period before that rule existed.
+
+---
+
 ## In-app help book (25 Jul 2026)
 
 The Help menu opened a 72-line sheet: a paragraph on getting started, the search
