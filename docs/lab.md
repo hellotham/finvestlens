@@ -108,6 +108,21 @@ Attachments are copied beside the book unless `--attachments` names a folder.
 Leaving it unset is usually right: the stored link is a bare filename resolved
 against the book's own folder, so the app finds them with no configuration.
 
+### Receipts bought overseas
+
+A card charged abroad posts in the book's currency, so the receipt says
+NZD 72.11 and the transaction says AUD −64.51. Nothing needs configuring for
+this: most issuers write the original into the narrative
+(`THE SQUARE RESTAURANT CHRISTCHURCH 72.11 NZD 2.18 AUD`), the matcher indexes
+it, and the receipt's own figure matches exactly.
+
+`--fx NZD=0.905,MYR=0.34` is the fallback for issuers that record nothing —
+book currency per unit of the foreign one, and only for the run you pass it on,
+because a card's rate moves daily and carries the issuer's margin. It is off by
+default and stays approximate: a match is reported only when **exactly one**
+transaction in the window falls inside the tolerance band, and rate-derived
+matches are counted separately in the summary so they can be reviewed.
+
 ## Dating a document
 
 Modification time lies, and the failure is not random. In a real statement

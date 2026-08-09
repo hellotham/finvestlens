@@ -196,6 +196,69 @@ struct IntelligenceIntegrationTests {
         #expect(model.linkedCandidate(amount: 18, spending: true, near: january)?.guid == near)
     }
 
+    @Test("A receipt from a trip matches on what the card was actually charged")
+    func foreignAmountMatching() throws {
+        // The card posts in the book's currency, so the receipt in your hand
+        // (NZD 72.11) shares no number with the transaction (AUD −64.51). The
+        // issuer wrote the original into the narrative, which is the number the
+        // receipt does share — no exchange rate, no tolerance, nothing tagged.
+        let url = tempURL()
+        defer { try? FileManager.default.removeItem(at: url) }
+        let model = AppModel()
+        try model.newDocument(at: url)
+        defer { model.close() }
+
+        let card = try #require(model.addAccount(name: "Card", type: .credit))
+        let food = try #require(model.addAccount(name: "Dining", type: .expense))
+        let trip = try #require(day("2026-01-22"))
+        let abroad = try model.addTransaction(
+            date: trip, description: "THE SQUARE RESTAURANT     CHRISTCHURCH  72.11  NZD 2.18 AUD",
+            currency: .aud,
+            splits: [SplitInput(accountID: card, value: -64.51), SplitInput(accountID: food, value: 64.51)])
+
+        let receiptDate = try #require(day("2026-01-20"))
+        let seventyTwoEleven = try #require(Decimal(string: "72.11"))
+        #expect(model.findTransactionByForeignAmount(
+            seventyTwoEleven, near: receiptDate, spending: true)?.guid == abroad)
+
+        // The posted amount still matches the ordinary way, so nothing regresses.
+        #expect(model.foreignAmountIndex()[seventyTwoEleven]?.count == 1)
+
+        // The conversion fee is in the book's own currency and must never be
+        // read as a foreign amount, or every domestic fee becomes a purchase
+        // abroad.
+        let fee = try #require(Decimal(string: "2.18"))
+        #expect(model.findTransactionByForeignAmount(fee, near: receiptDate, spending: true) == nil)
+
+        // Same rules as a domestic match: outside the window, no answer…
+        let farOff = try #require(day("2026-03-01"))
+        #expect(model.findTransactionByForeignAmount(
+            seventyTwoEleven, near: farOff, spending: true) == nil)
+        // …wrong direction, no answer…
+        #expect(model.findTransactionByForeignAmount(
+            seventyTwoEleven, near: receiptDate, spending: false) == nil)
+        // …and a transaction that already carries a document is not re-claimed.
+        model.setDocumentLink("square.png", for: abroad)
+        #expect(model.findTransactionByForeignAmount(
+            seventyTwoEleven, near: receiptDate, spending: true) == nil)
+    }
+
+    @Test("A domestic narrative contributes nothing to the foreign index")
+    func domesticNarrativesAreNotIndexed() throws {
+        let url = tempURL()
+        defer { try? FileManager.default.removeItem(at: url) }
+        let model = AppModel()
+        try model.newDocument(at: url)
+        defer { model.close() }
+
+        let card = try #require(model.addAccount(name: "Card", type: .credit))
+        let food = try #require(model.addAccount(name: "Dining", type: .expense))
+        _ = try model.addTransaction(
+            date: Date(), description: "SUPERMARKET 5773                CHATSWOOD", currency: .aud,
+            splits: [SplitInput(accountID: card, value: -28.90), SplitInput(accountID: food, value: 28.90)])
+        #expect(model.foreignAmountIndex().isEmpty)
+    }
+
     @Test("Budget suggestions create or update the monthly budget")
     func applyBudgetSuggestion() throws {
         let url = tempURL()

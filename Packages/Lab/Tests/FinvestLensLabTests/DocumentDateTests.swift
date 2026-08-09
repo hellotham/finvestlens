@@ -157,3 +157,30 @@ struct ChunkingTests {
         #expect([Int]().chunked(into: 5).isEmpty)
     }
 }
+
+@Suite("Exchange rates")
+struct ExchangeRateOptionTests {
+
+    @Test("A rate list parses, upper-cased")
+    func parsing() throws {
+        let rates = try DocumentsCommand.exchangeRates("NZD=0.905,myr=0.34")
+        #expect(rates["NZD"] == Decimal(string: "0.905"))
+        #expect(rates["MYR"] == Decimal(string: "0.34"))
+    }
+
+    @Test("No --fx means rate matching stays off")
+    func absentIsEmpty() throws {
+        #expect(try DocumentsCommand.exchangeRates(nil).isEmpty)
+        #expect(try DocumentsCommand.exchangeRates("").isEmpty)
+    }
+
+    @Test("A malformed or impossible rate is refused, not ignored")
+    func refusesNonsense() {
+        // Silently dropping a bad entry would leave the operator believing a
+        // currency was covered when it was not.
+        #expect(throws: LabError.self) { try DocumentsCommand.exchangeRates("NZD") }
+        #expect(throws: LabError.self) { try DocumentsCommand.exchangeRates("NZD=abc") }
+        #expect(throws: LabError.self) { try DocumentsCommand.exchangeRates("NZD=0") }
+        #expect(throws: LabError.self) { try DocumentsCommand.exchangeRates("NZD=-1") }
+    }
+}

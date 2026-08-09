@@ -92,7 +92,7 @@ Jan–Apr 2026, through `AppModel.matchAttachments` — the app's own matcher.
 
 | | Documents | Matched | Attached | Categorised |
 | --- | --- | --- | --- | --- |
-| Receipts and invoices | 183 (97 duplicates skipped) | 164 (90%) | 164 | 152 |
+| Receipts and invoices | 183 (97 duplicates skipped) | **172 (94%)** | 172 | 157 |
 | Dividend / distribution statements | 17 (2 already linked) | 14 (82%) | 13 | 11 |
 
 The book afterwards: **46,578 transactions, unchanged** — nothing was created
@@ -108,13 +108,51 @@ spending, so taking them out makes a negative balance more negative. The way to
 confirm a run did no harm is that the balance moved by exactly the sum of the
 legs that left, and that the transaction count did not change at all.
 
-What is left unmatched is left honestly. Of 19 receipts: **8 are
-foreign-currency** (6 NZD, 2 MYR), where no amount printed on the receipt can
-ever equal the AUD posting; the other **11 have no corresponding transaction in
-the book at all** — checked by searching the Jan–Apr postings for each amount
-and finding none. Of 4 statements, all four are a *second file* for a payment
-its twin already claimed (PL8, NAB and Telstra each arrive under two
-filenames), which is the correct outcome for one payment.
+What is left unmatched is left honestly. **11 receipts have no corresponding
+transaction in the book at all** — checked by searching the Jan–Apr postings
+for each amount read and finding none. Of 4 statements, all four are a *second
+file* for a payment its twin already claimed (PL8, NAB and Telstra each arrive
+under two filenames), which is the correct outcome for one payment.
+
+### A receipt from a trip shares no number with its transaction
+
+The first pass left 8 receipts unmatched for one reason: they were bought
+overseas (6 NZD, 2 MYR). A card charged abroad posts in the book's currency, so
+the receipt says NZD 72.11 and the transaction says AUD −64.51, and the rate
+between them is nowhere in the book.
+
+The obvious fixes are both bad. Asking the owner to *tag* transactions with a
+currency is work proportional to the ledger rather than to the receipts, and it
+is circular — to tag the right transactions you must already know which ones
+your receipts belong to. Converting at an assumed rate is worse: tried on this
+book, picking the posting nearest an assumed rate paired a New Zealand clothing
+receipt with a **supermarket run in another country**, because with tens of
+candidates in a window something always lands within a percent of any rate you
+choose.
+
+Neither is needed, because the card issuer already wrote the original down:
+
+    THE SQUARE RESTAURANT     CHRISTCHURCH  72.11  NZD 2.18 AUD
+
+Merchant, city, **the amount actually charged**, its currency, then the fee.
+`ForeignAmountScanner` (Interchange) reads that, and the matcher indexes it once
+per run, so a receipt's own figure matches the book **exactly** — no rate, no
+tolerance, nothing tagged. 37 transactions in this book carry it, across NZD,
+MYR, USD, THB and EUR. The trailing fee arrives mangled in real exports
+(`NZD 1.1.56 AUD`, `MYR22.68 AUD`) and is deliberately not read.
+
+That took the unmatched receipts from 19 to **11**, every foreign one recovered
+bar a scan whose amounts are absent from the book. The telling case is a café
+receipt that never printed a currency code at all: nothing detected it as
+foreign, but the book knew — `ALPINE PARROT QUEENSTOWN 51.40 NZD` — and the
+OCR had read 51.40. **You do not need to know the receipt's currency; match the
+number and let the book supply it.**
+
+A rate-based fallback exists for issuers that record nothing
+(`finlab documents --fx NZD=0.905`), off unless asked for, and it refuses to
+answer when more than one transaction in the window fits the band — two
+candidates is not a near-miss to break by picking the closer one, it is the
+signal that the amount identifies nothing. It was not needed here.
 
 ### Two matcher defects, found only because real documents were used
 

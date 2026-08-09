@@ -34,6 +34,7 @@ enum DocumentsCommand {
         let kind = DocumentScanner.Kind(rawValue: options.string("kind") ?? "any") ?? .any
         let apply = options.flag("apply")
         let batchSize = max(1, options.int("batch") ?? 12)
+        let rates = try Self.exchangeRates(options.string("fx"))
 
         // 1 — decide what to feed in.
         let (documents, duplicates, outOfPeriod) = try Stopwatch.measure {
@@ -101,9 +102,31 @@ enum DocumentsCommand {
         }
         log("")
 
-        var linked = 0, categorised = 0, matched = 0, applyFailures = 0
+        var linked = 0, categorised = 0, matched = 0, applyFailures = 0, byRate = 0
         var unmatched: [(name: String, note: String)] = []
+        var claimedThisRun: Set<GncGUID> = []
         let started = Stopwatch()
+
+        /// Copies the file beside the book and links it. Shared because a
+        /// rate-derived match is attached exactly like an exact one — the
+        /// difference is only in how the transaction was found, and that
+        /// belongs in the log, not in what gets written.
+        @MainActor func attach(_ match: AppModel.AttachmentMatch, to transactionID: GncGUID) async {
+            guard let data = try? await Task.detached(operation: { [url = match.url] in
+                try Data(contentsOf: url)
+            }).value else { applyFailures += 1; return }
+            do {
+                _ = try model.attachDocument(named: match.fileName, data: data, to: transactionID)
+                linked += 1
+            } catch {
+                applyFailures += 1
+                log("  ⚠︎ \(match.fileName): \(error.localizedDescription)")
+            }
+            if let suggestion = match.suggestion,
+               model.applyAttachmentSuggestion(suggestion, to: transactionID) {
+                categorised += 1
+            }
+        }
 
         // 3 — match, apply, save, one batch at a time.
         for (index, batch) in pending.chunked(into: batchSize).enumerated() {
@@ -120,27 +143,32 @@ enum DocumentsCommand {
                     // no amount on it could ever equal the amount in the
                     // book". Those need opposite responses, so the report has
                     // to tell them apart.
+                    // Last resort, and only when asked for: convert at a rate
+                    // the operator supplied for this trip. Off unless --fx
+                    // names the currency, because converting at an assumed
+                    // rate is guesswork and guesswork about money is worse
+                    // than an unmatched receipt.
+                    if let code = match.currencyHint, let rate = rates[code],
+                       let converted = match.candidateAmounts.lazy.compactMap({ amount in
+                           model.matchByConvertedAmount(amount, rate: rate, near: match.documentDate,
+                                                        spending: true, excluding: claimedThisRun)
+                       }).first {
+                        matched += 1
+                        byRate += 1
+                        claimedThisRun.insert(converted.transactionID)
+                        log("  ~ \(match.fileName): \(code) at \(rate) → \(converted.summary) "
+                            + "(implied \(converted.impliedRate))")
+                        if apply { await attach(match, to: converted.transactionID) }
+                        continue
+                    }
                     let hint = match.currencyHint.map { " [\($0)]" } ?? ""
                     unmatched.append((match.fileName, (match.note ?? "no reason given") + hint))
                     continue
                 }
                 matched += 1
+                claimedThisRun.insert(transactionID)
                 guard apply else { continue }
-
-                let url = match.url
-                let data = try? await Task.detached { try Data(contentsOf: url) }.value
-                guard let data else { applyFailures += 1; continue }
-                do {
-                    _ = try model.attachDocument(named: match.fileName, data: data, to: transactionID)
-                    linked += 1
-                } catch {
-                    applyFailures += 1
-                    log("  ⚠︎ \(match.fileName): \(error.localizedDescription)")
-                }
-                if let suggestion = match.suggestion,
-                   model.applyAttachmentSuggestion(suggestion, to: transactionID) {
-                    categorised += 1
-                }
+                await attach(match, to: transactionID)
             }
 
             if apply {
@@ -162,6 +190,7 @@ enum DocumentsCommand {
             + "(\(percent(matched, of: pending.count)))")
         if apply {
             log("  attached     \(linked)")
+            if byRate > 0 { log("  by fx rate   \(byRate)  (approximate — review these)") }
             log("  categorised  \(categorised)")
             if applyFailures > 0 { log("  failed       \(applyFailures)") }
         } else {
@@ -197,6 +226,28 @@ enum DocumentsCommand {
             log("")
             log("  report → \(report.path)")
         }
+    }
+
+    /// `--fx NZD=0.905,MYR=0.34` — book currency per unit of the foreign one.
+    ///
+    /// Deliberately explicit and per-run rather than stored: a card's rate
+    /// moves daily and carries the issuer's margin, so a rate is only ever
+    /// right for one trip. Naming it at the point of use keeps that visible,
+    /// and leaving it out keeps rate-based matching off — which is the
+    /// default, because most issuers record the original amount and reading it
+    /// beats converting at a guess.
+    static func exchangeRates(_ text: String?) throws -> [String: Decimal] {
+        guard let text, !text.isEmpty else { return [:] }
+        var rates: [String: Decimal] = [:]
+        for pair in text.split(separator: ",") {
+            let parts = pair.split(separator: "=", maxSplits: 1)
+            guard parts.count == 2,
+                  let rate = Decimal(string: String(parts[1]).trimmingCharacters(in: .whitespaces)),
+                  rate > 0
+            else { throw LabError.message("bad --fx entry '\(pair)' — expected e.g. NZD=0.905") }
+            rates[String(parts[0]).trimmingCharacters(in: .whitespaces).uppercased()] = rate
+        }
+        return rates
     }
 
     /// Collapses a per-file note to the class of problem it represents.

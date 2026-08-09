@@ -313,13 +313,19 @@ extension AppModel {
         // Transactions matched earlier in this batch: two files must not claim
         // the same one (links only land on Apply, so the book can't tell).
         var claimed = Set<GncGUID>()
-        // Files already attached in earlier runs, by resolved file name.
+        // Files already attached in earlier runs, by resolved file name, and —
+        // in the same pass — every transaction whose narrative records what a
+        // foreign purchase originally cost. A card charged overseas posts in
+        // the book's currency, so a receipt from a trip shares no number with
+        // its transaction; the issuer, however, wrote the original into the
+        // description, and that is a number the receipt does share.
         var attachedByName: [String: Transaction] = [:]
         for txn in book?.transactions ?? [] {
             guard let link = txn.documentLink else { continue }
             let name = ((link.removingPercentEncoding ?? link) as NSString).lastPathComponent
             attachedByName[name.lowercased()] = txn
         }
+        let foreignByAmount = foreignAmountIndex()
         for (index, url) in urls.enumerated() {
             if Task.isCancelled { break }
             var match = AttachmentMatch(url: url)
@@ -388,6 +394,20 @@ extension AppModel {
                 if let hit = attemptMatch(amount: amount) {
                     matched = hit
                     break
+                }
+            }
+            // Then the same amounts read as what a card was charged abroad.
+            // Deliberately a second pass rather than interleaved: a figure that
+            // matches a domestic transaction outright should win over one that
+            // matches some trip's original amount.
+            if matched == nil {
+                for amount in match.candidateAmounts {
+                    if let hit = findTransactionByForeignAmount(
+                        amount, near: match.documentDate, spending: spending,
+                        excluding: claimed, index: foreignByAmount) {
+                        matched = hit
+                        break
+                    }
                 }
             }
             if matched == nil {
@@ -629,6 +649,122 @@ extension AppModel {
             sole = txn
         }
         return sole
+    }
+
+    /// Every transaction that records what a foreign purchase originally cost,
+    /// keyed by that original amount.
+    ///
+    /// A card charged overseas posts in the book's own currency, so a receipt
+    /// brought home from a trip shares no number at all with its transaction,
+    /// and the rate that connects them is not in the book. The issuer, though,
+    /// wrote the original into the narrative — so the number the receipt shows
+    /// *is* in the book, just not in the amount column.
+    ///
+    /// Built once per matching run: scanning tens of thousands of narratives
+    /// per document would be the most expensive thing in the pass, and the
+    /// answer does not change between documents.
+    func foreignAmountIndex() -> [Decimal: [Transaction]] {
+        var index: [Decimal: [Transaction]] = [:]
+        for txn in book?.transactions ?? [] {
+            // A narrative with no decimal point cannot hold an amount, and
+            // almost none of them do — this skips the regex for nearly every
+            // transaction in the book.
+            let narrative = txn.transactionDescription
+            guard narrative.contains(".") else { continue }
+            for foreign in ForeignAmountScanner.scan(narrative, excluding: txn.currency.mnemonic) {
+                index[foreign.amount, default: []].append(txn)
+            }
+        }
+        return index
+    }
+
+    /// The transaction whose *original* foreign amount is `amount`.
+    ///
+    /// Held to the same rules a domestic match is: near the document's date,
+    /// money moving the right way, not already claimed or linked. The amount
+    /// is compared **exactly** — recovering a trip's receipts needs no
+    /// tolerance and no exchange rate, which is precisely why reading the
+    /// issuer's own record beats converting at a guessed rate. Only the
+    /// magnitude of the posted leg is left unchecked, because it is in a
+    /// different currency and is *supposed* to differ.
+    func findTransactionByForeignAmount(_ amount: Decimal, near date: Date?, spending: Bool,
+                                        excluding claimed: Set<GncGUID> = [],
+                                        index: [Decimal: [Transaction]]? = nil) -> Transaction? {
+        let rows = (index ?? foreignAmountIndex())[amount] ?? []
+        let calendar = Calendar.current
+        var best: (txn: Transaction, days: Int)?
+        for txn in rows {
+            guard !claimed.contains(txn.guid), txn.documentLink == nil else { continue }
+            guard txn.splits.contains(where: {
+                Self.isMoneyLeg($0) && $0.value != 0 && (spending ? $0.value < 0 : $0.value > 0)
+            }) else { continue }
+            var days = 0
+            if let date {
+                days = abs(calendar.dateComponents([.day], from: calendar.startOfDay(for: date),
+                                                   to: calendar.startOfDay(for: txn.datePosted)).day ?? 999)
+                guard days <= Self.matchWindowDays else { continue }
+            }
+            if best == nil || days < best!.days { best = (txn, days) }
+        }
+        return best?.txn
+    }
+
+    /// A transaction found by converting a foreign amount at a supplied rate.
+    public struct ConvertedMatch: Sendable {
+        public let transactionID: GncGUID
+        public let summary: String
+        /// What the book actually posted, in its own currency.
+        public let postedAmount: Decimal
+        /// `postedAmount / foreignAmount` — the rate this match implies, so a
+        /// reviewer can see whether it is plausible for the period.
+        public let impliedRate: Decimal
+    }
+
+    /// The transaction a foreign amount refers to, converted at `rate`.
+    ///
+    /// The fallback for issuers that do not record what they charged. It is
+    /// the weaker path *by construction*: converting at an assumed rate makes
+    /// matching approximate, and approximate matching on money invents
+    /// answers. Tried on a real book, picking the posting nearest an assumed
+    /// rate confidently paired a New Zealand clothing receipt with a
+    /// supermarket run in another country — with tens of candidates in a
+    /// window, something always lands within a percent of any rate you choose.
+    ///
+    /// So this refuses to guess: a match is returned only when **exactly one**
+    /// transaction in the window falls inside the tolerance band. Two
+    /// candidates is not a near-miss to be broken by picking the closer one —
+    /// it is the signal that the amount does not identify anything, and the
+    /// honest answer is nothing.
+    public func matchByConvertedAmount(_ amount: Decimal, rate: Decimal, near date: Date?,
+                                       spending: Bool, tolerancePercent: Decimal = 3,
+                                       excluding claimed: Set<GncGUID> = []) -> ConvertedMatch? {
+        guard let book, amount > 0, rate > 0 else { return nil }
+        let expected = amount * rate
+        let slack = expected * tolerancePercent / 100
+        let calendar = Calendar.current
+
+        var hits: [(txn: Transaction, posted: Decimal)] = []
+        for txn in book.transactions {
+            guard !claimed.contains(txn.guid), txn.documentLink == nil else { continue }
+            if let date {
+                let days = abs(calendar.dateComponents([.day], from: calendar.startOfDay(for: date),
+                                                       to: calendar.startOfDay(for: txn.datePosted)).day ?? 999)
+                guard days <= Self.matchWindowDays else { continue }
+            }
+            guard let leg = txn.splits.first(where: {
+                guard Self.isMoneyLeg($0), $0.value != 0 else { return false }
+                guard spending ? $0.value < 0 : $0.value > 0 else { return false }
+                let magnitude = abs($0.value)
+                return magnitude >= expected - slack && magnitude <= expected + slack
+            }) else { continue }
+            hits.append((txn, abs(leg.value)))
+            if hits.count > 1 { return nil }        // ambiguous — say nothing
+        }
+        guard let only = hits.first else { return nil }
+        return ConvertedMatch(transactionID: only.txn.guid,
+                              summary: transactionSummary(only.txn),
+                              postedAmount: only.posted,
+                              impliedRate: only.posted / amount)
     }
 
     /// The already-linked transaction an amount most plausibly refers to: the
