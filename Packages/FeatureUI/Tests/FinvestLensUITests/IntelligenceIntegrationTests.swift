@@ -259,6 +259,66 @@ struct IntelligenceIntegrationTests {
         #expect(model.foreignAmountIndex().isEmpty)
     }
 
+    @Test("A cash receipt is entered against the account it is told, and only that")
+    func recordCashPurchase() async throws {
+        let url = tempURL()
+        defer { try? FileManager.default.removeItem(at: url) }
+        let model = AppModel()
+        try model.newDocument(at: url)
+        defer { model.close() }
+
+        let folder = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        model.configuredDocumentFolder = folder
+
+        let hers = try #require(model.addAccount(name: "Her Cash", type: .cash))
+        _ = try #require(model.addAccount(name: "His Cash", type: .cash))
+        let bought = try #require(day("2026-02-22"))
+
+        let entered = try await model.recordCashPurchase(
+            fileName: "2026-02-22 BBQ.png", data: Data("receipt".utf8), date: bought,
+            vendor: "BBQ King", amount: 99.35, cashAccountID: hers)
+
+        let book = try #require(model.book)
+        let txn = try #require(book.transaction(with: entered.id))
+        #expect(txn.isBalanced)
+        #expect(txn.transactionDescription == "BBQ King")
+        #expect(txn.tags.contains("cash"))
+        #expect(txn.documentLink == "2026-02-22 BBQ.png")
+
+        // The money came out of the account named, and no other.
+        let herAccount = try #require(book.account(with: hers))
+        #expect(book.balance(of: herAccount).amount == Decimal(string: "-99.35"))
+
+        // The counter-leg is parked in the wash account, which is what lets the
+        // ordinary categoriser finish the job rather than a second one here.
+        #expect(txn.splits.contains { $0.account?.isWash == true })
+        #expect(model.uncategorizedItems().count == 1)
+    }
+
+    @Test("A cash purchase with no vendor still gets a usable description")
+    func cashPurchaseFallsBackToTheFileName() async throws {
+        let url = tempURL()
+        defer { try? FileManager.default.removeItem(at: url) }
+        let model = AppModel()
+        try model.newDocument(at: url)
+        defer { model.close() }
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        model.configuredDocumentFolder = folder
+
+        let cash = try #require(model.addAccount(name: "Cash", type: .cash))
+        let entered = try await model.recordCashPurchase(
+            fileName: "2026-01-09 H Hung.png", data: Data("x".utf8), date: Date(),
+            vendor: nil, amount: 25.60, cashAccountID: cash)
+        let book = try #require(model.book)
+        let txn = try #require(book.transaction(with: entered.id))
+        #expect(txn.transactionDescription == "2026-01-09 H Hung")
+    }
+
     @Test("Budget suggestions create or update the monthly budget")
     func applyBudgetSuggestion() throws {
         let url = tempURL()

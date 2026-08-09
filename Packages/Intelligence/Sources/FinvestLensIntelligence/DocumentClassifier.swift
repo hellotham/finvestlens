@@ -64,6 +64,54 @@ public enum DocumentClassifier {
         return payment && registry
     }
 
+    /// How a purchase was paid for, as far as the receipt admits.
+    public enum Tender: String, Sendable, Equatable {
+        /// Paid in notes and coins — so no card transaction exists to match.
+        case cash
+        /// Paid by card, so a transaction should exist. If none does, the
+        /// statement carrying it has not been imported — a data gap, not a
+        /// matching failure, and worth telling someone about.
+        case card
+        /// The receipt does not say, or could not be read.
+        case unknown
+    }
+
+    /// What a receipt says it was paid with.
+    ///
+    /// Worth knowing because an unmatched receipt has two very different
+    /// explanations. A cash purchase has no bank transaction and never will —
+    /// it can only be *entered*. A card purchase has one somewhere, and its
+    /// absence means a statement is missing.
+    ///
+    /// Cash is asserted only when the receipt says so **and** says nothing
+    /// about a card. That asymmetry is not fussiness: card dockets routinely
+    /// print `CHANGE 0.00`, and an EFTPOS receipt offering cash out prints
+    /// the word "cash" while being the most card-like document there is. A
+    /// single marker in isolation decides nothing.
+    ///
+    /// This never says which cash *account* — a receipt records that money
+    /// left a wallet, not whose. That fact is not in the document and no
+    /// amount of reading will find it.
+    public static func tender(_ text: String) -> Tender {
+        let lower = text.lowercased()
+        func containsAny(_ needles: [String]) -> Bool { needles.contains { lower.contains($0) } }
+        // Read broadly, and deliberately so. The two mistakes are not
+        // equal: failing to spot a card leaves a receipt unmatched, which
+        // costs nothing, while failing to spot it and calling the purchase
+        // cash *creates a transaction that never happened* — and it will
+        // double-count the moment the real statement is imported. So anything
+        // that smells of a card wins, including bare words like "debit" that
+        // a stricter list would miss when OCR mangles the phrase around them.
+        let card = containsAny(["eftpos", "visa", "mastercard", "master card", "amex",
+                                "american express", "credit", "debit", "contactless",
+                                "paywave", "paypass", "card", "chip", "swipe", "tap ",
+                                "auth", "approved", "merchant copy", "terminal", "aid:",
+                                "account type", "savings a", "cheque a"])
+        if card { return .card }
+        let cash = containsAny(["cash", "tendered", "change due"])
+        return cash ? .cash : .unknown
+    }
+
     /// Deterministic fallback. Order matters: a "dividend statement" contains
     /// the word "statement", so dividends are recognised first.
     public static func classifyByKeywords(_ text: String) -> FinancialDocumentKind {

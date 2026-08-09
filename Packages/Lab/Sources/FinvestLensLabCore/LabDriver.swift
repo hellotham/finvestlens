@@ -88,7 +88,8 @@ public enum Lab {
           finlab documents --file BOOK.finvestlens --root DIR
                           [--since YYYY-MM-DD] [--until YYYY-MM-DD]
                           [--kind any|invoice|dividend] [--limit N] [--batch N]
-                          [--attachments DIR] [--fx NZD=0.905,MYR=0.34] [--apply] [--report FILE.csv]
+                          [--attachments DIR] [--fx NZD=0.905] [--cash-account "Assets:X:Cash"]
+                          [--apply] [--report FILE.csv]
 
         Every command prints its own timings. Nothing is written to the book
         unless the command says it writes, and `documents` writes only with

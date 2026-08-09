@@ -264,6 +264,11 @@ extension AppModel {
         public var vendor: String?
         /// A foreign currency the document names (ISO code, or "RM" → MYR).
         public var currencyHint: String?
+        /// What the receipt says it was paid with. On an unmatched document
+        /// this is the difference between "no transaction exists, because it
+        /// was cash" and "a transaction exists somewhere and has not been
+        /// imported" — which need opposite responses.
+        public var tender: DocumentClassifier.Tender = .unknown
     }
 
     /// Matches a batch of picked files to transactions: each file is OCR'd, its
@@ -355,6 +360,7 @@ extension AppModel {
             let spending = !doc.isIncome
             match.vendor = doc.invoice?.vendor
             match.currencyHint = doc.currencyHint
+            match.tender = doc.tender
             if let already = attachedByName[url.lastPathComponent.lowercased()] {
                 match.note = "This file is already attached to \(transactionSummary(already))."
                 continue
@@ -462,6 +468,8 @@ extension AppModel {
         var textDates: [Date] = []
         /// A foreign currency the document names, when one is.
         var currencyHint: String?
+        /// What the receipt says it was paid with.
+        var tender: DocumentClassifier.Tender = .unknown
         /// The OCR text's head — for the categorisation fallback when the
         /// invoice pass yielded no per-line categories.
         var textExcerpt = ""
@@ -508,6 +516,7 @@ extension AppModel {
         doc.fallbackAmounts = Self.amountCandidates(in: text)
         doc.textDates = Self.datesInText(text)
         doc.currencyHint = Self.currencyHint(in: text)
+        doc.tender = DocumentClassifier.tender(text)
         doc.textExcerpt = String(text.prefix(1600))
         return doc
     }
@@ -707,6 +716,62 @@ extension AppModel {
             if best == nil || days < best!.days { best = (txn, days) }
         }
         return best?.txn
+    }
+
+    /// Enters a receipt that has no transaction to match, as a cash purchase.
+    ///
+    /// A cash receipt is not an unmatched document — there is nothing to
+    /// match. The money left a wallet, and unless someone enters it the
+    /// purchase simply never appears in the book.
+    ///
+    /// `cashAccountID` is required and never inferred. A receipt records that
+    /// notes changed hands, not *whose* notes: a household with a cash account
+    /// each cannot be told apart by anything printed on a docket, and picking
+    /// one would be inventing a fact about the ledger. So the caller states
+    /// it, once, and this does the rest.
+    ///
+    /// The counter-leg is deliberately parked in the wash account rather than
+    /// categorised here. That is not laziness — it is what lets the existing
+    /// path finish the job: once the document is attached,
+    /// ``suggestCategoryFromAttachment(for:)`` reads it and
+    /// ``applyAttachmentSuggestion(_:to:)`` replaces the wash leg exactly as
+    /// it would for an imported transaction, including splitting an itemised
+    /// invoice across several categories. One categoriser, not two.
+    ///
+    /// - Returns: the new transaction, and whether it was categorised.
+    @discardableResult
+    public func recordCashPurchase(fileName: String, data: Data, date: Date,
+                                   vendor: String?, amount: Decimal,
+                                   cashAccountID: GncGUID) async throws -> (id: GncGUID, categorised: Bool) {
+        guard let book else { throw TransactionEntryError.noBook }
+        guard amount > 0 else { throw TransactionEntryError.tooFewSplits }
+        guard let cash = book.account(with: cashAccountID) else { throw TransactionEntryError.notFound }
+        let currency = cash.commodity
+
+        // The book's own wash account for this currency, so the new row lands
+        // exactly where an uncategorised import would and every existing tool
+        // that tidies those can see it.
+        let washName = "Imbalance-\(currency.mnemonic)"
+        guard let wash = book.accounts.first(where: { $0.isWash && $0.commodity == currency })
+                ?? ensureAccount(path: [washName], type: .bank)
+        else { throw TransactionEntryError.notFound }
+
+        let description = (vendor?.trimmingCharacters(in: .whitespacesAndNewlines)).flatMap {
+            $0.isEmpty ? nil : $0
+        } ?? (fileName as NSString).deletingPathExtension
+        let id = try addTransaction(
+            date: date, description: description, currency: currency,
+            splits: [SplitInput(accountID: cashAccountID, value: -amount),
+                     SplitInput(accountID: wash.guid, value: amount)],
+            tags: ["cash"])
+
+        _ = try attachDocument(named: fileName, data: data, to: id)
+
+        var categorised = false
+        if let suggestion = try? await suggestCategoryFromAttachment(for: id) {
+            categorised = applyAttachmentSuggestion(suggestion, to: id)
+        }
+        return (id, categorised)
     }
 
     /// A transaction found by converting a foreign amount at a supplied rate.

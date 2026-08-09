@@ -154,6 +154,36 @@ answer when more than one transaction in the window fits the band — two
 candidates is not a near-miss to break by picking the closer one, it is the
 signal that the amount identifies nothing. It was not needed here.
 
+### The rest were never going to match
+
+Reading the remaining receipts for how they were paid split them cleanly, and
+the two halves need opposite responses. Four say **cash** — those have no
+transaction to match because the money left a wallet, and the only way they
+reach the book is by being entered. Six say **card** — those went through an
+account, so a transaction exists somewhere and the statement carrying it has
+not been imported. That is a data gap, not a matching failure, and no matcher
+can close it.
+
+`DocumentClassifier.tender` makes that call, and `finlab documents
+--cash-account "Assets:Someone:Cash"` enters the cash ones: date and vendor
+from the document, the named account credited, the file attached, and the
+counter-leg parked in the wash account so the *existing* categoriser finishes
+the job rather than a second one being written.
+
+The account is required and never inferred. A receipt records that notes
+changed hands, not whose — a household with a cash account each produces
+identical dockets, and picking one would be inventing a fact about the ledger.
+
+Card detection is deliberately broader than cash detection, which the first
+version got wrong: a tablet bought on a debit card was proposed as a *cash
+purchase* because the reflowed OCR never produced the exact phrase the strict
+list wanted. The mistakes are not symmetric — missing a card leaves a receipt
+unmatched and costs nothing, while calling a card purchase cash invents a
+transaction that double-counts the moment the statement arrives. So the card
+list reads bare words too, and anything ambiguous is left alone. With that
+fixed, the classifier's answers matched an independent Vision probe of the same
+receipts exactly.
+
 ### Two matcher defects, found only because real documents were used
 
 **Distributions were hunted among purchases.** `parseAttachment` decided a

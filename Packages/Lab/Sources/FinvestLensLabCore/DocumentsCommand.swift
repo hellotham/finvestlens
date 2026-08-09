@@ -35,6 +35,7 @@ enum DocumentsCommand {
         let apply = options.flag("apply")
         let batchSize = max(1, options.int("batch") ?? 12)
         let rates = try Self.exchangeRates(options.string("fx"))
+        let cashAccountName = options.string("cash-account")
 
         // 1 — decide what to feed in.
         let (documents, duplicates, outOfPeriod) = try Stopwatch.measure {
@@ -81,6 +82,21 @@ enum DocumentsCommand {
                 alreadyLinked.insert((decoded as NSString).lastPathComponent.lowercased())
             }
         }
+        // Resolved once, and refused loudly if it does not exist: a typo that
+        // silently disabled cash entry would look exactly like "no cash
+        // receipts this month".
+        var cashAccount: GncGUID?
+        if let cashAccountName {
+            guard let node = model.postableAccounts.first(where: {
+                $0.fullName.compare(cashAccountName, options: .caseInsensitive) == .orderedSame
+            }) else {
+                throw LabError.message("no account named '\(cashAccountName)' — "
+                                       + "use its full path, e.g. Assets:Someone:Cash")
+            }
+            cashAccount = node.id
+            log("  cash receipts → \(node.fullName)")
+        }
+
         let pending = documents.filter { !alreadyLinked.contains($0.url.lastPathComponent.lowercased()) }
         if pending.count != documents.count {
             log("  \(documents.count - pending.count) already attached — skipping")
@@ -102,7 +118,7 @@ enum DocumentsCommand {
         }
         log("")
 
-        var linked = 0, categorised = 0, matched = 0, applyFailures = 0, byRate = 0
+        var linked = 0, categorised = 0, matched = 0, applyFailures = 0, byRate = 0, created = 0
         var unmatched: [(name: String, note: String)] = []
         var claimedThisRun: Set<GncGUID> = []
         let started = Stopwatch()
@@ -161,8 +177,31 @@ enum DocumentsCommand {
                         if apply { await attach(match, to: converted.transactionID) }
                         continue
                     }
+                    // A receipt paid in cash has no transaction to match and
+                    // never will — the only way it reaches the book is by
+                    // being entered. Done only when --cash-account names the
+                    // wallet it came out of, because no document says whose.
+                    if let cashAccount, match.tender == .cash,
+                       let date = match.documentDate, let total = match.candidateAmounts.first,
+                       let data = try? await Task.detached(operation: { [url = match.url] in
+                           try Data(contentsOf: url)
+                       }).value {
+                        if apply {
+                            let entered = try await model.recordCashPurchase(
+                                fileName: match.fileName, data: data, date: date,
+                                vendor: match.vendor, amount: total, cashAccountID: cashAccount)
+                            linked += 1
+                            if entered.categorised { categorised += 1 }
+                        }
+                        created += 1
+                        log("  + \(match.fileName): entered as cash"
+                            + (match.vendor.map { " — \($0)" } ?? ""))
+                        continue
+                    }
                     let hint = match.currencyHint.map { " [\($0)]" } ?? ""
-                    unmatched.append((match.fileName, (match.note ?? "no reason given") + hint))
+                    let tender = match.tender == .unknown ? "" : " [\(match.tender.rawValue)]"
+                    unmatched.append((match.fileName,
+                                      (match.note ?? "no reason given") + hint + tender))
                     continue
                 }
                 matched += 1
@@ -191,6 +230,7 @@ enum DocumentsCommand {
         if apply {
             log("  attached     \(linked)")
             if byRate > 0 { log("  by fx rate   \(byRate)  (approximate — review these)") }
+            if created > 0 { log("  entered cash \(created)") }
             log("  categorised  \(categorised)")
             if applyFailures > 0 { log("  failed       \(applyFailures)") }
         } else {

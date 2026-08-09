@@ -86,3 +86,72 @@ struct DocumentClassifierIncomeTests {
         #expect(DocumentClassifier.classifyByKeywords("TAX INVOICE total 45.67") == .invoice)
     }
 }
+
+@Suite("How a receipt was paid")
+struct TenderTests {
+
+    @Test("A cash docket is cash")
+    func cash() {
+        #expect(DocumentClassifier.tender("""
+            H HUNG RESTAURANT
+            TOTAL      25.60
+            CASH       30.00
+            CHANGE      4.40
+            """) == .cash)
+    }
+
+    @Test("A card docket is card even when it prints CHANGE")
+    func cardPrintingChange() {
+        // The asymmetry that matters. Card dockets routinely print a zero
+        // change line, so "change" alone must never mean cash.
+        #expect(DocumentClassifier.tender("""
+            KIRRIBILLI SHOP
+            TOTAL       4.99
+            VISA CREDIT  ****1234
+            CHANGE      0.00
+            """) == .card)
+    }
+
+    @Test("An EFTPOS receipt offering cash out is still a card payment")
+    func cashOutIsNotCash() {
+        // The other direction of the same trap: the word "cash" appears on
+        // the most card-like document there is.
+        #expect(DocumentClassifier.tender("""
+            EFTPOS PURCHASE + CASH OUT
+            SAVINGS  APPROVED - 00
+            PURCHASE 29.97   CASH  50.00
+            """) == .card)
+    }
+
+    @Test("Anything card-shaped wins, because the mistakes are not equal")
+    func cardDetectionIsDeliberatelyBroad() {
+        // A $2,149 tablet bought on a debit card was proposed as a cash
+        // purchase on a real run, because the reflowed OCR did not produce the
+        // exact phrase the first list looked for. Calling a card purchase cash
+        // invents a transaction that will double-count when the statement
+        // arrives; missing a card merely leaves a receipt unmatched. So the
+        // card list reads bare words too.
+        for docket in ["TOTAL 2149.00\nDEBIT\nAPPROVED",
+                       "TOTAL 49.58\nCONTACTLESS",
+                       "TOTAL 19.00\nACCOUNT TYPE: SAVINGS",
+                       "TOTAL 12.00\nAUTH 004512"] {
+            #expect(DocumentClassifier.tender(docket) == .card, "should read as card: \(docket)")
+        }
+    }
+
+    @Test("A receipt that says nothing about payment admits nothing")
+    func unknown() {
+        #expect(DocumentClassifier.tender("UMAYA IZAKAYA\nTOTAL 15.01") == .unknown)
+        #expect(DocumentClassifier.tender("") == .unknown)
+    }
+
+    @Test("Tender says nothing about which account")
+    func tenderIsNotAnAccount() {
+        // Documented as a test because it is the whole reason the account is a
+        // required parameter elsewhere: two people with a cash account each
+        // produce identical dockets.
+        let docket = "CAFE\nTOTAL 20.00\nCASH 20.00"
+        #expect(DocumentClassifier.tender(docket) == .cash)
+        // There is no API here that returns an account, and there should not be.
+    }
+}

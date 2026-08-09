@@ -151,8 +151,33 @@ wrong one pulled nineteen 2024–2025 statements into a 2026 period in testing.
 Rule 4 excludes scanner output (`img20260207_20452286.png`) for the same
 reason — that is when it went on the glass, not when the purchase happened.
 
+### Receipts paid in cash
+
+A cash receipt is not an unmatched document — there is nothing to match. The
+money left a wallet and, unless someone enters it, the purchase never appears
+in the book at all.
+
+`--cash-account "Assets:Someone:Cash"` enters those: date and vendor from the
+document, the named account credited, the file attached, and the category left
+to the ordinary categoriser. It is off unless the account is named, and the
+name is never guessed — a receipt records that notes changed hands, not *whose*
+notes, and a household with a cash account each produces identical dockets.
+That fact is not in the document, so the operator states it once per run.
+
+Only receipts that say cash **and** say nothing about a card qualify. The two
+mistakes are not equal: missing a card leaves a receipt unmatched, which costs
+nothing, while calling a card purchase cash invents a transaction that will
+double-count when the real statement is imported. So card detection reads
+broadly and cash narrowly, and anything ambiguous is left alone.
+
+A receipt reported as `[card]` with no matching transaction means the opposite
+thing and needs the opposite response: that purchase *did* go through an
+account, and the statement carrying it has not been imported.
+
 ## What it does not do
 
-No command creates transactions. `documents` links and categorises what is
-already in the book; a receipt with no matching transaction is reported, never
-invented. Adding the missing transaction is a decision for a person.
+It does not invent transactions to make a receipt match. `documents` links and
+categorises what is already in the book, and the single exception —
+`--cash-account` — creates only what a person has explicitly asked for, only
+for receipts that say they were paid in cash, and only into an account they
+named. Everything else that fails to match is reported, never guessed at.
