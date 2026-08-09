@@ -62,15 +62,87 @@ struct DividendReconcilerTests {
         #expect(details.componentsMatchPayment)
     }
 
-    @Test("Franking credits are never derived — only reported when printed")
-    func creditsAreNeverInvented() {
-        // No arithmetic on the page constrains the credit, so a missing one
-        // stays missing rather than being guessed from the tax rate.
+    @Test("A missed franking credit is found by grossing up — when the page prints it")
+    func creditRecoveredByGrossUp() {
+        // The model reports "0.00" for a column it failed to read. A fully
+        // franked dividend implies its credit exactly, so the figure is
+        // computed and then looked for: 590 × 30/70 = 252.86, which this page
+        // does print.
+        for reported in ["", "0.00", "0"] {
+            let details = DividendReconciler.details(
+                from: RawDividendFigures(franked: "590.00", unfranked: "0.00",
+                                         credits: reported, net: "590.00"),
+                printedIn: page)
+            #expect(details.frankingCredits == Decimal(string: "252.86"),
+                    "credit not recovered when the model reported \"\(reported)\"")
+        }
+    }
+
+    @Test("A credit the page does not print is never claimed")
+    func grossUpIsOnlyASearchKey() {
+        // Partly franked: the gross-up does not hold, so the computed figure
+        // is absent from the page and nothing is reported. This is the whole
+        // distinction — the arithmetic says where to look, never what is true.
+        let partly = """
+            Unfranked   Franked   Franking Credit
+            300.00   290.00   62.14   Net Payment:   590.00
+            """
         let details = DividendReconciler.details(
-            from: RawDividendFigures(franked: "590.00", unfranked: "0.00", credits: "", net: "590.00"),
-            printedIn: page)
+            from: RawDividendFigures(franked: "290.00", unfranked: "300.00",
+                                     credits: "0.00", net: "590.00"),
+            printedIn: partly)
+        // 290 × 30/70 = 124.29, which is not on this page — the real credit is
+        // 62.14, and guessing it would have been wrong.
         #expect(details.frankingCredits == 0)
         #expect(details.componentsMatchPayment)
+    }
+
+    @Test("A rate read into the empty component column is zeroed")
+    func rateInTheWrongColumn() {
+        // NAB capital-note statements print a distribution per note, and the
+        // model puts that rate in the Unfranked column. It is on the page, so
+        // the printed-check cannot object — but the franked amount already
+        // equals the payment, and the two components sum to it, so the other
+        // one can only be zero.
+        let notes = """
+            NAB CAPITAL NOTES (ASX: NABPF)
+            Distribution rate per note   $0.9338
+            Unfranked   Franked   Franking Credit
+            0.00   466.90   200.10   Net Payment:   466.90
+            """
+        let details = DividendReconciler.details(
+            from: RawDividendFigures(franked: "466.90", unfranked: "0.9338",
+                                     credits: "200.10", net: "466.90"),
+            printedIn: notes)
+        #expect(details.unfrankedAmount == 0)
+        #expect(details.frankedAmount == Decimal(string: "466.90"))
+        #expect(details.componentsMatchPayment)
+    }
+
+    @Test("A franking credit as large as the dividend is refused")
+    func creditCannotEqualTheDividend() {
+        // The model returned the franked amount in both columns. That figure
+        // is genuinely printed, so grounding had no objection — but a credit
+        // is three sevenths of the dividend at 30% and a third at 25%, never
+        // all of it. Refused, then recovered by grossing up.
+        let notes = """
+            Unfranked   Franked   Franking Credit
+            0.00   466.90   200.10   Net Payment:   466.90
+            """
+        let details = DividendReconciler.details(
+            from: RawDividendFigures(franked: "466.90", unfranked: "0.00",
+                                     credits: "466.90", net: "466.90"),
+            printedIn: notes)
+        #expect(details.frankingCredits == Decimal(string: "200.10"))
+    }
+
+    @Test("An unfranked distribution grosses up to nothing")
+    func noCreditWithoutFranking() {
+        let details = DividendReconciler.details(
+            from: RawDividendFigures(franked: "0.00", unfranked: "590.00",
+                                     credits: "0.00", net: "590.00"),
+            printedIn: page)
+        #expect(details.frankingCredits == 0)
     }
 
     @Test("A derived figure that is not printed is refused")
@@ -86,14 +158,18 @@ struct DividendReconcilerTests {
 
     @Test("A statement that contradicts itself is left contradicting itself")
     func bothPrintedAndDisagreeing() {
-        // Both components are on the page and still do not add up. Nothing is
-        // invented — the mismatch is what the reviewer needs to see.
-        let odd = page + "\n   Adjustment   $252.86"
+        // Both components are on the page, neither accounts for the payment on
+        // its own, and they still do not add up to it. Nothing is invented —
+        // the mismatch is what the reviewer needs to see.
+        let odd = """
+            Unfranked   Franked   Franking Credit
+            200.00   300.00   128.57   Net Payment:   590.00
+            """
         let details = DividendReconciler.details(
-            from: RawDividendFigures(franked: "590.00", unfranked: "252.86", net: "590.00"),
+            from: RawDividendFigures(franked: "300.00", unfranked: "200.00", net: "590.00"),
             printedIn: odd)
-        #expect(details.frankedAmount == 590)
-        #expect(details.unfrankedAmount == Decimal(string: "252.86"))
+        #expect(details.frankedAmount == 300)
+        #expect(details.unfrankedAmount == 200)
         #expect(!details.componentsMatchPayment)
     }
 
