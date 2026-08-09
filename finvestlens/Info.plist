@@ -48,6 +48,31 @@
 			<true/>
 		</dict>
 	</array>
+	<key>UTImportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<!-- Imported, not exported: the type is GnuCash's, we only read it.
+			     Declared so the Quick Look extension has a UTI to name, and so
+			     File > Import GnuCash... can filter on one. `public.data`
+			     rather than `public.xml` because GnuCash compresses by default
+			     and also writes this extension for its SQLite backend. -->
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>GnuCash Book</string>
+			<key>UTTypeIdentifier</key>
+			<string>org.gnucash.book</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>gnucash</string>
+				</array>
+			</dict>
+		</dict>
+	</array>
 	<key>UTExportedTypeDeclarations</key>
 	<array>
 		<dict>

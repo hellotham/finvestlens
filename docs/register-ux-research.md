@@ -144,8 +144,19 @@ own text setting moves it.
 
 ## 5. Still open
 
-- **Column visibility** — Finder, Mail and Quicken all offer it by Control-clicking a
-  heading. Not implemented.
+- ~~**Column visibility** — Finder, Mail and Quicken all offer it by
+  Control-clicking a heading. Not implemented.~~ **Closed (9 Aug 2026).**
+  Control-click any heading; the same list is on the register's View ▾ menu and
+  the View menu bar, because HIG *Context menus* asks that context-menu items
+  "always" be available in the main interface too. Num, Transfer, Reconciled and
+  Balance may be switched off; Date, Description, Amount and the handle column
+  may not — they are what makes this a register rather than a list. A hidden
+  column is laid out at zero width, which is what makes the rest fall out for
+  free: nothing draws, no point can land in it, Description takes back the
+  space, and its editor leaves the ⇥ order with it. Worth knowing for Balance:
+  on a leg row that column carries the foreign or share quantity (FR-REG-07),
+  so hiding it hides that editor too. macOS only — as with column resizing,
+  which is also the AppKit sheet's.
 - **Option-click expands everything** (Finder) has no analogue: our model has one
   expandable level, and the Journal style *is* expand-all.
 - **Expansion state across sessions** — Outline views asks for it; we follow GnuCash

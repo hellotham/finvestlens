@@ -1,30 +1,147 @@
 {
-  "sourceLanguage" : "en",
-  "strings" : {
-    "FinvestLens Book" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : { "stringUnit" : { "state" : "translated", "value" : "FinvestLens-Buch" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Libro de FinvestLens" } },
-        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Livre FinvestLens" } },
-        "it" : { "stringUnit" : { "state" : "translated", "value" : "Libro FinvestLens" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "FinvestLens 帳簿" } },
-        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Livro do FinvestLens" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "FinvestLens 账簿" } }
+  "sourceLanguage": "en",
+  "strings": {
+    "FinvestLens Book": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FinvestLens-Buch"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Libro de FinvestLens"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Livre FinvestLens"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Libro FinvestLens"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FinvestLens 帳簿"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Livro do FinvestLens"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FinvestLens 账簿"
+          }
+        }
       }
     },
-    "Preview unavailable" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : { "stringUnit" : { "state" : "translated", "value" : "Keine Vorschau verfügbar" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Vista previa no disponible" } },
-        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Aperçu indisponible" } },
-        "it" : { "stringUnit" : { "state" : "translated", "value" : "Anteprima non disponibile" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "プレビューを利用できません" } },
-        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Pré-visualização indisponível" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "无法预览" } }
+    "GnuCash Book": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GnuCash-Buch"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Libro de GnuCash"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Livre GnuCash"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Libro GnuCash"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GnuCash ブック"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Livro do GnuCash"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GnuCash 账簿"
+          }
+        }
+      }
+    },
+    "Preview unavailable": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Vorschau verfügbar"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vista previa no disponible"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aperçu indisponible"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anteprima non disponibile"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プレビューを利用できません"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pré-visualização indisponível"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法预览"
+          }
+        }
       }
     }
   },
-  "version" : "1.0"
+  "version": "1.0"
 }

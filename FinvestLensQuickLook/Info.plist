@@ -13,6 +13,7 @@
 			<key>QLSupportedContentTypes</key>
 			<array>
 				<string>com.hellotham.finvestlens.document</string>
+				<string>org.gnucash.book</string>
 			</array>
 			<key>QLSupportsSearchableItems</key>
 			<false/>

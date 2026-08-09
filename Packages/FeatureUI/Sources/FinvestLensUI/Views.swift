@@ -1253,6 +1253,9 @@ struct RegisterView: View {
     @AppStorage(AppearanceKey.registerRowHeight)
     private var rowHeightPreference = RegisterRowHeight.automatic
     #if os(macOS)
+    /// Hidden columns as a bitmask — the same defaults key the header's
+    /// Control-click menu writes, so the two stay in step with no plumbing.
+    @AppStorage(RegisterColumnVisibility.key) private var hiddenColumns = 0
     @Environment(\.openWindow) private var openWindow
     #endif
     /// Whether the attachments sidebar is shown (persisted like Double Line).
@@ -1409,6 +1412,25 @@ struct RegisterView: View {
                 Label("Row Height", systemImage: "arrow.up.and.down.text.horizontal")
             }
             .help("How tall each transaction stands — Automatic measures the display")
+            #if os(macOS)
+            // HIG *Context menus*: "Always make context menu items available in
+            // the main interface, too." The header's own Control-click list is
+            // the same one, reachable by mouse where you are already pointing;
+            // this is its keyboard-and-menu-bar home.
+            Menu {
+                ForEach(RegisterColumnVisibility.hideable, id: \.id) { column in
+                    Toggle(column.title, isOn: Binding(
+                        get: { !RegisterColumnVisibility.isHidden(column.id, in: hiddenColumns) },
+                        set: { _ in
+                            hiddenColumns = RegisterColumnVisibility
+                                .toggling(column.id, in: hiddenColumns)
+                        }))
+                }
+            } label: {
+                Label("Columns", systemImage: "tablecells")
+            }
+            .help("Choose which columns the register shows")
+            #endif
             Menu {
                 Picker("Sort By", selection: $model.registerSort) {
                     ForEach(RegisterSort.allCases) { Text($0.rawValue).tag($0) }

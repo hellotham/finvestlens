@@ -52,6 +52,11 @@ struct finvestlensApp: App {
     private var registerRowHeight = RegisterRowHeight.automatic
     @Environment(\.openWindow) private var openWindow
     #if os(macOS)
+    /// Column visibility is a macOS-register feature: it belongs to the AppKit
+    /// sheet, which is where column resizing lives too.
+    @AppStorage(RegisterColumnVisibility.key) private var hiddenColumns = 0
+    #endif
+    #if os(macOS)
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     #endif
 
@@ -168,6 +173,19 @@ struct finvestlensApp: App {
                     }
                 }
                 .disabled(!model.isOpen)
+                #if os(macOS)
+                Menu("Columns") {
+                    ForEach(RegisterColumnVisibility.hideable, id: \.id) { column in
+                        Toggle(column.title, isOn: Binding(
+                            get: { !RegisterColumnVisibility.isHidden(column.id, in: hiddenColumns) },
+                            set: { _ in
+                                hiddenColumns = RegisterColumnVisibility
+                                    .toggling(column.id, in: hiddenColumns)
+                            }))
+                    }
+                }
+                .disabled(!model.isOpen)
+                #endif
                 Button("Filter Transactions…") {
                     model.registerFilterRequested = true
                 }

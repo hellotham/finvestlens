@@ -40,7 +40,7 @@ Common workflows partly built; each is a bounded piece of work.
 | Item | FR / Phase | Notes |
 |---|---|---|
 | Rule actions tail | FR-RULE-01 / P4 | **link-to-bill shipped 24 Jul 2026** (a rule stamps the payment with the schedule's GUID; bill reminders match it exactly before falling back to the name heuristic). Remaining, both left by judgement: **convert-type** (fuzzy in a double-entry model) and **set-budget** (budgets here are per-account planned amounts — a rule "assigning a budget" to a transaction has no coherent target; recorded 25 Jul 2026). |
-| Quick Look for `.gnucash` | FR-PLT-03 / P6 | The QL extension previews `.finvestlens` (read-only SQLite). Extending it to `.gnucash` needs a UTImportedTypeDeclarations entry plus a gzip-XML preview path (linking Interchange into the extension) — left by judgement 25 Jul 2026: GnuCash files are the interchange format, not the document users browse. |
+| Quick Look for `.gnucash` | FR-PLT-03 / P6 | ✅ **Done (9 Aug 2026).** The app now declares `org.gnucash.book` as an *imported* type (the type is GnuCash's; we only read it) and the extension previews all three shapes GnuCash writes, told apart by their first bytes rather than by extension: gzipped XML, plain XML, and its SQLite backend. Interchange was **not** linked in — that would drag Engine into an extension Quick Look launches on a Finder selection. Instead the XML paths read GnuCash's own `<gnc:count-data>` header from an inflated *prefix*, so a 9.6 MB book measured 6.7 ms; the SQLite path reuses the existing reader, telling the two schemas apart by table name (`accounts`/`transactions` vs our `account`/`txn`, read from `libgnucash/backend/sql/`). |
 
 ## 3 — Apple Intelligence import caveats (monitor)
 

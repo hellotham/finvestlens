@@ -69,6 +69,9 @@ struct RegisterSheet: View {
     /// on the display the register is showing on, and a SwiftUI view has no
     /// window to ask.
     @AppStorage(AppearanceKey.registerRowHeight) private var rowHeight = RegisterRowHeight.automatic
+    /// Which columns are switched off, as a bitmask. Shared with the header's
+    /// own Control-click menu through `UserDefaults`, so either can drive it.
+    @AppStorage(RegisterColumnVisibility.key) private var hiddenColumns = 0
     @State private var saveError: String?
 
     var body: some View {
@@ -78,6 +81,7 @@ struct RegisterSheet: View {
                   style: wholeBook ? .journal : style,
                   fontScale: fontScale,
                   rowHeight: rowHeight,
+                  hiddenColumns: hiddenColumns,
                   dateFormat: dateFormat,
                   sort: model.registerSort,
                   sortReversed: model.registerSortReversed,
@@ -133,6 +137,7 @@ private struct SheetHost: NSViewRepresentable {
     let style: RegisterStyle
     let fontScale: CGFloat
     let rowHeight: RegisterRowHeight
+    let hiddenColumns: Int
     let dateFormat: AppDateFormat
     let sort: RegisterSort
     let sortReversed: Bool
@@ -184,7 +189,7 @@ private struct SheetHost: NSViewRepresentable {
         view.sheet.apply(rowsKey: rowsKey, accountKey: accountKey,
                          style: style,
                          fontScale: fontScale, rowHeight: rowHeight,
-                         dateFormat: dateFormat,
+                         hiddenColumns: hiddenColumns, dateFormat: dateFormat,
                          editing: editing, pendingAvailable: pendingAvailable)
         if let target = jump.wrappedValue {
             view.sheet.scrollToEnd(target)
@@ -290,6 +295,59 @@ private enum SheetColumn: Int, CaseIterable {
     var sortable: Bool {
         self == .date || self == .num || self == .description || self == .amount
     }
+
+    /// Whether the column may be switched off.
+    ///
+    /// Date, Description and Amount are what makes this a register rather than
+    /// a list, and the handle column carries the disclosure triangle and the
+    /// edit pencil — hiding any of them would take away something the register
+    /// has no other way to offer. The rest are the user's.
+    ///
+    /// Hiding a column hides **its editor too**: a field with no box cannot be
+    /// clicked or tabbed to (see `focusOrder`). That is what hiding means, it
+    /// is reversible from the same menu, and it is worth knowing for Balance in
+    /// particular — on a leg row that column carries the foreign or share
+    /// quantity (FR-REG-07), not a running balance.
+    var canHide: Bool {
+        switch self {
+        case .num, .transfer, .reconcile, .balance: true
+        case .date, .handle, .description, .amount: false
+        }
+    }
+
+    /// The heading a menu calls it by. `title` is empty for the handle column
+    /// and a bare "R" for reconcile, neither of which reads as a menu item.
+    var menuTitle: String {
+        self == .reconcile ? String(localized: "Reconciled") : title
+    }
+}
+
+/// Which columns are switched off, persisted as a bitmask.
+///
+/// A mask rather than a set because `@AppStorage` carries an `Int` natively:
+/// the SwiftUI menus and this AppKit sheet then read and write the *same*
+/// defaults key, and a change from either side reaches the other without a
+/// second channel to keep in step.
+public enum RegisterColumnVisibility {
+    public static let key = "registerHiddenColumns"
+
+    fileprivate static func hidden(from mask: Int) -> Set<SheetColumn> {
+        Set(SheetColumn.allCases.filter { $0.canHide && mask & (1 << $0.rawValue) != 0 })
+    }
+
+    fileprivate static func mask(of hidden: Set<SheetColumn>) -> Int {
+        hidden.reduce(0) { $0 | (1 << $1.rawValue) }
+    }
+
+    /// The columns a menu may offer, in register order, as plain values — so
+    /// the SwiftUI menus can build the same list without seeing the sheet's
+    /// private column enum.
+    public static var hideable: [(id: Int, title: String)] {
+        SheetColumn.allCases.filter(\.canHide).map { ($0.rawValue, $0.menuTitle) }
+    }
+
+    public static func isHidden(_ id: Int, in mask: Int) -> Bool { mask & (1 << id) != 0 }
+    public static func toggling(_ id: Int, in mask: Int) -> Int { mask ^ (1 << id) }
 }
 
 private enum SheetLine: Equatable {
@@ -326,7 +384,8 @@ private enum SheetMetrics {
         var x: [CGFloat]
         var width: [CGFloat]
 
-        init(totalWidth: CGFloat, overrides: [SheetColumn: CGFloat] = [:]) {
+        init(totalWidth: CGFloat, overrides: [SheetColumn: CGFloat] = [:],
+             hidden: Set<SheetColumn> = []) {
             var fixed: [SheetColumn: CGFloat] = [
                 .date: 80, .num: 58, .handle: 22, .transfer: 180,
                 .reconcile: 24, .amount: 100, .balance: 112,
@@ -334,12 +393,17 @@ private enum SheetMetrics {
             for (column, width) in overrides where fixed[column] != nil {
                 fixed[column] = max(SheetMetrics.minColumnWidth, width)
             }
+            // A hidden column is a zero-width one. Everything downstream then
+            // falls out for free: `rect` returns an empty box so nothing draws,
+            // `column(atX:)` can never land in it because no point satisfies
+            // `x >= start && x < start`, and Description takes back the space.
+            for column in hidden where fixed[column] != nil { fixed[column] = 0 }
             let flex = max(140, totalWidth - fixed.values.reduce(0, +))
             var xs: [CGFloat] = []
             var ws: [CGFloat] = []
             var cursor: CGFloat = 0
             for column in SheetColumn.allCases {
-                let w = fixed[column] ?? flex
+                let w = hidden.contains(column) ? 0 : (fixed[column] ?? flex)
                 xs.append(cursor)
                 ws.append(w)
                 cursor += w
@@ -593,6 +657,7 @@ private final class SheetView: NSView, NSTextFieldDelegate {
     // Geometry: yOffsets[i] = top of block i; count+1 entries (prefix sums).
     private var yOffsets: [CGFloat] = [0]
     private var columnWidths: [SheetColumn: CGFloat] = ColumnWidths.load()
+    fileprivate private(set) var hiddenColumns: Set<SheetColumn> = []
     private var frames = SheetMetrics.Frames(totalWidth: 800,
                                              overrides: ColumnWidths.load())
 
@@ -884,7 +949,7 @@ private final class SheetView: NSView, NSTextFieldDelegate {
 
     func apply(rowsKey: Int, accountKey: Int,
                style: RegisterStyle, fontScale: CGFloat,
-               rowHeight: RegisterRowHeight,
+               rowHeight: RegisterRowHeight, hiddenColumns: Int,
                dateFormat: AppDateFormat, editing: GncGUID?,
                pendingAvailable: Bool) {
         self.dateFormat = dateFormat
@@ -904,6 +969,20 @@ private final class SheetView: NSView, NSTextFieldDelegate {
             resolvedRowPoints = nil
         }
         updateMetrics()
+
+        let hidden = RegisterColumnVisibility.hidden(from: hiddenColumns)
+        if hidden != self.hiddenColumns {
+            self.hiddenColumns = hidden
+            // A field in a column that just went away must not keep the
+            // cursor — `setCursor(nil)` takes the editor down with it.
+            if let cursor, hidden.contains(Self.column(of: cursor.field)) {
+                setCursor(nil)
+            }
+            rebuildFrames()
+            header?.hiddenColumns = hidden
+            invalidateAccessibilityTree()
+            needsDisplay = true
+        }
 
         var settingsChanged = false
         if style != self.style {
@@ -1143,7 +1222,8 @@ private final class SheetView: NSView, NSTextFieldDelegate {
     }
 
     private func rebuildFrames() {
-        frames = SheetMetrics.Frames(totalWidth: frame.width, overrides: columnWidths)
+        frames = SheetMetrics.Frames(totalWidth: frame.width, overrides: columnWidths,
+                                     hidden: hiddenColumns)
         header?.frames = frames
         header?.window?.invalidateCursorRects(for: header!)
         needsDisplay = true
@@ -1868,6 +1948,21 @@ private final class SheetView: NSView, NSTextFieldDelegate {
         _ = scrollToVisible(rect.insetBy(dx: 0, dy: -2 * lineHeight))
     }
 
+    /// The column a field is edited in — on a leg row the register uses
+    /// GnuCash's `CURSOR_SPLIT` mapping (`split-register-layout.c`): Action
+    /// under Date, Memo under Description, the account under Transfer, and the
+    /// foreign or share quantity under Balance.
+    private static func column(of field: TransactionEditField) -> SheetColumn {
+        switch field {
+        case .date, .splitAction: .date
+        case .number: .num
+        case .description, .notes, .tags, .splitMemo: .description
+        case .transfer, .splitAccount: .transfer
+        case .amount, .splitAmount: .amount
+        case .splitQuantity: .balance
+        }
+    }
+
     private func cellRect(of focus: SheetFocus) -> CGRect? {
         guard let block = indexByTxn[focus.txn] else { return nil }
         let row = rows[block]
@@ -1878,26 +1973,19 @@ private final class SheetView: NSView, NSTextFieldDelegate {
             draft?.lines.firstIndex { $0.id == id }
         }
 
-        let target: (line: Int, column: SheetColumn)? = switch focus.field {
-        case .date: lineIndex(.heading).map { ($0, .date) }
-        case .number: lineIndex(.heading).map { ($0, .num) }
-        case .description: lineIndex(.heading).map { ($0, .description) }
-        case .transfer: lineIndex(.heading).map { ($0, .transfer) }
-        case .amount: lineIndex(.heading).map { ($0, .amount) }
-        case .notes: lineIndex(.notes).map { ($0, .description) }
-        case .tags: lineIndex(.tags).map { ($0, .description) }
-        case .splitAction(let id):
-            legIndex(id).flatMap { lineIndex(.leg($0)) }.map { ($0, .date) }
-        case .splitMemo(let id):
-            legIndex(id).flatMap { lineIndex(.leg($0)) }.map { ($0, .description) }
-        case .splitAccount(let id):
-            legIndex(id).flatMap { lineIndex(.leg($0)) }.map { ($0, .transfer) }
-        case .splitAmount(let id):
-            legIndex(id).flatMap { lineIndex(.leg($0)) }.map { ($0, .amount) }
-        case .splitQuantity(let id):
-            legIndex(id).flatMap { lineIndex(.leg($0)) }.map { ($0, .balance) }
+        // Which *line* the field sits on. The column half is `column(of:)`,
+        // shared with `focusOrder` so the two can never drift apart on which
+        // box a field is edited in.
+        let line: Int? = switch focus.field {
+        case .date, .number, .description, .transfer, .amount: lineIndex(.heading)
+        case .notes: lineIndex(.notes)
+        case .tags: lineIndex(.tags)
+        case .splitAction(let id), .splitMemo(let id), .splitAccount(let id),
+             .splitAmount(let id), .splitQuantity(let id):
+            legIndex(id).flatMap { lineIndex(.leg($0)) }
         }
-        guard let target else { return nil }
+        guard let line else { return nil }
+        let target = (line: line, column: Self.column(of: focus.field))
         var rect = frames.rect(target.column,
                                y: yOffsets[block] + CGFloat(target.line) * lineHeight,
                                height: lineHeight)
@@ -2408,7 +2496,11 @@ private final class SheetView: NSView, NSTextFieldDelegate {
                 }
             }
         }
-        return order
+        // A hidden column is zero-width, so its fields have no box to edit in
+        // and no point can click into them; ⇥ has to agree, or Tab would walk
+        // the cursor somewhere invisible.
+        guard !hiddenColumns.isEmpty else { return order }
+        return order.filter { !hiddenColumns.contains(Self.column(of: $0.field)) }
     }
 
     private func moveCursor(backwards: Bool) {
@@ -2499,6 +2591,7 @@ private final class SheetAXRow: NSAccessibilityElement, NSAccessibilityElementPr
                 guard let sheet else { return nil }
                 return SheetColumn.allCases
                     .filter { $0 != .handle }       // the handle is decoration
+                    .filter { !sheet.hiddenColumns.contains($0) }
                     .map { SheetAXCell(sheet: sheet, rowIndex: index, column: $0) }
             }
             // Parenting happens out here, where `self` is simply self.
@@ -2814,6 +2907,43 @@ private final class SheetHeaderView: NSView {
 
     override var isFlipped: Bool { true }
 
+    var hiddenColumns: Set<SheetColumn> = [] {
+        didSet {
+            guard hiddenColumns != oldValue else { return }
+            axHeaderCache = nil
+            window?.invalidateCursorRects(for: self)
+            needsDisplay = true
+        }
+    }
+
+    /// Control-click a heading to choose columns — the gesture Finder, Mail and
+    /// Quicken all use for exactly this. HIG *Context menus* asks that the same
+    /// items live in the main interface too, which they do: the register's
+    /// View \u{25BE} menu and the View menu bar carry the same list.
+    override func menu(for event: NSEvent) -> NSMenu? {
+        let menu = NSMenu()
+        for column in SheetColumn.allCases where column.canHide {
+            let item = NSMenuItem(title: column.menuTitle,
+                                  action: #selector(toggleColumn(_:)),
+                                  keyEquivalent: "")
+            item.target = self
+            item.tag = column.rawValue
+            item.state = hiddenColumns.contains(column) ? .off : .on
+            menu.addItem(item)
+        }
+        return menu
+    }
+
+    @objc private func toggleColumn(_ sender: NSMenuItem) {
+        guard let column = SheetColumn(rawValue: sender.tag), column.canHide else { return }
+        var hidden = hiddenColumns
+        if hidden.contains(column) { hidden.remove(column) } else { hidden.insert(column) }
+        // Written straight to defaults: the SwiftUI menus read the same key
+        // through `@AppStorage`, so the change reaches the sheet the same way
+        // theirs does — one path in, not two.
+        UserDefaults.standard.set(RegisterColumnVisibility.mask(of: hidden), forKey: RegisterColumnVisibility.key)
+    }
+
     // MARK: Accessibility — the headings are drawn, so AX needs objects
 
     override func isAccessibilityElement() -> Bool { false }
@@ -2824,7 +2954,7 @@ private final class SheetHeaderView: NSView {
     override func accessibilityChildren() -> [Any]? {
         if let axHeaderCache { return axHeaderCache }
         let built = SheetColumn.allCases
-            .filter { !$0.title.isEmpty }
+            .filter { !$0.title.isEmpty && !hiddenColumns.contains($0) }
             .map { SheetAXColumnHeader(header: self, column: $0) }
         axHeaderCache = built
         return built
@@ -2894,7 +3024,8 @@ private final class SheetHeaderView: NSView {
     /// columns resize; Description takes whatever is left, as it does in a
     /// Finder window.
     private func resizableColumn(nearX x: CGFloat) -> SheetColumn? {
-        for column in SheetColumn.allCases where column != .description {
+        for column in SheetColumn.allCases
+        where column != .description && !hiddenColumns.contains(column) {
             let edge = frames.x[column.rawValue] + frames.width[column.rawValue]
             if abs(x - edge) <= SheetMetrics.resizeGrab { return column }
         }
@@ -2903,7 +3034,8 @@ private final class SheetHeaderView: NSView {
 
     override func resetCursorRects() {
         super.resetCursorRects()
-        for column in SheetColumn.allCases where column != .description {
+        for column in SheetColumn.allCases
+        where column != .description && !hiddenColumns.contains(column) {
             let edge = frames.x[column.rawValue] + frames.width[column.rawValue]
             addCursorRect(CGRect(x: edge - SheetMetrics.resizeGrab, y: 0,
                                  width: SheetMetrics.resizeGrab * 2,
