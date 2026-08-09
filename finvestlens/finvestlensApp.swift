@@ -48,6 +48,8 @@ struct finvestlensApp: App {
     @State private var model = AppModel()
     /// Mirrors the register's View ▸ Style picker into the menu bar.
     @AppStorage("registerViewStyle") private var registerStyle = RegisterStyle.basic
+    @AppStorage(AppearanceKey.registerRowHeight)
+    private var registerRowHeight = RegisterRowHeight.automatic
     @Environment(\.openWindow) private var openWindow
     #if os(macOS)
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
@@ -159,6 +161,12 @@ struct finvestlensApp: App {
                     }
                 }
                 .pickerStyle(.inline)
+                .disabled(!model.isOpen)
+                Picker("Row Height", selection: $registerRowHeight) {
+                    ForEach(RegisterRowHeight.allCases) { height in
+                        Text(height.title).tag(height)
+                    }
+                }
                 .disabled(!model.isOpen)
                 Button("Filter Transactions…") {
                     model.registerFilterRequested = true

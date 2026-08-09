@@ -7,6 +7,9 @@
 //
 
 import SwiftUI
+#if canImport(AppKit)
+import AppKit
+#endif
 
 /// The Appearance preferences: theme, accent colour and text size — mirroring
 /// macOS System Settings ▸ Appearance.
@@ -14,6 +17,8 @@ public struct AppearanceSettingsView: View {
     @AppStorage(AppearanceKey.colorScheme) private var schemeRaw = ColorSchemePreference.system.rawValue
     @AppStorage(AppearanceKey.accent) private var accentRaw = AppAccent.lavender.rawValue
     @AppStorage(AppearanceKey.textStep) private var textStep = TextSize.defaultStep
+    @AppStorage(AppearanceKey.registerRowHeight)
+    private var rowHeight = RegisterRowHeight.automatic
 
     public init() {}
 
@@ -45,8 +50,19 @@ public struct AppearanceSettingsView: View {
                     Text("A").font(.title2)
                 }
                 Button("Reset to Default") { textStep = TextSize.defaultStep }
-                    .font(.caption)
+                    .scaledFont(.caption)
                     .disabled(textStep == TextSize.defaultStep)
+            }
+
+            Section("Register") {
+                Picker("Transaction Row Height", selection: $rowHeight) {
+                    ForEach(RegisterRowHeight.allCases) { height in
+                        Text(height.title).tag(height)
+                    }
+                }
+                Text(rowHeightCaption)
+                    .scaledFont(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Section("Preview") {
@@ -101,6 +117,20 @@ public struct AppearanceSettingsView: View {
             }
         }
         .padding(.vertical, 4)
+    }
+
+    /// What the choice actually comes to on the display in front of you. An
+    /// automatic setting that never says what it decided is just a number the
+    /// user cannot see.
+    private var rowHeightCaption: LocalizedStringKey {
+        #if canImport(AppKit)
+        let points = Int(rowHeight.points(on: NSScreen.main))
+        #else
+        let points = Int(rowHeight.points(pointsPerInch: nil, screenHeight: nil))
+        #endif
+        return rowHeight == .automatic
+            ? "Measured from this display: \(points) points. Text and icons scale with the row."
+            : "\(points) points. Text and icons scale with the row."
     }
 
     private var textSizeLabel: String {

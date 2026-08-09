@@ -20,6 +20,7 @@ public enum AppearanceKey {
     public static let colorScheme = "appearance.colorScheme"
     public static let accent = "appearance.accent"
     public static let textStep = "appearance.textStep"
+    public static let registerRowHeight = "appearance.registerRowHeight"
 }
 
 /// Theme mode: follow the system, or force light/dark.
@@ -102,6 +103,133 @@ public enum TextSize {
         return factors[min(max(step, 0), factors.count - 1)]
     }
 }
+
+/// How tall a transaction row is in the register — and, by ``base``, how big
+/// everything inside it is, because the register's fonts and glyphs are all
+/// multiples of the row.
+///
+/// **Why the default is computed rather than a number.** A macOS point is
+/// nominally 1/72 inch and no real display honours that. Measured on this
+/// project's own machine, the built-in display is 1470 × 956 points across
+/// 290.6 mm — **128.5 points per inch** — so the 21pt row the register shipped
+/// with stands 4.15 mm tall there, against 4.89 mm for the identical row on a
+/// 109-points-per-inch desktop monitor. That is a 15% legibility difference
+/// the app can measure and the person reading it cannot control. `automatic`
+/// closes it.
+///
+/// `NSScreen.deviceDescription[.resolution]` is the wrong source and looks
+/// like the right one: it reports the *nominal* 72 dpi times the backing scale
+/// — it returned `{144, 144}` on the 128.5 ppi display above. Physical size
+/// comes from `CGDisplayScreenSize`, which reads the display's EDID.
+public enum RegisterRowHeight: Int, CaseIterable, Identifiable, Sendable {
+    /// Derived from the display — see ``automaticPoints(pointsPerInch:screenHeight:)``.
+    case automatic = -1
+    /// 21pt: the density the register shipped with before this existed.
+    case compact = 0
+    /// 24pt: `NSTableView`'s own default `rowHeight`.
+    case standard = 1
+    case comfortable = 2
+    case spacious = 3
+
+    public var id: Int { rawValue }
+
+    public var title: LocalizedStringKey {
+        switch self {
+        case .automatic: "Automatic"
+        case .compact: "Compact"
+        case .standard: "Standard"
+        case .comfortable: "Comfortable"
+        case .spacious: "Spacious"
+        }
+    }
+
+    /// The row height every other register metric is expressed against: fonts,
+    /// symbols and the header strip are all scaled by `height / base`, so a
+    /// taller row is a bigger row rather than the same small text adrift in
+    /// white space. 24pt is AppKit's own `NSTableView.rowHeight` (measured, not
+    /// remembered — a bare `NSTableView()` reports 24.0).
+    public static let base: CGFloat = 24
+
+    /// Reference density: a desktop display of about 109 points per inch — the
+    /// 27-inch class the platform's own metrics were drawn for, where AppKit's
+    /// 24pt row stands 5.59 mm tall.
+    static let referencePointsPerInch: CGFloat = 109
+
+    /// How far `automatic` corrects towards a row of constant *physical*
+    /// height. Full correction is right in isolation and wrong in company:
+    /// macOS itself treats a point as a point, so a fully normalised register
+    /// would stand visibly out of step with every other app on the same screen
+    /// — and would quietly undo the choice of someone running "More Space".
+    /// Half-way keeps most of the legibility and the platform's proportions.
+    static let correction: CGFloat = 0.5
+
+    /// A register still has to be a register: never so tall that a full-height
+    /// window could not show thirty transactions.
+    static let minimumRowsPerScreen: CGFloat = 30
+
+    /// The floor and ceiling `automatic` may reach.
+    static let range: ClosedRange<CGFloat> = 21...30
+
+    /// Row height in points at 100% Text Size.
+    public func points(pointsPerInch: CGFloat?, screenHeight: CGFloat?) -> CGFloat {
+        switch self {
+        case .compact: 21
+        case .standard: 24
+        case .comfortable: 27
+        case .spacious: 30
+        case .automatic: Self.automaticPoints(pointsPerInch: pointsPerInch,
+                                              screenHeight: screenHeight)
+        }
+    }
+
+    /// The display-derived row: correct part-way towards constant physical
+    /// size, then refuse to be so tall that too few transactions fit.
+    ///
+    /// Both inputs are optional because both can be unknowable — a virtual
+    /// display, a capture device or a projector may report no physical size at
+    /// all, and iOS exposes none. A missing input drops its term rather than
+    /// the whole calculation.
+    public static func automaticPoints(pointsPerInch: CGFloat?,
+                                       screenHeight: CGFloat?) -> CGFloat {
+        var height = base
+        // Displays that report 0 mm (or something absurd) must not drag the
+        // row to the clamp: treat only a plausible density as a measurement.
+        if let ppi = pointsPerInch, (30...400).contains(ppi) {
+            height = base * (1 + correction * (ppi / referencePointsPerInch - 1))
+        }
+        if let screenHeight, screenHeight > 0 {
+            height = min(height, screenHeight / minimumRowsPerScreen)
+        }
+        return min(max(height.rounded(), range.lowerBound), range.upperBound)
+    }
+}
+
+#if canImport(AppKit)
+public extension NSScreen {
+    /// Logical points per inch, from the display's physical size.
+    ///
+    /// `nil` when the display reports no usable size — virtual displays, some
+    /// projectors and capture devices report 0 mm, and a divide by that is how
+    /// a legibility feature becomes a crash.
+    var pointsPerInch: CGFloat? {
+        guard let number = deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber
+        else { return nil }
+        let millimetres = CGDisplayScreenSize(CGDirectDisplayID(number.uint32Value)).width
+        guard millimetres > 1, frame.width > 0 else { return nil }
+        return frame.width / (millimetres / 25.4)
+    }
+}
+
+public extension RegisterRowHeight {
+    /// Resolved against the display a window is actually on, so dragging the
+    /// register between a laptop screen and an external monitor re-measures.
+    func points(on screen: NSScreen?) -> CGFloat {
+        let screen = screen ?? NSScreen.main
+        return points(pointsPerInch: screen?.pointsPerInch,
+                      screenHeight: screen?.frame.height)
+    }
+}
+#endif
 
 /// Base point sizes for the semantic text styles (macOS metrics). Used by
 /// ``ScaledFont`` to produce a crisp, explicitly-scaled font.

@@ -272,6 +272,11 @@ struct RegisterTableView: View {
     /// ⌘↑/⌘↓ from the shell; consumed here.
     var jump: Binding<RegisterEnd?> = .constant(nil)
     @Environment(\.appDateFormat) private var dateFormat
+    @Environment(\.appFontScale) private var appFontScale
+    /// How tall a transaction row stands, and — because everything in the row
+    /// is a multiple of it — how big its text and glyphs are.
+    @AppStorage(AppearanceKey.registerRowHeight)
+    private var rowHeightPreference = RegisterRowHeight.automatic
 
     /// The shared register style — all three of them. A `Table` can honour
     /// Auto Details as cheaply as Journal, because disclosure here is rows
@@ -305,6 +310,28 @@ struct RegisterTableView: View {
     /// The style actually in force. All Transactions is a journal whatever the
     /// preference says — the same substitution the macOS sheet makes.
     private var style: RegisterStyle { wholeBook ? .journal : registerStyle }
+
+    /// The row height at 100% Text Size.
+    ///
+    /// `automatic` is display-derived on macOS; iOS and iPadOS publish no
+    /// physical screen size at all, and there Dynamic Type already carries the
+    /// accessibility contract — `scaledFont` multiplies every register font by
+    /// it — so `automatic` resolves to the 24pt base and the person's own text
+    /// setting moves it from there.
+    private var rowPoints: CGFloat {
+        #if os(macOS)
+        rowHeightPreference.points(on: NSScreen.main)
+        #else
+        rowHeightPreference.points(pointsPerInch: nil, screenHeight: nil)
+        #endif
+    }
+
+    /// Published into the table's subtree so `scaledFont` grows the row's text
+    /// and symbols with the row itself — a taller row is a bigger row, not the
+    /// same small text with more air around it.
+    private var rowFontScale: CGFloat {
+        appFontScale * (rowPoints / RegisterRowHeight.base)
+    }
 
     /// Journal only: every transaction is disclosed, so the base rows carry
     /// every leg. The other two styles disclose at most the selected
@@ -365,8 +392,13 @@ struct RegisterTableView: View {
     private func table(_ rows: [RegisterTableRow], code: String) -> some View {
         ScrollViewReader { proxy in
             Table(rows, selection: $selection, sortOrder: tableSortOrder) {
-                TableColumn("Date", value: \.sortDate) { dateCell($0) }
-                    .width(96)
+                // The row's height floor rides on the first column: a `Table`
+                // row is as tall as its tallest cell, so one `minHeight` sets
+                // the lot without touching the other six.
+                TableColumn("Date", value: \.sortDate) {
+                    dateCell($0).frame(minHeight: rowPoints * appFontScale)
+                }
+                .width(96)
                 // The edit-handle column: 22pt between Date and Description,
                 // always laid out, so the pencil appearing moves nothing.
                 TableColumn("") { handleCell($0) }
@@ -383,6 +415,7 @@ struct RegisterTableView: View {
                     .width(120)
                     .alignment(.numeric)
             }
+            .environment(\.appFontScale, rowFontScale)
             .scrollEdgeEffectStyle(.hard, for: .top)
             #if os(macOS)
             // Selection *interaction* stays native; drawing is ours: the

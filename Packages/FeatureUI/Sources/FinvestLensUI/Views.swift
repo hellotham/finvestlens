@@ -1247,6 +1247,11 @@ struct RegisterView: View {
     /// styles (``RegisterStyle``). This was a single "Show All Splits" flag,
     /// which could say Basic or Journal but had no way to say Auto-Split.
     @AppStorage("registerViewStyle") private var registerStyle = RegisterStyle.basic
+    /// Row height is a Settings preference, but it is also a thing you judge
+    /// *while looking at the register* — so it is on the register's own View
+    /// menu too, and mirrored into the menu bar (HIG *Toolbars*, macOS).
+    @AppStorage(AppearanceKey.registerRowHeight)
+    private var rowHeightPreference = RegisterRowHeight.automatic
     #if os(macOS)
     @Environment(\.openWindow) private var openWindow
     #endif
@@ -1393,6 +1398,17 @@ struct RegisterView: View {
             }
             .pickerStyle(.inline)
             Divider()
+            Menu {
+                Picker("Row Height", selection: $rowHeightPreference) {
+                    ForEach(RegisterRowHeight.allCases) { height in
+                        Text(height.title).tag(height)
+                    }
+                }
+                .pickerStyle(.inline)
+            } label: {
+                Label("Row Height", systemImage: "arrow.up.and.down.text.horizontal")
+            }
+            .help("How tall each transaction stands — Automatic measures the display")
             Menu {
                 Picker("Sort By", selection: $model.registerSort) {
                     ForEach(RegisterSort.allCases) { Text($0.rawValue).tag($0) }

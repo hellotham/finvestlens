@@ -65,6 +65,10 @@ struct RegisterSheet: View {
     @Environment(\.appFontScale) private var fontScale
 
     @AppStorage("registerViewStyle") private var style = RegisterStyle.basic
+    /// Resolved against the sheet's own window, not here: `automatic` depends
+    /// on the display the register is showing on, and a SwiftUI view has no
+    /// window to ask.
+    @AppStorage(AppearanceKey.registerRowHeight) private var rowHeight = RegisterRowHeight.automatic
     @State private var saveError: String?
 
     var body: some View {
@@ -73,6 +77,7 @@ struct RegisterSheet: View {
                   accountKey: accountKey,
                   style: wholeBook ? .journal : style,
                   fontScale: fontScale,
+                  rowHeight: rowHeight,
                   dateFormat: dateFormat,
                   sort: model.registerSort,
                   sortReversed: model.registerSortReversed,
@@ -127,6 +132,7 @@ private struct SheetHost: NSViewRepresentable {
     let accountKey: Int
     let style: RegisterStyle
     let fontScale: CGFloat
+    let rowHeight: RegisterRowHeight
     let dateFormat: AppDateFormat
     let sort: RegisterSort
     let sortReversed: Bool
@@ -177,7 +183,8 @@ private struct SheetHost: NSViewRepresentable {
         }
         view.sheet.apply(rowsKey: rowsKey, accountKey: accountKey,
                          style: style,
-                         fontScale: fontScale, dateFormat: dateFormat,
+                         fontScale: fontScale, rowHeight: rowHeight,
+                         dateFormat: dateFormat,
                          editing: editing, pendingAvailable: pendingAvailable)
         if let target = jump.wrappedValue {
             view.sheet.scrollToEnd(target)
@@ -309,6 +316,8 @@ private enum SheetMetrics {
     /// column only" — so the triangle lives inside Date, not in a column of
     /// its own and not on the trailing edge (a trailing chevron is the iOS
     /// *navigation* indicator, a different meaning).
+    /// The base width, at a 24pt row and 100% Text Size; the view scales it
+    /// (`SheetView.caretGutter`) so the gutter tracks the glyph it holds.
     static let caretGutter: CGFloat = 14
     static let washRadius: CGFloat = 8
     static let washInset: CGFloat = 4
@@ -549,9 +558,25 @@ private final class SheetView: NSView, NSTextFieldDelegate {
     private var dateFormat: AppDateFormat?
     var onError: ((String) -> Void)?
 
-    // Dynamic Type: the app font scale drives fonts and the line height.
+    // Metrics. Two inputs — the app's Text Size and the row-height preference
+    // — fold into one `scale` that every font, glyph and offset is a multiple
+    // of, so the register grows as a piece.
+    private var appFontScale: CGFloat = 1
+    private var rowHeight = RegisterRowHeight.automatic
+    /// The row height resolved against this view's display. `nil` means
+    /// "measure again" — set by a preference change or a move to another screen.
+    private var resolvedRowPoints: CGFloat?
+    /// The disclosure gutter, scaled. It has to move with the glyph inside it:
+    /// `drawSymbol` centres a symbol at its natural size and does not clip, so
+    /// a fixed 14pt gutter spilled the triangle into the date text once the
+    /// scale passed ~1.4 (measured: the 11pt triangle renders 16pt wide at
+    /// scale 1.41, 19pt at 1.63). It is also the click target, which is the
+    /// half that matters for a taller row.
+    private var caretGutter: CGFloat = SheetMetrics.caretGutter
+    /// `rowHeight` resolved against this view's display, times Text Size,
+    /// divided by the 24pt base. 1.0 is a 24pt row with 13pt text.
     private var fontScale: CGFloat = 0
-    private var lineHeight: CGFloat = 21
+    private var lineHeight: CGFloat = RegisterRowHeight.base
     private var bodyFont = NSFont.systemFont(ofSize: 13)
     private var monoFont = NSFont.monospacedDigitSystemFont(ofSize: 13, weight: .regular)
     private var smallFont = NSFont.systemFont(ofSize: 11)
@@ -577,6 +602,7 @@ private final class SheetView: NSView, NSTextFieldDelegate {
     private lazy var unreconciledRotor = UnreconciledRotor(sheet: self)
     private var comboTyped = false
     nonisolated(unsafe) private var scrollObserver: NSObjectProtocol?
+    nonisolated(unsafe) private var screenObserver: NSObjectProtocol?
 
     weak var header: SheetHeaderView?
 
@@ -597,6 +623,9 @@ private final class SheetView: NSView, NSTextFieldDelegate {
         if let scrollObserver {
             NotificationCenter.default.removeObserver(scrollObserver)
         }
+        if let screenObserver {
+            NotificationCenter.default.removeObserver(screenObserver)
+        }
     }
 
     override var isFlipped: Bool { true }
@@ -613,6 +642,25 @@ private final class SheetView: NSView, NSTextFieldDelegate {
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
+        // An automatic row height is a property of the *display*, so dragging
+        // the window to another monitor has to re-measure it.
+        if let screenObserver {
+            NotificationCenter.default.removeObserver(screenObserver)
+            self.screenObserver = nil
+        }
+        if let window {
+            screenObserver = NotificationCenter.default.addObserver(
+                forName: NSWindow.didChangeScreenNotification, object: window,
+                queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated {
+                    self?.resolvedRowPoints = nil
+                    self?.updateMetrics()
+                }
+            }
+        }
+        resolvedRowPoints = nil
+        updateMetrics()
+
         guard scrollObserver == nil,
               let clip = enclosingScrollView?.contentView else { return }
         clip.postsBoundsChangedNotifications = true
@@ -803,8 +851,40 @@ private final class SheetView: NSView, NSTextFieldDelegate {
     private var accountKey: Int = .min
     private var lastEditingRequest: GncGUID?
 
+    /// Folds Text Size and the row-height preference into the one scale the
+    /// whole sheet draws from, and rebuilds whatever measured itself against
+    /// the old one.
+    ///
+    /// Idempotent on purpose — it returns the moment the number has not moved,
+    /// which is what lets the screen-change notification call it blind.
+    private func updateMetrics() {
+        // Measured, then remembered. `apply` runs on every interaction, and
+        // resolving the row costs ~10 µs of `CGDisplayScreenSize` and
+        // `deviceDescription` lookup (measured, 100k iterations) — small, and
+        // exactly the per-interaction work this register is built to avoid.
+        let resolved = resolvedRowPoints ?? rowHeight.points(on: window?.screen)
+        resolvedRowPoints = resolved
+        let scale = appFontScale * (resolved / RegisterRowHeight.base)
+        guard scale != fontScale else { return }
+        fontScale = scale
+        lineHeight = ceil(RegisterRowHeight.base * scale)
+        caretGutter = ceil(SheetMetrics.caretGutter * scale)
+        bodyFont = NSFont.systemFont(ofSize: 13 * scale)
+        monoFont = NSFont.monospacedDigitSystemFont(ofSize: 13 * scale, weight: .regular)
+        smallFont = NSFont.systemFont(ofSize: 11 * scale)
+        // The header strip and the suggestions popup are separate views; they
+        // scale with the register or Dynamic Type stops at its edge.
+        suggestions.fontScale = scale
+        header?.fontScale = scale
+        header?.superview?.needsLayout = true
+        rebuildGeometry()
+        needsDisplay = true
+        positionEditor()
+    }
+
     func apply(rowsKey: Int, accountKey: Int,
                style: RegisterStyle, fontScale: CGFloat,
+               rowHeight: RegisterRowHeight,
                dateFormat: AppDateFormat, editing: GncGUID?,
                pendingAvailable: Bool) {
         self.dateFormat = dateFormat
@@ -818,22 +898,12 @@ private final class SheetView: NSView, NSTextFieldDelegate {
             header?.needsDisplay = true
         }
 
-        if fontScale != self.fontScale {
-            self.fontScale = fontScale
-            lineHeight = ceil(21 * fontScale)
-            bodyFont = NSFont.systemFont(ofSize: 13 * fontScale)
-            monoFont = NSFont.monospacedDigitSystemFont(ofSize: 13 * fontScale,
-                                                        weight: .regular)
-            smallFont = NSFont.systemFont(ofSize: 11 * fontScale)
-            // The header strip and the suggestions popup are separate views;
-            // they scale with the register or Dynamic Type stops at its edge.
-            suggestions.fontScale = fontScale
-            header?.fontScale = fontScale
-            header?.superview?.needsLayout = true
-            rebuildGeometry()
-            needsDisplay = true
-            positionEditor()
+        appFontScale = fontScale
+        if rowHeight != self.rowHeight {
+            self.rowHeight = rowHeight
+            resolvedRowPoints = nil
         }
+        updateMetrics()
 
         var settingsChanged = false
         if style != self.style {
@@ -1274,7 +1344,7 @@ private final class SheetView: NSView, NSTextFieldDelegate {
             if !skipForCursor(row, .date) {
                 let date = drafting ? (draft?.date ?? row.base.date) : row.base.date
                 drawText(dateFormat?.short(date) ?? "", in: cell(.date),
-                         leadingInset: SheetMetrics.caretGutter)
+                         leadingInset: caretGutter)
             }
             if !skipForCursor(row, .number) {
                 let num = drafting ? (draft?.number ?? "") : row.base.number
@@ -1384,7 +1454,7 @@ private final class SheetView: NSView, NSTextFieldDelegate {
         guard style.allowsManualExpand, selectedTxn == row.txn else { return }
         let open = currentExpanded || (drafting && draft?.isExpanded == true)
         let gutter = CGRect(x: dateCell.minX, y: dateCell.minY,
-                            width: SheetMetrics.caretGutter, height: dateCell.height)
+                            width: caretGutter, height: dateCell.height)
         drawSymbol(SheetSymbols.caret(open: open, fontScale), centeredIn: gutter)
     }
 
@@ -1593,7 +1663,7 @@ private final class SheetView: NSView, NSTextFieldDelegate {
 
         // The first column's leading gutter is the disclosure triangle.
         if column == .date, case .heading = line, style.allowsManualExpand,
-           point.x < frames.x[SheetColumn.date.rawValue] + SheetMetrics.caretGutter {
+           point.x < frames.x[SheetColumn.date.rawValue] + caretGutter {
             toggleCurrentExpanded()
             return
         }
@@ -1834,8 +1904,8 @@ private final class SheetView: NSView, NSTextFieldDelegate {
         // The date field starts after the disclosure gutter, so the editor
         // occupies the same box the drawn text does.
         if target.column == .date, case .date = focus.field {
-            rect.origin.x += SheetMetrics.caretGutter
-            rect.size.width -= SheetMetrics.caretGutter
+            rect.origin.x += caretGutter
+            rect.size.width -= caretGutter
         }
         return rect
     }

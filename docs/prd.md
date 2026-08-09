@@ -182,6 +182,7 @@ FinvestLens is a **document-based app** with its **own native file format** (a s
 | FR-REG-09 | Provide a whole-book journal view (combined register across all accounts) — shipped as the **All Transactions** sidebar destination (GnuCash's General Ledger, renamed per the plain-language principle, §8). | Could | P2 |
 | FR-REG-10 | **Attach/associate an external file or URL** to a transaction (document link / "paperclip"). | Could | P6 |
 | FR-REG-11 | **Print checks** from transactions with configurable check formats. | Could | P4 |
+| FR-REG-12 | **Row height is measured, not fixed.** The register's default row is derived from the display's physical point density (`CGDisplayScreenSize`), correcting half-way towards a row of constant physical size and never so tall that thirty transactions would not fit the screen; text and glyphs scale with the row. Overridable — Automatic, Compact, Standard, Comfortable, Spacious — from Settings ▸ Appearance ▸ Register, the register's View ▾ menu, and the View menu bar. iOS publishes no physical-size API and leaves this to Dynamic Type. *(Aug 2026; measurements and the reasoning for the half-way correction in [register-ux-research.md](register-ux-research.md) §4.)* | Should | P6 |
 
 ### 5.7 Reconciliation
 
