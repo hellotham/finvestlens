@@ -73,53 +73,6 @@ public enum StatementExtractor {
     /// twenty-row cap, so a slice never needs the cap to save it.
     static let sliceBudget = 1_000
 
-    /// Folds text to letters and digits only, so a payee can be looked for in
-    /// the source without spacing, case or punctuation getting in the way.
-    static func grounding(_ text: String) -> String {
-        text.lowercased().filter { $0.isLetter || $0.isNumber }
-    }
-
-    /// Whether an amount the model reported is actually printed in the slice.
-    ///
-    /// The instructions say "report amounts exactly as printed", so the digits
-    /// must be there. Folded to digits alone this survives the differences that
-    /// do not matter — a leading minus the statement writes as a trailing `CR`,
-    /// a thousands separator the model drops — while a padded row's invented
-    /// amount has no match at all. It is the sharper half of the grounding
-    /// pair: a merchant name can be guessed plausibly, an exact cent figure
-    /// much less so.
-    static func isAmountPrinted(_ amount: String, in source: String) -> Bool {
-        let digits = amount.filter(\.isNumber)
-        // Under $10.00 an amount folds to three digits or fewer, which is short
-        // enough to hit by chance in a page of card numbers and dates — so the
-        // check abstains there rather than rejecting a real row on a weak test.
-        guard digits.count >= 4 else { return true }
-        return source.contains(digits)
-    }
-
-    /// Whether `payee` actually occurs in the slice it was extracted from.
-    ///
-    /// The prompt asks for the payee "cleaned up", so an exact match is the
-    /// wrong test: `WOOLWORTHS 3421 SYDNEY NS` legitimately comes back as
-    /// `Woolworths`. Folded to letters and digits, the cleaned name is still a
-    /// substring of the printed one — while an invented merchant is not.
-    ///
-    /// Short names are exempt: below four folded characters the containment
-    /// test stops discriminating (`BP`, `Aldi`) and would start accepting
-    /// anything.
-    static func isGrounded(_ payee: String, in source: String) -> Bool {
-        let needle = grounding(payee)
-        guard needle.count >= 4 else { return !needle.isEmpty }
-        if source.contains(needle) { return true }
-        // A multi-word payee may be cleaned by dropping a word rather than
-        // punctuation ("Transport for NSW Travel" → "Transport NSW"), so accept
-        // it when every word of four or more characters is present.
-        let words = payee.split(whereSeparator: { !$0.isLetter && !$0.isNumber })
-            .map { grounding(String($0)) }
-            .filter { $0.count >= 4 }
-        return !words.isEmpty && words.allSatisfy { source.contains($0) }
-    }
-
     /// Splits text into groups of whole lines, each at most `budget`
     /// characters. A single line longer than the budget is left whole — cutting
     /// mid-row would split a transaction from its amount.
@@ -200,7 +153,7 @@ public enum StatementExtractor {
                 if let opening = IntelligenceParsing.amount(response.content.openingBalance) {
                     previousBalance = opening
                 }
-                let source = Self.grounding(slice)
+                let source = SourceGrounding.folded(slice)
                 for row in response.content.transactions {
                     guard let date = IntelligenceParsing.date(row.date),
                           let amount = IntelligenceParsing.amount(row.amount),
@@ -211,8 +164,8 @@ public enum StatementExtractor {
                           // remaining slots with plausible rows — so a row is
                           // kept only if both its payee and its amount are
                           // actually in the text it was extracted from.
-                          Self.isGrounded(row.payee, in: source),
-                          Self.isAmountPrinted(row.amount, in: source)
+                          SourceGrounding.isNamePrinted(row.payee, in: source),
+                          SourceGrounding.isAmountPrinted(row.amount, in: source)
                     else { continue }
                     let balance = IntelligenceParsing.amount(row.balanceAfter)
                     // Dedupe across pages (carried-over rows, repeated headers).

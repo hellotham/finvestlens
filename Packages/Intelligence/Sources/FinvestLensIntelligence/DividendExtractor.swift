@@ -54,6 +54,11 @@ import FoundationModels
 @available(macOS 26.0, iOS 26.0, *)
 public enum DividendExtractor {
 
+    /// Field order matters, and the order that works is not the printed one.
+    /// Asking for Unfranked before Franked — as the table prints them — made
+    /// every Plato statement come back as the $0.0055 rate in all three
+    /// columns and NAB's unfranked amount as 85, the cents figure. Franked
+    /// first holds the row in place. Measured, not reasoned.
     @Generable
     struct ModelDividend {
         @Guide(description: "Company or fund name paying the dividend")
@@ -62,11 +67,11 @@ public enum DividendExtractor {
         var ticker: String
         @Guide(description: "Payment date in yyyy-MM-dd format, empty if not shown")
         var paymentDate: String
-        @Guide(description: "Franked amount of the dividend, 0 if not shown")
+        @Guide(description: "The figure in the Franked Amount column of the table, exactly as printed. Not the rate per share, and not the number of shares.")
         var frankedAmount: String
-        @Guide(description: "Unfranked amount of the dividend, 0 if not shown")
+        @Guide(description: "The figure in the Unfranked Amount column of the table, exactly as printed.")
         var unfrankedAmount: String
-        @Guide(description: "Franking credits (imputation credits) attached, 0 if not shown")
+        @Guide(description: "The figure in the Franking Credit column of the table, exactly as printed. Only 0 if that column is absent.")
         var frankingCredits: String
         @Guide(description: "Net cash payment to the shareholder (total paid)")
         var netPayment: String
@@ -80,10 +85,31 @@ public enum DividendExtractor {
             throw IntelligenceError.unavailable("Apple Intelligence is not available.")
         }
 
+        // Two sentences, both bought with measurements on real statements.
+        //
+        // The franking credit has its own column whose header wraps across two
+        // lines — "Franking" above "Credit" — and without being told that, the
+        // model misses the column on every statement tried: it returned 0 with
+        // $728.57 (NAB) and $252.86 (Plato) printed on the page. Naming the
+        // column fixes both.
+        //
+        // "Never subtract" earns its place too. Mentioning franking credits at
+        // all makes the model want to net them off the payment, and it will
+        // report a $1,700.00 dividend as $971.43 given the chance.
+        //
+        // What is deliberately NOT here: a paragraph telling the model to
+        // ignore the prose restatement of the calculation. It does fix the
+        // franked amount, and on the NAB statement it also makes the request
+        // fail outright — `refusal`, "May contain sensitive content". The
+        // reconciliation below fixes that figure without asking the model for
+        // anything, so the prompt stays short enough not to trip the guardrail.
         let session = LanguageModelSession(instructions: """
             You read dividend and distribution statements from share registries. \
-            Extract the amounts exactly as printed. Franking credits are listed \
-            separately from the cash payment — never add them together.
+            Extract the amounts exactly as printed. The franking credit has its \
+            own column in the same table, headed "Franking Credit", which may be \
+            split across two lines — report it when it is there. Franking \
+            credits are listed separately from the cash payment: never add them \
+            to it and never subtract them from it.
             """)
         do {
             let model = try await session.respond(
@@ -91,15 +117,13 @@ public enum DividendExtractor {
                 generating: ModelDividend.self,
                 options: GenerationOptions(sampling: .greedy)
             ).content
-            return DividendStatementDetails(
-                securityName: model.security,
-                ticker: model.ticker.uppercased(),
-                paymentDate: IntelligenceParsing.date(model.paymentDate),
-                frankedAmount: IntelligenceParsing.amount(model.frankedAmount) ?? 0,
-                unfrankedAmount: IntelligenceParsing.amount(model.unfrankedAmount) ?? 0,
-                frankingCredits: IntelligenceParsing.amount(model.frankingCredits) ?? 0,
-                netPayment: IntelligenceParsing.amount(model.netPayment) ?? 0
-            )
+            return DividendReconciler.details(
+                from: RawDividendFigures(
+                    security: model.security, ticker: model.ticker,
+                    paymentDate: model.paymentDate, franked: model.frankedAmount,
+                    unfranked: model.unfrankedAmount, credits: model.frankingCredits,
+                    net: model.netPayment),
+                printedIn: text)
         } catch {
             throw IntelligenceError.wrap(error)
         }

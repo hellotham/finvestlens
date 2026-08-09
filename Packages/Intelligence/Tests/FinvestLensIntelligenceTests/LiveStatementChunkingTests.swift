@@ -53,55 +53,55 @@ struct StatementChunkingTests {
 
     @Test("A cleaned-up payee is still recognised in the printed line")
     func groundingAcceptsCleanedNames() {
-        let source = StatementExtractor.grounding("""
+        let source = SourceGrounding.folded("""
             12 FEB  WOOLWORTHS 3421 SYDNEY NS          45.67
             13 FEB  TRANSPORT FOR NSW TRAVEL            8.20
             14 FEB  AMZN Mktp AU*RT4XY9  SYDNEY        21.99
             """)
         // The prompt asks for the payee "cleaned up", so these are the shapes
         // the model actually returns for those lines.
-        #expect(StatementExtractor.isGrounded("Woolworths", in: source))
-        #expect(StatementExtractor.isGrounded("WOOLWORTHS 3421", in: source))
-        #expect(StatementExtractor.isGrounded("Transport for NSW", in: source))
-        #expect(StatementExtractor.isGrounded("Amazon Marketplace", in: source) == false)
-        #expect(StatementExtractor.isGrounded("AMZN Mktp", in: source))
+        #expect(SourceGrounding.isNamePrinted("Woolworths", in: source))
+        #expect(SourceGrounding.isNamePrinted("WOOLWORTHS 3421", in: source))
+        #expect(SourceGrounding.isNamePrinted("Transport for NSW", in: source))
+        #expect(SourceGrounding.isNamePrinted("Amazon Marketplace", in: source) == false)
+        #expect(SourceGrounding.isNamePrinted("AMZN Mktp", in: source))
     }
 
     @Test("An invented merchant is rejected")
     func groundingRejectsInvention() {
-        let source = StatementExtractor.grounding("12 FEB  WOOLWORTHS 3421 SYDNEY NS   45.67")
+        let source = SourceGrounding.folded("12 FEB  WOOLWORTHS 3421 SYDNEY NS   45.67")
         // Padding is the failure mode this exists for: the model fills unused
         // array slots with plausible merchants that are not on the page.
-        #expect(!StatementExtractor.isGrounded("Netflix", in: source))
-        #expect(!StatementExtractor.isGrounded("Uber Eats", in: source))
-        #expect(!StatementExtractor.isGrounded("Coles Supermarket", in: source))
+        #expect(!SourceGrounding.isNamePrinted("Netflix", in: source))
+        #expect(!SourceGrounding.isNamePrinted("Uber Eats", in: source))
+        #expect(!SourceGrounding.isNamePrinted("Coles Supermarket", in: source))
     }
 
     @Test("An amount must actually be printed on the page")
     func amountGrounding() {
-        let source = StatementExtractor.grounding("""
+        let source = SourceGrounding.folded("""
             12 FEB  WOOLWORTHS 3421 SYDNEY NS          45.67
             13 FEB  ANZ INTEREST CHARGED            1,204.30 CR
             """)
-        #expect(StatementExtractor.isAmountPrinted("45.67", in: source))
-        #expect(StatementExtractor.isAmountPrinted("-45.67", in: source))
+        #expect(SourceGrounding.isAmountPrinted("45.67", in: source))
+        #expect(SourceGrounding.isAmountPrinted("-45.67", in: source))
         // A thousands separator the model drops, and a CR the statement writes
         // instead of a sign, both fold away.
-        #expect(StatementExtractor.isAmountPrinted("1204.30", in: source))
+        #expect(SourceGrounding.isAmountPrinted("1204.30", in: source))
         // An invented figure has nothing to match.
-        #expect(!StatementExtractor.isAmountPrinted("99.99", in: source))
-        #expect(!StatementExtractor.isAmountPrinted("512.00", in: source))
+        #expect(!SourceGrounding.isAmountPrinted("99.99", in: source))
+        #expect(!SourceGrounding.isAmountPrinted("512.00", in: source))
         // Under $10.00 there are too few digits to test on, so it abstains.
-        #expect(StatementExtractor.isAmountPrinted("0.50", in: source))
+        #expect(SourceGrounding.isAmountPrinted("0.50", in: source))
     }
 
     @Test("Payees too short to discriminate are not rejected on length alone")
     func groundingIsLenientOnShortNames() {
         // Below four folded characters containment stops meaning anything, so
         // the check abstains rather than throwing away real rows.
-        let source = StatementExtractor.grounding("12 FEB  BP CONNECT ROZELLE   88.00")
-        #expect(StatementExtractor.isGrounded("BP", in: source))
-        #expect(!StatementExtractor.isGrounded("", in: source))
+        let source = SourceGrounding.folded("12 FEB  BP CONNECT ROZELLE   88.00")
+        #expect(SourceGrounding.isNamePrinted("BP", in: source))
+        #expect(!SourceGrounding.isNamePrinted("", in: source))
     }
 }
 
