@@ -476,45 +476,16 @@ public struct FinvestLensRootView: View {
                     Button("New Account…", systemImage: "plus.rectangle.on.folder") {
                         model.presentedPanel = .newAccount
                     }
-                    Divider()
-                    Button("Stock Transaction…", systemImage: "chart.line.uptrend.xyaxis") {
-                        model.presentedPanel = .stockTransaction
-                    }
-                    .disabled(model.securityAccountNodes.isEmpty)
-                    Button("Currency Transfer…", systemImage: "dollarsign.arrow.circlepath") {
-                        model.presentedPanel = .currencyTransfer
-                    }
-                    .disabled(model.currencyCommodities.count < 2)
+                    // Stock Transaction and Currency Transfer are guided
+                    // *transaction editors*, not top-level app actions: they
+                    // are reached from the transaction area (the Transaction
+                    // menu and the register's context menu) and from the Book
+                    // menu, which is where HIG *Toolbars* (macOS) requires
+                    // every command to exist anyway.
                 } label: {
                     Label("New", systemImage: "plus")
                 }
                 .help("Create a transaction or account")
-                Menu {
-                    Button("Import Bank File…", systemImage: "square.and.arrow.down.on.square") {
-                        model.bankImportRequested = true
-                    }
-                    Divider()
-                    // Apple Intelligence (on-device model) features.
-                    Button("Smart Import PDFs…", systemImage: "doc.viewfinder") {
-                        model.smartImportRequested = true
-                    }
-                    .disabled(!model.isIntelligenceAvailable)
-                    .help(model.intelligenceUnavailableReason
-                          ?? "Import bank statements, dividend statements, and invoices — each PDF is identified and handled automatically")
-                    Button("Auto-Categorise…", systemImage: "sparkles") {
-                        model.presentedPanel = .autoCategorize
-                    }
-                    .help("Assign categories to uncategorised transactions")
-                    Button("Match Attachments…", systemImage: "paperclip.badge.ellipsis") {
-                        model.presentedPanel = .matchAttachments
-                    }
-                    .disabled(!model.isIntelligenceAvailable)
-                    .help(model.intelligenceUnavailableReason
-                          ?? "Pick receipts and statements — each is matched to its transaction (any account), linked, and categorised")
-                } label: {
-                    Label("Import", systemImage: "square.and.arrow.down")
-                }
-                .help("Import a bank file, read PDFs, or auto-categorise")
             }
         }
         .sheet(item: $model.presentedPanel) { panel in
@@ -1272,10 +1243,10 @@ struct RegisterView: View {
     @State private var goToDateShown = false
     /// GnuCash's View ▸ Double Line, renamed Show Details. A preference
     /// rather than per-register state, so it survives moving between accounts.
-    @AppStorage("registerDoubleLine") private var doubleLine = false
-    /// Every transaction opened out into its legs — the journal read, in the
-    /// same table (FR-REG-03: one register, not three styles).
-    @AppStorage("registerShowAllSplits") private var showAllSplits = false
+    /// How much of each transaction is opened out — GnuCash's three register
+    /// styles (``RegisterStyle``). This was a single "Show All Splits" flag,
+    /// which could say Basic or Journal but had no way to say Auto-Split.
+    @AppStorage("registerViewStyle") private var registerStyle = RegisterStyle.basic
     #if os(macOS)
     @Environment(\.openWindow) private var openWindow
     #endif
@@ -1318,6 +1289,12 @@ struct RegisterView: View {
         }
         .navigationTitle(selectedName)
         .background { jumpShortcuts }
+        .onChange(of: model.registerFilterRequested) { _, now in
+            if now {
+                filterShown = true
+                model.registerFilterRequested = false
+            }
+        }
         .sheet(isPresented: $filterShown) {
             RegisterFilterSheet(model: model)
         }
@@ -1327,34 +1304,105 @@ struct RegisterView: View {
         .toolbar { registerToolbar }
     }
 
-    /// The register's toolbar (redesign 6.2): View ▾ · Sort ▾ · Filter ·
-    /// Reconcile · Edit. Register controls live with the window's, so the
-    /// register itself is all rows — no strip eating a line of every account.
+    /// The register's toolbar. Register controls live with the window's, so
+    /// the register itself is all rows — no strip eating a line of every
+    /// account.
+    ///
+    /// Two groups, in the shape Mail uses: the controls that decide *what you
+    /// are looking at* together on the leading side, then a separator, then
+    /// the things you can *do*.
+    ///
+    /// HIG *Toolbars* — "Minimize the number of groups… in general, aim for a
+    /// maximum of three" — and it is why Edit has left: a per-row command does
+    /// not belong in the window frame (HIG *Buttons*, macOS: "Square buttons
+    /// aren\u{2019}t intended for use in toolbars"). Editing is the row\u{2019}s pencil,
+    /// a click in any cell, \u{2318}E, and the Transaction menu.
     @ToolbarContentBuilder
     private var registerToolbar: some ToolbarContent {
         ToolbarItemGroup {
             viewMenu
-            sortMenu
             filterButton
-            reconcileButton
-            editSelectionButton
+        }
+        // HIG *Toolbars*: separation between sections is fixed space, not a
+        // drawn rule — "Add separation by inserting fixed space between the
+        // buttons." On macOS 26 the system renders that as the divider you
+        // see between Mail's groups.
+        ToolbarSpacer(.fixed)
+        ToolbarItemGroup {
+            actionsMenu
         }
     }
 
-    /// What to show, not which style: details (notes/memo), all splits, the
-    /// subtree, the attachments panel — orthogonal toggles, not modes.
+    /// Everything you can *do* to this register, in one pull-down — the
+    /// "actions" half of the toolbar. HIG *Pull-down buttons* sanctions this
+    /// shape (its own examples are an Add menu and a Sort menu) and warns only
+    /// against burying a view\u{2019}s primary actions; entering a transaction is
+    /// the primary action here and it stays on the entry bar and \u{2318}N.
+    private var actionsMenu: some View {
+        Menu {
+            Button("Reconcile Account…", systemImage: "checkmark.seal") {
+                #if os(macOS)
+                if let id = model.selectedAccountID { openWindow(id: "reconcile", value: id) }
+                #else
+                model.presentedPanel = .reconcile
+                #endif
+            }
+            .disabled(model.selectedAccountID == nil)
+            Button("Bulk Edit…", systemImage: "square.and.pencil") {
+                model.presentedPanel = .bulkEdit
+            }
+            .disabled(model.selectedTransactionIDs.count < 2)
+            Divider()
+            Button("Import Bank File…", systemImage: "square.and.arrow.down.on.square") {
+                model.bankImportRequested = true
+            }
+            Button("Smart Import PDFs…", systemImage: "doc.viewfinder") {
+                model.smartImportRequested = true
+            }
+            .disabled(!model.isIntelligenceAvailable)
+            .help(model.intelligenceUnavailableReason
+                  ?? "Import bank statements, dividend statements, and invoices — each PDF is identified and handled automatically")
+            Button("Auto-Categorise…", systemImage: "sparkles") {
+                model.presentedPanel = .autoCategorize
+            }
+            .help("Assign categories to uncategorised transactions")
+            Button("Match Attachments…", systemImage: "paperclip.badge.ellipsis") {
+                model.presentedPanel = .matchAttachments
+            }
+            .disabled(!model.isIntelligenceAvailable)
+            .help(model.intelligenceUnavailableReason
+                  ?? "Pick receipts and statements — each is matched to its transaction, linked, and categorised")
+        } label: {
+            Label("Actions", systemImage: "ellipsis.circle")
+        }
+        .help("Reconcile, import, categorise")
+    }
+
+    /// The register style, plus what to show alongside it: details
+    /// (notes/memo), the subtree, the attachments panel.
     private var viewMenu: some View {
         let selectedHasDocument = model.selectedTransactionIDs.count == 1
             && model.selectedTransactionIDs.first.map(model.hasLinkedDocument) == true
         return Menu {
-            Toggle(isOn: $doubleLine) {
-                Label("Show Details", systemImage: "text.alignleft")
+            Picker(selection: $registerStyle) {
+                ForEach(RegisterStyle.allCases) { style in
+                    Label(style.title, systemImage: style.symbol).tag(style)
+                }
+            } label: {
+                Label("Style", systemImage: "rectangle.split.1x2")
             }
-            .help("Show notes, memo and action under each transaction")
-            Toggle(isOn: $showAllSplits) {
-                Label("Show All Splits", systemImage: "list.bullet.indent")
+            .pickerStyle(.inline)
+            Divider()
+            Menu {
+                Picker("Sort By", selection: $model.registerSort) {
+                    ForEach(RegisterSort.allCases) { Text($0.rawValue).tag($0) }
+                }
+                .pickerStyle(.inline)
+                Divider()
+                Toggle("Reverse Order", isOn: $model.registerSortReversed)
+            } label: {
+                Label("Sort By", systemImage: "arrow.up.arrow.down")
             }
-            .help("Open every transaction out into its splits")
             Divider()
             Toggle(isOn: $model.registerIncludesSubaccounts) {
                 Label("Include Subaccounts", systemImage: "arrow.triangle.branch")
@@ -1370,57 +1418,6 @@ struct RegisterView: View {
             Label("View", systemImage: "slider.horizontal.3")
         }
         .help("Choose what the register shows")
-    }
-
-    private var reconcileButton: some View {
-        Button("Reconcile", systemImage: "checkmark.seal") {
-            #if os(macOS)
-            if let id = model.selectedAccountID { openWindow(id: "reconcile", value: id) }
-            #else
-            model.presentedPanel = .reconcile
-            #endif
-        }
-        .help("Reconcile this account against a statement")
-        .disabled(model.selectedAccountID == nil)
-    }
-
-    /// Edit (one transaction → the inspector) or Bulk Edit (several → the
-    /// uniform-change sheet). Always present, disabled with nothing selected.
-    private var editSelectionButton: some View {
-        let count = model.selectedTransactionIDs.count
-        return Button {
-            if count == 1 {
-                model.editingTransactionID = model.selectedTransactionIDs.first
-            } else {
-                model.presentedPanel = .bulkEdit
-            }
-        } label: {
-            Label(count > 1 ? "Bulk Edit \(count)" : "Edit",
-                  systemImage: "square.and.pencil")
-        }
-        .disabled(count == 0)
-        .help(count > 1
-              ? "Apply a uniform change to the \(count) selected transactions"
-              : "Edit the selected transaction in the inspector")
-    }
-
-    /// GnuCash's View ▸ Sort By, as a menu rather than a dialog — the options
-    /// are the point, not the panel.
-    private var sortMenu: some View {
-        Menu {
-            Picker("Sort By", selection: $model.registerSort) {
-                ForEach(RegisterSort.allCases) { Text($0.rawValue).tag($0) }
-            }
-            .pickerStyle(.inline)
-            Divider()
-            Toggle("Reverse Order", isOn: $model.registerSortReversed)
-        } label: {
-            Label(model.registerSort == .standard && !model.registerSortReversed
-                  ? "Sort" : "Sort: \(model.registerSort.rawValue)",
-                  systemImage: "arrow.up.arrow.down")
-        }
-        .fixedSize()
-        .help("Choose the order transactions are listed in")
     }
 
     private var filterButton: some View {
@@ -1545,402 +1542,6 @@ struct GeneralLedgerView: View {
         #else
         RegisterTableView(model: model, wholeBook: true, jump: $jump)
             .navigationTitle("All Transactions")
-        #endif
-    }
-}
-
-struct JournalView: View {
-    @Environment(\.appDateFormat) private var dateFormat
-    @Bindable var model: AppModel
-    let accountID: GncGUID?
-    @Binding var editingTransactionID: GncGUID?
-    @Binding var jump: RegisterEnd?
-    @State private var selection: Set<GncGUID> = []
-    @Environment(\.appFontScale) private var appFontScale
-    /// Measured width, driving the proportional column widths (RegisterColumns).
-    @State private var tableWidth: CGFloat = 800
-    /// Double Line: the detail lines (heading notes, per-leg action · memo) —
-    /// the same preference the Basic-table styles use.
-    @AppStorage("registerDoubleLine") private var doubleLine = false
-
-    /// The journal edits exactly the way the register does: one
-    /// ``TransactionDraft``, one cursor cell, ⏎ saves, ⎋ cancels. The old
-    /// journal had its own editing dialect — always-live per-cell fields that
-    /// committed each keystroke straight into the book, and an account button
-    /// that opened a popover — which is precisely the "two different UIs for
-    /// editing transactions" this redesign exists to remove. A journal
-    /// transaction is already opened out (each leg is a row), so the draft is
-    /// always expanded and there is nothing to expand or collapse: no layout
-    /// shift, the cells just come alive.
-    @State private var draft: TransactionDraft?
-    /// The journal's cursor — same one-`FocusState`-enum pattern as the
-    /// register (see ``RegisterCell``).
-    @FocusState private var cursor: TransactionEditField?
-    @State private var saveError: String?
-
-    private var metrics: RegisterMetrics {
-        RegisterMetrics(width: tableWidth, scale: appFontScale)
-    }
-
-    /// The transaction whose cells are live: the drafted one, else the single
-    /// selected row's. Selecting any leg wakes the whole transaction —
-    /// GnuCash's cursor spans the transaction, not one row of it.
-    private func isLive(_ row: JournalRow) -> Bool {
-        if let draft { return draft.transactionID == row.transactionID }
-        guard selection.count == 1, let id = selection.first else { return false }
-        return id == row.id || id == row.transactionID
-            || rowTransactionID(of: id) == row.transactionID
-    }
-
-    private func rowTransactionID(of rowID: GncGUID) -> GncGUID? {
-        model.transactionID(ofSplit: rowID) ?? rowID
-    }
-
-    private func beginEdit(_ row: JournalRow) {
-        if selection != [row.id], draft?.transactionID != row.transactionID {
-            selection = [row.id]
-        }
-        guard draft?.transactionID != row.transactionID else { return }
-        draft = TransactionDraft(model: model, transactionID: row.transactionID, expanded: true)
-    }
-
-    private func cancelEdit() {
-        draft = nil
-        cursor = nil
-    }
-
-    private func saveEdit() {
-        guard let draft else { return }
-        guard draft.isBalanced else {
-            saveError = draft.lines.allSatisfy(\.quantityIsValid)
-                ? String(localized: "The splits don’t balance — off by \(AmountFormat.string(draft.imbalance, code: model.reportCurrency.mnemonic)).")
-                : String(localized: "A quantity isn’t a number — clear it or fix it.")
-            return
-        }
-        do {
-            try model.updateTransaction(
-                id: draft.transactionID, date: draft.date, description: draft.description,
-                currency: draft.currencyOverride
-                    ?? model.transactionCurrency(for: draft.lines.compactMap(\.accountID)),
-                splits: draft.lines.filter { $0.accountID != nil }.map(\.asInput),
-                tags: draft.parsedTags, notes: draft.notes)
-            cancelEdit()
-        } catch {
-            saveError = error.localizedDescription
-        }
-    }
-
-    /// The draft line a leg row edits — matched by split identity, which is
-    /// what survives the draft reordering or dropping legs.
-    private func draftLine(for row: JournalRow) -> Int? {
-        draft?.lines.firstIndex { $0.splitID == row.id }
-    }
-
-    private func isDrafting(_ row: JournalRow) -> Bool {
-        draft?.transactionID == row.transactionID
-    }
-
-    /// ⇥ order: the heading's fields, then each leg's, in visual order,
-    /// skipping folded columns — the same contract as the register row.
-    private func fieldOrder(rows: [JournalRow]) -> [TransactionEditField] {
-        guard let draft else { return [] }
-        var fields: [TransactionEditField] = []
-        if showsDate { fields.append(.date) }
-        fields.append(.description)
-        if doubleLine { fields.append(.notes) }
-        for row in rows where !row.isHeading && row.transactionID == draft.transactionID {
-            guard let index = draftLine(for: row) else { continue }
-            let lineID = draft.lines[index].id
-            fields.append(.splitAccount(lineID))
-            if doubleLine { fields.append(.splitMemo(lineID)) }
-            fields.append(.splitAmount(lineID))
-        }
-        return fields
-    }
-
-    private func moveCursor(rows: [JournalRow], backwards: Bool) {
-        let order = fieldOrder(rows: rows)
-        guard !order.isEmpty else { return }
-        guard let current = cursor, let index = order.firstIndex(of: current) else {
-            cursor = order.first
-            return
-        }
-        let next = backwards
-            ? (index == 0 ? order.count - 1 : index - 1)
-            : (index + 1) % order.count
-        cursor = order[next]
-    }
-
-    var body: some View {
-        let rows = model.journalRows(forAccountID: accountID)
-        if rows.isEmpty {
-            ContentUnavailableView("No transactions", systemImage: "tray",
-                                   description: Text("No postings to show."))
-        } else {
-            ScrollViewReader { proxy in
-                table(rows)
-                    // Deferred a tick: scrolling during the same pass that builds
-                    // the table can land before AppKit has row geometry, which is
-                    // why the journal styles used to open at the top. Like the
-                    // Basic register, they open on the newest transaction.
-                    .onAppear { Task { scroll(proxy, to: .newest, rows: rows) } }
-                    .onChange(of: accountID) { Task { scroll(proxy, to: .newest, rows: rows) } }
-                    .onChange(of: jump) { _, target in
-                        guard let target else { return }
-                        scroll(proxy, to: target, rows: rows)
-                        jump = nil
-                    }
-            }
-            .onGeometryChange(for: CGFloat.self) { ($0.size.width / 8).rounded() * 8 } action: { tableWidth = $0 }
-        }
-    }
-
-    /// Jumps to the oldest or newest **visible** row. Targeting the displayed
-    /// rows matters in Auto-Split, where an unexpanded transaction's legs are
-    /// not on screen — the old whole-journal edge row didn't exist there, so
-    /// the scroll silently did nothing.
-    private func scroll(_ proxy: ScrollViewProxy, to end: RegisterEnd, rows: [JournalRow]) {
-        guard let target = (end == .newest ? rows.last?.id : rows.first?.id) else { return }
-        proxy.scrollTo(target, anchor: end == .newest ? .bottom : .top)
-    }
-
-    // The same responsive folds as the Basic register (see RegisterColumns).
-    private var showsBalance: Bool { RegisterColumns.showsBalance(tableWidth, appFontScale) }
-    private var showsDate: Bool { RegisterColumns.showsDate(tableWidth, appFontScale) }
-
-    private func table(_ rows: [JournalRow]) -> some View {
-        // The column skeleton mirrors the Basic register — Date | text | R |
-        // Amount | Balance, at the same computed widths — so switching styles
-        // keeps every shared column edge exactly where it was.
-        Table(rows, selection: $selection) {
-            if showsDate {
-                TableColumn("Date") { row in
-                    if row.isHeading {
-                        RegisterCell(value: isDrafting(row)
-                                        ? dateFormat.short(draft?.date ?? row.date ?? .now)
-                                        : row.date.map { dateFormat.short($0) } ?? "",
-                                     field: isDrafting(row) ? .date : nil,
-                                     cursor: $cursor,
-                                     metrics: metrics,
-                                     onFocus: { beginEdit(row) },
-                                     onEdit: { text in
-                                         if let parsed = dateFormat.parseShort(text) {
-                                             draft?.date = parsed
-                                         }
-                                     })
-                    } else if let date = row.date {
-                        Text(dateFormat.short(date))
-                            .scaledFont(.body).fontWeight(.medium)
-                    }
-                }
-                .width(RegisterColumns.date(tableWidth, appFontScale))
-            }
-            TableColumn("Transaction / Account") { row in
-                // Legs are indented under their heading, so the grouping still
-                // reads even though the rows are flat. Double Line shows the
-                // detail beneath the text: notes on headings, action · memo on
-                // legs — the same toggle the Basic-table styles use. The single
-                // selected row edits in place, as in the Basic table.
-                VStack(alignment: .leading, spacing: 1) {
-                    if row.isHeading {
-                        HStack(spacing: 4) {
-                            if row.hasDocument {
-                                Image(systemName: "paperclip")
-                                    .imageScale(.small)
-                                    .foregroundStyle(.secondary)
-                            }
-                            RegisterCell(value: isDrafting(row) ? (draft?.description ?? "")
-                                                                : row.text,
-                                         field: isDrafting(row) ? .description : nil,
-                                         cursor: $cursor,
-                                         metrics: metrics,
-                                         onFocus: { beginEdit(row) },
-                                         onEdit: { draft?.description = $0 })
-                        }
-                        if !showsDate, let date = row.date {
-                            Text(dateFormat.short(date))
-                                .scaledFont(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        if doubleLine {
-                            RegisterCell(value: isDrafting(row) ? (draft?.notes ?? "")
-                                                                : row.notes,
-                                         placeholder: "Notes", muted: true,
-                                         field: isDrafting(row) ? .notes : nil,
-                                         cursor: $cursor,
-                                         metrics: metrics,
-                                         onFocus: { beginEdit(row) },
-                                         onEdit: { draft?.notes = $0 })
-                        }
-                    } else {
-                        // A leg's account: the same combo cell as the register's
-                        // Transfer column. At rest it is drawn text; the popover
-                        // button it replaces was a control at rest and a focus
-                        // fight when open.
-                        if let index = draftLine(for: row), isDrafting(row),
-                           let line = draft?.lines[safe: index] {
-                            AccountComboCell(accountID: line.accountID,
-                                             nodes: model.postableAccounts,
-                                             field: .splitAccount(line.id),
-                                             cursor: $cursor,
-                                             metrics: metrics,
-                                             onPick: { draft?.lines[index].accountID = $0 },
-                                             onReturn: saveEdit)
-                            if doubleLine {
-                                RegisterCell(value: line.memo, placeholder: "Memo",
-                                             muted: true,
-                                             field: .splitMemo(line.id),
-                                             cursor: $cursor,
-                                             metrics: metrics,
-                                             onEdit: { draft?.lines[index].memo = $0 })
-                            }
-                        } else {
-                            RegisterCell(value: row.text, muted: true,
-                                         isEditable: false, metrics: metrics)
-                            if doubleLine {
-                                RegisterCell(value: row.memo, placeholder: "Memo",
-                                             muted: true,
-                                             isEditable: false, metrics: metrics)
-                            }
-                        }
-                    }
-                }
-                .padding(.leading, row.isHeading ? 0 : 18 * appFontScale)
-            }
-            TableColumn("R") { row in
-                if !row.isHeading, !row.reconcile.isEmpty {
-                    ReconcileBadge(glyph: row.reconcile) {
-                        model.cycleReconcileState(splitID: row.id)
-                    }
-                }
-            }
-            .width(24 * appFontScale)
-            TableColumn("Amount") { row in
-                if row.isHeading {
-                    // The heading's Amount cell is blank — except while its
-                    // transaction is being edited out of balance, when it
-                    // carries the same warning the register's Balance cell
-                    // does. A cell that is already there; no line appears.
-                    if isDrafting(row), let draft, draft.imbalance != 0 {
-                        Label(AmountFormat.string(draft.imbalance, code: row.currencyCode),
-                              systemImage: "exclamationmark.triangle.fill")
-                            .labelStyle(.titleAndIcon)
-                            .scaledFont(.caption).monospacedDigit()
-                            .foregroundStyle(.orange)
-                            .help("Out of balance — the splits do not sum to zero")
-                            .frame(maxWidth: .infinity, alignment: .trailing)
-                    }
-                } else if let index = draftLine(for: row), isDrafting(row),
-                          let line = draft?.lines[safe: index] {
-                    RegisterCell(value: line.amountText,
-                                 alignment: .trailing, monospaced: true,
-                                 field: .splitAmount(line.id), cursor: $cursor,
-                                 metrics: metrics,
-                                 onEdit: { draft?.setAmountText($0, at: index) })
-                } else if let amount = row.amount {
-                    VStack(alignment: .trailing, spacing: 1) {
-                        Text(AmountFormat.string(amount, code: row.currencyCode))
-                            .scaledFont(.body)
-                            .monospacedDigit()
-                            .foregroundStyle(amount < 0 ? .red : .primary)
-                        // The folded Balance column: under the amount, not gone.
-                        if !showsBalance, let balance = row.runningBalance {
-                            Text(AmountFormat.string(balance, code: row.currencyCode))
-                                .scaledFont(.caption)
-                                .monospacedDigit()
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-                }
-            }
-            .width(RegisterColumns.amount(tableWidth, appFontScale))
-            .alignment(.numeric)
-            // The focused account's running balance on its own legs — the same
-            // trailing column as Basic, so the style switch doesn't reflow. The
-            // general ledger (no focus account) leaves it empty.
-            if showsBalance {
-                TableColumn("Balance") { row in
-                    if let balance = row.runningBalance {
-                        Text(AmountFormat.string(balance, code: row.currencyCode))
-                            .scaledFont(.body)
-                            .monospacedDigit()
-                            .frame(maxWidth: .infinity, alignment: .trailing)
-                    }
-                }
-                .width(RegisterColumns.balance(tableWidth, appFontScale))
-                .alignment(.numeric)
-            }
-        }
-        .contextMenu(forSelectionType: GncGUID.self) { ids in
-            // A journal row is a heading or a leg. A heading has no split of its
-            // own, so act on the transaction's first leg — the same transaction
-            // either way, which is what the operations are about.
-            if let id = ids.first, let row = rows.first(where: { $0.id == id }) {
-                // Multi-selection actions want split GUIDs: a leg's id already is
-                // one; a heading's is its transaction's, so borrow its first leg.
-                let splitIDs = Set(ids.compactMap { id -> GncGUID? in
-                    guard let row = rows.first(where: { $0.id == id }) else { return nil }
-                    return row.isHeading ? model.anySplitID(ofTransaction: row.transactionID) : id
-                })
-                TransactionActions(model: model,
-                                   splitID: model.anySplitID(ofTransaction: row.transactionID),
-                                   selectionSplitIDs: splitIDs)
-            }
-        }
-        // ⏎ saves the draft, exactly as in the register. There is no Save
-        // button here either.
-        .onSubmit(of: .text) { saveEdit() }
-        // Same AppKit-level ⇥ capture as the register: the key never reaches
-        // per-field handlers on macOS.
-        .captureTabs(while: draft != nil, onTab: { moveCursor(rows: rows, backwards: $0) })
-        // Edit Transaction… / ⌘E: same entry point as the register — the id
-        // lands in the model, the journal wakes that transaction's cells. (The
-        // old wiring still pointed at the removed trailing inspector, so ⌘E in
-        // the journal did nothing at all.)
-        .onChange(of: model.editingTransactionID) { _, id in
-            guard let id, draft?.transactionID != id,
-                  let heading = rows.first(where: { $0.isHeading && $0.transactionID == id })
-            else { return }
-            beginEdit(heading)
-            cursor = .description
-        }
-        .sheet(item: $model.schedulingTransactionID) { id in
-            ScheduleTransactionSheet(model: model, transactionID: id)
-        }
-        .onChange(of: selection) {
-            // Mirror the full selection into the model (as the Basic table
-            // does): headings stand in via their transaction's first leg.
-            let splitIDs = Set(selection.compactMap { id -> GncGUID? in
-                guard let row = rows.first(where: { $0.id == id }) else { return nil }
-                return row.isHeading ? model.anySplitID(ofTransaction: row.transactionID) : id
-            })
-            model.selectedSplitIDs = splitIDs
-            // Moving off the drafted transaction abandons the draft, the way
-            // leaving a row does in GnuCash — and in the register upstairs.
-            if let draft, !selection.isEmpty,
-               !selection.contains(where: { rowTransactionID(of: $0) == draft.transactionID }) {
-                cancelEdit()
-            }
-            // Selecting a single row puts the cursor in its transaction —
-            // journal rows are already opened out, so the draft is the
-            // selection, and its lines give the leg cells focus identities.
-            if selection.count == 1, let id = selection.first, draft == nil,
-               let row = rows.first(where: { $0.id == id }) {
-                beginEdit(row)
-            }
-        }
-        .alert("Couldn’t save", isPresented: Binding(
-            get: { saveError != nil }, set: { if !$0 { saveError = nil } })) {
-            Button("OK", role: .cancel) { saveError = nil }
-        } message: {
-            Text(saveError ?? "")
-        }
-        #if os(macOS)
-        // ⎋ abandons the edit, then clears the selection — the register's order.
-        .onExitCommand {
-            if draft != nil { cancelEdit() } else { selection = [] }
-        }
         #endif
     }
 }

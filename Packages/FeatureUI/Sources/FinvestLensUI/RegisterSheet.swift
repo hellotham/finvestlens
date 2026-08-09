@@ -64,16 +64,14 @@ struct RegisterSheet: View {
     @Environment(\.appDateFormat) private var dateFormat
     @Environment(\.appFontScale) private var fontScale
 
-    @AppStorage("registerDoubleLine") private var doubleLine = false
-    @AppStorage("registerShowAllSplits") private var showAllSplits = false
+    @AppStorage("registerViewStyle") private var style = RegisterStyle.basic
     @State private var saveError: String?
 
     var body: some View {
         SheetHost(model: model, wholeBook: wholeBook,
                   rowsKey: rowsKey,
                   accountKey: accountKey,
-                  showDetails: doubleLine,
-                  showAllSplits: showAllSplits,
+                  style: wholeBook ? .journal : style,
                   fontScale: fontScale,
                   dateFormat: dateFormat,
                   sort: model.registerSort,
@@ -127,8 +125,7 @@ private struct SheetHost: NSViewRepresentable {
     let wholeBook: Bool
     let rowsKey: Int
     let accountKey: Int
-    let showDetails: Bool
-    let showAllSplits: Bool
+    let style: RegisterStyle
     let fontScale: CGFloat
     let dateFormat: AppDateFormat
     let sort: RegisterSort
@@ -156,10 +153,14 @@ private struct SheetHost: NSViewRepresentable {
     private func push(into view: SheetContainerView) {
         view.sheet.onError = onError
         view.headerView.sortState = sortIndicator
+        view.headerView.onResize = { [weak view] column, width in
+            view?.sheet.resizeColumn(column, to: width)
+        }
         view.headerView.onSort = { [weak model] column in
             guard let model else { return }
             let target: RegisterSort? = switch column {
             case .date: .date
+            case .num: .number
             case .description: .description
             case .amount: .amount
             default: nil
@@ -175,7 +176,7 @@ private struct SheetHost: NSViewRepresentable {
             }
         }
         view.sheet.apply(rowsKey: rowsKey, accountKey: accountKey,
-                         showDetails: showDetails, showAllSplits: showAllSplits,
+                         style: style,
                          fontScale: fontScale, dateFormat: dateFormat,
                          editing: editing, pendingAvailable: pendingAvailable)
         if let target = jump.wrappedValue {
@@ -187,6 +188,7 @@ private struct SheetHost: NSViewRepresentable {
 
     private var sortIndicator: (column: SheetColumn, reversed: Bool)? {
         switch sort {
+        case .number: (.num, sortReversed)
         case .date: (.date, sortReversed)
         case .description: (.description, sortReversed)
         case .amount: (.amount, sortReversed)
@@ -222,8 +224,14 @@ private struct SheetMainBase {
     var anchorSplit: GncGUID?
     var isHeadingOnly: Bool
     var date: Date
+    /// GnuCash's Num field — a cheque number or the bank reference an import
+    /// carried in. The model has always had it and the register has always
+    /// been able to *sort* by it; nothing ever drew it.
+    var number: String
     var description: String
     var notes: String
+    /// Joined for display; the draft owns the editable text.
+    var tags: String
     var reconcile: String
     var hasDocument: Bool
     var isSimple: Bool
@@ -256,11 +264,12 @@ private enum SheetTrace {
 // MARK: - Geometry
 
 private enum SheetColumn: Int, CaseIterable {
-    case date, handle, description, transfer, reconcile, amount, balance
+    case date, num, handle, description, transfer, reconcile, amount, balance
 
     var title: String {
         switch self {
         case .date: String(localized: "Date")
+        case .num: String(localized: "Num")
         case .handle: ""
         case .description: String(localized: "Description")
         case .transfer: String(localized: "Transfer")
@@ -271,12 +280,18 @@ private enum SheetColumn: Int, CaseIterable {
     }
 
     var trailing: Bool { self == .amount || self == .balance }
-    var sortable: Bool { self == .date || self == .description || self == .amount }
+    var sortable: Bool {
+        self == .date || self == .num || self == .description || self == .amount
+    }
 }
 
 private enum SheetLine: Equatable {
     case heading
     case notes
+    /// Tags were editable only in the modal editor — the register carried the
+    /// field in its draft and in its tab order but mapped it to no cell at
+    /// all, so the one place you keep transactions could not touch them.
+    case tags
     case leg(Int)
     case addSplit
 }
@@ -284,6 +299,17 @@ private enum SheetLine: Equatable {
 private enum SheetMetrics {
     static let headerHeight: CGFloat = 26
     static let textInset: CGFloat = 5
+    /// A column may not be dragged narrower than this.
+    static let minColumnWidth: CGFloat = 28
+    /// How close to a divider counts as grabbing it.
+    static let resizeGrab: CGFloat = 3
+
+    /// The disclosure triangle's gutter at the leading edge of the first
+    /// column. HIG *Outline views*: "Expose data hierarchy in the first
+    /// column only" — so the triangle lives inside Date, not in a column of
+    /// its own and not on the trailing edge (a trailing chevron is the iOS
+    /// *navigation* indicator, a different meaning).
+    static let caretGutter: CGFloat = 14
     static let washRadius: CGFloat = 8
     static let washInset: CGFloat = 4
 
@@ -291,11 +317,14 @@ private enum SheetMetrics {
         var x: [CGFloat]
         var width: [CGFloat]
 
-        init(totalWidth: CGFloat) {
-            let fixed: [SheetColumn: CGFloat] = [
-                .date: 80, .handle: 22, .transfer: 180,
+        init(totalWidth: CGFloat, overrides: [SheetColumn: CGFloat] = [:]) {
+            var fixed: [SheetColumn: CGFloat] = [
+                .date: 80, .num: 58, .handle: 22, .transfer: 180,
                 .reconcile: 24, .amount: 100, .balance: 112,
             ]
+            for (column, width) in overrides where fixed[column] != nil {
+                fixed[column] = max(SheetMetrics.minColumnWidth, width)
+            }
             let flex = max(140, totalWidth - fixed.values.reduce(0, +))
             var xs: [CGFloat] = []
             var ws: [CGFloat] = []
@@ -327,24 +356,123 @@ private enum SheetMetrics {
     }
 }
 
+/// Column widths the user dragged, kept across launches.
+///
+/// HIG *Lists and tables* (macOS) states it plainly — "Let people resize
+/// columns" — and every app in this class obeys: Finder ("drag the line that's
+/// between the column headings"), Quicken, and GnuCash, whose own manual says
+/// the register's columns "can be resized by left-clicking and dragging the
+/// dividers in the header".
+@MainActor
+private enum ColumnWidths {
+    private static let key = "registerColumnWidths"
+
+    static func load() -> [SheetColumn: CGFloat] {
+        guard let raw = UserDefaults.standard.dictionary(forKey: key) as? [String: Double]
+        else { return [:] }
+        var out: [SheetColumn: CGFloat] = [:]
+        for (name, width) in raw {
+            if let index = Int(name), let column = SheetColumn(rawValue: index) {
+                out[column] = CGFloat(width)
+            }
+        }
+        return out
+    }
+
+    static func save(_ widths: [SheetColumn: CGFloat]) {
+        let raw = Dictionary(uniqueKeysWithValues:
+            widths.map { (String($0.key.rawValue), Double($0.value)) })
+        UserDefaults.standard.set(raw, forKey: key)
+    }
+}
+
 // MARK: - Symbols (drawn, not widgets)
 
 @MainActor
 private enum SheetSymbols {
-    static let paperclip = make("paperclip", color: .secondaryLabelColor, size: 10)
-    static let pencil = make("square.and.pencil", color: .secondaryLabelColor, size: 12)
-    static let cancel = make("xmark.circle", color: .secondaryLabelColor, size: 12)
-    static let addSplit = make("plus.circle", color: .secondaryLabelColor, size: 11)
-    static let removeSplit = make("minus.circle", color: .secondaryLabelColor, size: 11)
-    static let warning = make("exclamationmark.triangle.fill", color: .systemOrange, size: 10)
-    static let sortUp = make("chevron.up", color: .secondaryLabelColor, size: 8)
-    static let sortDown = make("chevron.down", color: .secondaryLabelColor, size: 8)
+    /// Cached per (name, size): the drawn glyphs have to follow Dynamic Type
+    /// like the text does, and they were fixed-size statics — so at large text
+    /// the caret and pencil stayed at their 11–12pt while every label around
+    /// them grew.
+    private static var cache: [String: NSImage?] = [:]
 
-    private static func make(_ name: String, color: NSColor, size: CGFloat) -> NSImage? {
-        NSImage(systemSymbolName: name, accessibilityDescription: nil)?
+    /// Dropped when the appearance flips or the accent changes: a cached
+    /// image has its colour baked in.
+    static func invalidate() { cache.removeAll() }
+
+    /// The attachment mark: accent, and bold at 12pt. It scored 26.3 ink mass
+    /// in secondary grey at 10pt — the faintest thing in the row — against
+    /// 61.7 here.
+    static func paperclip(_ s: CGFloat) -> NSImage? {
+        make("paperclip", NSColor(Color.appAccent), 12 * s, .bold)
+    }
+    // Interactive glyphs use `labelColor`, not the secondary/tertiary greys
+    // they started in. Measured against the register's own alternating row
+    // colours: tertiary lands at 1.88:1 in light and 2.26:1 in dark, which
+    // fails WCAG 1.4.11's 3:1 for non-text controls, and secondary scrapes
+    // 3.88:1 in light — technically a pass, and still too faint to find.
+    // `labelColor` measures 13.96:1 / 10.89:1 on the same backgrounds.
+    /// SF Symbols has **no filled pencil** — `pencil.fill`,
+    /// `square.and.pencil.fill` and `pencil.tip.fill` do not exist, and the
+    /// only filled pencil forms are circle discs. So the chunkiest non-disc
+    /// pencil is this one at semibold: measured as alpha-weighted ink mass it
+    /// scores 87.1, against the bare `pencil`'s 22.3 (which is why dropping
+    /// the square made it fainter, not bolder) and the caret's 49.0.
+    static func pencil(_ s: CGFloat) -> NSImage? {
+        make("square.and.pencil", NSColor(Color.appAccent), 15 * s, .semibold)
+    }
+
+    /// Genuinely filled, and red: this one discards work, so it is the one
+    /// place a stronger signal than the accent is right. `xmark.circle.fill`
+    /// scores 151.8 ink mass against the outline ring's 61.2.
+    static func cancel(_ s: CGFloat) -> NSImage? {
+        make("xmark.circle.fill", .systemRed, 14 * s, knockout: .white)
+    }
+
+    static func addSplit(_ s: CGFloat) -> NSImage? {
+        make("plus.circle", .labelColor, 11 * s)
+    }
+    /// The disclosure triangle. HIG *Disclosure controls*: it "points inward
+    /// from the leading edge when its content is hidden and down when its
+    /// content is visible" — hence a triangle, not a chevron. Sized to match
+    /// the reconcile glyphs rather than the 9pt it began at.
+    static func caret(open: Bool, _ s: CGFloat) -> NSImage? {
+        make(open ? "arrowtriangle.down.fill" : "arrowtriangle.right.fill",
+             NSColor(Color.appAccent), 11 * s)
+    }
+    static func removeSplit(_ s: CGFloat) -> NSImage? {
+        make("minus.circle", .labelColor, 11 * s)
+    }
+    /// Same two-layer trap as `cancel`: with one palette colour this drew a
+    /// plain orange triangle, mass identical to `triangle.fill`, no "!".
+    static func warning(_ s: CGFloat) -> NSImage? {
+        make("exclamationmark.triangle.fill", .systemOrange, 10 * s, knockout: .white)
+    }
+    static func sort(reversed: Bool, _ s: CGFloat) -> NSImage? {
+        make(reversed ? "chevron.down" : "chevron.up", .secondaryLabelColor, 8 * s)
+    }
+
+    /// Weight is the lever for "solid": a thin outline anti-aliases to many
+    /// pale pixels, a heavy stroke to fewer opaque ones, and the eye reads the
+    /// second as darker even at equal area.
+    /// `knockout` is the colour of the mark *inside* a filled badge, and it is
+    /// not optional decoration: a `.fill` badge symbol has two layers, and a
+    /// palette of ONE colour paints both — so `xmark.circle.fill` rendered as
+    /// a plain red disc with no visible ✕. Measured, it scored exactly the
+    /// same ink mass as `circle.fill` (151.8) with a red centre pixel. Passing
+    /// two colours puts the mark back.
+    private static func make(_ name: String, _ color: NSColor, _ size: CGFloat,
+                             _ weight: NSFont.Weight = .regular,
+                             knockout: NSColor? = nil) -> NSImage? {
+        let key = "\(name)|\(Int(size.rounded()))|\(weight.rawValue)|\(knockout != nil)"
+        if let hit = cache[key] { return hit }
+        let palette = knockout.map { [$0, color] } ?? [color]
+        let image = NSImage(systemSymbolName: name, accessibilityDescription: nil)?
             .withSymbolConfiguration(
-                NSImage.SymbolConfiguration(pointSize: size, weight: .regular)
-                    .applying(NSImage.SymbolConfiguration(paletteColors: [color])))
+                NSImage.SymbolConfiguration(pointSize: size, weight: weight)
+                    .applying(NSImage.SymbolConfiguration(paletteColors: palette)))
+        cache[key] = image
+        return image
     }
 }
 
@@ -353,20 +481,31 @@ private enum SheetSymbols {
 private enum ReconcileSymbols {
     private static var cache: [String: NSImage?] = [:]
 
-    static func image(for glyph: String) -> NSImage? {
-        if let hit = cache[glyph] { return hit }
-        let (name, color): (String, NSColor) = switch glyph {
-        case "c": ("checkmark.circle", NSColor(Color.appAccent))
-        case "y": ("checkmark.circle.fill", .systemGreen)
-        case "f": ("snowflake", .systemCyan)
-        case "v": ("xmark.circle", .systemRed)
-        default: ("circle.dotted", .secondaryLabelColor)
+    /// Dropped when the appearance flips or the accent changes: a cached
+    /// image has its colour baked in.
+    static func invalidate() { cache.removeAll() }
+
+    static func image(for glyph: String, scale: CGFloat) -> NSImage? {
+        let key = "\(glyph)|\(Int((11 * scale).rounded()))"
+        if let hit = cache[key] { return hit }
+        // `knockout` is the mark inside a filled badge. Without it a palette of
+        // one colour paints both layers, and "reconciled" drew as a solid
+        // green dot with no tick in it — measured at the same ink mass as
+        // `circle.fill`. Only the `.fill` glyph needs it; the outline ones are
+        // a single layer.
+        let (name, color, knockout): (String, NSColor, NSColor?) = switch glyph {
+        case "c": ("checkmark.circle", NSColor(Color.appAccent), nil)
+        case "y": ("checkmark.circle.fill", .systemGreen, .white)
+        case "f": ("snowflake", .systemCyan, nil)
+        case "v": ("xmark.circle", .systemRed, nil)
+        default: ("circle.dotted", .secondaryLabelColor, nil)
         }
+        let palette = knockout.map { [$0, color] } ?? [color]
         let image = NSImage(systemSymbolName: name, accessibilityDescription: nil)?
             .withSymbolConfiguration(
-                NSImage.SymbolConfiguration(pointSize: 11, weight: .regular)
-                    .applying(NSImage.SymbolConfiguration(paletteColors: [color])))
-        cache[glyph] = image
+                NSImage.SymbolConfiguration(pointSize: 11 * scale, weight: .regular)
+                    .applying(NSImage.SymbolConfiguration(paletteColors: palette)))
+        cache[key] = image
         return image
     }
 }
@@ -403,8 +542,10 @@ private final class SheetView: NSView, NSTextFieldDelegate {
     private var indexByTxn: [GncGUID: Int] { cache.indexByTxn }
 
     // Settings (pushed from SwiftUI)
-    private var showDetails = false
-    private var showAllSplits = false
+    private var style = RegisterStyle.basic
+    /// GnuCash's `info->trans_expanded`: one flag, for the current transaction
+    /// only, cleared whenever the selection moves.
+    private var currentExpanded = false
     private var dateFormat: AppDateFormat?
     var onError: ((String) -> Void)?
 
@@ -426,7 +567,9 @@ private final class SheetView: NSView, NSTextFieldDelegate {
 
     // Geometry: yOffsets[i] = top of block i; count+1 entries (prefix sums).
     private var yOffsets: [CGFloat] = [0]
-    private var frames = SheetMetrics.Frames(totalWidth: 800)
+    private var columnWidths: [SheetColumn: CGFloat] = ColumnWidths.load()
+    private var frames = SheetMetrics.Frames(totalWidth: 800,
+                                             overrides: ColumnWidths.load())
 
     // The one editor (gnucash-item-edit)
     private let itemEdit = ItemEditField()
@@ -458,6 +601,15 @@ private final class SheetView: NSView, NSTextFieldDelegate {
 
     override var isFlipped: Bool { true }
     override var acceptsFirstResponder: Bool { true }
+
+    /// A cached symbol carries its colour, so light/dark has to invalidate.
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        SheetSymbols.invalidate()
+        ReconcileSymbols.invalidate()
+        needsDisplay = true
+        header?.needsDisplay = true
+    }
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
@@ -564,6 +716,7 @@ private final class SheetView: NSView, NSTextFieldDelegate {
         let base = rows[index].base
         switch column {
         case .date: return dateFormat?.short(base.date) ?? ""
+        case .num: return base.number
         case .handle: return ""
         case .description: return base.description
         case .transfer: return base.isHeadingOnly ? "" : base.transferName
@@ -608,6 +761,21 @@ private final class SheetView: NSView, NSTextFieldDelegate {
         editExpanded()
     }
 
+    /// The caret, for VoiceOver: only the selected row in Basic Ledger has one.
+    fileprivate func axCanExpand(_ index: Int) -> Bool {
+        rows.indices.contains(index) && style.allowsManualExpand
+            && selectedTxn == rows[index].txn
+    }
+
+    fileprivate func axIsExpanded(_ index: Int) -> Bool {
+        axCanExpand(index) && currentExpanded
+    }
+
+    fileprivate func axToggleExpanded(_ index: Int) {
+        guard axCanExpand(index) else { return }
+        toggleCurrentExpanded()
+    }
+
     fileprivate func axCanReconcile(_ index: Int) -> Bool {
         rows.indices.contains(index) && rows[index].base.anchorSplit != nil
     }
@@ -630,15 +798,25 @@ private final class SheetView: NSView, NSTextFieldDelegate {
 
     // MARK: Inputs from SwiftUI (updateNSView)
 
+    private var lastAccent = ""
     private var rowsKey: Int = .min
     private var accountKey: Int = .min
     private var lastEditingRequest: GncGUID?
 
-    func apply(rowsKey: Int, accountKey: Int, showDetails: Bool,
-               showAllSplits: Bool, fontScale: CGFloat,
+    func apply(rowsKey: Int, accountKey: Int,
+               style: RegisterStyle, fontScale: CGFloat,
                dateFormat: AppDateFormat, editing: GncGUID?,
                pendingAvailable: Bool) {
         self.dateFormat = dateFormat
+
+        let accent = UserDefaults.standard.string(forKey: AppearanceKey.accent) ?? ""
+        if accent != lastAccent {
+            lastAccent = accent
+            SheetSymbols.invalidate()
+            ReconcileSymbols.invalidate()
+            needsDisplay = true
+            header?.needsDisplay = true
+        }
 
         if fontScale != self.fontScale {
             self.fontScale = fontScale
@@ -658,12 +836,11 @@ private final class SheetView: NSView, NSTextFieldDelegate {
         }
 
         var settingsChanged = false
-        if showDetails != self.showDetails {
-            self.showDetails = showDetails
-            settingsChanged = true
-        }
-        if showAllSplits != self.showAllSplits {
-            self.showAllSplits = showAllSplits
+        if style != self.style {
+            self.style = style
+            // A hand-opened transaction has no meaning once the style decides
+            // what is open (split-register.c:251).
+            currentExpanded = false
             settleDirtyDraft()
             settingsChanged = true
         }
@@ -746,8 +923,11 @@ private final class SheetView: NSView, NSTextFieldDelegate {
                     txn: txn.guid,
                     base: SheetMainBase(anchorSplit: nil, isHeadingOnly: true,
                                         date: txn.datePosted,
+                                        number: txn.number,
                                         description: txn.transactionDescription,
-                                        notes: txn.notes, reconcile: "",
+                                        notes: txn.notes,
+                                        tags: txn.tags.joined(separator: ", "),
+                                        reconcile: "",
                                         hasDocument: txn.documentLink != nil,
                                         isSimple: false, transferName: "",
                                         amount: 0, runningBalance: nil),
@@ -763,8 +943,12 @@ private final class SheetView: NSView, NSTextFieldDelegate {
             out.append(SheetRow(
                 txn: txn,
                 base: SheetMainBase(anchorSplit: main.id, isHeadingOnly: false,
-                                    date: main.date, description: main.description,
-                                    notes: main.notes, reconcile: main.reconcile,
+                                    date: main.date, number: main.number,
+                                    description: main.description,
+                                    notes: main.notes,
+                                    tags: model.transactionTags(ofTransaction: txn)
+                                        .joined(separator: ", "),
+                                    reconcile: main.reconcile,
                                     hasDocument: main.hasDocument,
                                     isSimple: model.isSimpleTransfer(splitID: main.id),
                                     transferName: main.transfer,
@@ -777,30 +961,53 @@ private final class SheetView: NSView, NSTextFieldDelegate {
 
     // MARK: Line plan
 
+    /// Whether this row is disclosed — the whole of the style difference, and
+    /// now the only thing that governs detail. Journal discloses every row,
+    /// Auto Details the selected one, Basic only what the caret opened.
+    /// Mirrors GnuCash's passive/active cursor choice in
+    /// `split-register-util.c:435-495`.
+    private func isDisclosed(_ row: SheetRow, drafting: Bool) -> Bool {
+        if wholeBook || style == .journal { return true }
+        if drafting, draft?.isExpanded == true { return true }
+        guard selectedTxn == row.txn else { return false }
+        return style == .autoDetails || currentExpanded
+    }
+
+    /// The caret. Basic Ledger only: in the other two styles GnuCash's expand
+    /// call returns immediately (split-register.c:251).
+    private func toggleCurrentExpanded() {
+        guard style.allowsManualExpand, let txn = selectedTxn else { return }
+        currentExpanded.toggle()
+        geometryChanged(fromBlock: indexByTxn[txn])
+    }
+
+
+    /// One disclosure, everything behind it: notes, tags, then every leg with
+    /// its memo, action and share/foreign quantity.
     private func linePlan(_ row: SheetRow) -> [SheetLine] {
         let drafting = draft?.transactionID == row.txn
         var lines: [SheetLine] = [.heading]
-        if showDetails { lines.append(.notes) }
+        guard isDisclosed(row, drafting: drafting) else { return lines }
+        // Unconditional, and that is the point. Emitting these only when they
+        // held something made a block's height depend on whether it was being
+        // edited — so clicking a row in Journal grew it by two lines with no
+        // geometry rebuild, and it painted straight over the row beneath.
+        // A disclosed row is the same height whether or not you are editing
+        // it; that invariant is worth two quiet lines.
+        lines.append(.notes)
+        lines.append(.tags)
         let legCount = drafting ? (draft?.lines.count ?? 0) : row.legs.count
-        let legsShown = wholeBook || showAllSplits
-            || (drafting && draft?.isExpanded == true)
-        if legsShown {
-            for index in 0..<legCount { lines.append(.leg(index)) }
-            if drafting, draft?.isExpanded == true { lines.append(.addSplit) }
-        }
+        for index in 0..<legCount { lines.append(.leg(index)) }
+        if drafting, draft?.isExpanded == true { lines.append(.addSplit) }
         return lines
     }
 
     private func lineCount(_ row: SheetRow) -> Int {
         let drafting = draft?.transactionID == row.txn
-        var count = 1
-        if showDetails { count += 1 }
-        let legsShown = wholeBook || showAllSplits
-            || (drafting && draft?.isExpanded == true)
-        if legsShown {
-            count += drafting ? (draft?.lines.count ?? 0) : row.legs.count
-            if drafting, draft?.isExpanded == true { count += 1 }
-        }
+        guard isDisclosed(row, drafting: drafting) else { return 1 }
+        var count = 3                              // heading + notes + tags
+        count += drafting ? (draft?.lines.count ?? 0) : row.legs.count
+        if drafting, draft?.isExpanded == true { count += 1 }
         return count
     }
 
@@ -855,8 +1062,20 @@ private final class SheetView: NSView, NSTextFieldDelegate {
     func updateWidth(_ width: CGFloat) {
         guard abs(width - frame.width) > 0.5 else { return }
         setFrameSize(NSSize(width: width, height: frame.height))
-        frames = SheetMetrics.Frames(totalWidth: width)
+        rebuildFrames()
+    }
+
+    /// A column divider was dragged in the header.
+    func resizeColumn(_ column: SheetColumn, to width: CGFloat) {
+        columnWidths[column] = width
+        ColumnWidths.save(columnWidths)
+        rebuildFrames()
+    }
+
+    private func rebuildFrames() {
+        frames = SheetMetrics.Frames(totalWidth: frame.width, overrides: columnWidths)
         header?.frames = frames
+        header?.window?.invalidateCursorRects(for: header!)
         needsDisplay = true
         positionEditor()
     }
@@ -1003,6 +1222,7 @@ private final class SheetView: NSView, NSTextFieldDelegate {
     private func placeholder(for field: TransactionEditField) -> String {
         switch field {
         case .date: String(localized: "Date")
+        case .number: String(localized: "Num")
         case .description: String(localized: "Description")
         case .notes: String(localized: "Notes")
         case .tags: String(localized: "Tags")
@@ -1024,7 +1244,7 @@ private final class SheetView: NSView, NSTextFieldDelegate {
                      leadingInset: leadingInset, middleTruncate: middleTruncate)
         } else if drafting {
             drawText(placeholder, in: cell, trailing: trailing,
-                     color: .tertiaryLabelColor, leadingInset: leadingInset)
+                     color: .placeholderTextColor, leadingInset: leadingInset)
         }
     }
 
@@ -1050,19 +1270,26 @@ private final class SheetView: NSView, NSTextFieldDelegate {
 
         switch line {
         case .heading:
+            drawCaret(row, drafting: drafting, in: cell(.date))
             if !skipForCursor(row, .date) {
                 let date = drafting ? (draft?.date ?? row.base.date) : row.base.date
-                drawText(dateFormat?.short(date) ?? "", in: cell(.date))
+                drawText(dateFormat?.short(date) ?? "", in: cell(.date),
+                         leadingInset: SheetMetrics.caretGutter)
+            }
+            if !skipForCursor(row, .number) {
+                let num = drafting ? (draft?.number ?? "") : row.base.number
+                drawEditableText(num, placeholder: placeholder(for: .number),
+                                 drafting: drafting, in: cell(.num), muted: true)
             }
             drawHandle(row, drafting: drafting, in: cell(.handle))
             if !skipForCursor(row, .description) {
                 var inset: CGFloat = 0
                 if row.base.hasDocument {
                     let box = cell(.description)
-                    drawSymbol(SheetSymbols.paperclip,
+                    drawSymbol(SheetSymbols.paperclip(fontScale),
                                centeredIn: CGRect(x: box.minX + 2, y: box.minY,
-                                                  width: 14, height: box.height))
-                    inset = 14
+                                                  width: 16, height: box.height))
+                    inset = 16
                 }
                 let text = drafting ? (draft?.description ?? "") : row.base.description
                 drawEditableText(text, placeholder: placeholder(for: .description),
@@ -1074,7 +1301,7 @@ private final class SheetView: NSView, NSTextFieldDelegate {
                          in: cell(.transfer), muted: true, middleTruncate: true)
             }
             if !row.base.isHeadingOnly {
-                drawSymbol(ReconcileSymbols.image(for: row.base.reconcile),
+                drawSymbol(ReconcileSymbols.image(for: row.base.reconcile, scale: fontScale),
                            centeredIn: cell(.reconcile))
             }
             if !row.base.isHeadingOnly, !skipForCursor(row, .amount) {
@@ -1088,6 +1315,14 @@ private final class SheetView: NSView, NSTextFieldDelegate {
             if !skipForCursor(row, .notes) {
                 let text = drafting ? (draft?.notes ?? "") : row.base.notes
                 drawEditableText(text, placeholder: placeholder(for: .notes),
+                                 drafting: drafting,
+                                 in: cell(.description), muted: true)
+            }
+
+        case .tags:
+            if !skipForCursor(row, .tags) {
+                let text = drafting ? (draft?.tagsText ?? "") : row.base.tags
+                drawEditableText(text, placeholder: placeholder(for: .tags),
                                  drafting: drafting,
                                  in: cell(.description), muted: true)
             }
@@ -1119,7 +1354,7 @@ private final class SheetView: NSView, NSTextFieldDelegate {
                 ?? leg.line?.splitID.flatMap { model.reconcileState(ofSplit: $0)?.rawValue }
                 ?? ""
             if !reconcile.isEmpty {
-                drawSymbol(ReconcileSymbols.image(for: reconcile),
+                drawSymbol(ReconcileSymbols.image(for: reconcile, scale: fontScale),
                            centeredIn: cell(.reconcile))
             }
             if !skipForCursor(row, leg.line.map { .splitAmount($0.id) }) {
@@ -1132,7 +1367,7 @@ private final class SheetView: NSView, NSTextFieldDelegate {
 
         case .addSplit:
             let box = cell(.description)
-            drawSymbol(SheetSymbols.addSplit,
+            drawSymbol(SheetSymbols.addSplit(fontScale),
                        centeredIn: CGRect(x: box.minX + 2, y: box.minY,
                                           width: 14, height: box.height))
             drawText(String(localized: "Add Split"), in: box, muted: true,
@@ -1140,12 +1375,29 @@ private final class SheetView: NSView, NSTextFieldDelegate {
         }
     }
 
+    /// The disclosure triangle, in the leading gutter of the first column.
+    ///
+    /// Only Basic Ledger draws one: in Auto Details and Journal the style has
+    /// already decided what is disclosed, so a triangle would promise a choice
+    /// that does not exist.
+    private func drawCaret(_ row: SheetRow, drafting: Bool, in dateCell: CGRect) {
+        guard style.allowsManualExpand, selectedTxn == row.txn else { return }
+        let open = currentExpanded || (drafting && draft?.isExpanded == true)
+        let gutter = CGRect(x: dateCell.minX, y: dateCell.minY,
+                            width: SheetMetrics.caretGutter, height: dateCell.height)
+        drawSymbol(SheetSymbols.caret(open: open, fontScale), centeredIn: gutter)
+    }
+
+    /// Edit, in its own narrow column before the description — a per-row image
+    /// button living *in the view*, which is where HIG *Buttons* (macOS) puts
+    /// them: "Square buttons aren\u{2019}t intended for use in toolbars." While a
+    /// row is opened out for editing it becomes the cancel glyph, because
+    /// there the click abandons the edit.
     private func drawHandle(_ row: SheetRow, drafting: Bool, in rect: CGRect) {
-        let expanded = drafting && draft?.isExpanded == true
-        if expanded {
-            drawSymbol(SheetSymbols.cancel, centeredIn: rect)
+        if drafting, draft?.isExpanded == true {
+            drawSymbol(SheetSymbols.cancel(fontScale), centeredIn: rect)
         } else if selectedTxn == row.txn {
-            drawSymbol(SheetSymbols.pencil, centeredIn: rect)
+            drawSymbol(SheetSymbols.pencil(fontScale), centeredIn: rect)
         }
     }
 
@@ -1164,7 +1416,7 @@ private final class SheetView: NSView, NSTextFieldDelegate {
                                   height: textHeight)
             (text as NSString).draw(in: textRect, withAttributes: attributes)
             let size = (text as NSString).size(withAttributes: attributes)
-            drawSymbol(SheetSymbols.warning,
+            drawSymbol(SheetSymbols.warning(fontScale),
                        centeredIn: CGRect(x: textRect.maxX - size.width - 18,
                                           y: rect.minY, width: 14, height: rect.height))
         } else if let balance = row.base.runningBalance {
@@ -1184,13 +1436,13 @@ private final class SheetView: NSView, NSTextFieldDelegate {
                                       height: rect.height)
             if line.quantityText.isEmpty {
                 drawText(String(localized: "Quantity"), in: quantityRect,
-                         trailing: true, color: .tertiaryLabelColor)
+                         trailing: true, color: .placeholderTextColor)
             } else {
                 drawText(line.quantityText, in: quantityRect, trailing: true, mono: true)
             }
         }
         if removable {
-            drawSymbol(SheetSymbols.removeSplit, centeredIn: removeHotspot(in: rect))
+            drawSymbol(SheetSymbols.removeSplit(fontScale), centeredIn: removeHotspot(in: rect))
         }
     }
 
@@ -1220,7 +1472,7 @@ private final class SheetView: NSView, NSTextFieldDelegate {
 
     // MARK: Selection
 
-    private var armsOnSelection: Bool { wholeBook || showAllSplits }
+    private var armsOnSelection: Bool { wholeBook || style == .journal }
 
     /// Mirror the sheet's transaction selection into the model's split-based
     /// selection — the toolbar Edit button, attachments panel, and menu
@@ -1248,10 +1500,25 @@ private final class SheetView: NSView, NSTextFieldDelegate {
 
     private func applySelection(_ txns: Set<GncGUID>, anchor: Int?, lead: Int?) {
         let before = selection
+        let previouslyOpen = selectedTxn
+        let wasExpanded = currentExpanded
         selection = txns
         anchorBlock = anchor
         leadBlock = lead
         selectedTxn = txns.count == 1 ? txns.first : nil
+
+        // GnuCash drops `trans_expanded` when the cursor leaves the
+        // transaction; a hand-opened row shuts as you move off it.
+        if selectedTxn != previouslyOpen { currentExpanded = false }
+
+        // In Auto-Split — or when a hand-opened row just shut — the *open* row
+        // has moved, so block heights changed. That is geometry, not paint:
+        // repainting alone would leave every later block at a stale offset.
+        if style == .autoDetails || wasExpanded || armsOnSelection {
+            let touched = [previouslyOpen, selectedTxn]
+                .compactMap { $0.flatMap { indexByTxn[$0] } }
+            geometryChanged(fromBlock: touched.min())
+        }
         damageBlocks(before.union(txns))
         mirrorSelection()
         if before != txns {
@@ -1324,9 +1591,18 @@ private final class SheetView: NSView, NSTextFieldDelegate {
         let line = plan[lineIndex]
         let drafting = draft?.transactionID == row.txn
 
+        // The first column's leading gutter is the disclosure triangle.
+        if column == .date, case .heading = line, style.allowsManualExpand,
+           point.x < frames.x[SheetColumn.date.rawValue] + SheetMetrics.caretGutter {
+            toggleCurrentExpanded()
+            return
+        }
         if column == .handle, case .heading = line {
-            let expanded = drafting && draft?.isExpanded == true
-            if expanded { escapePressed() } else { editExpanded() }
+            if drafting, draft?.isExpanded == true {
+                escapePressed()   // the cancel glyph abandons the edit
+            } else {
+                editExpanded()    // the pencil opens the row for editing
+            }
             return
         }
         if column == .reconcile {
@@ -1354,10 +1630,12 @@ private final class SheetView: NSView, NSTextFieldDelegate {
 
         let place: SheetTap? = switch (column, line) {
         case (.date, .heading): .heading(.date)
+        case (.num, .heading): .heading(.number)
         case (.description, .heading): .heading(.description)
         case (.transfer, .heading): row.base.isHeadingOnly ? nil : .heading(.transfer)
         case (.amount, .heading): row.base.isHeadingOnly ? nil : .heading(.amount)
         case (.description, .notes): .heading(.notes)
+        case (.description, .tags): .heading(.tags)
         case (.date, .leg(let index)): .leg(index, .action)
         case (.description, .leg(let index)): .leg(index, .memo)
         case (.transfer, .leg(let index)): .leg(index, .account)
@@ -1393,6 +1671,13 @@ private final class SheetView: NSView, NSTextFieldDelegate {
         switch event.keyCode {
         case 125: moveSelection(step: 1, extend: event.modifierFlags.contains(.shift))
         case 126: moveSelection(step: -1, extend: event.modifierFlags.contains(.shift))
+        // → opens the selected row, ← shuts it: the disclosure keys an
+        // outline row answers to. Bare arrows are unbound elsewhere in the
+        // register (only the slide deck binds them).
+        case 124 where style.allowsManualExpand && !currentExpanded:
+            toggleCurrentExpanded()
+        case 123 where style.allowsManualExpand && currentExpanded:
+            toggleCurrentExpanded()
         case 53: escapePressed()
         case 36:
             if let txn = selectedTxn, draft?.transactionID != txn {
@@ -1525,11 +1810,12 @@ private final class SheetView: NSView, NSTextFieldDelegate {
 
         let target: (line: Int, column: SheetColumn)? = switch focus.field {
         case .date: lineIndex(.heading).map { ($0, .date) }
+        case .number: lineIndex(.heading).map { ($0, .num) }
         case .description: lineIndex(.heading).map { ($0, .description) }
         case .transfer: lineIndex(.heading).map { ($0, .transfer) }
         case .amount: lineIndex(.heading).map { ($0, .amount) }
         case .notes: lineIndex(.notes).map { ($0, .description) }
-        case .tags: nil
+        case .tags: lineIndex(.tags).map { ($0, .description) }
         case .splitAction(let id):
             legIndex(id).flatMap { lineIndex(.leg($0)) }.map { ($0, .date) }
         case .splitMemo(let id):
@@ -1542,9 +1828,16 @@ private final class SheetView: NSView, NSTextFieldDelegate {
             legIndex(id).flatMap { lineIndex(.leg($0)) }.map { ($0, .balance) }
         }
         guard let target else { return nil }
-        return frames.rect(target.column,
-                           y: yOffsets[block] + CGFloat(target.line) * lineHeight,
-                           height: lineHeight)
+        var rect = frames.rect(target.column,
+                               y: yOffsets[block] + CGFloat(target.line) * lineHeight,
+                               height: lineHeight)
+        // The date field starts after the disclosure gutter, so the editor
+        // occupies the same box the drawn text does.
+        if target.column == .date, case .date = focus.field {
+            rect.origin.x += SheetMetrics.caretGutter
+            rect.size.width -= SheetMetrics.caretGutter
+        }
+        return rect
     }
 
     private func configureEditor(for focus: SheetFocus, in rect: CGRect) {
@@ -1600,6 +1893,7 @@ private final class SheetView: NSView, NSTextFieldDelegate {
         guard let d = draft else { return "" }
         switch field {
         case .date: return dateFormat?.short(d.date) ?? ""
+        case .number: return d.number
         case .description: return d.description
         case .notes: return d.notes
         case .tags: return d.tagsText
@@ -1621,6 +1915,8 @@ private final class SheetView: NSView, NSTextFieldDelegate {
             withDraft { d in
                 if let date = dateFormat?.parseShort(text) { d.date = date }
             }
+        case .number:
+            withDraft { $0.number = text }
         case .description:
             withDraft { $0.description = text }
         case .notes:
@@ -1902,7 +2198,7 @@ private final class SheetView: NSView, NSTextFieldDelegate {
             currency: d.currencyOverride
                 ?? model.transactionCurrency(for: d.lines.compactMap(\.accountID)),
             splits: d.lines.filter { $0.accountID != nil }.map(\.asInput),
-            tags: d.parsedTags, notes: d.notes)
+            tags: d.parsedTags, notes: d.notes, number: d.number)
     }
 
     func settleDirtyDraft() {
@@ -2012,16 +2308,24 @@ private final class SheetView: NSView, NSTextFieldDelegate {
         guard let d = draft else { return [] }
         let txn = d.transactionID
         let legsVisible = d.isExpanded || armsOnSelection
+            || style == .autoDetails || currentExpanded
         var order: [SheetFocus] = [
             SheetFocus(txn: txn, field: .date),
+            SheetFocus(txn: txn, field: .number),
             SheetFocus(txn: txn, field: .description),
         ]
-        if showDetails { order.append(SheetFocus(txn: txn, field: .notes)) }
+        // Visual order, and only visual order: Transfer and Amount are on the
+        // heading line, so ⇥ must reach them before dropping to the notes and
+        // tags lines underneath.
         if !wholeBook {
             if d.counterpartyIndex(account: model.selectedAccountID) != nil {
                 order.append(SheetFocus(txn: txn, field: .transfer))
             }
             order.append(SheetFocus(txn: txn, field: .amount))
+        }
+        if legsVisible {
+            order.append(SheetFocus(txn: txn, field: .notes))
+            order.append(SheetFocus(txn: txn, field: .tags))
         }
         if legsVisible {
             for line in d.lines {
@@ -2147,6 +2451,16 @@ private final class SheetAXRow: NSAccessibilityElement, NSAccessibilityElementPr
         ]
         let canReconcile = MainActor.assumeIsolated {
             sheet?.axCanReconcile(index) ?? false
+        }
+        let canExpand = MainActor.assumeIsolated { sheet?.axCanExpand(index) ?? false }
+        if canExpand {
+            let open = MainActor.assumeIsolated { sheet?.axIsExpanded(index) ?? false }
+            actions.append(NSAccessibilityCustomAction(
+                name: open ? String(localized: "Hide Details")
+                           : String(localized: "Show Details")) {
+                MainActor.assumeIsolated { sheet?.axToggleExpanded(index) }
+                return true
+            })
         }
         if canReconcile {
             actions.append(NSAccessibilityCustomAction(
@@ -2418,6 +2732,9 @@ private final class SheetHeaderView: NSView {
         }
     }
     var onSort: ((SheetColumn) -> Void)?
+    /// Reports a finished drag: the column and its new width.
+    var onResize: ((SheetColumn, CGFloat) -> Void)?
+    private var dragging: (column: SheetColumn, startX: CGFloat, startWidth: CGFloat)?
     var fontScale: CGFloat = 1 {
         didSet { if fontScale != oldValue { needsDisplay = true } }
     }
@@ -2483,8 +2800,8 @@ private final class SheetHeaderView: NSView {
                                   height: textHeight)
             title.draw(in: textRect, withAttributes: attributes)
             if let sortState, sortState.column == column {
-                let indicator = sortState.reversed ? SheetSymbols.sortDown
-                                                   : SheetSymbols.sortUp
+                let indicator = SheetSymbols.sort(reversed: sortState.reversed,
+                                                 fontScale)
                 let titleWidth = min(title.size(withAttributes: attributes).width,
                                      textRect.width)
                 let x = column.trailing ? textRect.maxX - titleWidth - 12
@@ -2503,10 +2820,50 @@ private final class SheetHeaderView: NSView {
         }
     }
 
+    /// The column whose trailing divider is under `x`, if any. Only fixed
+    /// columns resize; Description takes whatever is left, as it does in a
+    /// Finder window.
+    private func resizableColumn(nearX x: CGFloat) -> SheetColumn? {
+        for column in SheetColumn.allCases where column != .description {
+            let edge = frames.x[column.rawValue] + frames.width[column.rawValue]
+            if abs(x - edge) <= SheetMetrics.resizeGrab { return column }
+        }
+        return nil
+    }
+
+    override func resetCursorRects() {
+        super.resetCursorRects()
+        for column in SheetColumn.allCases where column != .description {
+            let edge = frames.x[column.rawValue] + frames.width[column.rawValue]
+            addCursorRect(CGRect(x: edge - SheetMetrics.resizeGrab, y: 0,
+                                 width: SheetMetrics.resizeGrab * 2,
+                                 height: bounds.height),
+                          cursor: .resizeLeftRight)
+        }
+    }
+
     override func mouseDown(with event: NSEvent) {
         let point = convert(event.locationInWindow, from: nil)
+        if let column = resizableColumn(nearX: point.x) {
+            dragging = (column, point.x, frames.width[column.rawValue])
+            return
+        }
         guard let column = frames.column(atX: point.x), column.sortable else { return }
         onSort?(column)
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        guard let dragging else { return }
+        let point = convert(event.locationInWindow, from: nil)
+        let width = max(SheetMetrics.minColumnWidth,
+                        dragging.startWidth + (point.x - dragging.startX))
+        onResize?(dragging.column, width)
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        guard dragging != nil else { return }
+        self.dragging = nil
+        window?.invalidateCursorRects(for: self)
     }
 }
 

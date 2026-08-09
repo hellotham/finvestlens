@@ -66,8 +66,14 @@ public enum AppAccent: String, CaseIterable, Identifiable, Sendable {
         case .blue:     Color.dynamic(light: rgb(0.00, 0.48, 1.00), dark: rgb(0.34, 0.64, 1.00))
         case .teal:     Color.dynamic(light: rgb(0.00, 0.52, 0.56), dark: rgb(0.32, 0.80, 0.83))
         case .green:    Color.dynamic(light: rgb(0.15, 0.53, 0.25), dark: rgb(0.40, 0.78, 0.46))
-        case .yellow:   Color.dynamic(light: rgb(0.72, 0.55, 0.00), dark: rgb(0.95, 0.80, 0.32))
-        case .orange:   Color.dynamic(light: rgb(0.84, 0.44, 0.00), dark: rgb(1.00, 0.62, 0.26))
+        // Darkened Aug 2026: at their old light values these two measured
+        // 2.58:1 and 2.77:1 against the register's selection wash — under
+        // WCAG 1.4.11's 3:1 for non-text controls, which matters now that the
+        // register's row controls are tinted with the accent. These values
+        // measure 3.22:1 on the same background; every other accent already
+        // passed.
+        case .yellow:   Color.dynamic(light: rgb(0.63, 0.48, 0.00), dark: rgb(0.95, 0.80, 0.32))
+        case .orange:   Color.dynamic(light: rgb(0.76, 0.40, 0.00), dark: rgb(1.00, 0.62, 0.26))
         case .pink:     Color.dynamic(light: rgb(0.83, 0.24, 0.54), dark: rgb(1.00, 0.47, 0.71))
         case .red:      Color.dynamic(light: rgb(0.78, 0.19, 0.19), dark: rgb(1.00, 0.44, 0.44))
         case .graphite: Color.dynamic(light: rgb(0.38, 0.38, 0.41), dark: rgb(0.64, 0.64, 0.67))

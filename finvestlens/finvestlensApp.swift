@@ -46,6 +46,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 @main
 struct finvestlensApp: App {
     @State private var model = AppModel()
+    /// Mirrors the register's View ▸ Style picker into the menu bar.
+    @AppStorage("registerViewStyle") private var registerStyle = RegisterStyle.basic
     @Environment(\.openWindow) private var openWindow
     #if os(macOS)
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
@@ -146,6 +148,22 @@ struct finvestlensApp: App {
                 Button("All Transactions") { model.show(.generalLedger) }
                     .keyboardShortcut("3", modifiers: [.command, .option])
                     .disabled(!model.isOpen)
+                Divider()
+                // HIG *Toolbars* (macOS): "Make every toolbar item available
+                // as a command in the menu bar" — people can hide or
+                // customise the toolbar, so it can never be a command's only
+                // home. These mirror the register's View and Filter items.
+                Picker("Register Style", selection: $registerStyle) {
+                    ForEach(RegisterStyle.allCases) { style in
+                        Text(style.title).tag(style)
+                    }
+                }
+                .pickerStyle(.inline)
+                .disabled(!model.isOpen)
+                Button("Filter Transactions…") {
+                    model.registerFilterRequested = true
+                }
+                .disabled(!model.isOpen)
                 Divider()
             }
             CommandGroup(after: .pasteboard) {

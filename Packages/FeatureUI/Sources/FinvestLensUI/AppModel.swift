@@ -742,6 +742,12 @@ public final class AppModel {
     /// from this set — it was a stored copy every writer had to assign in
     /// lockstep, the exact stored-copy-that-can-drift pattern. This full set
     /// lets commands like Auto-Categorise act on a multi-row selection.
+    /// Set by the View ▸ Filter Transactions… menu command; the register
+    /// consumes it and opens its filter sheet. HIG *Toolbars* (macOS) requires
+    /// every toolbar item to also be a menu-bar command, and the filter button
+    /// had no menu equivalent.
+    public var registerFilterRequested = false
+
     public var selectedSplitIDs: Set<GncGUID> = []
 
     /// The transactions the current register selection belongs to.

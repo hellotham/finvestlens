@@ -126,6 +126,10 @@ public struct TransactionEdit: Sendable {
     public var tags: [String] = []
     /// GnuCash's transaction Notes — the second line of a double-line register.
     public var notes: String = ""
+    /// GnuCash's Num field: a cheque number, or the reference an imported
+    /// statement line carried in. The register can sort by it, so it has to be
+    /// editable there too — reading it but never writing it was the gap.
+    public var number: String = ""
 }
 
 /// A snapshot of an account's editable fields.
@@ -172,6 +176,12 @@ extension AppModel {
         return txn.guid
     }
 
+    /// A transaction's tags, for the register's disclosed detail line. Cheap
+    /// enough to ask per visible row; the full `editData` snapshot is not.
+    public func transactionTags(ofTransaction id: GncGUID) -> [String] {
+        book?.transaction(with: id)?.tags ?? []
+    }
+
     /// A snapshot of a transaction for editing, or `nil` if not found.
     public func editData(forTransaction id: GncGUID) -> TransactionEdit? {
         guard let book, let txn = book.transaction(with: id) else { return nil }
@@ -188,7 +198,8 @@ extension AppModel {
                            memo: $0.memo, action: $0.action)
             },
             tags: txn.tags,
-            notes: txn.notes
+            notes: txn.notes,
+            number: txn.number
         )
     }
 
@@ -198,7 +209,8 @@ extension AppModel {
     public func updateTransaction(id: GncGUID, date: Date, description: String,
                                   currency: Commodity, splits: [SplitInput],
                                   tags: [String]? = nil,
-                                  notes: String? = nil) throws -> GncGUID {
+                                  notes: String? = nil,
+                                  number: String? = nil) throws -> GncGUID {
         guard let book, let txn = book.transaction(with: id) else { throw TransactionEntryError.notFound }
         let realSplits = splits.filter { $0.accountID != nil }
         guard realSplits.count >= 2 else { throw TransactionEntryError.tooFewSplits }
@@ -232,6 +244,7 @@ extension AppModel {
             txn.currency = currency
             if let tags { txn.tags = tags }
             if let notes { txn.notes = notes }
+            if let number { txn.number = number }
             for existing in Array(txn.splits) { txn.removeSplit(existing) }
             for (account, input) in resolved {
                 if let splitID = input.splitID, let split = reusable[splitID] {

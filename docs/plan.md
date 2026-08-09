@@ -123,7 +123,7 @@ Dependencies point downward only; `Engine` builds/tests with nothing above it (`
 **Workstreams & tasks**
 - **App shell:** SwiftUI document app; `NavigationSplitView` (macOS/iPad) / stacks (iOS); open/save/recent UI; macOS menu-bar mapping. *(FR-PLT-01, Architecture §8)*
 - **Chart of accounts:** hierarchical tree + balances; create/edit/reparent/hide/delete with guards; placeholder/hidden; codes + renumber. *(FR-COA-01..06)*
-- **Register/ledger:** simple + multi-split entry with live balancing; transfer/duplicate/delete/void; inline reconcile-state; reversing/jump/copy/remove-splits; whole-book journal view. *(FR-REG-01..09.)* *Built with GnuCash's three view styles; the Jul 2026 redesign replaced them with **one expandable register** + a Show All Splits option (PRD FR-REG-03), and the whole-book journal ships as **All Transactions**.*
+- **Register/ledger:** simple + multi-split entry with live balancing; transfer/duplicate/delete/void; inline reconcile-state; reversing/jump/copy/remove-splits; whole-book journal view. *(FR-REG-01..09.)* *Built with GnuCash's three view styles; Jul 2026 replaced them with one expandable register, and Aug 2026 restored them as **Basic Ledger / Auto Details / Transaction Journal** over a single unified disclosure (PRD FR-REG-03, [register-ux-research.md](register-ux-research.md)). The whole-book journal ships as **All Transactions**.*
 - **QuickFill** autofill (payee/description/last-split). *(FR-REG-04)*
 - **Find/search (basic)** via GRDB predicates. *(FR-REG-06 — upgraded in P4)*
 - **Tags (model + minimal UI).** *(FR-TAG-01, early)*

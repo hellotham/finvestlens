@@ -87,8 +87,54 @@ struct RegisterMetrics: Equatable {
 }
 
 /// Which field a click, Tab, or Edit Transaction wants the cursor in.
+/// How much of each transaction the register discloses. Modelled on GnuCash's
+/// `SplitRegisterStyle` (split-register.h:186 — `REG_STYLE_LEDGER`,
+/// `REG_STYLE_AUTO_LEDGER`, `REG_STYLE_JOURNAL`), but disclosing *all* of a
+/// transaction's detail rather than only its splits.
+///
+/// GnuCash keeps a separate `use_double_line` flag that reveals one field
+/// (Notes). We had copied that as a "Show Details" toggle, and it was a poor
+/// bargain: a whole switch for a single field, orthogonal to a second control
+/// that revealed the splits, so a transaction's detail arrived in two
+/// unrelated halves. One disclosure now reveals the lot — notes, tags, and
+/// every leg with its memo, action and share/foreign quantity.
+public enum RegisterStyle: String, CaseIterable, Identifiable, Sendable {
+    /// One line per transaction; only the row you disclose by hand opens.
+    /// GnuCash's per-transaction expand flag
+    /// (`gnc_split_register_expand_current_trans`).
+    case basic
+    /// The selected transaction discloses its detail automatically; every
+    /// other row stays on one line. `REG_STYLE_AUTO_LEDGER`.
+    case autoDetails
+    /// Every transaction shows its full detail, always. `REG_STYLE_JOURNAL`.
+    case journal
+
+    public var id: String { rawValue }
+
+    public var title: LocalizedStringKey {
+        switch self {
+        case .basic: "Basic Ledger"
+        case .autoDetails: "Auto Details"
+        case .journal: "Transaction Journal"
+        }
+    }
+
+    public var symbol: String {
+        switch self {
+        case .basic: "list.dash"
+        case .autoDetails: "rectangle.expand.vertical"
+        case .journal: "list.bullet.indent"
+        }
+    }
+
+    /// Whether a row can be disclosed by hand. GnuCash's expand call is a
+    /// no-op outside Basic (split-register.c:251) — the other two styles have
+    /// already decided what is open.
+    public var allowsManualExpand: Bool { self == .basic }
+}
+
 enum TransactionEditField: Hashable {
-    case date, description, transfer, amount, notes, tags
+    case date, number, description, transfer, amount, notes, tags
     case splitAccount(UUID), splitMemo(UUID), splitAction(UUID), splitAmount(UUID)
     /// GnuCash's RATE_CELL — the foreign quantity on an FX or security leg.
     case splitQuantity(UUID)
@@ -530,6 +576,8 @@ extension View {
 struct TransactionDraft: Equatable {
     var transactionID: GncGUID
     var date: Date
+    /// GnuCash's Num — a cheque number or an imported bank reference.
+    var number: String
     var description: String
     var notes: String
     var tagsText: String
@@ -546,6 +594,7 @@ struct TransactionDraft: Equatable {
         guard let edit = model.editData(forTransaction: transactionID) else { return nil }
         self.transactionID = transactionID
         date = edit.date
+        number = edit.number
         description = edit.description
         notes = edit.notes
         tagsText = edit.tags.joined(separator: ", ")
@@ -558,10 +607,12 @@ struct TransactionDraft: Equatable {
     /// A draft assembled by a host that owns its own state — the modal editor,
     /// whose prefill/adopt/invoice flows write the same fields. Same shape, no
     /// book read, always opened out.
-    init(transactionID: GncGUID, date: Date, description: String, notes: String,
+    init(transactionID: GncGUID, date: Date, number: String = "",
+         description: String, notes: String,
          tagsText: String, lines: [EditableSplit], currencyOverride: Commodity?) {
         self.transactionID = transactionID
         self.date = date
+        self.number = number
         self.description = description
         self.notes = notes
         self.tagsText = tagsText

@@ -20,16 +20,23 @@
 //   4. Clicking a field inside the already-selected transaction edits that
 //      field in place with zero layout shift; ⇥/⇧⇥ walk the visible fields
 //      only; ⏎ saves, ⎋ cancels.
-//   5. The selected transaction shows a pencil in a 22pt handle column
-//      between Date and Description (an ✕ while the edit is expanded);
-//      pencil ≡ right-click Edit Transaction… ≡ ⌘E.
+//   5. The selected transaction carries a control in a 22pt handle column
+//      between Date and Description: a disclosure triangle in Basic Ledger,
+//      where the row's detail is the user's to open, and the pencil that
+//      opens the full edit (≡ right-click Edit Transaction… ≡ ⌘E) in the
+//      styles that have already decided. Either becomes an ✕ while the edit
+//      is expanded.
 //   6. Edit Transaction expands the transaction into leg rows — every field,
 //      including the foreign quantity on FX/security legs (FR-REG-07), plus
 //      Add Split and per-leg remove.
-//   7. Show All Splits / All Transactions give the journal reading
-//      (`legRows(ofTransaction:)` — every leg, the focus account's own
-//      included); editing swaps live cells in under unchanged row identities,
-//      so nothing moves.
+//   7. **One disclosure reveals the lot** — the notes line, the tags line,
+//      then every leg (`legRows(ofTransaction:)`, the focus account's own
+//      included). ``RegisterStyle`` decides which rows are disclosed:
+//      Journal every row, Auto Details the selected one, Basic only the row
+//      the handle opened. This is the same line plan the macOS sheet draws
+//      (RegisterSheet's `linePlan`/`isDisclosed`), so the two platforms
+//      disclose the same set. Editing swaps live cells in under unchanged row
+//      identities, so nothing moves.
 //
 //  Row identity rule: **headings are transactions, legs are splits** — the
 //  anchor's own leg row can never collide with its heading (a duplicate Table
@@ -59,6 +66,11 @@ import AppKit
 /// A register row's identity. Headings are transactions, legs are splits.
 enum RegisterRowID: Hashable {
     case txn(GncGUID)
+    /// A disclosed transaction's notes and tags lines. Rows of their own, the
+    /// way the macOS sheet's line plan has them — the transaction's identity
+    /// is enough to tell them apart from its heading.
+    case notes(GncGUID)
+    case tags(GncGUID)
     case split(GncGUID)
     /// A leg the user just added in this edit (draft line id).
     case draftLine(UUID)
@@ -93,6 +105,9 @@ private struct RegisterMainBase {
     var date: Date
     var description: String
     var notes: String
+    /// The transaction's tags, comma-joined — the second line a disclosure
+    /// reveals, and what ``TransactionDraft/tagsText`` edits.
+    var tags: String
     var reconcile: String
     var hasDocument: Bool
     /// Two legs, both in the transaction currency — the transfer combo case.
@@ -157,7 +172,43 @@ private final class RegisterRowCache {
 
 // MARK: - Render rows (per-pass compose: base + selection/draft state)
 
-enum RegisterHandleState: Equatable { case hidden, edit, cancel }
+enum RegisterHandleState: Equatable {
+    case hidden
+    /// The pencil: opens the transaction right out (Add Split, per-leg
+    /// remove). Shown where the style, not the user, decides disclosure.
+    case edit
+    /// The disclosure triangle — Basic Ledger only, where the row's detail is
+    /// the user's to open.
+    case disclose(open: Bool)
+    case cancel
+}
+
+/// Which of a disclosed transaction's two text lines a row is.
+enum RegisterDetailField: Hashable {
+    case notes, tags
+
+    /// The label the cell carries — HIG *Text fields*: a placeholder is not a
+    /// label, so this is also the cell's accessibility label.
+    var placeholder: LocalizedStringKey {
+        switch self {
+        case .notes: "Notes"
+        case .tags: "Tags"
+        }
+    }
+
+    var editField: TransactionEditField {
+        switch self {
+        case .notes: .notes
+        case .tags: .tags
+        }
+    }
+}
+
+/// What a disclosed transaction's notes or tags line draws.
+struct RegisterDetailRowData: Equatable {
+    var field: RegisterDetailField
+    var text: String
+}
 
 /// What a heading row's cells draw. Raw values — cells format on render, so
 /// only visible cells pay.
@@ -170,7 +221,6 @@ struct RegisterMainRowData: Equatable {
     var handle: RegisterHandleState
     var date: Date
     var description: String
-    var notes: String
     var transferIsCombo: Bool
     var transferAccountID: GncGUID?
     var transferName: String?
@@ -186,6 +236,7 @@ struct RegisterMainRowData: Equatable {
 struct RegisterTableRow: Identifiable, Equatable {
     enum Kind: Equatable {
         case main(RegisterMainRowData)
+        case detail(RegisterDetailRowData)
         case bookLeg(AutoSplitRow)
         case draftLeg(line: EditableSplit, reconcile: String,
                       canRemove: Bool, quantityEditable: Bool)
@@ -222,8 +273,16 @@ struct RegisterTableView: View {
     var jump: Binding<RegisterEnd?> = .constant(nil)
     @Environment(\.appDateFormat) private var dateFormat
 
-    @AppStorage("registerDoubleLine") private var doubleLine = false
-    @AppStorage("registerShowAllSplits") private var showAllSplits = false
+    /// The shared register style — all three of them. A `Table` can honour
+    /// Auto Details as cheaply as Journal, because disclosure here is rows
+    /// appearing in the composed array, not block geometry to reconcile.
+    @AppStorage("registerViewStyle") private var registerStyle = RegisterStyle.basic
+    /// Basic Ledger's hand-opened row: GnuCash's per-transaction
+    /// `trans_expanded` (split-register.c) — one flag for the current
+    /// transaction, dropped the moment the selection leaves it. The other two
+    /// styles have already decided what is open, so the flag is theirs to
+    /// ignore (`RegisterStyle.allowsManualExpand`).
+    @State private var currentExpanded = false
 
     @State private var selection: Set<RegisterRowID> = []
     @FocusState private var cursor: RegisterFocus?
@@ -243,9 +302,31 @@ struct RegisterTableView: View {
     /// edited transaction never slides out of the viewport).
     @State private var scrollTarget: RegisterRowID?
 
-    /// The journal readings arm the selected transaction with an invisible
-    /// clean draft, so its cells edit in place with zero shift (spec 7).
-    private var armsOnSelection: Bool { wholeBook || showAllSplits }
+    /// The style actually in force. All Transactions is a journal whatever the
+    /// preference says — the same substitution the macOS sheet makes.
+    private var style: RegisterStyle { wholeBook ? .journal : registerStyle }
+
+    /// Journal only: every transaction is disclosed, so the base rows carry
+    /// every leg. The other two styles disclose at most the selected
+    /// transaction, whose legs come from its draft.
+    private var disclosesEveryRow: Bool { style == .journal }
+
+    /// Styles that disclose on selection arm the selected transaction with an
+    /// invisible clean draft, so its cells edit in place with zero shift
+    /// (spec 7). Basic arms when the handle opens the row instead.
+    private var armsOnSelection: Bool { style != .basic }
+
+    /// Whether a transaction shows its detail — notes, tags and legs. The
+    /// whole of the style difference, and the mirror of the macOS sheet's
+    /// `isDisclosed` (GnuCash's passive/active cursor choice,
+    /// split-register-util.c:435-495).
+    private func isDisclosed(txn: GncGUID, drafting: Bool,
+                             selected: GncGUID?) -> Bool {
+        if style == .journal { return true }
+        if drafting, draft?.isExpanded == true { return true }
+        guard selected == txn else { return false }
+        return style == .autoDetails || currentExpanded
+    }
 
     var body: some View {
         let rows = buildRows()
@@ -255,9 +336,11 @@ struct RegisterTableView: View {
             #if os(macOS)
             .onExitCommand { escapePressed() }
             #endif
-            .onChange(of: selection) { _, now in selectionChanged(now) }
+            .onChange(of: selection) { before, now in
+                selectionChanged(from: before, to: now)
+            }
             .onChange(of: cursor) { _, now in cursorChanged(now) }
-            .onChange(of: showAllSplits) { settleAndReset(keepSelection: true) }
+            .onChange(of: registerStyle) { settleAndReset(keepSelection: true) }
             .onChange(of: model.editingTransactionID) { _, id in
                 guard let id, draft?.transactionID != id || draft?.isExpanded != true
                 else { return }
@@ -424,7 +507,7 @@ struct RegisterTableView: View {
                      cursor: $cursor,
                      onEdit: { text in withLine(line.id) { $0.action = text } },
                      onEscape: { escapePressed() })
-        case .addSplit:
+        case .detail, .addSplit:
             restText("")
         }
     }
@@ -433,19 +516,66 @@ struct RegisterTableView: View {
     private func handleCell(_ row: RegisterTableRow) -> some View {
         if case .main(let data) = row.kind, data.handle != .hidden {
             Button {
-                if data.handle == .cancel { escapePressed() } else { editExpanded() }
+                switch data.handle {
+                case .cancel: escapePressed()
+                case .disclose: toggleDisclosure()
+                case .edit, .hidden: editExpanded()
+                }
             } label: {
-                Image(systemName: data.handle == .cancel ? "xmark.circle"
-                                                         : "square.and.pencil")
-                    .imageScale(.small)
-                    .foregroundStyle(.secondary)
+                Image(systemName: handleSymbol(data.handle))
+                    .imageScale(.medium)
+                    .fontWeight(.semibold)
+                    // The app's accent, matching the macOS sheet's caret and
+                    // pencil. `.secondary` measured 3.88:1 on the register's
+                    // own alternating rows — a technical WCAG 1.4.11 pass
+                    // that read as invisible; every selectable accent now
+                    // measures at least 3.2:1 on the same backgrounds.
+                    .foregroundStyle(data.handle == .cancel
+                                     ? AnyShapeStyle(.red) : AnyShapeStyle(.tint))
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.plain)
-            .help(data.handle == .cancel ? "Cancel Edit (⎋)" : "Edit Transaction (⌘E)")
-            .accessibilityLabel(data.handle == .cancel ? "Cancel Edit" : "Edit Transaction")
+            .help(handleHelp(data.handle))
+            .accessibilityLabel(handleLabel(data.handle))
         } else {
             restText("")
+        }
+    }
+
+    /// HIG *Disclosure controls*: the triangle "points inward from the leading
+    /// edge when its content is hidden and down when its content is visible" —
+    /// the pair the macOS sheet draws (`SheetSymbols.caretClosed/caretOpen`).
+    private func handleSymbol(_ state: RegisterHandleState) -> String {
+        switch state {
+        case .hidden: ""
+        // Filled, matching the macOS sheet: the outline pencil measured 32%
+        // ink against the solid caret's 42% and read as faint beside it.
+        // SF Symbols has no filled pencil (`pencil.fill` and
+        // `square.and.pencil.fill` do not exist), so the chunkiest non-disc
+        // pencil is this one at semibold — 87.1 alpha-weighted ink mass
+        // against the bare `pencil`'s 22.3.
+        case .edit: "square.and.pencil"
+        case .disclose(let open): open ? "arrowtriangle.down.fill"
+                                       : "arrowtriangle.right.fill"
+        case .cancel: "xmark.circle.fill"
+        }
+    }
+
+    private func handleHelp(_ state: RegisterHandleState) -> LocalizedStringKey {
+        switch state {
+        case .hidden: ""
+        case .edit: "Edit Transaction (⌘E)"
+        case .disclose(let open): open ? "Hide Details" : "Show Details"
+        case .cancel: "Cancel Edit (⎋)"
+        }
+    }
+
+    private func handleLabel(_ state: RegisterHandleState) -> LocalizedStringKey {
+        switch state {
+        case .hidden: ""
+        case .edit: "Edit Transaction"
+        case .disclose(let open): open ? "Hide Details" : "Show Details"
+        case .cancel: "Cancel Edit"
         }
     }
 
@@ -453,32 +583,40 @@ struct RegisterTableView: View {
     private func descriptionCell(_ row: RegisterTableRow) -> some View {
         switch row.kind {
         case .main(let data):
-            VStack(alignment: .leading, spacing: 1) {
-                HStack(spacing: 4) {
-                    if data.hasDocument {
-                        Image(systemName: "paperclip")
-                            .imageScale(.small)
-                            .foregroundStyle(.secondary)
-                            .accessibilityLabel("Has attachment")
-                    }
-                    GridCell(restValue: data.description,
-                             placeholder: "Description",
-                             isEditable: row.editable,
-                             focus: RegisterFocus(row: row.id, field: .description),
-                             cursor: $cursor,
-                             onEdit: { text in withDraft { $0.description = text } },
-                             onEscape: { escapePressed() })
+            HStack(spacing: 4) {
+                if data.hasDocument {
+                    Image(systemName: "paperclip")
+                        .imageScale(.medium)
+                        .fontWeight(.bold)
+                        .foregroundStyle(.tint)
+                        .accessibilityLabel("Has attachment")
                 }
-                if doubleLine {
-                    GridCell(restValue: data.notes,
-                             placeholder: "Notes", muted: true,
-                             isEditable: row.editable,
-                             focus: RegisterFocus(row: row.id, field: .notes),
-                             cursor: $cursor,
-                             onEdit: { text in withDraft { $0.notes = text } },
-                             onEscape: { escapePressed() })
-                }
+                GridCell(restValue: data.description,
+                         placeholder: "Description",
+                         isEditable: row.editable,
+                         focus: RegisterFocus(row: row.id, field: .description),
+                         cursor: $cursor,
+                         onEdit: { text in withDraft { $0.description = text } },
+                         onEscape: { escapePressed() })
             }
+        case .detail(let detail):
+            // Notes and tags sit under the description, GnuCash's own column
+            // for them (split-register-layout.c, and the macOS sheet's
+            // `cellIndex` mapping both lines to the description column).
+            GridCell(restValue: detail.text,
+                     placeholder: detail.field.placeholder, muted: true,
+                     isEditable: row.editable,
+                     focus: RegisterFocus(row: row.id, field: detail.field.editField),
+                     cursor: $cursor,
+                     onEdit: { text in
+                         withDraft { draft in
+                             switch detail.field {
+                             case .notes: draft.notes = text
+                             case .tags: draft.tagsText = text
+                             }
+                         }
+                     },
+                     onEscape: { escapePressed() })
         case .bookLeg(let leg):
             restText(leg.legMemo, muted: true)
         case .draftLeg(let line, _, _, _):
@@ -531,7 +669,7 @@ struct RegisterTableView: View {
                       onPick: { id in withLine(line.id) { $0.accountID = id } },
                       onReturn: { saveEdit() },
                       onEscape: { escapePressed() })
-        case .addSplit:
+        case .detail, .addSplit:
             restText("")
         }
     }
@@ -599,7 +737,7 @@ struct RegisterTableView: View {
                          withLineIndex(line.id) { d, index in d.setAmountText(text, at: index) }
                      },
                      onEscape: { escapePressed() })
-        case .addSplit:
+        case .detail, .addSplit:
             restText("")
         }
     }
@@ -644,7 +782,7 @@ struct RegisterTableView: View {
                         removeLine(line.id)
                     } label: {
                         Image(systemName: "minus.circle")
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.primary)
                     }
                     .buttonStyle(.plain)
                     .help("Remove this split")
@@ -681,7 +819,7 @@ struct RegisterTableView: View {
         var hasher = Hasher()
         hasher.combine(model.bookRevision)
         hasher.combine(wholeBook)
-        hasher.combine(showAllSplits)
+        hasher.combine(disclosesEveryRow)
         if wholeBook {
             hasher.combine(model.journalTransactions(forAccountID: nil).count)
         } else {
@@ -704,7 +842,7 @@ struct RegisterTableView: View {
     private func accountBase() -> [RegisterBaseRow] {
         var out: [RegisterBaseRow] = []
         let mains = model.autoSplitRows(expanding: nil, expandAll: false)
-        out.reserveCapacity(showAllSplits ? mains.count * 3 : mains.count)
+        out.reserveCapacity(disclosesEveryRow ? mains.count * 3 : mains.count)
         for row in mains {
             guard let main = row.main,
                   let txn = model.transactionID(ofSplit: main.id) else { continue }
@@ -713,13 +851,16 @@ struct RegisterTableView: View {
                 kind: .main(RegisterMainBase(
                     id: main.id, isHeadingOnly: false,
                     date: main.date, description: main.description,
-                    notes: main.notes, reconcile: main.reconcile,
+                    notes: main.notes,
+                    tags: model.transactionTags(ofTransaction: txn)
+                        .joined(separator: ", "),
+                    reconcile: main.reconcile,
                     hasDocument: main.hasDocument,
                     isSimple: model.isSimpleTransfer(splitID: main.id),
                     transferName: main.transfer,
                     amount: main.amount,
                     runningBalance: main.runningBalance))))
-            if showAllSplits {
+            if disclosesEveryRow {
                 for leg in model.legRows(ofTransaction: txn) {
                     out.append(RegisterBaseRow(id: .split(leg.id), txn: txn,
                                                kind: .bookLeg(leg)))
@@ -737,7 +878,9 @@ struct RegisterTableView: View {
                 kind: .main(RegisterMainBase(
                     id: txn.guid, isHeadingOnly: true,
                     date: txn.datePosted, description: txn.transactionDescription,
-                    notes: txn.notes, reconcile: "",
+                    notes: txn.notes,
+                    tags: txn.tags.joined(separator: ", "),
+                    reconcile: "",
                     hasDocument: txn.documentLink != nil,
                     isSimple: false, transferName: "",
                     amount: 0, runningBalance: nil))))
@@ -757,6 +900,10 @@ struct RegisterTableView: View {
         hasher.combine(baseKey)
         hasher.combine(selection)
         hasher.combine(editGeneration)
+        // Disclosure is composed, not based: Auto Details and a hand-opened
+        // Basic row change which rows exist without changing the base.
+        hasher.combine(style)
+        hasher.combine(currentExpanded)
         return cache.composed(for: hasher.finalize()) {
             composeRows(base: cache.base(for: baseKey) { buildBase() })
         }
@@ -765,28 +912,42 @@ struct RegisterTableView: View {
     private func composeRows(base: [RegisterBaseRow]) -> [RegisterTableRow] {
         let selectedTxn = singleSelectedTransaction
         let draftTxn = draft?.transactionID
-        let draftLegsActive = draft != nil
-            && (draft?.isExpanded == true || armsOnSelection)
         var out: [RegisterTableRow] = []
-        out.reserveCapacity(base.count + (draft?.lines.count ?? 0) + 1)
+        out.reserveCapacity(base.count + (draft?.lines.count ?? 0) + 3)
         for row in base {
+            let drafting = draftTxn == row.txn
+            let disclosed = isDisclosed(txn: row.txn, drafting: drafting,
+                                        selected: selectedTxn)
             switch row.kind {
             case .main(let mainBase):
-                let drafting = draftTxn == row.txn
                 let editable = selectedTxn == row.txn
                 out.append(RegisterTableRow(
                     id: row.id,
                     selected: selection.contains(row.id),
                     editable: editable,
                     kind: .main(renderData(mainBase, drafting: drafting,
-                                           editable: editable))))
-                if drafting, draftLegsActive {
-                    out.append(contentsOf: draftLegRows())
-                }
+                                           editable: editable,
+                                           disclosed: disclosed))))
+                guard disclosed else { continue }
+                // One disclosure, everything behind it: notes, tags, then
+                // every leg — the macOS sheet's `linePlan`, row for row.
+                // Unconditional: a disclosed row must be the same height
+                // whether or not it is being edited, or selecting one shifts
+                // everything below it.
+                out.append(detailRow(.notes, txn: row.txn, editable: editable,
+                                     text: drafting ? (draft?.notes ?? "")
+                                                    : mainBase.notes))
+                out.append(detailRow(.tags, txn: row.txn, editable: editable,
+                                     text: drafting ? (draft?.tagsText ?? "")
+                                                    : mainBase.tags))
+                // Outside Journal the base carries no legs: the disclosed
+                // transaction is the armed one, and its draft supplies them.
+                if drafting { out.append(contentsOf: draftLegRows()) }
             case .bookLeg(let leg):
-                // The drafted transaction's book legs are replaced by its
-                // draft rows (same split identities — no shift).
-                if row.txn == draftTxn, draftLegsActive { continue }
+                // Book legs only reach the base where every row discloses;
+                // the drafted transaction's are replaced by its draft rows
+                // (same split identities — no shift).
+                guard disclosed, !drafting else { continue }
                 out.append(RegisterTableRow(
                     id: row.id,
                     selected: selection.contains(row.id),
@@ -797,16 +958,33 @@ struct RegisterTableView: View {
         return out
     }
 
+    private func detailRow(_ field: RegisterDetailField, txn: GncGUID,
+                           editable: Bool, text: String) -> RegisterTableRow {
+        let id: RegisterRowID = field == .notes ? .notes(txn) : .tags(txn)
+        return RegisterTableRow(
+            id: id, selected: selection.contains(id), editable: editable,
+            kind: .detail(RegisterDetailRowData(field: field, text: text)))
+    }
+
+    /// The handle column at rest. Basic Ledger is the only style where a row's
+    /// disclosure is the user's to choose (``RegisterStyle/allowsManualExpand``
+    /// — GnuCash's expand call is a no-op elsewhere, split-register.c:251), so
+    /// it is the only one that offers a triangle; the others keep the pencil
+    /// that opens the transaction right out.
+    private func restingHandle(editable: Bool, disclosed: Bool) -> RegisterHandleState {
+        guard editable else { return .hidden }
+        return style.allowsManualExpand ? .disclose(open: disclosed) : .edit
+    }
+
     private func renderData(_ base: RegisterMainBase, drafting: Bool,
-                            editable: Bool) -> RegisterMainRowData {
+                            editable: Bool, disclosed: Bool) -> RegisterMainRowData {
         var data = RegisterMainRowData(
             id: base.id, isHeadingOnly: base.isHeadingOnly,
             reconcile: base.reconcile, hasDocument: base.hasDocument,
             drafting: drafting,
-            handle: editable ? .edit : .hidden,
+            handle: restingHandle(editable: editable, disclosed: disclosed),
             date: base.date,
             description: base.description,
-            notes: base.notes,
             transferIsCombo: base.isSimple,
             transferAccountID: nil,
             transferName: base.transferName,
@@ -818,11 +996,10 @@ struct RegisterTableView: View {
         if drafting, let d = draft {
             data.date = d.date
             data.description = d.description
-            data.notes = d.notes
             data.imbalance = d.imbalance
             // An expanded edit always shows its ✕ — cancelling must not
             // depend on where the selection happens to sit.
-            data.handle = d.isExpanded ? .cancel : (editable ? .edit : .hidden)
+            if d.isExpanded { data.handle = .cancel }
             if !data.isHeadingOnly {
                 if let ci = d.counterpartyIndex(account: model.selectedAccountID) {
                     data.transferIsCombo = true
@@ -890,7 +1067,7 @@ struct RegisterTableView: View {
 
     private func transaction(of rowID: RegisterRowID) -> GncGUID? {
         switch rowID {
-        case .txn(let guid): guid
+        case .txn(let guid), .notes(let guid), .tags(let guid): guid
         case .split(let guid): model.transactionID(ofSplit: guid)
         case .draftLine, .addSplit: draft?.transactionID
         }
@@ -901,16 +1078,21 @@ struct RegisterTableView: View {
     private func splitID(of rowID: RegisterRowID) -> GncGUID? {
         switch rowID {
         case .split(let guid): guid
-        case .txn(let guid): model.anySplitID(ofTransaction: guid)
+        case .txn(let guid), .notes(let guid), .tags(let guid):
+            model.anySplitID(ofTransaction: guid)
         case .draftLine, .addSplit: nil
         }
     }
 
-    /// The transaction the selection is about — when it is about exactly one.
-    private var singleSelectedTransaction: GncGUID? {
-        guard !selection.isEmpty else { return nil }
-        let txns = Set(selection.compactMap(transaction(of:)))
+    /// The transaction a selection is about — when it is about exactly one.
+    private func singleTransaction(in ids: Set<RegisterRowID>) -> GncGUID? {
+        guard !ids.isEmpty else { return nil }
+        let txns = Set(ids.compactMap(transaction(of:)))
         return txns.count == 1 ? txns.first : nil
+    }
+
+    private var singleSelectedTransaction: GncGUID? {
+        singleTransaction(in: selection)
     }
 
     private func withDraft(_ apply: (inout TransactionDraft) -> Void) {
@@ -1005,12 +1187,16 @@ struct RegisterTableView: View {
     }
 
     private func commit(_ d: TransactionDraft) throws {
+        // `number` goes back untouched: this table has no Num column, so
+        // `TransactionEditField.number` is never focusable here and the draft
+        // still carries whatever the book held. Writing it keeps the commit
+        // whole should a column ever be added.
         try model.updateTransaction(
             id: d.transactionID, date: d.date, description: d.description,
             currency: d.currencyOverride
                 ?? model.transactionCurrency(for: d.lines.compactMap(\.accountID)),
             splits: d.lines.filter { $0.accountID != nil }.map(\.asInput),
-            tags: d.parsedTags, notes: d.notes)
+            tags: d.parsedTags, notes: d.notes, number: d.number)
     }
 
     private func bounceBack() {
@@ -1025,10 +1211,16 @@ struct RegisterTableView: View {
 
     // MARK: Selection / focus handlers
 
-    private func selectionChanged(_ now: Set<RegisterRowID>) {
+    private func selectionChanged(from before: Set<RegisterRowID>,
+                                  to now: Set<RegisterRowID>) {
         if now.contains(.addSplit) {
             appendLine()
             return
+        }
+        // GnuCash drops `trans_expanded` when the cursor leaves the
+        // transaction: a hand-opened row shuts as you move off it.
+        if singleTransaction(in: now) != singleTransaction(in: before) {
+            currentExpanded = false
         }
         model.selectedSplitIDs = Set(now.compactMap(splitID(of:)))
         // Leaving the drafted transaction commits or bounces.
@@ -1059,8 +1251,8 @@ struct RegisterTableView: View {
         }
     }
 
-    /// Account switches and Show-All toggles change the row population
-    /// wholesale: settle any dirty edit, then re-arm under the new rules.
+    /// Account switches and style changes change the row population wholesale:
+    /// settle any dirty edit, then re-arm under the new rules.
     private func settleAndReset(keepSelection: Bool = false) {
         if let d = draft, d != original {
             if d.isBalanced { try? commit(d) }
@@ -1068,6 +1260,9 @@ struct RegisterTableView: View {
         }
         clearDraft()
         cursor = nil
+        // A hand-opened row has no meaning once the style decides what is open
+        // (split-register.c:251), nor once the rows themselves are replaced.
+        currentExpanded = false
         if keepSelection {
             rearm()
         } else {
@@ -1080,6 +1275,29 @@ struct RegisterTableView: View {
     private func editExpanded() {
         if let txn = singleSelectedTransaction ?? draft?.transactionID {
             open(txn)
+        }
+    }
+
+    /// The disclosure triangle. Basic Ledger only: in the other two styles
+    /// GnuCash's expand call returns immediately (split-register.c:251), so
+    /// the control is never offered there.
+    ///
+    /// Opening arms the row with a clean draft — the same invisible draft the
+    /// journal readings use — so the notes, tags and legs it reveals are live
+    /// cells rather than a read-only echo. Folding settles that draft first:
+    /// an unbalanced edit refuses, exactly as it refuses to be left.
+    private func toggleDisclosure() {
+        guard style.allowsManualExpand,
+              let txn = singleSelectedTransaction else { return }
+        if currentExpanded {
+            guard leaveDraft() else { return }
+            cursor = nil
+            currentExpanded = false
+        } else {
+            currentExpanded = true
+            if draft == nil { beginEdit(transaction: txn, expanded: false) }
+            // The rows below shift down; keep the opened one on screen.
+            scrollTarget = .txn(txn)
         }
     }
 
@@ -1181,8 +1399,12 @@ struct RegisterTableView: View {
         }
     }
 
+    /// A disclosed row keeps a clean draft behind it, so its cells stay live
+    /// after a save or a cancel — whether the style disclosed it or the
+    /// handle did.
     private func rearm() {
-        guard armsOnSelection, let txn = singleSelectedTransaction else { return }
+        guard armsOnSelection || currentExpanded,
+              let txn = singleSelectedTransaction else { return }
         beginEdit(transaction: txn, expanded: false)
     }
 
@@ -1190,28 +1412,33 @@ struct RegisterTableView: View {
 
     private func focusOrder() -> [RegisterFocus] {
         guard let d = draft, let anchorRow else { return [] }
-        let legsVisible = d.isExpanded || armsOnSelection
+        let txn = d.transactionID
+        // Reading order, so ⇥ and VoiceOver walk the rows the way they are
+        // drawn: the heading line, then the disclosed lines beneath it.
         var order: [RegisterFocus] = [
             RegisterFocus(row: anchorRow, field: .date),
             RegisterFocus(row: anchorRow, field: .description),
         ]
-        if doubleLine { order.append(RegisterFocus(row: anchorRow, field: .notes)) }
+        // `.number` (GnuCash's Num) has no column in this table, so it is not
+        // a stop — a Tab landing on a cell that is never drawn is a trap.
         if !wholeBook {
             if d.counterpartyIndex(account: model.selectedAccountID) != nil {
                 order.append(RegisterFocus(row: anchorRow, field: .transfer))
             }
             order.append(RegisterFocus(row: anchorRow, field: .amount))
         }
-        if legsVisible {
-            for line in d.lines {
-                let row = line.splitID.map(RegisterRowID.split) ?? .draftLine(line.id)
-                order.append(RegisterFocus(row: row, field: .splitAction(line.id)))
-                order.append(RegisterFocus(row: row, field: .splitMemo(line.id)))
-                order.append(RegisterFocus(row: row, field: .splitAccount(line.id)))
-                order.append(RegisterFocus(row: row, field: .splitAmount(line.id)))
-                if isForeign(line) {
-                    order.append(RegisterFocus(row: row, field: .splitQuantity(line.id)))
-                }
+        guard isDisclosed(txn: txn, drafting: true,
+                          selected: singleSelectedTransaction) else { return order }
+        order.append(RegisterFocus(row: .notes(txn), field: .notes))
+        order.append(RegisterFocus(row: .tags(txn), field: .tags))
+        for line in d.lines {
+            let row = line.splitID.map(RegisterRowID.split) ?? .draftLine(line.id)
+            order.append(RegisterFocus(row: row, field: .splitAction(line.id)))
+            order.append(RegisterFocus(row: row, field: .splitMemo(line.id)))
+            order.append(RegisterFocus(row: row, field: .splitAccount(line.id)))
+            order.append(RegisterFocus(row: row, field: .splitAmount(line.id)))
+            if isForeign(line) {
+                order.append(RegisterFocus(row: row, field: .splitQuantity(line.id)))
             }
         }
         return order
