@@ -95,6 +95,22 @@ struct StatementChunkingTests {
         #expect(SourceGrounding.isAmountPrinted("0.50", in: source))
     }
 
+    @Test("An amount is counted as often as the page prints it")
+    func printedMultiplicity() {
+        let source = SourceGrounding.folded("""
+            12 FEB  TRANSPORT FOR NSW TRAVEL    14.20
+            12 FEB  TRANSPORT FOR NSW TRAVEL    14.20
+            13 FEB  WOOLWORTHS 3421 SYDNEY NS   45.67
+            """)
+        // Two identical fares on one day are real, and both are printed — the
+        // cap must let both through.
+        #expect(SourceGrounding.printedCount("14.20", in: source) == 2)
+        #expect(SourceGrounding.printedCount("45.67", in: source) == 1)
+        #expect(SourceGrounding.printedCount("99.99", in: source) == 0)
+        // Too few digits to count on: never a limit.
+        #expect(SourceGrounding.printedCount("4.20", in: source) == SourceGrounding.unbounded)
+    }
+
     @Test("Payees too short to discriminate are not rejected on length alone")
     func groundingIsLenientOnShortNames() {
         // Below four folded characters containment stops meaning anything, so

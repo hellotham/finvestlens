@@ -36,13 +36,37 @@ enum SourceGrounding {
     /// fall away: a minus sign the statement writes as a trailing `CR`, a
     /// thousands separator the model drops, a currency symbol either side.
     static func isAmountPrinted(_ amount: String, in source: String) -> Bool {
+        printedCount(amount, in: source) != 0
+    }
+
+    /// How many times an amount is printed in `source`, or ``unbounded`` when
+    /// the figure is too short to count on.
+    ///
+    /// A transaction cannot occur on a page more often than its amount does,
+    /// which makes this the ceiling on how many times an extractor may report
+    /// it. That matters because the model sometimes restates a row it has
+    /// already given, with the payee worded differently each time — enough to
+    /// defeat a dedupe key that holds the payee verbatim. On one real ANZ
+    /// statement three transactions came back four and five times each, ten
+    /// surplus rows out of ninety; the same month's neighbours had none.
+    static func printedCount(_ amount: String, in source: String) -> Int {
         let digits = amount.filter(\.isNumber)
         // Under $10.00 an amount folds to three digits or fewer, which is short
         // enough to hit by chance in a page of card numbers and dates — so the
-        // check abstains there rather than rejecting a real row on a weak test.
-        guard digits.count >= 4 else { return true }
-        return source.contains(digits)
+        // check abstains rather than rejecting a real row on a weak test.
+        guard digits.count >= 4 else { return unbounded }
+        var count = 0
+        var searched = source[...]
+        while let hit = searched.range(of: digits) {
+            count += 1
+            searched = searched[hit.upperBound...]
+        }
+        return count
     }
+
+    /// Returned by ``printedCount(_:in:)`` when the figure carries too little
+    /// information to be counted — never a limit.
+    static let unbounded = Int.max
 
     /// Whether a name the model reported occurs in `source` (already folded).
     ///

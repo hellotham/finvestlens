@@ -154,6 +154,11 @@ public enum StatementExtractor {
                     previousBalance = opening
                 }
                 let source = SourceGrounding.folded(slice)
+                // A row may not be reported more often than its amount is
+                // printed on this slice. The dedupe set below holds the payee
+                // verbatim, so a restated row worded differently slips past it;
+                // the page cannot be argued with.
+                var reported: [String: Int] = [:]
                 for row in response.content.transactions {
                     guard let date = IntelligenceParsing.date(row.date),
                           let amount = IntelligenceParsing.amount(row.amount),
@@ -166,6 +171,11 @@ public enum StatementExtractor {
                           // actually in the text it was extracted from.
                           SourceGrounding.isNamePrinted(row.payee, in: source),
                           SourceGrounding.isAmountPrinted(row.amount, in: source)
+                    else { continue }
+                    let digits = row.amount.filter(\.isNumber)
+                    reported[digits, default: 0] += 1
+                    guard reported[digits, default: 0]
+                            <= SourceGrounding.printedCount(row.amount, in: source)
                     else { continue }
                     let balance = IntelligenceParsing.amount(row.balanceAfter)
                     // Dedupe across pages (carried-over rows, repeated headers).
