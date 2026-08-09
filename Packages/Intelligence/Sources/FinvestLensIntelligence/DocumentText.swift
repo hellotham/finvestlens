@@ -220,8 +220,53 @@ public enum DocumentText {
         request.recognitionLevel = .accurate
         request.usesLanguageCorrection = true
         let observations = try await request.perform(on: image)
-        let lines = observations.compactMap { $0.topCandidates(1).first?.string }
-        return lines.isEmpty ? nil : lines.joined(separator: "\n")
+        let reflowed = reflow(observations)
+        return reflowed.isEmpty ? nil : reflowed
+    }
+
+    /// Joins recognised fragments that sit on the same line of the image.
+    ///
+    /// Vision returns one observation per *run* of text, not per printed line,
+    /// so a till receipt arrives as `BROCCOLINI` and `$2.98` on separate lines
+    /// — 82 lines for 876 characters on a real one, about ten characters each.
+    /// Two things go wrong with that. The item is severed from its price, and
+    /// ``InvoiceAnalyzer`` is asked to "take each item's amount from the end of
+    /// its own line", which is then impossible. And the on-device model
+    /// rejects the result outright — `unsupportedLanguageOrLocale`, four
+    /// receipts in five — because a column of ten-character fragments does not
+    /// read as a language.
+    ///
+    /// The PDF path already reflows by geometry (``layoutText(for:)``); this
+    /// is the same idea against Vision's normalised boxes, and it is why the
+    /// two paths now produce comparably shaped text.
+    private static func reflow(_ observations: [RecognizedTextObservation]) -> String {
+        struct Fragment { let text: String; let x: CGFloat; let y: CGFloat; let height: CGFloat }
+        let fragments: [Fragment] = observations.compactMap { observation -> Fragment? in
+            guard let text = observation.topCandidates(1).first?.string,
+                  !text.trimmingCharacters(in: .whitespaces).isEmpty else { return nil }
+            let box = observation.boundingBox.cgRect
+            return Fragment(text: text, x: box.minX, y: box.midY, height: box.height)
+        }
+        guard !fragments.isEmpty else { return "" }
+
+        // Vision's origin is bottom-left, so descending y reads top-down. The
+        // tolerance is half a line's own height rather than a constant: a
+        // receipt photographed close up has taller boxes than a scanned A4.
+        let sorted = fragments.sorted { $0.y > $1.y }
+        var lines: [String] = []
+        var row: [Fragment] = []
+        for fragment in sorted {
+            let tolerance = max(fragment.height, row.first?.height ?? 0) / 2
+            if let first = row.first, abs(fragment.y - first.y) > tolerance {
+                lines.append(row.sorted { $0.x < $1.x }.map(\.text).joined(separator: "   "))
+                row = []
+            }
+            row.append(fragment)
+        }
+        if !row.isEmpty {
+            lines.append(row.sorted { $0.x < $1.x }.map(\.text).joined(separator: "   "))
+        }
+        return lines.joined(separator: "\n")
     }
 
     /// Decodes image data (PNG/JPEG/HEIC…) to a `CGImage` for recognition.
@@ -261,8 +306,13 @@ public enum DocumentText {
                 if !line.isEmpty { blocks.append(line) }
             }
         }
+        // With no table found, this reader has nothing to offer that plain
+        // recognition does not: its transcript is fragment-per-line, exactly
+        // the shape that severs a receipt's items from their prices and gets
+        // the request refused. Returning nil hands the image to the reflowing
+        // path instead, which is the whole point of preferring this one.
+        guard !blocks.isEmpty else { return nil }
         let body = document.text.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
-        if blocks.isEmpty { return body.isEmpty ? nil : body }
         if !body.isEmpty { blocks.append(body) }
         return blocks.joined(separator: "\n")
     }
