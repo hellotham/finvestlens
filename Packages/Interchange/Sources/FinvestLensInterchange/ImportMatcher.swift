@@ -172,10 +172,52 @@ public enum ImportMatcher {
             }?.key
         }
 
-        func suggest(for payee: String) -> GncGUID? {
+        // Account types, for the sign rule below.
+        var typeByGUID: [GncGUID: AccountType] = [:]
+        for account in [book.rootAccount] + book.rootAccount.descendants {
+            typeByGUID[account.guid] = account.type
+        }
+
+        /// Payee history is frequency, and frequency has no idea which way the
+        /// money went. A Telstra **dividend** of $3,150 was suggested
+        /// `Expenses:Work Related Expense:Phone`, because in this book "Telstra"
+        /// nearly always means paying a phone bill — the history is right about
+        /// the payee and wrong about the direction.
+        ///
+        /// So the counts are filtered by sign before the winner is picked:
+        ///
+        ///  * **Money out never lands in an income account.** Absolute; an
+        ///    expense is not income, whatever the history says.
+        ///  * **Money in prefers a non-expense account, but may fall back** —
+        ///    a refund genuinely belongs against the expense it reverses, and
+        ///    for a refund that expense account is usually the *only* history
+        ///    there is. Preferring rather than forbidding keeps refunds working
+        ///    and still fixes the dividend.
+        ///
+        /// `exact` distinguishes a payee the history actually knows from one
+        /// reached by substring. That is what settles the refund question: an
+        /// **exact** payee whose only history is an expense account is a
+        /// plausible refund, so the expense is kept. A **substring** guess
+        /// landing on an expense for incoming money has no such standing — it
+        /// is how "Telstra" the dividend inherited "Telstra" the phone bill —
+        /// and suggesting nothing beats suggesting that.
+        func allowed(_ counts: [GncGUID: Int], amount: Decimal,
+                     exact: Bool) -> [GncGUID: Int] {
+            guard amount != 0 else { return counts }
+            if amount < 0 {
+                return counts.filter { typeByGUID[$0.key] != .income }
+            }
+            let preferred = counts.filter { typeByGUID[$0.key] != .expense }
+            if !preferred.isEmpty { return preferred }
+            return exact ? counts : [:]
+        }
+
+        func suggest(for payee: String, amount: Decimal) -> GncGUID? {
             let key = payee.lowercased()
             guard !key.isEmpty else { return nil }
-            if let exact = payeeAccounts[key] { return bestAccount(exact) }
+            if let hit = payeeAccounts[key] {
+                return bestAccount(allowed(hit, amount: amount, exact: true))
+            }
             // Substring fallback: among history payees that contain (or are
             // contained by) this one, take the most frequent, deterministically.
             let candidates = payeeAccounts.filter { key.contains($0.key) || $0.key.contains(key) }
@@ -184,7 +226,7 @@ public enum ImportMatcher {
                 let rhsTotal = rhs.value.values.reduce(0, +)
                 return lhsTotal == rhsTotal ? lhs.key > rhs.key : lhsTotal < rhsTotal
             }
-            return bestAccount(best?.value)
+            return bestAccount(best.map { allowed($0.value, amount: amount, exact: false) })
         }
 
         // Where this card's payments historically come from: the bank-side
@@ -382,10 +424,10 @@ public enum ImportMatcher {
                 claimedSplits.insert(duplicate.guid)
                 return MatchResult(staged: row, isDuplicate: true,
                                    matchedSplitID: duplicate.guid,
-                                   suggestedAccountID: suggest(for: hint))
+                                   suggestedAccountID: suggest(for: hint, amount: row.amount))
             }
             return MatchResult(staged: row, isDuplicate: false,
-                               suggestedAccountID: suggest(for: hint)
+                               suggestedAccountID: suggest(for: hint, amount: row.amount)
                                    ?? fundingSuggestion(for: row))
         }
     }

@@ -81,7 +81,12 @@ public enum BudgetAdvisor {
 
     @Generable
     struct ModelBudget {
-        @Guide(description: "One line per spending category from the input")
+        /// Capped at the `prefix(40)` the caller offers: one line per input
+        /// category is the whole contract, so more than forty answers means
+        /// the model has started inventing categories or repeating itself.
+        /// Unbounded, that repetition runs until it exhausts the context
+        /// window — see ``StatementExtractor/ModelPage``.
+        @Guide(description: "One line per spending category from the input", .maximumCount(40))
         var lines: [ModelBudgetLine]
         @Guide(description: "Two or three sentences summarising the overall plan and any savings opportunity")
         var summary: String

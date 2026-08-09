@@ -17,10 +17,15 @@ public struct CategoryCandidate: Sendable, Hashable, Identifiable {
     public let id: GncGUID
     /// Colon-delimited full name, e.g. `Expenses:Food:Groceries`.
     public let fullName: String
+    /// Whether this is an income account. Carried so the categoriser can keep
+    /// spending out of income: money going *out* has no business landing in an
+    /// income account, whatever a model suggests.
+    public let isIncome: Bool
 
-    public init(id: GncGUID, fullName: String) {
+    public init(id: GncGUID, fullName: String, isIncome: Bool = false) {
         self.id = id
         self.fullName = fullName
+        self.isIncome = isIncome
     }
 
     var leafName: String {

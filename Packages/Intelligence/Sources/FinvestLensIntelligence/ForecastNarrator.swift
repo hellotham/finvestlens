@@ -59,7 +59,7 @@ public enum ForecastNarrator {
     struct ModelOutlook {
         @Guide(description: "One-sentence headline verdict on the cash position")
         var headline: String
-        @Guide(description: "Two to four short, specific observations grounded ONLY in the given numbers")
+        @Guide(description: "Two to four short, specific observations grounded ONLY in the given numbers", .maximumCount(4))
         var insights: [String]
     }
 

@@ -60,7 +60,8 @@ extension AppModel {
     func categoryCandidates(includeIncome: Bool = true) -> [CategoryCandidate] {
         postableAccounts
             .filter { $0.typeName == "Expense" || (includeIncome && $0.typeName == "Income") }
-            .map { CategoryCandidate(id: $0.id, fullName: $0.fullName) }
+            .map { CategoryCandidate(id: $0.id, fullName: $0.fullName,
+                                     isIncome: $0.typeName == "Income") }
     }
 
     // MARK: FR-AI-01 — PDF statement import

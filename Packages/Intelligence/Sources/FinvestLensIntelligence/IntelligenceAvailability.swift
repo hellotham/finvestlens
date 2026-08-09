@@ -52,6 +52,11 @@ public enum IntelligenceError: LocalizedError {
     case unavailable(String)
     case emptyDocument
     case guardrailDeclined
+    /// Instructions + prompt + generated output did not fit the model's
+    /// context window. Distinguished from a general failure because it is the
+    /// one failure a caller can *act* on: send less text (see
+    /// ``StatementExtractor``, which halves and retries on exactly this).
+    case contextOverflow
     case modelFailure(String)
 
     public var errorDescription: String? {
@@ -61,13 +66,16 @@ public enum IntelligenceError: LocalizedError {
             return "No readable text was found in the document."
         case .guardrailDeclined:
             return "Apple Intelligence declined to process this content (safety guardrails). Enter the details manually instead."
+        case .contextOverflow:
+            return "This document is too long for Apple Intelligence to read in one piece."
         case .modelFailure(let detail):
             return "Apple Intelligence could not process this request: \(detail)"
         }
     }
 
     /// Wraps a FoundationModels error, keeping IntelligenceErrors as-is and
-    /// translating guardrail refusals into an actionable message.
+    /// translating guardrail refusals and context overflow into cases callers
+    /// can branch on.
     static func wrap(_ error: any Error) -> IntelligenceError {
         if let error = error as? IntelligenceError { return error }
         #if canImport(FoundationModels)
@@ -76,6 +84,8 @@ public enum IntelligenceError: LocalizedError {
             switch generation {
             case .guardrailViolation, .refusal:
                 return .guardrailDeclined
+            case .exceededContextWindowSize:
+                return .contextOverflow
             default:
                 break
             }

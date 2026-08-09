@@ -27,6 +27,58 @@ public struct CategorizationItem: Sendable, Identifiable {
     }
 }
 
+/// Turns the model's free-text answers into account IDs, and refuses the
+/// ones that break the sign invariant.
+///
+/// Deliberately outside ``TransactionCategorizer``: nothing here needs the
+/// on-device model, so nothing here should be gated on macOS 26 — a guard
+/// that can only be reached when Apple Intelligence is present is a guard
+/// that cannot be unit-tested.
+enum CategorySuggestionResolver {
+
+    /// Maps the model's answers onto the batch. Pure, and separate from the
+    /// request, because this is where the wrong answers are caught — and a
+    /// guard that cannot be tested is not a guard.
+    ///
+    /// Two model behaviours are handled, both observed rather than assumed:
+    ///
+    /// * **Padding.** The schema asks for one suggestion per transaction but
+    ///   cannot enforce the count, so the model enumerates whichever list is
+    ///   more salient. Offered three categories for a single transaction it
+    ///   answered three times — numbered 1, 2, 3, one per *category*. The
+    ///   surplus is dropped by the range check; the real protection is that
+    ///   money-out is never offered an income account in the first place, so a
+    ///   pad landing on row 3 cannot be "Other Income".
+    /// * **Invention.** It returns names that were never offered
+    ///   (`Expenses:Transportation:Uber`). ``AccountNameMatcher`` resolves what
+    ///   it can and yields `nil` otherwise, and an unmatched row simply stays
+    ///   for the person to categorise.
+    ///
+    /// Last-numbered answer wins for a repeated number: an earlier one is a
+    /// pad the model then corrected.
+    static func resolve(
+        answers: [(number: Int, category: String)],
+        batch: [CategorizationItem],
+        offered: [CategoryCandidate]
+    ) -> [UUID: GncGUID] {
+        var result: [UUID: GncGUID] = [:]
+        for answer in answers {
+            let index = answer.number - 1
+            guard batch.indices.contains(index),
+                  let hit = AccountNameMatcher.match(answer.category, in: offered)
+            else { continue }
+            // The shortlist already excludes income for spending; this
+            // re-checks the account actually landed on, because
+            // `AccountNameMatcher` is deliberately forgiving and a fuzzy match
+            // is exactly where an invariant slips. An expense is never income —
+            // better no suggestion than a wrong-signed one.
+            guard !(hit.isIncome && batch[index].amount < 0) else { continue }
+            result[batch[index].id] = hit.id
+        }
+        return result
+    }
+}
+
 /// Suggests destination accounts for transactions using the on-device model
 /// (`FR-AI-02`).
 ///
@@ -51,7 +103,13 @@ public enum TransactionCategorizer {
 
     @Generable
     struct ModelSuggestions {
-        @Guide(description: "One suggestion per input transaction, in order")
+        /// Capped at ``batchSize``: there can never be more answers than there
+        /// were transactions to ask about, and without a ceiling the model
+        /// enumerates the *category* list instead — offered three categories
+        /// for one transaction it answered three times. Unbounded, that same
+        /// repetition can run until it exhausts the context window, which is
+        /// a slow failure rather than a wrong answer.
+        @Guide(description: "One suggestion per input transaction, in order", .maximumCount(8))
         var suggestions: [ModelSuggestion]
     }
     #endif
@@ -79,41 +137,64 @@ public enum TransactionCategorizer {
         }
         guard !items.isEmpty, !candidates.isEmpty else { return [:] }
 
-        let offered = Array(candidates.prefix(candidateLimit))
-        let categoryList = offered.map { "- \($0.fullName)" }.joined(separator: "\n")
-        let instructions = """
+        // Spending and receipts are categorised separately, because the
+        // candidate list differs: **money out is never offered an income
+        // account**. `AppModel.categoryCandidates(includeIncome:)` could
+        // already express this and was passed `false` at one of its eight call
+        // sites, so income categories were on the menu for nearly every
+        // spending row — which is how a Coles receipt came back as Other
+        // Income. Doing it here rather than at the call sites makes it a
+        // property of categorisation itself, and it holds for a mixed batch,
+        // which a per-call switch never could.
+        //
+        // The asymmetry is deliberate: money *in* may legitimately be an
+        // expense account (a refund offsets what it was spent on), so only the
+        // outgoing direction is constrained.
+        let spendingCandidates = Array(candidates.lazy.filter { !$0.isIncome }.prefix(candidateLimit))
+        guard !spendingCandidates.isEmpty || items.allSatisfy({ $0.amount > 0 }) else { return [:] }
+        func instructions(for offered: [CategoryCandidate]) -> String {
+            """
             You categorise personal finance transactions. Choose the single best \
             category for each transaction from this list (copy the name exactly):
 
-            \(categoryList)
+            \(offered.map { "- \($0.fullName)" }.joined(separator: "\n"))
 
             Negative amounts are spending, positive amounts are income or refunds.
             """
+        }
 
         var result: [UUID: GncGUID] = [:]
-        let batches = stride(from: 0, to: items.count, by: batchSize).map {
-            Array(items[$0..<min($0 + batchSize, items.count)])
+        // Keep spending and receipts in their own batches so each carries the
+        // right candidate list.
+        let spending = items.filter { $0.amount < 0 }
+        let receipts = items.filter { $0.amount >= 0 }
+        let allCandidates = Array(candidates.prefix(candidateLimit))
+        let groups: [(items: [CategorizationItem], offered: [CategoryCandidate])] =
+            [(spending, spendingCandidates), (receipts, allCandidates)].filter { !$0.0.isEmpty }
+        let batches = groups.flatMap { group in
+            stride(from: 0, to: group.items.count, by: batchSize).map {
+                (batch: Array(group.items[$0..<min($0 + batchSize, group.items.count)]),
+                 offered: group.offered)
+            }
         }
-        for (batchIndex, batch) in batches.enumerated() {
+        for (batchIndex, group) in batches.enumerated() {
+            let (batch, offered) = group
             let listing = batch.enumerated().map { index, item in
                 let memo = item.memo.isEmpty ? "" : " — \(item.memo)"
                 return "\(index + 1). \(item.payee)\(memo) (\(item.amount))"
             }.joined(separator: "\n")
 
-            let session = LanguageModelSession(instructions: instructions)
+            let session = LanguageModelSession(instructions: instructions(for: offered))
             do {
                 let response = try await session.respond(
                     to: "Categorise these transactions:\n\(listing)",
                     generating: ModelSuggestions.self,
                     options: GenerationOptions(sampling: .greedy)
                 )
-                for suggestion in response.content.suggestions {
-                    let index = suggestion.number - 1
-                    guard batch.indices.contains(index),
-                          let hit = AccountNameMatcher.match(suggestion.category, in: offered)
-                    else { continue }
-                    result[batch[index].id] = hit.id
-                }
+                result.merge(
+                    CategorySuggestionResolver.resolve(answers: response.content.suggestions.map { ($0.number, $0.category) },
+                            batch: batch, offered: offered)
+                ) { _, new in new }
             } catch {
                 throw IntelligenceError.wrap(error)
             }

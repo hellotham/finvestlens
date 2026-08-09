@@ -70,7 +70,14 @@ public enum InvoiceAnalyzer {
         var date: String
         @Guide(description: "Grand total of the invoice as printed")
         var total: String
-        @Guide(description: "Every billed line item — one entry per printed line, never merged. Exclude subtotal, tax-only, and total rows; keep discounts as negative amounts.")
+        /// Fifty lines is past any invoice or receipt this reads in practice,
+        /// and comfortably inside what is left of the 4,096-token window
+        /// after 6,000 characters of invoice text. The ceiling exists to stop
+        /// runaway generation, not to trim real invoices: measured on
+        /// statement pages, an unbounded array spent 3,900 tokens repeating
+        /// itself and failed, where the same request capped answered in a
+        /// fifth of the time.
+        @Guide(description: "Every billed line item — one entry per printed line, never merged. Exclude subtotal, tax-only, and total rows; keep discounts as negative amounts.", .maximumCount(50))
         var lineItems: [ModelLineItem]
     }
     #endif

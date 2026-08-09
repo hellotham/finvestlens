@@ -44,7 +44,7 @@ public enum ReportNarrator {
 
     @Generable
     struct ModelNotes {
-        @Guide(description: "Two to four short observations grounded ONLY in the given figures — what dominates, what the relationship between the headline numbers is. No advice, no speculation, no invented numbers.")
+        @Guide(description: "Two to four short observations grounded ONLY in the given figures — what dominates, what the relationship between the headline numbers is. No advice, no speculation, no invented numbers.", .maximumCount(4))
         var notes: [String]
     }
 
