@@ -114,11 +114,13 @@ RESIDUAL = re.compile(
 # say when" swallow its own middle and slip through. The residual risk — a
 # deferral written inside quotation marks — is not a shape deferrals take.
 MENTION = re.compile(
-    r"```.*?```"          # fenced code
-    r"|`[^`\n]*`"         # inline code
+    r"```.*?```"            # fenced code
+    r"|`[^`\n]*`"           # inline code
     r"|\"[^\"\n]{0,160}\""  # "double quoted"
-    r"|“[^”\n]{0,160}”",  # “curly quoted”
-    re.S)
+    r"|“[^”\n]{0,160}”"     # “curly quoted”
+    r"|\*\*[^*\n]{0,160}\*\*"  # **strong**
+    r"|\*[^*\n]{0,160}\*",     # *emphasised* — the marker that caught this
+    re.S)                      # gate out a second time, on the very fix for it
 
 
 def spoken(text):

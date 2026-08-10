@@ -133,9 +133,17 @@ Two things they deliberately allow, because the alternative is a gate people
 route around. A **blocker stated next to the item it blocks** passes
 `check-no-deferrals.py` ("X remains undone because Y" — the sibling gate
 *requires* exactly this); a blocker far from the item does not, since one honest
-sentence must not excuse a whole list. And **quotations and code spans are not
-searched at all**, so discussing the gates does not trip them — a detector that
-cannot tell use from mention fires on every conversation about itself.
+sentence must not excuse a whole list. And **quoted, code-spanned and
+emphasised text is not searched at all**, so discussing the gates does not trip
+them — a detector that cannot tell use from mention fires on every conversation
+about itself.
+
+After editing any hook, run its regression suite — 17 cases, both directions,
+every mention marker and every real deferral shape that has actually been seen:
+
+```bash
+python3 .claude/hooks/test-gates.py
+```
 
 ## Theming
 
