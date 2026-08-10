@@ -110,7 +110,7 @@ FinvestLens is not a fork of GnuCash. It is a clean, idiomatic Swift reimplement
 | Import/Export | GnuCash XML reader & writer (interchange); native CSV/QIF/OFX-QFX/MT940/CAMT.053 importers + import matcher |
 | Sync | File-level (iCloud Documents / Files / NAS) with external-change detection and conflict resolution |
 
-The core engine is kept free of UI and persistence dependencies so it can be unit-tested in isolation and reused across platforms. See [docs/prd.md](docs/prd.md), [docs/architecture.md](docs/architecture.md), [docs/porting.md](docs/porting.md), and the [implementation plan](docs/plan.md).
+The core engine is kept free of UI and persistence dependencies so it can be unit-tested in isolation and reused across platforms. See [docs/prd.md](docs/prd.md), [docs/architecture.md](docs/architecture.md), [docs/porting.md](docs/porting.md), and the [implementation plan](docs/plan.md). The two command-line tools have their own manuals: [cli.md](docs/cli.md) for `finlens` (read-only) and [lab.md](docs/lab.md) for `finlab` (the write side).
 
 ## Roadmap
 
@@ -128,7 +128,7 @@ Phased delivery (full detail in [docs/plan.md](docs/plan.md)):
 - ✅ **Report-quality redesign (Jul 2026)** — statements at annual-report presentation standard (hierarchical face-and-notes built from the user's own chart of accounts, ASC 274 liquidity/maturity ordering, materiality folding, accounting typography with comparatives — including the Trial Balance), plus two presentation decks: a CFO-style **Financial Review** and a factsheet-style **Investment Review**, each with charts, callouts, and on-device insights that a deterministic validator keeps grounded in the slide's own figures. Plan and research: [report-redesign.md](docs/report-redesign.md).
 - ✅ **P8 Extended import (Jul 2026)** — SWIFT **MT940/MT942** and ISO 20022 **CAMT.053** statement import through the Import Matcher, with format auto-detection (extension + content sniffing); plus an import-matcher hardening pass validated on real bank exports — cross-account **transfer completion**, FITID-mismatch veto, one-to-one duplicate claiming, credit-card funding inference, and an Imbalance fallback feeding the Uncategorised sweep. *(Online bank sync skipped by decision — local-first; see deferred.md.)*
 - ✅ **P9 Planning & insights (Jul 2026)** — the **Planner** destination: a Debt Reduction Planner (avalanche/snowball, interest saved vs minimums), a transparent **Lifetime Planner** (five book-seeded buckets, editable assumptions, life events, today's-dollars view), and an editable-bracket **tax estimator** (AU FY defaults, franking/withholding recognition, CGT discount) — plus the **Spending Insights** comparison report with plain-language summaries, an explainable **wellbeing score** tile, the one-page **Financial Summary (passport)** PDF, **savings challenges** on goals, a local-auth-gated **Emergency Records** organizer, and a GnuCash-style **audit-log** sidecar. All estimates, clearly labelled — never advice. *(TXF export skipped: US-specific format, meaningless for an AU book.)*
-- ✅ **P10 Ledger CLI & interchange (Jul 2026)** — **Ledger 3 journal import/export** with GnuCash-XML-grade round-trip fidelity (the real 46k-transaction book exports, re-imports and re-exports byte-identically, every balance to the cent), and **`finlens`** — a ledger-modelled, strictly read-only CLI over `.finvestlens` books, ledger journals and GnuCash files: `balance`, `register`, `print`, `csv`, `accounts`, `payees`, `commodities`, `prices`, `pricedb`, `stats`, `equity`, `cleared`, `budget`, `xact`, ledger's query language and period expressions, valuation flags, `-l`/`-d` value expressions, the `--budget`/`--forecast` family, an init file and `FINLENS_*` defaults, and an interactive REPL. Manual: [cli.md](docs/cli.md). Design and research: [ledger-design.md](docs/ledger-design.md), [ledger-format-reference.md](docs/ledger-format-reference.md), [ledger-cli-reference.md](docs/ledger-cli-reference.md).
+- ✅ **P10 Ledger CLI & interchange (Jul 2026)** — **Ledger 3 journal import/export** with GnuCash-XML-grade round-trip fidelity (the real 46k-transaction book exports, re-imports and re-exports byte-identically, every balance to the cent), and **`finlens`** — a ledger-modelled, strictly read-only CLI over `.finvestlens` books, ledger journals and GnuCash files: `balance`, `register`, `print`, `csv`, `accounts`, `payees`, `commodities`, `prices`, `pricedb`, `stats`, `equity`, `cleared`, `budget`, `xact`, `source`, ledger's query language and period expressions, valuation flags, `-l`/`-d` value expressions, the `--budget`/`--forecast` family, an init file and `FINLENS_*` defaults, and an interactive REPL. Manual: [cli.md](docs/cli.md). Design and research: [ledger-design.md](docs/ledger-design.md), [ledger-format-reference.md](docs/ledger-format-reference.md), [ledger-cli-reference.md](docs/ledger-cli-reference.md).
 - ✅ **Full-codebase review pass (Jul 2026)** — a max-effort adversarial review of the finished implementation against the PRD, architecture, and plan (ten finder angles → per-candidate verification → gap sweep; 60 confirmed findings, all fixed the same day): money-correctness fixes (short-position stock splits, CAMT reversal signs verified against ISO 20022, decimal-comma parsing, return-of-capital imports), data-safety hardening (the NAS lock's heartbeat/break races, undo integrity across scheduled posting and Revert, strict whole-string money parsing in every sheet), duplicate-proof investment re-imports, correct bill statuses with expected-amount matching, the last two PRD *Should* gaps built (unusual-spend alerts, goal-to-bill links), and a memoisation sweep over the dashboard's hot paths. Narrative in [implemented.md](docs/implemented.md).
 
 ## Command line
@@ -153,6 +153,23 @@ across all three. Defaults live in `~/.finlensrc` or `FINLENS_*` variables.
 `finlens --help` lists every command and flag; [docs/cli.md](docs/cli.md) is
 the full manual.
 
+A second binary, **`finlab`**, is the *write* side — GnuCash→book import, price
+refresh, document ingestion, data repair, and the open/save benchmarks. It is
+deliberately a separate tool rather than a mode of `finlens`, because a command
+you can point at a book knowing it cannot write is a different kind of tool
+from one that can, and that promise is worth a second binary.
+
+```bash
+swift build -c release --package-path Packages/Lab
+
+finlab import --from Book.gnucash --to Book.finvestlens
+finlab prices --file Book.finvestlens                    # refresh every security
+finlab documents --file Book.finvestlens --root ~/Receipts --apply
+finlab bench --file Book.finvestlens --save              # where open/save time goes
+```
+
+Manual: [docs/lab.md](docs/lab.md).
+
 ## Help
 
 The Help menu (⌘?) opens an in-app help book — 20 topics across Basics,
@@ -164,14 +181,16 @@ pages serve macOS, iPadOS and iOS.
 ## Languages
 
 FinvestLens is localized into **English, German, Spanish, French, Italian,
-Japanese, Brazilian Portuguese and Simplified Chinese** — 1,353 UI strings,
+Japanese, Brazilian Portuguese and Simplified Chinese** — 1,392 UI strings,
 with accounting terminology following GnuCash's own conventions in each
 language, so a GnuCash user reads familiar words. Dates, numbers and currency
 follow the system locale.
 
 ## Platform requirements
 
-- macOS, iPadOS, iOS — minimum versions to be finalized (target current − 1 major).
+- macOS 26, iPadOS 26, iOS 26 — the packages target 26.0 and the app 26.5. The floor is
+  set by what the product depends on, not by a support window: the on-device model
+  (`FoundationModels`), Vision 26 document reading, and Swift 6.2 concurrency all require 26.
 - Built with Swift and SwiftUI in Xcode.
 
 ## Published by
@@ -195,10 +214,10 @@ The GnuCash XML format is treated as an interchange specification. This is not a
 
 ## Status
 
-**Every phase P0–P10 is complete** — the core engine, native document + NAS locking, GnuCash import/export, core UX, everyday finance, investments/multi-currency/quotes, sync/dashboard/alerts, Apple Intelligence, small-business features, extended statement import (SWIFT MT + ISO 20022), and the planning & insights layer — **plus two July 2026 redesigns** (usability & performance, [usability-review.md](docs/usability-review.md) / [performance-review.md](docs/performance-review.md); and report quality, [report-redesign.md](docs/report-redesign.md)) **and a July 2026 full-codebase review pass** that adversarially verified the finished implementation against the PRD, architecture, and plan and fixed all 60 confirmed findings. What has been built is recorded in [implemented.md](docs/implemented.md); the one open tail (NAS-hardware perf validation) is in [deferred.md](docs/deferred.md).
+**Every phase P0–P10 is complete** — the core engine, native document + NAS locking, GnuCash import/export, core UX, everyday finance, investments/multi-currency/quotes, sync/dashboard/alerts, Apple Intelligence, small-business features, extended statement import (SWIFT MT + ISO 20022), and the planning & insights layer — **plus two July 2026 redesigns** (usability & performance, [usability-review.md](docs/usability-review.md) / [performance-review.md](docs/performance-review.md); and report quality, [report-redesign.md](docs/report-redesign.md)) **and a July 2026 full-codebase review pass** that adversarially verified the finished implementation against the PRD, architecture, and plan and fixed all 60 confirmed findings. What has been built is recorded in [implemented.md](docs/implemented.md); the open tails are in [deferred.md](docs/deferred.md). NAS-hardware performance validation closed on 10 Aug 2026 — NFR-02 met and ADR-8 confirmed unqualified — and the item it surfaced in passing is that `finlens` reads a network book without a local working copy.
 
 Exercised against a real GnuCash book — 46,553 transactions, 559 accounts, 102,706 prices, multi-currency — imported and compared side by side with GnuCash 5.16, which it matches to the cent (net worth, every account subtree, register running balances, the balance sheet, and the investment reports). Interoperability is round-trip verified: a re-export is byte-identical, and GnuCash reads FinvestLens's exported file back.
 
-Performance is measured against that book, not a synthetic one. Opening it takes ~6.3s and a register edit ~0.26s (an account edit 0.067s), down from ~26s and several seconds; the general ledger scrolls all 46k transactions with jumps to either end instant. The 2026 redesign added a further layer: the register status strip is snapshotted in the same pass that builds the rows (was three full-book scans per render), QuickFill reads a per-revision cache (was a 46k-transaction sort per keystroke), price and settings edits snapshot only what they touch for undo (was a whole-book XML export), heavy reports are memoised per (parameters, book revision) and build behind a placeholder, and an `os_signpost` harness watches every hot path. The design behind those numbers — and what is still deliberately slow — is [architecture.md §10](docs/architecture.md#10-derived-state-and-performance).
+Performance is measured against that book, not a synthetic one. Opening it takes 1.87 s from a local SSD and 5.08 s from an SMB share, a save 9.22 s and 15.40 s respectively, and a register edit ~0.26 s (an account edit 0.067 s); the general ledger scrolls all 46k transactions with jumps to either end instant. The 2026 redesign added a further layer: the register status strip is snapshotted in the same pass that builds the rows (was three full-book scans per render), QuickFill reads a per-revision cache (was a 46k-transaction sort per keystroke), price and settings edits snapshot only what they touch for undo (was a whole-book XML export), heavy reports are memoised per (parameters, book revision) and build behind a placeholder, and an `os_signpost` harness watches every hot path. The design behind those numbers — and what is still deliberately slow — is [architecture.md §10](docs/architecture.md#10-derived-state-and-performance).
 
-The test suites stand at **1,277 tests across the eleven packages**, alongside env-gated live harnesses that re-run the real-book import, planning, and report-catalogue validations end to end. Not yet released. iOS can open, create, and edit books but not import or export (a deliberate non-goal — see the PRD). CI tests all eleven packages and builds the unsigned app + extensions for both platforms on GitHub's macOS 26 runners; an SPDX-header gate covers every Swift target.
+The test suites stand at **1,277 tests across the eleven packages**, alongside env-gated live harnesses that re-run the real-book import, planning, and report-catalogue validations end to end. **Released as 1.0 on 25 Jul 2026** (`v1.0`); P7–P10 and the August 2026 work are post-1.0 and unreleased. iOS can open, create, and edit books but not import or export (a deliberate non-goal — see the PRD). CI tests all eleven packages and builds the unsigned app + extensions for both platforms on GitHub's macOS 26 runners; an SPDX-header gate covers every Swift target.

@@ -2,8 +2,8 @@
 
 | | |
 |---|---|
-| **Document status** | **All phases P0–P10 complete** (v1.0 was P0–P6, 13 July 2026; P7 business, P8 extended import, P9 planning & insights, and P10 ledger CLI & interchange since), **plus the Jul 2026 usability/performance and report-quality redesigns**. Online bank sync skipped to [deferred.md](deferred.md). |
-| **Last updated** | 2026-07-25 |
+| **Document status** | **All phases P0–P10 complete** (v1.0 was P0–P6, 13 July 2026; P7 business, P8 extended import, P9 planning & insights, and P10 ledger CLI & interchange since), **plus the Jul 2026 usability/performance and report-quality redesigns**, and the Aug 2026 register-style restoration and large-book NAS validation that closed the last NFR-02 item (`finlab`, [lab.md](lab.md)). Online bank sync skipped to [deferred.md](deferred.md). |
+| **Last updated** | 2026-08-10 |
 | **Scope** | The build plan: phases, workstreams, tasks, dependencies, and exit criteria |
 | **Companions** | [PRD](prd.md) · [Architecture](architecture.md) · [Porting Strategy](porting.md) · [Implemented](implemented.md) · [Deferred backlog](deferred.md) · [Money study](enhancements-msmoney.md) · [Firefly study](enhancements-firefly.md) · [Frollo study](enhancements-frollo.md) |
 
@@ -59,14 +59,21 @@ FinvestLensApp targets (macOS/iPadOS/iOS) depend on FeatureUI → downward only.
 
 Dependencies point downward only; `Engine` builds/tests with nothing above it (`FR-ENG-12`).
 
+Four more packages joined after P0, making **eleven** in all: `Shared` (the
+Foundation-only App-Group snapshot leaf, P6), `Intelligence` (the on-device
+model layer, P6+), `CLI` (`finlens`, P10c) and `Lab` (`finlab`, Aug 2026). The
+app target and `finlab` are both top-level consumers above `FeatureUI`;
+`finlens` sits beside them on Engine/Persistence/Interchange/Reports only. The
+current graph is [architecture.md §9](architecture.md).
+
 ---
 
 ## 3. Cross-cutting workstreams (run continuously from P0)
 
 | Stream | What | Starts |
 |---|---|---|
-| **Testing & CI** | Swift Testing; CI runs unit + round-trip + perf on each PR; coverage tracked | P0 |
-| **Fixture corpus** | Curated `.gnucash` files (small→large, personal/business, multi-currency, investments) under `Tests/Fixtures`; a synthetic 100k-txn generator | P1 |
+| **Testing & CI** | Swift Testing; CI (`ci.yml`) builds and tests all eleven packages plus the unsigned macOS/iOS app on every PR, and gates SPDX headers. Perf and live-book harnesses are env-gated (`FL_*`) and skip in CI. Coverage is **not** currently measured. | P0 |
+| **Fixture corpus** | Books synthesized in-test per package, plus env-gated harnesses against the real reference book (`FL_ROUNDTRIP_FILE`, `FL_PERF_FILE`). No committed `.gnucash` corpus and no synthetic generator — real books are gitignored, and a real 46,578-transaction book proved the better instrument. | P1 |
 | **Design system** | SwiftUI component kit, dark/light, Dynamic Type; charts per the [dataviz](enhancements-firefly.md) standards | P2 |
 | **Performance harness** | Open/scroll/import/save benchmarks vs NFR-02; NAS write-back tests. *An `os_signpost` + DEBUG over-budget harness (`Perf`) now wraps the hot paths (Jul 2026).* | P1 |
 | **Accessibility & localization** | VoiceOver, Dynamic Type, locale-aware formatting; string catalogs | P2 (audit in P6) |
@@ -106,13 +113,13 @@ Dependencies point downward only; `Engine` builds/tests with nothing above it (`
 - **`FileLock`:** lock file + holder metadata + heartbeat + stale-lock detection; `NSFileCoordinator`; conflict detection on write-back. *(FR-DAT-06/07/08, ADR-8)*
 - **UTI/document type** registration for `.finvestlens` (`public.database`). *(FR-PLT-04)*
 - **GnuCash XML importer:** gzip detect (magic `1f 8b`) + zlib; `XMLParser` SAX mappers per object (commodities, accounts, transactions/splits, prices); **preserve slots + GUIDs**; import summary; run **Scrub**. *(FR-IMP-01..08, ADR-2/ADR-4)*
-- **Perf validation:** import a synthetic 100k-txn book; open/scroll/save on **local + real SMB/NFS**. *(NFR-02; §17)*
+- ✅ **Perf validation (10 Aug 2026):** a real 46,578-transaction / 103,365-posting / 54 MB book, open/scroll/save on a local SSD **and** a real SMB share, measured with `finlab bench` / `finlab import`. The planned synthetic 100k generator was never built — a real book of this size was available and is better evidence. *(NFR-02; §17)*
 
 **Dependencies.** P0.
 **Deliverables.** `Persistence` + `Interchange` (import half) packages; a document you can open/edit/save; GnuCash import.
-**Exit criteria.** Create/open/save a document on local **and** a network share with working single-writer locking; **discard a session** leaves the on-disk file byte-unchanged; import a real `.gnucash` file with structure/GUIDs/slots intact and Scrub clean; 100k-txn perf meets NFR-02.
+**Exit criteria.** Create/open/save a document on local **and** a network share with working single-writer locking; **discard a session** leaves the on-disk file byte-unchanged; import a real `.gnucash` file with structure/GUIDs/slots intact and Scrub clean; large-book perf meets NFR-02 on local **and** SMB ✅ (46,578 transactions / 54 MB, 10 Aug 2026).
 **Test focus.** Locking/write-back/discard (§14.4); import structural fidelity; migration.
-**Risks.** PR6 (NAS write-safety, scale) — the P1 network load test is the go/no-go for GRDB direct-mode vs always-working-copy (§17).
+**Risks.** PR6 (NAS write-safety, scale) — **closed 10 Aug 2026**: the network load test ran on a real 46,578-transaction / 54 MB book over SMB and settled §17 in favour of always-working-copy.
 
 ---
 
@@ -214,12 +221,12 @@ Dependencies point downward only; `Engine` builds/tests with nothing above it (`
 - ✅ **App Intents / Shortcuts:** Net Worth, Upcoming Bills, Financial Alerts intents + `AppShortcutsProvider` (Siri/Spotlight/Shortcuts). ✅ **Widgets / Quick Look** shipped later as extension targets (`FinvestLensWidgets` incl. a Control widget, `FinvestLensQuickLook` for `.finvestlens`; the Apple-modernization pass). *(FR-PLT-03)*
 - ✅ **Alerts engine (Advisor-FYI):** bill-due, projected low/negative balance, over-budget, price-target, and unusual-spend (added in the Jul 2026 review pass); severity-ranked; KVP-persisted price targets. Surfaced on the dashboard, via the Alerts intent, and as local notifications (`AlertNotificationScheduler`). *(FR-PLAN-05)*
 - ✅ **Home dashboard:** net-worth headline + 12-month trend, alerts, account balances, upcoming bills, budget status. *(FR-PLAN-08.)* *Reworked by the Jul 2026 redesign into a **non-scrolling tile board** — prioritised, content-aware cards packed into the actual window, per-user show/hide, and an Up Next action card.*
-- ✅ **Accessibility pass:** VoiceOver labels/values on account rows, dashboard, alerts and every chart. ⏸️ **Localization** (string catalogs) deferred. *(NFR-05/06)*
+- ✅ **Accessibility pass:** VoiceOver labels/values on account rows, dashboard, alerts and every chart. ✅ **Localization** — the string catalogs shipped 25 Jul 2026, eight languages. *(NFR-05/06)*
 - ✅ **Optional book lock** (Face/Touch ID via injectable `Authenticating`; Security menu; lock screen). *(NFR-07)*
 
 **Dependencies.** P4 (bills/budgets/alerts data), P5 (portfolio for dashboard/widgets).
 **Deliverables.** Sync machinery, Shortcuts, dashboard, alerts, book lock; a11y-labelled UI.
-**Status.** **Complete** — the once-deferred extension work (iCloud container, widgets, Quick Look, local notifications) all shipped in the later Apple-modernization pass. Still open (documented in [deferred.md](deferred.md)): **localization** (needs translators).
+**Status.** **Complete** — the once-deferred extension work (iCloud container, widgets, Quick Look, local notifications) all shipped in the later Apple-modernization pass. Nothing from P6 remains open; professional native-speaker review of the catalogs is the one optional follow-up ([deferred.md](deferred.md) §1).
 **Test focus.** Conflict resolution; alert rule correctness.
 **Risks.** File-sync conflicts on simultaneous edits — reuses the P1 conflict-detection machinery.
 
@@ -285,9 +292,9 @@ Dependencies point downward only; `Engine` builds/tests with nothing above it (`
 
 ---
 
-## 13b. Phase P10 — Ledger CLI & interchange (planned)
+## 13b. Phase P10 — Ledger CLI & interchange
 
-**Status.** 🔲 **Designed, not started** (25 Jul 2026). Full research and the
+**Status.** ✅ **Complete (25 Jul 2026)** — P10a–P10d all delivered. Full research and the
 phased plan live in [ledger-design.md](ledger-design.md); the journal-format
 and CLI specs (verified against the Ledger 3 manual and its C++ source) are
 [ledger-format-reference.md](ledger-format-reference.md) and
@@ -302,7 +309,7 @@ journals, and GnuCash files.
 - ✅ **P10a** — Ledger codec core in Interchange (parser + canonical writer; fixed-point pinned).
 - ✅ **P10b** — Book ⟷ journal mapping, read-only store access, app File ▸ Import/Export menus; real-book round-trip verified byte-identical with zero errors. *(FR-XIO-09/10)*
 - ✅ **P10c** — the `finlens` CLI package: core-80 commands, query/period grammars, the interactive REPL, 28 golden/grammar tests, read-only guarantee; 371 real-book balances match the engine. *(FR-CLI-01..03, 05)*
-- **P10d** — depth on demand: valuation flags, periodic grouping, `--budget` family, `xact`, mini value-expressions. *(FR-CLI-04)*
+- ✅ **P10d** — depth on demand: valuation flags, periodic grouping, `--budget` family, `xact`, mini value-expressions. *(FR-CLI-04)*
 
 **Dependencies.** P1 (store), P3 (interchange patterns), P5 (PriceDB for valuation).
 **Risks.** Grammar breadth; output-fidelity expectations; foreign journals vs the double-entry invariant — mitigations in the design doc §8.
@@ -358,7 +365,7 @@ The architecture's open decisions and their resolutions:
 | Default quote providers shipped | ✅ Keyless Yahoo default; keyed EODHD / Alpha Vantage / Finnhub. |
 | Target GnuCash XML schema version | ✅ GnuCash v5-era (`gnc:book` 2.0.0), round-trip verified against GnuCash 5.16. |
 | Lock heartbeat interval & stale threshold | ✅ Periodic heartbeat + a stale threshold that offers Break-Lock; stable on provider drives. |
-| GRDB direct-mode vs always-working-copy at scale | ⬜ Open — always working-copy as built; the large-book validation on real SMB/NFS is the go/no-go. Tracked in [deferred.md](deferred.md). |
+| GRDB direct-mode vs always-working-copy at scale | ✅ **Always working-copy; direct mode not built** (10 Aug 2026). Measured on a 46,578-transaction / 54 MB book: locally the working-copy hop costs **0 ms** (an APFS clone), so there is nothing to win; over SMB, reading the same book without it took **40.6 s against 3.5 s**. No upside on one side and 11.6× on the other. [architecture.md](architecture.md) §10, numbers in [implemented.md](implemented.md). |
 
 ## 18. References
 

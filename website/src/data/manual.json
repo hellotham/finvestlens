@@ -33,7 +33,7 @@
             },
             {
               "type": "text",
-              "value": "Choose File ▸ Import ▸ GnuCash… and pick your `.gnucash` file. Accounts, transactions, prices, scheduled transactions and business records all come across, and you can export back to GnuCash at any time."
+              "value": "Choose File ▸ Import GnuCash… and pick your `.gnucash` file. Accounts, transactions, prices, scheduled transactions and business records all come across, and you can export back to GnuCash at any time."
             },
             {
               "type": "tip",
@@ -99,9 +99,9 @@
         {
           "id": "transactions",
           "title": "Recording transactions",
-          "summary": "The register, splits, and the transaction inspector.",
+          "summary": "The register, splits, and editing a row in place.",
           "symbol": "square.and.pencil",
-          "keywords": "transaction register enter split memo transfer edit inspector double entry balance",
+          "keywords": "transaction register enter split memo transfer edit double entry balance style columns",
           "blocks": [
             {
               "type": "text",
@@ -129,11 +129,11 @@
             },
             {
               "type": "text",
-              "value": "A transaction can touch more than two accounts — a pay slip split into salary, tax and superannuation, or a shopping trip split across categories. Open the inspector (⌘E, or the toolbar's inspector button) to add splits."
+              "value": "A transaction can touch more than two accounts — a pay slip split into salary, tax and superannuation, or a shopping trip split across categories. Select the row and press ⌘E, or click its disclosure arrow, to open it out — notes, tags and every leg, edited in the register itself."
             },
             {
               "type": "tip",
-              "value": "Transactions in a foreign currency, or with more than two splits, are edited in the inspector rather than inline — the register row shows a reminder when that applies."
+              "value": "How much each row shows is up to you: View ▸ Register Style switches between one line per transaction (Basic Ledger), detail on the selected row (Auto Details), and every row open (Transaction Journal). View ▸ Columns switches off the columns you do not use."
             }
           ]
         },
@@ -267,7 +267,7 @@
           "blocks": [
             {
               "type": "text",
-              "value": "Choose File ▸ Import Bank File… (⌥⌘I) and pick what your bank gave you. The format is detected from the file itself — CSV, QIF, OFX/QFX, SWIFT MT940/MT942 and ISO 20022 CAMT.053 are all read."
+              "value": "Choose Book ▸ Import Bank File… (⌥⌘I) and pick what your bank gave you. The format is detected from the file itself — CSV, QIF, OFX/QFX, SWIFT MT940/MT942 and ISO 20022 CAMT.053 are all read."
             },
             {
               "type": "heading",
@@ -304,7 +304,7 @@
           "blocks": [
             {
               "type": "text",
-              "value": "File ▸ Smart Import PDFs… (⇧⌘I) reads bank statements, dividend statements and invoices **on this device** and turns them into transactions for you to review. Nothing is sent anywhere."
+              "value": "Book ▸ Smart Import PDFs… (⇧⌘I) reads bank statements, dividend statements and invoices **on this device** and turns them into transactions for you to review. Nothing is sent anywhere."
             },
             {
               "type": "heading",
@@ -320,7 +320,15 @@
             },
             {
               "type": "text",
-              "value": "**Match Attachments…** (⇧⌘M) does the same for receipts you already have: pick the files, and each is paired with its transaction and filed."
+              "value": "**Match Attachments…** (⇧⌘M) does the same for receipts you already have — PDFs or photos: pick the files, and each is paired with its transaction and filed."
+            },
+            {
+              "type": "text",
+              "value": "Receipts from a trip match too. A card charged overseas posts in your own currency, so nothing on the receipt looks like the amount in your book — but the card issuer writes the original into the transaction, and that figure is matched exactly. No exchange rate, nothing to set up."
+            },
+            {
+              "type": "tip",
+              "value": "A file that matches nothing keeps its row and says why. **Manually Edit…** opens the transaction editor with the document's date, vendor and amount already filled in — for a cash purchase that was never on a statement, or one whose statement you have not imported yet."
             },
             {
               "type": "tip",
@@ -461,7 +469,7 @@
           "blocks": [
             {
               "type": "text",
-              "value": "Any transaction can have documents attached — a receipt, an invoice, a dividend statement. The Attachments panel beside the register shows the selected transaction's file."
+              "value": "Any transaction can have documents attached — a receipt, an invoice, a dividend statement. The Attachments panel beside the register shows the selected transaction's file; turn it on with **View ▸ Attachments** in the register toolbar."
             },
             {
               "type": "heading",
@@ -720,7 +728,7 @@
             },
             {
               "type": "text",
-              "value": "File ▸ Export ▸ Ledger Journal… (⇧⌘E) writes a plain-text Ledger journal, and File ▸ Import ▸ Ledger Journal… reads one back."
+              "value": "File ▸ Export Ledger Journal… (⇧⌘E) writes a plain-text Ledger journal, and File ▸ Import Ledger Journal… reads one back."
             },
             {
               "type": "heading",
@@ -843,7 +851,31 @@
                 ],
                 [
                   "⌘E",
-                  "Edit the selected transaction in the inspector"
+                  "Open the selected transaction out for editing"
+                ],
+                [
+                  "⌘D",
+                  "Duplicate the selected transaction"
+                ],
+                [
+                  "⌘⌫",
+                  "Delete the selected transaction"
+                ],
+                [
+                  "⌘J",
+                  "Go to the other account in this transaction"
+                ],
+                [
+                  "⌘G",
+                  "Go to date"
+                ],
+                [
+                  "⌘↑ / ⌘↓",
+                  "Oldest / newest transaction"
+                ],
+                [
+                  "⌘⏎",
+                  "Commit the row you are entering"
                 ],
                 [
                   "⇧⌘R",
@@ -871,12 +903,12 @@
               "type": "table",
               "rows": [
                 [
-                  "⌘D",
+                  "⌥⌘0",
                   "Dashboard"
                 ],
                 [
                   "⌘R",
-                  "Reports in a new window"
+                  "Reports"
                 ],
                 [
                   "⇧⌘B",

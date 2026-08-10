@@ -31,8 +31,8 @@ matched, attached and categorised.
 
 `finlens` is read-only by design (ADR-L2), and that promise was worth keeping,
 so none of this was added to it. `Packages/Lab` is a new package whose binary
-`finlab` carries four verbs — `import`, `bench`, `prices`, `documents` —
-documented in [lab.md](lab.md).
+`finlab` carries five verbs — `import`, `bench`, `prices`, `documents` and
+`repair` — documented in [lab.md](lab.md).
 
 It is the only package that depends on **FeatureUI**, deliberately.
 Attachment matching, smart categorisation and quote fetching all live on

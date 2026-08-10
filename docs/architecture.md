@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Document status** | Design baseline v1.2 (Jul 2026 — adds the report presentation layer and review decks) |
+| **Document status** | Design baseline v1.3 (Aug 2026 — closes the working-copy decision (§10), restores the three register styles (§10.1), adds the two command-line consumers (§9)) |
 | **Companions** | [PRD](prd.md) · [Porting Strategy](porting.md) · [Report redesign](report-redesign.md) |
 | **Scope** | Target architecture, technology choices, native file format, and how the hard problems are solved |
 
@@ -27,10 +27,12 @@ FinvestLens is **native-first above all else**. Two consequences: (1) money uses
 
 ```
 FinvestLensApp (macOS / iPadOS / iOS)          ← SwiftUI, per-platform
+finlab (Lab)                                   ← headless maintenance, writes
+finlens (CLI) → Engine · Persistence · Interchange · Reports   (read-only, ADR-L2)
    │
    ├── FeatureUI          SwiftUI views + AppModel (@Observable view model)
    ├── Reports            report computation (Swift) + Swift Charts rendering
-   ├── Interchange        GnuCash XML import/export · QIF/OFX/CSV · import matcher
+   ├── Interchange        GnuCash XML · CSV/QIF/OFX · MT940/CAMT.053 · Ledger 3 journal · import matcher
    ├── Rules              rules engine · merchant heuristics
    ├── Shared             App-Group snapshot shared with the widget/Quick Look extensions
    ├── Quotes             pluggable price/quote providers (URLSession)
@@ -116,7 +118,7 @@ This keeps the engine free of persistence concerns, gives SQLite's scalability f
 3. **Flat compressed snapshot** (whole book in RAM, atomic whole-file save) — simplest and very NAS-safe, but full rewrite per save and whole book in memory.
 4. **File package/bundle** — multi-file semantics complicate atomic network writes; rejected.
 
-**Decision → a single SQLite file (`.finvestlens`) managed by [GRDB](https://github.com/groue/GRDB.swift)**, with **whole-book snapshot semantics** (a hybrid of options 1 and 3): `read()` materializes the full graph and `write()` rewrites all tables in one transaction — SQLite file format, snapshot IO. This is simple and NAS-safe; incremental per-row persistence is an available optimization if the perf validation (§10) justifies it.
+**Decision → a single SQLite file (`.finvestlens`) managed by [GRDB](https://github.com/groue/GRDB.swift)**, with **whole-book snapshot semantics** (a hybrid of options 1 and 3): `read()` materializes the full graph and `write()` rewrites all tables in one transaction — SQLite file format, snapshot IO. This is simple and NAS-safe; incremental per-row persistence remains an available optimization. The 10 Aug 2026 validation (§10) measured the whole-book write at **8.8 s, identical on local and SMB** — so a save is bound by serialisation rather than by IO, and incremental persistence is the lever if save latency ever needs one. It has not yet been judged slow enough to justify the complexity.
 
 - **UTI / document type:** `com.hellotham.finvestlens.document` conforming to `public.database`; extension `.finvestlens`.
 - **Schema & migrations:** GRDB `DatabaseMigrator`, versioned; a `meta` table records the app/schema version and a change counter. Conflict detection uses a **SHA-256 file fingerprint** of the shared document.
@@ -244,7 +246,7 @@ To get SQLite's speed/scale without trusting it over the network, and to make wr
 5. **Conflict defense in depth:** before overwriting, re-read the document's SHA-256 fingerprint on the share; if it changed unexpectedly (someone bypassed the lock, or an out-of-band edit), **do not clobber** — the save throws a conflict which the UI surfaces.
 6. **On close:** if dirty, prompt to Save or Discard; then release the lock and drop the working copy (retained briefly only for crash recovery).
 
-For **genuinely local volumes** (not a network share), the working-copy hop can be skipped (direct mode) as an optimization; the explicit-save/discard semantics and locking still apply.
+For **genuinely local volumes** the hop was considered as an optimization and then **measured and rejected** (10 Aug 2026 — §10): copying on APFS is a clone, so it costs **0 ms** and there is nothing left to skip. The working copy is unconditional; the explicit-save/discard semantics and locking apply everywhere.
 
 ### 6.3 iCloud / Files integration
 
@@ -261,12 +263,23 @@ Because the document is a file, sync is **file-level**: place it in iCloud Docum
 ## 7. Testing architecture
 
 1. **Money/rounding** — tests assert correctness of `Money`/`Decimal` operations and balancing with **explicit tolerances**; parity with GnuCash is checked only approximately (P3).
-2. **Round-trip interchange** — a corpus of `.gnucash` files under `Tests/Fixtures`; import→export→re-import compares **object graphs** with numeric tolerance and exact GUID/slot preservation (`FR-EXP-02` for structure; amounts within tolerance).
+2. **Round-trip interchange** — books synthesized in-test (`RoundTripTests`, `BusinessRoundTripTests`, `PriceRoundTripTests`, `LedgerRoundTripTests`) plus env-gated runs against the real reference book (`LiveFileRoundTripTests`, `FL_ROUNDTRIP_FILE`); import→export→re-import compares **object graphs** with numeric tolerance and exact GUID/slot preservation (`FR-EXP-02` for structure; amounts within tolerance). Real `.gnucash` books are gitignored and never committed, so there is no fixture corpus in the repository.
 3. **Invariants** — every persisted transaction balances within tolerance (`FR-ENG-06`); `Scrub` reports nothing on a clean import.
 4. **Locking, write-back & discard** — simulate concurrent openers (two lock acquirers), stale-lock breaking, mid-save crash (working copy intact, document untouched), conflicting external writes, and **discard/revert** (edit → close without saving → assert the on-disk document is byte-unchanged from the last save; Revert restores the opened snapshot). Assert the document is never corrupted or silently clobbered.
 5. **Performance** — a large-book document gates open/scroll/import/save against NFR-02.
 
-Framework: **Swift Testing** for new tests; XCTest where needed for UI/perf harnesses.
+Framework: **Swift Testing** throughout, including the perf harnesses. XCTest
+survives only in `finvestlensUITests`, because XCUITest has no Swift Testing
+equivalent.
+
+6. **Live-book acceptance (env-gated)** — harnesses that skip themselves unless
+   an `FL_*` variable names a real book (`FL_PERF_FILE`, `FL_ROUNDTRIP_FILE`,
+   `FL_FINLENS`, `FL_STATEMENT_PDF`, `FL_SCAN_PDF`, `FL_RECEIPT_DIR`), so CI
+   stays deterministic while the reference book still gets real coverage.
+   `finlab bench` ([lab.md](lab.md)) is the NFR-02 instrument.
+
+CI (`ci.yml`) builds and tests all eleven packages plus an unsigned macOS and
+iOS app on every PR — roughly 1,300 tests — and gates SPDX headers.
 
 ---
 
@@ -303,9 +316,19 @@ Rules         → Engine
 Shared        (no dependencies — Foundation-only App-Group snapshot leaf)
 Intelligence  → Engine, Interchange
 FeatureUI     → Engine, Persistence, Interchange, Reports, Rules, Quotes, Intelligence, Shared
+CLI           → Engine, Persistence, Interchange, Reports        (finlens — read-only)
+Lab           → Engine, Persistence, Interchange, Quotes, Intelligence, FeatureUI  (finlab)
 FinvestLensApp (macOS/iPadOS/iOS targets) → FeatureUI
 Widget/QuickLook extension targets → Shared
 ```
+
+`Lab` is the only package above `FeatureUI` besides the app, and that is
+deliberate: `finlab` drives `AppModel` headlessly so a maintenance run
+exercises the code the app runs rather than a parallel implementation free to
+drift from it (rationale in `Packages/Lab/Package.swift`'s header and
+[lab.md](lab.md)). Dependencies still point strictly downward — `finlab` is a
+top-level consumer, a sibling of the app target, not a layer inserted beneath
+one.
 
 ---
 

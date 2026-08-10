@@ -4,7 +4,7 @@
 |---|---|
 | **Product** | FinvestLens — native Apple double-entry accounting |
 | **Platforms** | macOS, iPadOS, iOS |
-| **Document status** | Requirements baseline v1.2 (Jul 2026 — usability- and report-redesign decisions folded in) |
+| **Document status** | Requirements baseline v1.3 (Aug 2026 — register disclosure styles and row height, settled platform floors, the NAS validation, and the attachment-matching requirements FR-AI-10…12 / FR-CLI-06) |
 | **Author** | Christine Tham |
 | **License** | GNU GPL v3.0 |
 
@@ -90,9 +90,9 @@ FinvestLens is delivered in phases. Requirement priorities use **MoSCoW** (Must 
 | **P7 — Business features** | SMB | Customers/vendors, invoices/bills, tax tables, A/R–A/P |
 | **P8 — Extended import/export** | Interop breadth | MT940/MT942 + CAMT.053 import; online bank sync; PDF export |
 | **P9 — Planning & insights** | Money-inspired | Debt Reduction Planner, Lifetime Planner, tax estimator, insights/comparison reports |
-| **P10 — Ledger CLI & interchange** | Plain-text accounting | Ledger 3 journal import/export; the read-only `finlens` CLI (balance/register/print…) — design in [ledger-design.md](ledger-design.md) |
+| **P10 — Ledger CLI & interchange** | Plain-text accounting | Ledger 3 journal import/export; the read-only `finlens` CLI and the write-side `finlab` (balance/register/print…) — design in [ledger-design.md](ledger-design.md) |
 
-Planning features that layer onto earlier phases (bill reminders, cash-flow forecast, alerts, budgets, payee rules, portfolio, dashboard, onboarding) are scheduled within P4–P7 — see [§5.16](#516-planning-forecasting--insights-microsoft-moneyinspired) and the [enhancement study](enhancements-msmoney.md). An optional on-device **Apple Intelligence** layer ([§5.18](#518-on-device-intelligence-apple-intelligence), FR-AI-01…08) adds PDF statement/invoice/dividend import, auto-categorisation, and budget/forecast narration over the same engine — see [Architecture §11](architecture.md#11-apple-intelligence-integration-intelligence-package).
+Planning features that layer onto earlier phases (bill reminders, cash-flow forecast, alerts, budgets, payee rules, portfolio, dashboard, onboarding) are scheduled within P4–P7 — see [§5.16](#516-planning-forecasting--insights-microsoft-moneyinspired) and the [enhancement study](enhancements-msmoney.md). An optional on-device **Apple Intelligence** layer ([§5.18](#518-on-device-intelligence-apple-intelligence), FR-AI-01…12) adds PDF statement/invoice/dividend import, auto-categorisation, and budget/forecast narration over the same engine — see [Architecture §11](architecture.md#11-apple-intelligence-integration-intelligence-package).
 
 ---
 
@@ -208,7 +208,7 @@ FinvestLens is a **document-based app** with its **own native file format** (a s
 | FR-INV-01 | Support **stock and mutual-fund accounts** denominated in a security commodity. | Must | P5 |
 | FR-INV-02 | Provide a **Price Editor / database**: manual entry and listing of commodity prices over time. | Must | P5 |
 | FR-INV-03 | Retrieve **online price quotes** for securities and currencies via **pluggable providers**, with user-triggered and scheduled refresh, a user-chosen default and fallback order. Results populate the Price DB. *(Jul 2026 redesign: a one-click **Update Prices** (⌘⇧U) fills every security's missing history with the default provider — from the menu, the dashboard's Up Next card, or the Prices toolbar — with determinate progress and a completion toast; "last updated" shows in the Prices header.)* | Should | P5 |
-| FR-INV-03a | Provide a **keyless "yfinance-like" Yahoo provider** (no API key) for current and **historical** quotes, dividends, and splits — the default out-of-box source. | Should | P5 |
+| FR-INV-03a | Provide a **keyless "yfinance-like" Yahoo provider** (no API key) for current and **historical** quotes, dividends, and splits — the default out-of-box source, with **Stooq** as a second keyless fallback. | Should | P5 |
 | FR-INV-03b | Support **keyed providers** where the user enters an **API key** (stored in the **Keychain**), including **EODHD**, Alpha Vantage, Finnhub, and Twelve Data. Keys are entered by the user in Settings and sent only to that provider. | Should | P5 |
 | FR-INV-03c | Support **EODHD** specifically for **historical prices of delisted securities** (and deep multi-decade history). | Should | P5 |
 | FR-INV-03d | Support **historical price backfill** over a date range (not just latest), to populate the Price DB for valuation and reports. | Should | P5 |
@@ -270,8 +270,8 @@ FinvestLens is a **document-based app** with its **own native file format** (a s
 | FR-XIO-08 | Support **save/load of CSV import settings** (column-mapping profiles) for repeat imports. | Should | P4 |
 | FR-XIO-06 | Export **CSV** for accounts, transactions, and prices. | Should | P4 |
 | FR-XIO-04 | Import **MT940 / MT942** and **CAMT.053** (ISO 20022) bank statement formats — native parsers feeding the Import Matcher, with extension + content-sniffing format detection. *(Delivered 24 Jul 2026.)* | Could | P8 ✅ |
-| FR-XIO-09 | Import the **Ledger 3 plain-text journal** format (transactions, postings, costs `@`/`@@`, states, tags/metadata, aux dates, prices, the living directive set), with per-line errors, an import summary, and balance-assertion verification. Policies for the features that defy a strict engine (unbalanced virtuals, automated entries) are recorded in [ledger-design.md](ledger-design.md) §4. | Could | P10 |
-| FR-XIO-10 | Export a **Ledger 3 journal** the real `ledger` binary parses, deterministic and round-trippable (GUIDs/types/states/tags via ledger-legal metadata comments; securities/FX as `@@` total-cost postings; prices as `P` lines). | Could | P10 |
+| FR-XIO-09 | Import the **Ledger 3 plain-text journal** format (transactions, postings, costs `@`/`@@`, states, tags/metadata, aux dates, prices, the living directive set), with per-line errors, an import summary, and balance-assertion verification. Policies for the features that defy a strict engine (unbalanced virtuals, automated entries) are recorded in [ledger-design.md](ledger-design.md) §4. | Could | P10 ✅ |
+| FR-XIO-10 | Export a **Ledger 3 journal** the real `ledger` binary parses, deterministic and round-trippable (GUIDs/types/states/tags via ledger-legal metadata comments; securities/FX as `@@` total-cost postings; prices as `P` lines). | Could | P10 ✅ |
 | FR-XIO-07 | **Online bank sync** via modern aggregation APIs — **SimpleFIN** / **GoCardless (Nordigen)** and, for Australia, the **Consumer Data Right (CDR / Open Banking)** via an **accredited intermediary** — feeding the Import Matcher. Optional, explicitly consented, cloud-mediated; the app stays fully functional offline. *(Skipped from the phase plan 24 Jul 2026 — [deferred.md](deferred.md) §5; revisit only on strong demand.)* | Won't-for-now | — |
 
 ### 5.15 Platform integration
@@ -329,15 +329,16 @@ Automation and organization features that layer onto the engine. See the [enhanc
 
 ### 5.18a Command-line interface (ledger-modelled) — P10
 
-A read-only CLI (`finlens`) over `.finvestlens` books, Ledger journals, and GnuCash files, modelled on [Ledger 3](https://ledger-cli.org)'s commands, query language and report shapes. Design: [ledger-design.md](ledger-design.md).
+Two command-line binaries: the strictly read-only reporter `finlens` (`FR-CLI-01`…`05`) over `.finvestlens` books, Ledger journals and GnuCash files, and the write-side maintenance tool `finlab` (`FR-CLI-06`, [lab.md](lab.md)), modelled on [Ledger 3](https://ledger-cli.org)'s commands, query language and report shapes. Design: [ledger-design.md](ledger-design.md).
 
 | ID | Requirement | Pri | Phase |
 |---|---|---|---|
-| FR-CLI-01 | Provide the core reporting commands — `balance`, `register`, `print`, `csv`, `accounts`, `payees`, `commodities`, `prices`, `pricedb`, `stats`, `equity`, `cleared`, `source` — with ledger's layouts (tree balance with chain elision and grand total, running-total register, canonical `print`). | Could | P10 |
-| FR-CLI-02 | Support ledger's query idioms (account regexes with implicit OR, `and/or/not`, `@payee`, `%tag`, `#code`, `=note`), smart dates, `-b/-e/-p` period expressions, state filters, and sort/display options per the core-80 subset in [ledger-cli-reference.md](ledger-cli-reference.md). | Could | P10 |
-| FR-CLI-03 | Operate **strictly read-only**: open books via a read-only store connection with no lock, no working copy, and no writes — safe against a book the app has open (verified by test). | Must (within P10) | P10 |
-| FR-CLI-04 | Valuation flags (`-V`, `-X`, `-B`, `-H`) over the book's price database and journal-implied costs. | Could | P10 |
-| FR-CLI-05 | An **interactive REPL** (no-command invocation): sources loaded once, one report command per prompt, with `push`/`pop`/`reload` as in ledger. | Could | P10 |
+| FR-CLI-01 | Provide the core reporting commands — `balance`, `register`, `print`, `csv`, `accounts`, `payees`, `commodities`, `prices`, `pricedb`, `stats`, `equity`, `cleared`, `source` — with ledger's layouts (tree balance with chain elision and grand total, running-total register, canonical `print`). | Could | P10 ✅ |
+| FR-CLI-02 | Support ledger's query idioms (account regexes with implicit OR, `and/or/not`, `@payee`, `%tag`, `#code`, `=note`), smart dates, `-b/-e/-p` period expressions, state filters, and sort/display options per the core-80 subset in [ledger-cli-reference.md](ledger-cli-reference.md). | Could | P10 ✅ |
+| FR-CLI-03 | Operate **strictly read-only**: open books via a read-only store connection with no lock, no working copy, and no writes — safe against a book the app has open (verified by test). | Must (within P10) | P10 ✅ |
+| FR-CLI-04 | Valuation flags (`-V`, `-X`, `-B`, `-H`) over the book's price database and journal-implied costs. | Could | P10 ✅ |
+| FR-CLI-05 | An **interactive REPL** (no-command invocation): sources loaded once, one report command per prompt, with `push`/`pop`/`reload` as in ledger. | Could | P10 ✅ |
+| FR-CLI-06 | **Headless maintenance is a separate binary** *(Aug 2026)*: any command-line operation that *writes* to a book — GnuCash import, price refresh, document ingestion, data repair — ships as its own tool (`finlab`, [lab.md](lab.md)), never as a mode of the reporting CLI. This is what makes `FR-CLI-03`'s read-only guarantee unconditional: a tool that cannot write is a different kind of tool from one that can, and the difference is worth a second binary. The maintenance tool drives the same application model the app does, so a headless run exercises the shipping code rather than a parallel implementation free to drift from it. | Could | P10 |
 
 ### 5.18 On-device intelligence (Apple Intelligence)
 
@@ -354,6 +355,9 @@ An optional layer that runs entirely on-device over Apple's **Foundation Models*
 | FR-AI-07 | **Smart Import (multi-PDF)**: classify each dropped PDF and route it — statements to `FR-AI-01` review, dividend statements to a verified booking, invoices matched to their transaction, split by line item, and re-dated to the invoice's economic date. | Could | P7 |
 | FR-AI-08 | **Document links**: copy applied statements/invoices into the document folder and link them to their transaction via GnuCash's `assoc_uri` slot, round-trippable through GnuCash XML. | Could | P6 |
 | FR-AI-09 | **Slide narration** *(Jul 2026)*: for the presentation decks (FR-RPT-07), turn each slide's deterministic facts pack into an investor-deck action title and a one-to-two-sentence insight. Output is **disposed deterministically**: every numeric token must round-match a listed figure (raw or k/m-scaled), a listed delta percent, a label numeral, or a calendar year — otherwise the story is rejected and the deterministic title stands. The deck must read fully with Apple Intelligence off. | Could | P6 |
+| FR-AI-10 | **Attachment matching (batch)** *(Aug 2026)*: given a folder of receipts and statements, read each one and find the transaction it belongs to — a money leg of the amount read, moving the right way, within a bounded window of the document's own date — then attach the file (`FR-AI-08`) and categorise it (`FR-AI-03`). **A document is never allowed to invent a transaction to match**: one that fits nothing is reported with the amounts and date it was searched on, so the reason is diagnosable. Two documents may not claim one transaction, and a document already linked is skipped rather than re-read. | Could | P7 |
+| FR-AI-11 | **Foreign-currency receipts** *(Aug 2026)*: a card charged abroad posts in the book's currency, so a receipt brought home shares no figure with its transaction. Where the issuer records the original amount in the transaction narrative, match on **that** figure, exactly — no exchange rate, no tolerance, and nothing for the user to tag. Converting at a supplied rate is a fallback only, off by default, and must abstain when more than one transaction in the window fits, since an approximate match on money is worse than none. | Could | P7 |
+| FR-AI-12 | **Cash receipts** *(Aug 2026)*: a receipt paid in cash has no transaction to match and never will. Read the tender from the document and, when told which cash account to use, enter the purchase — date and vendor from the receipt, the file attached, the category left to `FR-AI-02`. The **account is never inferred**: a receipt records that notes changed hands, not whose, so it is supplied by the user. Detection must be asymmetric — a card marker outranks a cash one, because mistaking a card purchase for cash creates a transaction that double-counts when its statement imports. | Could | P7 |
 
 ---
 
@@ -362,14 +366,14 @@ An optional layer that runs entirely on-device over Apple's **Foundation Models*
 | ID | Requirement |
 |---|---|
 | NFR-01 **Correctness** | Monetary math uses native `Decimal` (no binary-float error), rounded to each commodity's fraction. No transaction may persist unbalanced (within one minor unit). Round-trip import/export preserves structure/GUIDs/slots losslessly; amounts match within a rounding tolerance (test-enforced). |
-| NFR-02 **Performance** | Open and render a book with 100k+ transactions responsively; register scrolling and balance computation stay smooth (target <100 ms interactions on current Apple hardware). Import of a large GnuCash file completes with progress feedback. |
+| NFR-02 **Performance** | *Interactions*: register/account open under **100 ms**, any body pass under **16 ms**, and anything over ~300 ms shows determinate progress. *Documents*: a book of 100k+ **postings** opens, scrolls and saves without the interface stalling, and a large GnuCash import reports progress throughout. Validated 10 Aug 2026 on a real 46,578-transaction / 103,365-posting / 54 MB book — open 1.8 s local and 3.5 s over SMB, save 9.2 s / 15.4 s ([implemented.md](implemented.md)). A save is bound by serialisation, not by IO. |
 | NFR-03 **Data integrity & safety** | Never lose or silently mutate user data; guard destructive actions; keep unrecognised imported data for round-tripping. Local-first; works fully **offline**. |
-| NFR-04 **Platform support** | macOS, iPadOS, iOS on a shared codebase. Minimum OS versions to be finalized (target current − 1 major). Not every capability need be present on every platform: import/export is desktop-class (macOS/iPadOS); iPhone is open/create/edit only (`FR-PLT-06`). |
+| NFR-04 **Platform support** | macOS, iPadOS, iOS on a shared codebase. Minimum versions are **macOS 26.5 / iPadOS 26.5 / iOS 26.5** — settled by the frameworks the product depends on rather than by a support window: the on-device model (`FoundationModels`), Vision 26 document reading, and the Swift 6.2 concurrency the packages are written against all require 26. Not every capability need be present on every platform: import/export is desktop-class (macOS/iPadOS); iPhone is open/create/edit only (`FR-PLT-06`). |
 | NFR-05 **Accessibility** | Full VoiceOver, Dynamic Type, keyboard navigation, sufficient contrast, Reduce Motion support. |
 | NFR-06 **Localization** | Localizable UI; correct locale-aware number, date, and currency formatting; right-to-left readiness. |
 | NFR-07 **Privacy & security** | No financial data leaves the device except via user-initiated iCloud sync or export. No trades or transfers. Optional local authentication (Face ID / Touch ID) to open a book. |
-| NFR-08 **Testability** | Engine and import/export covered by unit tests; round-trip corpus of real GnuCash files in CI. |
-| NFR-09 **Maintainability** | Clear layering (engine / persistence / import-export / UI); idiomatic Swift; documented public APIs. |
+| NFR-08 **Testability** | Engine and import/export covered by unit tests; a synthetic round-trip corpus in CI, plus an env-gated harness (`FL_ROUNDTRIP_FILE`) run locally against real GnuCash books — real books are gitignored and never enter the repository. |
+| NFR-09 **Maintainability** | Clear layering across eleven local SPM packages (Engine · Persistence · Interchange · Rules · Reports · Quotes · Intelligence · Shared · FeatureUI · CLI · Lab), dependencies pointing downward only; idiomatic Swift; documented public APIs. |
 | NFR-10 **Licensing** | GPLv3; interoperate with GnuCash via its XML format; no proprietary lock-in. |
 
 ---
@@ -424,7 +428,7 @@ Book
 8. **P7 Business features** — customers/vendors, invoices/bills, tax tables, A/R–A/P. *(FR-BUS-\*)*
 9. **P8 Extended import/export** — MT940/MT942 + CAMT.053 bank-statement import; online bank sync; PDF export. *(FR-XIO-04/07, FR-RPT-05)*
 10. **P9 Planning & insights** — Debt Reduction Planner, Lifetime Planner, tax estimator/tagging, insights/comparison reports. *(FR-PLAN-10..13, 15..17, FR-GOAL-*)* Earlier planning features (bill reminders, forecast, alerts, payee rules, portfolio, dashboard, onboarding) map to P4–P7. *(FR-PLAN-01..09, 14)*
-11. **P10 Ledger CLI & interchange** — Ledger 3 journal import/export; the `finlens` read-only CLI. *(FR-XIO-09/10, FR-CLI-\*; design: [ledger-design.md](ledger-design.md))*
+11. **P10 Ledger CLI & interchange** — Ledger 3 journal import/export; the `finlens` read-only CLI (and, from Aug 2026, the `finlab` maintenance tool). *(FR-XIO-09/10, FR-CLI-\*; design: [ledger-design.md](ledger-design.md))*
 
 ---
 
@@ -432,7 +436,7 @@ Book
 
 - **Interoperability:** ≥99% of objects in a representative corpus of real GnuCash files round-trip without loss; zero balance-integrity failures.
 - **Correctness:** 0 unbalanced transactions persisted; engine test coverage ≥90% of core logic.
-- **Performance:** books of 100k transactions open and scroll within target latencies (NFR-02).
+- **Performance:** a book of 100k+ postings opens and scrolls within the NFR-02 latencies — validated 10 Aug 2026 on a real 46,578-transaction / 103,365-posting book, on local and SMB storage.
 - **Adoption signal (post-launch):** migrating GnuCash users can import, use daily, and export back successfully.
 
 ---
@@ -442,10 +446,10 @@ Book
 | # | Risk / question | Notes |
 |---|---|---|
 | R1 | GnuCash XML schema breadth (business objects, slots, SX) is large. | Prioritise core objects; preserve-and-passthrough unknowns to protect round-trip. |
-| R2 | Exact-decimal performance at scale. | Benchmark the rational type early; cache balances. |
+| R2 | Exact-decimal performance at scale. | **Closed (10 Aug 2026)** — the hand-written rational was rejected in favour of `Decimal` (architecture §5.1); measured on a real 46,578-transaction book with balances cached. Numbers in [implemented.md](implemented.md). |
 | R3 | Online quote sources change/rate-limit. | Make quote sources pluggable; degrade gracefully offline. |
-| R4 | SQLite safety/locking on network shares (SMB/NFS). | App-level lock file + heartbeat, local working copy, coordinated atomic write-back (Architecture §6); load-test on real NAS in P1. |
-| Q1 | Minimum OS versions? | Target current − 1; confirm against required SwiftUI/document features. |
+| R4 | SQLite safety/locking on network shares (SMB/NFS). | App-level lock file + heartbeat, local working copy, coordinated atomic write-back (Architecture §6); **closed 10 Aug 2026** by a load test on a real SMB share: direct mode not built (the working copy costs 0 ms locally and saves 11.6× remotely). One residual — `finlens` still reads across the wire ([deferred.md](deferred.md) §1). |
+| Q1 | Minimum OS versions? | **Resolved** — macOS/iPadOS/iOS **26.5**, set by the frameworks the product depends on (FoundationModels, Vision 26, Swift 6.2), not by a support window. See NFR-04. |
 | Q2 | Which GnuCash XML schema version to target for export? | Match current stable GnuCash (v5-era) format. |
 | Q3 | Product/trademark naming relative to GnuCash. | FinvestLens is unaffiliated; avoid implying endorsement. |
 

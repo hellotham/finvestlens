@@ -3,6 +3,10 @@
 > The manual page for the `finlens` binary built by `Packages/CLI`.
 > Design: [ledger-design.md](ledger-design.md). Ledger's own surface, which
 > this follows: [ledger-cli-reference.md](ledger-cli-reference.md).
+>
+> **This tool only reads.** The write side of the command line is a separate
+> binary, `finlab` (`Packages/Lab`) — GnuCash import, price refresh, document
+> ingestion, repair and benchmarks. See [lab.md](lab.md).
 
 ## Name
 
@@ -37,15 +41,22 @@ merge into one book. Recognised by extension, then by content sniff:
 
 | Source | Extensions | Notes |
 | --- | --- | --- |
-| FinvestLens book | `.finvestlens` | Opened **read-only**: no lock is taken, no working copy is made, nothing is ever written (ADR-L2). Only one book at a time. |
+| FinvestLens book | `.finvestlens` | Opened **read-only**: no lock is taken, no working copy is made, nothing is ever written (ADR-L2). Only one book at a time. Writing to a book from the command line is [`finlab`](lab.md)'s job, not this tool's. |
 | Ledger journal | `.ledger` `.journal` `.dat` `.txt` `-` (stdin) | Full Ledger 3 grammar — see [ledger-format-reference.md](ledger-format-reference.md). |
 | GnuCash | `.gnucash` | XML, compressed or plain. |
 
 With no `-f`, `$FINLENS_FILE` is used. With neither, `finlens` exits 1 with
-`no source file given`.
+`no source file given (use -f FILE or set FINLENS_FILE)`.
 
 Because a book is read without a lock, a read that races the app's save sees
 the pre-save file — never a half-written one.
+
+Over a network share that safety costs real time. Without a working copy,
+SQLite reads the file where it lies and each of its small random reads pays
+network latency: a 54 MB book on SMB takes about **40 s** against **3.5 s** for
+the app's copy-then-read path (measured 10 Aug 2026 — 1.96 s of that 40 s was
+CPU). For repeated queries against a book on a NAS, copy it somewhere local
+first.
 
 ## Commands
 
@@ -53,7 +64,7 @@ the pre-save file — never a half-written one.
 | --- | --- |
 | `balance` (`bal`, `b`) | Account balances as an indented tree, 20-column right-justified totals, single-child chains elided, a dashed grand total. |
 | `register` (`reg`, `r`) | One line per posting: date, payee, account, amount, running total. |
-| `print` | The matching transactions as a Ledger journal (round-trippable). |
+| `print` | The matching transactions as a Ledger journal (round-trippable). `--raw` re-emits the original journal source untransformed (journal sources only). |
 | `csv` | One CSV row per posting, every field quoted, in ledger's column order. |
 | `accounts` / `payees` / `commodities` | Sorted names; `--count` prints tallies. |
 | `prices` / `pricedb` | Price history; `--latest` keeps only the newest per commodity. |
@@ -251,7 +262,7 @@ and is otherwise ignored — it can never lock you out.
 
 ## Not implemented
 
-`select`, `convert`, and format strings (`-F`/`--format`). See
+`select`, `convert`, format strings (`-F`, `--bold-if`), `--pivot`, `--anon`, plot outputs (`-j`/`-J`), and `lisp`/`xml` output. See
 [ledger-design.md](ledger-design.md) §5.4 for why, and what the core-80 subset
 covers instead.
 
