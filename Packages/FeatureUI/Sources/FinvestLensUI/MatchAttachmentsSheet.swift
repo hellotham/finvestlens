@@ -256,13 +256,10 @@ struct MatchAttachmentsSheet: View {
     private func attach(_ match: AppModel.AttachmentMatch, to transactionID: GncGUID,
                         summary: String) {
         Task {
-            let url = match.url
-            let accessing = url.startAccessingSecurityScopedResource()
-            defer { if accessing { url.stopAccessingSecurityScopedResource() } }
-            let data = try? await Task.detached { try Data(contentsOf: url) }.value
-            if let data {
-                model.attachDocumentReporting(named: match.fileName, data: data, to: transactionID)
-            }
+            // Linked where it lies, never copied: the folder the user scanned
+            // is the archive, and copying would put a second receipt beside the
+            // book with the link pointing at the copy.
+            model.linkDocument(at: match.url, to: transactionID)
             matches.removeAll { $0.id == match.id }
             appliedSummary = summary
         }
@@ -276,17 +273,9 @@ struct MatchAttachmentsSheet: View {
             var categorised = 0
             for match in matches where accepted.contains(match.id) {
                 guard let transactionID = match.transactionID else { continue }
-                let accessing = match.url.startAccessingSecurityScopedResource()
-                defer { if accessing { match.url.stopAccessingSecurityScopedResource() } }
-                // Read off the main actor: a cloud-backed file materialises on
-                // read, which can take a while.
-                let url = match.url
-                let data = try? await Task.detached { try Data(contentsOf: url) }.value
-                if let data,
-                   model.attachDocumentReporting(named: match.fileName, data: data,
-                                                 to: transactionID) {
-                    linked += 1
-                }
+                // Linked in place — see `attach(_:to:summary:)`.
+                model.linkDocument(at: match.url, to: transactionID)
+                linked += 1
                 if let suggestion = match.suggestion,
                    model.applyAttachmentSuggestion(suggestion, to: transactionID) {
                     categorised += 1

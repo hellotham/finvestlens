@@ -86,6 +86,8 @@ public enum Lab {
           finlab bench    --file BOOK.finvestlens [--save] [--repeat N]
           finlab prices   --file BOOK.finvestlens [--provider yahoo|stooq] [--dry-run]
           finlab repair   --file BOOK.finvestlens [--apply]
+          finlab relink   --file BOOK.finvestlens --primary DIR [--secondary DIR]
+                          [--apply] [--prune]
           finlab documents --file BOOK.finvestlens --root DIR
                           [--since YYYY-MM-DD] [--until YYYY-MM-DD]
                           [--kind any|invoice|dividend] [--limit N] [--batch N]
@@ -118,6 +120,8 @@ public enum Lab {
                 try await DocumentsCommand.run(options, log: log)
             case "repair":
                 try await RepairCommand.run(options, log: log)
+            case "relink":
+                try await RelinkCommand.run(options, log: log)
             case "help", "--help", "-h":
                 log(usage)
             default:

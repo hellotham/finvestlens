@@ -97,6 +97,38 @@ instead of the 4 that were wrong, because GnuCash stores plenty of dates at
 10:59 UTC — late evening here, and the same day either way. Nothing is written
 without `--apply`, and the dry run lists every row it would touch.
 
+### `relink` — point document links back at the filed originals
+
+```bash
+finlab relink --file Book.finvestlens --primary DIR [--secondary DIR] \
+              [--apply] [--prune]
+```
+
+The second repair, and like the first it exists because this tool got it wrong.
+`documents` attached matches with `attachDocument(named:data:to:)`, whose
+contract is to **copy** the file into the document folder — and that folder
+defaults to the folder holding the book. One ingest of the real book therefore
+duplicated 189 receipts onto the NAS beside it and pointed every link at the
+duplicate rather than at the file the user had filed. Attachments are supposed
+to be *links*: the book records where a document is, not a second copy of it.
+
+`relink` rewrites every link to its original's path **relative to whichever
+configured root contains it** — `--primary`, else `--secondary` — so nothing
+embeds a home directory or a cloud-provider path that differs on the next
+machine. Names index the archive; the SHA-256 decides, so a copy is only ever
+matched to an original it is byte-identical to.
+
+`--prune` then deletes the copies beside the book, but only after every link in
+the book has been re-resolved successfully, and only for a file whose bytes are
+confirmed present under a root. The two roots belong in **Settings ▸ Documents**
+as the primary and secondary document folders, which is what the app resolves
+relative links against.
+
+The source-side fix landed with it: `documents`, the app's Match Attachments
+sheet, Attach File…, and the cash-receipt path all now call
+`linkDocument(at:to:)`. Only Smart Import still copies, because pasted or
+scanned bytes have no original to point at.
+
 ### `documents` — ingest receipts and statements
 
 ```bash

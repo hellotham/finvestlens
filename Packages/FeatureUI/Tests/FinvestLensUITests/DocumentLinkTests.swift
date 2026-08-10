@@ -110,4 +110,60 @@ struct DocumentLinkTests {
             #expect(model.linkedDocumentURL(for: id) == nil)
         }
     }
+
+    @Test("Linking never copies, and relativises against either configured root")
+    func linkInPlaceIsRelativeToEitherRoot() throws {
+        let saved = UserDefaults.standard.string(forKey: AppModel.secondaryDocumentFolderDefaultsKey)
+        defer {
+            UserDefaults.standard.set(saved ?? "", forKey: AppModel.secondaryDocumentFolderDefaultsKey)
+        }
+        try withCleanSetting { model in
+            let invoices = FileManager.default.temporaryDirectory
+                .appendingPathComponent(UUID().uuidString)
+            let finance = FileManager.default.temporaryDirectory
+                .appendingPathComponent(UUID().uuidString)
+            for folder in [invoices, finance] {
+                try FileManager.default.createDirectory(
+                    at: folder.appendingPathComponent("2026-04"), withIntermediateDirectories: true)
+            }
+            defer { for f in [invoices, finance] { try? FileManager.default.removeItem(at: f) } }
+            model.configuredDocumentFolder = invoices
+            model.secondaryDocumentFolder = finance
+
+            // Under the PRIMARY root, in a subfolder: the subpath is kept, so
+            // the archive's own shape survives in the link.
+            let receipt = invoices.appendingPathComponent("2026-04/Coles.png")
+            try Data("R".utf8).write(to: receipt)
+            let first = try makeTransaction(model)
+            model.linkDocument(at: receipt, to: first)
+            #expect(model.documentLink(for: first) == "2026-04/Coles.png")
+
+            // Under the SECONDARY root. This is the case that regressed: only
+            // the primary was checked, so every document filed in the second
+            // folder had the user's full home path written into the book.
+            let advice = finance.appendingPathComponent("2026-04/Dividend.pdf")
+            try Data("D".utf8).write(to: advice)
+            let second = try makeTransaction(model)
+            model.linkDocument(at: advice, to: second)
+            #expect(model.documentLink(for: second) == "2026-04/Dividend.pdf")
+            #expect(model.linkedDocumentURL(for: second)?.path == advice.path)
+
+            // Under neither: absolute, because there is no base to be relative to.
+            let loose = FileManager.default.temporaryDirectory
+                .appendingPathComponent("\(UUID().uuidString).png")
+            try Data("L".utf8).write(to: loose)
+            defer { try? FileManager.default.removeItem(at: loose) }
+            let third = try makeTransaction(model)
+            model.linkDocument(at: loose, to: third)
+            #expect(model.documentLink(for: third) == loose.standardizedFileURL.path)
+
+            // Nothing was copied into either root: linking leaves the archive
+            // exactly as it found it.
+            for folder in [invoices, finance] {
+                let files = try FileManager.default.contentsOfDirectory(
+                    at: folder, includingPropertiesForKeys: nil)
+                #expect(files.map(\.lastPathComponent) == ["2026-04"])
+            }
+        }
+    }
 }

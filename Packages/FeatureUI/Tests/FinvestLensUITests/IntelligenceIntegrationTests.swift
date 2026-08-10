@@ -277,8 +277,13 @@ struct IntelligenceIntegrationTests {
         _ = try #require(model.addAccount(name: "His Cash", type: .cash))
         let bought = try #require(day("2026-02-22"))
 
+        // The receipt is linked where it lies, so the test writes it into the
+        // document folder and hands over the URL. The stored link is still the
+        // bare name, because the file is under that folder.
+        let receipt = folder.appendingPathComponent("2026-02-22 BBQ.png")
+        try Data("receipt".utf8).write(to: receipt)
         let entered = try await model.recordCashPurchase(
-            fileName: "2026-02-22 BBQ.png", data: Data("receipt".utf8), date: bought,
+            receipt: receipt, date: bought,
             vendor: "BBQ King", amount: 99.35, cashAccountID: hers)
 
         let book = try #require(model.book)
@@ -317,8 +322,10 @@ struct IntelligenceIntegrationTests {
 
         let cash = try #require(model.addAccount(name: "Cash", type: .cash))
         let ninth = try #require(day("2026-01-09"))       // midnight, local
+        let receipt = folder.appendingPathComponent("2026-01-09 Tofu.png")
+        try Data("x".utf8).write(to: receipt)
         let entered = try await model.recordCashPurchase(
-            fileName: "2026-01-09 Tofu.png", data: Data("x".utf8), date: ninth,
+            receipt: receipt, date: ninth,
             vendor: "Artisan Tofu", amount: 25.60, cashAccountID: cash)
 
         let book = try #require(model.book)
@@ -393,8 +400,10 @@ struct IntelligenceIntegrationTests {
         model.configuredDocumentFolder = folder
 
         let cash = try #require(model.addAccount(name: "Cash", type: .cash))
+        let receipt = folder.appendingPathComponent("2026-01-09 H Hung.png")
+        try Data("x".utf8).write(to: receipt)
         let entered = try await model.recordCashPurchase(
-            fileName: "2026-01-09 H Hung.png", data: Data("x".utf8), date: Date(),
+            receipt: receipt, date: Date(),
             vendor: nil, amount: 25.60, cashAccountID: cash)
         let book = try #require(model.book)
         let txn = try #require(book.transaction(with: entered.id))

@@ -468,15 +468,27 @@ public enum HelpBook {
                 """),
             .heading("Where files live"),
             .text("""
-                Set a document folder in Settings ▸ Documents. Files inside it are linked \
+                Your files stay where you filed them. Attaching one records **where it is**, \
+                not a second copy of it — so the folder you scan into stays the single \
+                archive, and tidying it there tidies it everywhere.
+                """),
+            .text("""
+                Settings ▸ Documents takes two folders, a primary and a secondary — receipts \
+                in one and statements in the other, say. A file inside either is linked \
                 **relatively**, the same way GnuCash does it, so the book and its documents \
-                can move together — onto a NAS, or to a new Mac — without breaking.
+                can move together — onto a NAS, or to a new Mac — without breaking. A file \
+                outside both is linked by its full path, which still works but does not \
+                travel.
                 """),
             .bullets([
                 "**Link File…** points at a file where it already is.",
                 "**Add Web Link…** stores a URL instead of a file.",
                 "**Remove Link** unlinks only — your file is never deleted.",
             ]),
+            .tip("""
+                Matching a folder of receipts in bulk — **Match Attachments…** — links them \
+                where they lie too. Point it at the folder you already file into.
+                """),
         ])
 
     // MARK: Investments & planning

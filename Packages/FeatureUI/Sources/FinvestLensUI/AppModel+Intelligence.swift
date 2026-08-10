@@ -817,10 +817,14 @@ extension AppModel {
     /// invoice across several categories. One categoriser, not two.
     ///
     /// - Returns: the new transaction, and whether it was categorised.
+    ///
+    /// The receipt is taken as a `URL` and **linked where it lies**, not copied:
+    /// the folder it was scanned from is the archive.
     @discardableResult
-    public func recordCashPurchase(fileName: String, data: Data, date: Date,
+    public func recordCashPurchase(receipt url: URL, date: Date,
                                    vendor: String?, amount: Decimal,
                                    cashAccountID: GncGUID) async throws -> (id: GncGUID, categorised: Bool) {
+        let fileName = url.lastPathComponent
         guard let book else { throw TransactionEntryError.noBook }
         guard amount > 0 else { throw TransactionEntryError.tooFewSplits }
         guard let cash = book.account(with: cashAccountID) else { throw TransactionEntryError.notFound }
@@ -843,7 +847,7 @@ extension AppModel {
                      SplitInput(accountID: wash.guid, value: amount)],
             tags: ["cash"])
 
-        _ = try attachDocument(named: fileName, data: data, to: id)
+        linkDocument(at: url, to: id)
 
         var categorised = false
         if let suggestion = try? await suggestCategoryFromAttachment(for: id) {
@@ -1359,9 +1363,8 @@ extension AppModel {
     /// into the proper multi-currency form. The editor just reloads afterwards.
     public func adoptDocument(url: URL, foreignAmount: Decimal?,
                               currencyCode: String?, into transactionID: GncGUID) async {
-        if let data = try? await Task.detached(operation: { try Data(contentsOf: url) }).value {
-            _ = try? attachDocument(named: url.lastPathComponent, data: data, to: transactionID)
-        }
+        // Linked where it lies, not copied into the document folder.
+        linkDocument(at: url, to: transactionID)
         if #available(macOS 26.0, iOS 26.0, *),
            let suggestion = try? await suggestCategoryFromAttachment(for: transactionID) {
             applyAttachmentSuggestion(suggestion, to: transactionID)

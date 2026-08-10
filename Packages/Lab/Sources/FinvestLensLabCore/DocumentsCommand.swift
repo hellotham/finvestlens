@@ -123,21 +123,21 @@ enum DocumentsCommand {
         var claimedThisRun: Set<GncGUID> = []
         let started = Stopwatch()
 
-        /// Copies the file beside the book and links it. Shared because a
-        /// rate-derived match is attached exactly like an exact one — the
-        /// difference is only in how the transaction was found, and that
-        /// belongs in the log, not in what gets written.
+        /// Links the file **where it already lives** — it is not copied, and in
+        /// particular not copied beside the book. Shared because a rate-derived
+        /// match is attached exactly like an exact one; the difference is only
+        /// in how the transaction was found, and that belongs in the log, not
+        /// in what gets written.
+        ///
+        /// This used `attachDocument(named:data:to:)`, whose contract is to
+        /// copy into the document folder — which defaults to the book's own
+        /// folder. One ingest of the real book duplicated 189 receipts onto the
+        /// NAS beside it and pointed every link at the duplicate instead of at
+        /// the file the user filed. The scanned folders *are* the archive; the
+        /// book records where a document is, not a second copy of it.
         @MainActor func attach(_ match: AppModel.AttachmentMatch, to transactionID: GncGUID) async {
-            guard let data = try? await Task.detached(operation: { [url = match.url] in
-                try Data(contentsOf: url)
-            }).value else { applyFailures += 1; return }
-            do {
-                _ = try model.attachDocument(named: match.fileName, data: data, to: transactionID)
-                linked += 1
-            } catch {
-                applyFailures += 1
-                log("  ⚠︎ \(match.fileName): \(error.localizedDescription)")
-            }
+            model.linkDocument(at: match.url, to: transactionID)
+            linked += 1
             if let suggestion = match.suggestion,
                model.applyAttachmentSuggestion(suggestion, to: transactionID) {
                 categorised += 1
@@ -182,13 +182,10 @@ enum DocumentsCommand {
                     // being entered. Done only when --cash-account names the
                     // wallet it came out of, because no document says whose.
                     if let cashAccount, match.tender == .cash,
-                       let date = match.documentDate, let total = match.candidateAmounts.first,
-                       let data = try? await Task.detached(operation: { [url = match.url] in
-                           try Data(contentsOf: url)
-                       }).value {
+                       let date = match.documentDate, let total = match.candidateAmounts.first {
                         if apply {
                             let entered = try await model.recordCashPurchase(
-                                fileName: match.fileName, data: data, date: date,
+                                receipt: match.url, date: date,
                                 vendor: match.vendor, amount: total, cashAccountID: cashAccount)
                             linked += 1
                             if entered.categorised { categorised += 1 }

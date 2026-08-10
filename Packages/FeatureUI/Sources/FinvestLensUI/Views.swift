@@ -621,14 +621,10 @@ public struct FinvestLensRootView: View {
             guard case let .success(url) = result else { return }
             let scoped = url.startAccessingSecurityScopedResource()
             defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-            guard let data = try? Data(contentsOf: url) else {
-                statementError = "Couldn't read “\(url.lastPathComponent)”."; return
-            }
-            do {
-                _ = try model.attachDocument(named: url.lastPathComponent, data: data, to: txnID)
-            } catch {
-                statementError = "Couldn't attach the file: \(error.localizedDescription). Set a document folder in Settings ▸ Documents."
-            }
+            // The file the user picked is left where they filed it and linked
+            // there. Copying it into the document folder made a second copy of
+            // something already filed, and pointed the book at the copy.
+            model.linkDocument(at: url, to: txnID)
         }
     }
 

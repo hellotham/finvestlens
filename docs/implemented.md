@@ -31,8 +31,32 @@ matched, attached and categorised.
 
 `finlens` is read-only by design (ADR-L2), and that promise was worth keeping,
 so none of this was added to it. `Packages/Lab` is a new package whose binary
-`finlab` carries five verbs — `import`, `bench`, `prices`, `documents` and
-`repair` — documented in [lab.md](lab.md).
+`finlab` carries six verbs — `import`, `bench`, `prices`, `documents`,
+`repair` and `relink` — documented in [lab.md](lab.md).
+
+### Attachments are links, not copies (10 Aug 2026)
+
+The ingest above attached its matches with `attachDocument(named:data:to:)`,
+whose contract is to **copy** the file into the document folder — and that
+folder falls back to the folder holding the book. So the run duplicated 189
+receipts onto the NAS beside the book and pointed every link at the duplicate
+instead of at the file the user had filed. The correct call already existed two
+functions further down (`linkDocument(at:to:)`, "links an existing file in
+place — no copy"), and the app's own drag-and-drop path was already using it;
+the batch paths reached for the wrong one.
+
+Fixed at the source — `finlab documents`, Match Attachments, Attach File… and
+the cash-receipt path all link now. Smart Import still copies, because pasted or
+scanned bytes have no original to point at.
+
+`linkDocument` also only relativised against the *primary* document folder, so
+anything filed in the secondary one had the user's full home path written into
+the book. It now relativises against either, which is what makes two archives —
+receipts in one folder, statements in another — work at all.
+
+`finlab relink` repaired the existing book: 95 links rewritten to include their
+archive subfolder, 759 verified to resolve, and the 189 copies pruned only after
+each was confirmed byte-identical to a file still in the archive.
 
 It is the only package that depends on **FeatureUI**, deliberately.
 Attachment matching, smart categorisation and quote fetching all live on

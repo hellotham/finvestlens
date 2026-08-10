@@ -234,17 +234,39 @@ extension AppModel {
     }
 
     /// Links an existing file **in place** — no copy, unlike
-    /// ``attachDocument(named:data:to:)``. Stored relative to the document
-    /// folder when the file lives inside it (so book + documents move
-    /// together), else as an absolute path.
+    /// ``attachDocument(named:data:to:)``.
+    ///
+    /// Stored **relative** to whichever configured document folder contains it
+    /// — primary or secondary — so the link survives the archive being moved,
+    /// renamed, or synced to a different machine where the provider path
+    /// differs. Only a file under neither is stored absolute, because then
+    /// there is no base to be relative to.
+    ///
+    /// Relativising against the *secondary* folder matters as soon as the
+    /// documents live in more than one place — invoices in one folder,
+    /// statements in another. Checking only the primary silently wrote the
+    /// user's full home path into the book for every document in the second
+    /// folder.
     public func linkDocument(at url: URL, to transactionID: GncGUID) {
+        setDocumentLink(Self.relativeLink(for: url, under: documentFolders), for: transactionID)
+    }
+
+    /// The configured roots a relative link may be resolved against, primary
+    /// first — the same order ``linkedDocumentURL(for:)`` searches.
+    public var documentFolders: [URL] {
+        [effectiveDocumentFolder, secondaryDocumentFolder].compactMap { $0 }
+    }
+
+    /// `url` expressed relative to the first folder that contains it, else its
+    /// absolute path. Subfolders are preserved (`2026-01/Coles.png`).
+    public static func relativeLink(for url: URL, under folders: [URL]) -> String {
         let path = url.standardizedFileURL.path
-        var link = path
-        if let base = effectiveDocumentFolder?.standardizedFileURL.path {
+        for folder in folders {
+            let base = folder.standardizedFileURL.path
             let prefix = base.hasSuffix("/") ? base : base + "/"
-            if path.hasPrefix(prefix) { link = String(path.dropFirst(prefix.count)) }
+            if path.hasPrefix(prefix) { return String(path.dropFirst(prefix.count)) }
         }
-        setDocumentLink(link, for: transactionID)
+        return path
     }
 
     /// One transaction's document association, for the book-wide list

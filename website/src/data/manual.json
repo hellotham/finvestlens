@@ -518,7 +518,11 @@
             },
             {
               "type": "text",
-              "value": "Set a document folder in Settings ▸ Documents. Files inside it are linked **relatively**, the same way GnuCash does it, so the book and its documents can move together — onto a NAS, or to a new Mac — without breaking."
+              "value": "Your files stay where you filed them. Attaching one records **where it is**, not a second copy of it — so the folder you scan into stays the single archive, and tidying it there tidies it everywhere."
+            },
+            {
+              "type": "text",
+              "value": "Settings ▸ Documents takes two folders, a primary and a secondary — receipts in one and statements in the other, say. A file inside either is linked **relatively**, the same way GnuCash does it, so the book and its documents can move together — onto a NAS, or to a new Mac — without breaking. A file outside both is linked by its full path, which still works but does not travel."
             },
             {
               "type": "bullets",
@@ -527,6 +531,10 @@
                 "**Add Web Link…** stores a URL instead of a file.",
                 "**Remove Link** unlinks only — your file is never deleted."
               ]
+            },
+            {
+              "type": "tip",
+              "value": "Matching a folder of receipts in bulk — **Match Attachments…** — links them where they lie too. Point it at the folder you already file into."
             }
           ]
         },

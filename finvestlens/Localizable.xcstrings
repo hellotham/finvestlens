@@ -38760,6 +38760,52 @@
         }
       }
     },
+    "Matching a folder of receipts in bulk — **Match Attachments…** — links them where they lie too. Point it at the folder you already file into.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auch der Stapelabgleich eines Belegordners — **Anhänge zuordnen …** — verknüpft die Dateien dort, wo sie liegen. Richten Sie ihn auf den Ordner, in dem Sie ohnehin ablegen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Emparejar una carpeta de recibos en lote —**Emparejar adjuntos…**— también los enlaza donde están. Apúntalo a la carpeta en la que ya archivas."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le rapprochement en lot d’un dossier de reçus — **Associer les pièces jointes…** — les lie également là où elles se trouvent. Pointez-le vers le dossier dans lequel vous classez déjà."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anche l’abbinamento in blocco di una cartella di ricevute — **Abbina allegati…** — le collega dove si trovano. Puntalo alla cartella in cui archivi già."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "領収書フォルダをまとめて照合する**「添付ファイルを照合…」**も、ファイルをその場所のままリンクします。普段から整理しているフォルダを指定してください。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Combinar uma pasta de recibos em lote — **Associar anexos…** — também os vincula onde estão. Aponte para a pasta em que você já arquiva."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "批量匹配收据文件夹 —**匹配附件…**— 同样会就地链接这些文件。把它指向你平时归档的那个文件夹即可。"
+          }
+        }
+      }
+    },
     "Measured from this display: %lld points. Text and icons scale with the row.": {
       "extractionState": "manual",
       "localizations": {
@@ -60872,53 +60918,6 @@
         }
       }
     },
-    "Set a document folder in Settings ▸ Documents. Files inside it are linked **relatively**, the same way GnuCash does it, so the book and its documents can move together — onto a NAS, or to a new Mac — without breaking.": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Legen Sie unter Einstellungen ▸ Dokumente einen Dokumentordner fest. Dateien darin werden **relativ** verknüpft, genau wie bei GnuCash, sodass Buch und Dokumente gemeinsam umziehen können — auf ein NAS oder einen neuen Mac — ohne dass etwas bricht."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Define una carpeta de documentos en Ajustes ▸ Documentos. Los archivos que contenga se vinculan de forma **relativa**, igual que en GnuCash, así el libro y sus documentos pueden moverse juntos —a un NAS o a un Mac nuevo— sin romperse."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Définissez un dossier de documents dans Réglages ▸ Documents. Les fichiers qu’il contient sont liés de façon **relative**, comme le fait GnuCash, afin que le livre et ses documents puissent se déplacer ensemble — vers un NAS ou un nouveau Mac — sans rien casser."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Imposta una cartella dei documenti in Impostazioni ▸ Documenti. I file al suo interno vengono collegati in modo **relativo**, come fa GnuCash, così libro e documenti possono spostarsi insieme — su un NAS o su un nuovo Mac — senza rompersi."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "「設定 ▸ 書類」で書類フォルダを指定します。その中のファイルは GnuCash と同じく **相対パス** でリンクされるため、帳簿と書類を一緒に（NAS や新しい Mac へ）移動してもリンクが切れません。"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Defina uma pasta de documentos em Ajustes ▸ Documentos. Os arquivos dentro dela são vinculados de forma **relativa**, do mesmo jeito que o GnuCash faz, então o livro e seus documentos podem se mover juntos — para um NAS ou um Mac novo — sem quebrar."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在「设置 ▸ 文稿」中设定文稿文件夹。其中的文件将以 **相对路径** 关联，与 GnuCash 的做法一致，因此账簿与文稿可以一同迁移 — 到 NAS 或新 Mac — 而不会失效。"
-          }
-        }
-      }
-    },
     "Set a schedule to be created a few days early if you like to see it coming.": {
       "extractionState": "manual",
       "localizations": {
@@ -61479,6 +61478,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "设置"
+          }
+        }
+      }
+    },
+    "Settings ▸ Documents takes two folders, a primary and a secondary — receipts in one and statements in the other, say. A file inside either is linked **relatively**, the same way GnuCash does it, so the book and its documents can move together — onto a NAS, or to a new Mac — without breaking. A file outside both is linked by its full path, which still works but does not travel.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einstellungen ▸ Dokumente nimmt zwei Ordner auf, einen primären und einen sekundären — etwa Belege im einen, Auszüge im anderen. Eine Datei in einem der beiden wird **relativ** verknüpft, genau wie GnuCash es macht, sodass Buch und Dokumente gemeinsam umziehen können — auf ein NAS oder auf einen neuen Mac — ohne zu brechen. Eine Datei außerhalb beider wird mit ihrem vollen Pfad verknüpft; das funktioniert, zieht aber nicht mit um."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajustes ▸ Documentos admite dos carpetas, una principal y una secundaria: los recibos en una y los extractos en la otra, por ejemplo. Un archivo dentro de cualquiera de las dos se enlaza de forma **relativa**, igual que hace GnuCash, así el libro y sus documentos pueden moverse juntos —a un NAS o a un Mac nuevo— sin romperse. Un archivo fuera de ambas se enlaza por su ruta completa: sigue funcionando, pero no viaja."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réglages ▸ Documents accepte deux dossiers, un principal et un secondaire — les reçus dans l’un et les relevés dans l’autre, par exemple. Un fichier situé dans l’un ou l’autre est lié de façon **relative**, comme le fait GnuCash, si bien que le livre et ses documents peuvent déménager ensemble — vers un NAS ou vers un nouveau Mac — sans rien casser. Un fichier hors des deux est lié par son chemin complet : cela fonctionne, mais ne voyage pas."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impostazioni ▸ Documenti accetta due cartelle, una primaria e una secondaria: le ricevute in una e gli estratti conto nell’altra, per dire. Un file dentro l’una o l’altra viene collegato in modo **relativo**, come fa GnuCash, così il libro e i suoi documenti possono spostarsi insieme — su un NAS o su un Mac nuovo — senza rompersi. Un file fuori da entrambe viene collegato con il percorso completo: funziona, ma non viaggia."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「設定 ▸ 書類」には、主フォルダと副フォルダの 2 つを指定できます。たとえば領収書を一方に、明細をもう一方に。どちらかの中にあるファイルは GnuCash と同じく**相対パス**でリンクされるため、帳簿と書類をまとめて移動しても — NAS へでも新しい Mac へでも — リンクは切れません。どちらにも入っていないファイルはフルパスでリンクされます。動作はしますが、一緒には移動できません。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajustes ▸ Documentos aceita duas pastas, uma principal e uma secundária — recibos em uma e extratos na outra, por exemplo. Um arquivo dentro de qualquer uma delas é vinculado de forma **relativa**, do mesmo jeito que o GnuCash faz, então o livro e seus documentos podem se mudar juntos — para um NAS ou para um Mac novo — sem quebrar. Um arquivo fora das duas é vinculado pelo caminho completo: continua funcionando, mas não viaja."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「设置 ▸ 文稿」可设置两个文件夹：主文件夹与次文件夹 — 比如收据放一个、对账单放另一个。位于其中任一文件夹内的文件会以**相对路径**链接，与 GnuCash 的做法一致，因此账簿和文档可以一起迁移 — 迁到 NAS 或新的 Mac — 而不会断链。不在这两个文件夹内的文件按完整路径链接：仍然可用，但无法随之迁移。"
           }
         }
       }
@@ -72613,6 +72658,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "你的更改会保存在工作副本中，并在你按 ⌘S、自动存储运行或关闭账簿时写回文件。自动存储及其间隔位于「设置 ▸ 通用」。"
+          }
+        }
+      }
+    },
+    "Your files stay where you filed them. Attaching one records **where it is**, not a second copy of it — so the folder you scan into stays the single archive, and tidying it there tidies it everywhere.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ihre Dateien bleiben dort, wo Sie sie abgelegt haben. Ein Anhang hält fest, **wo** die Datei liegt, statt eine zweite Kopie anzulegen — so bleibt der Ordner, in den Sie scannen, das einzige Archiv, und wer dort aufräumt, räumt überall auf."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tus archivos se quedan donde los has archivado. Adjuntar uno registra **dónde está**, no una segunda copia: así la carpeta en la que escaneas sigue siendo el único archivo, y ordenarla allí lo ordena todo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vos fichiers restent là où vous les avez classés. Joindre un document enregistre **où il se trouve**, et non une seconde copie — le dossier dans lequel vous numérisez reste donc l’unique archive, et y faire le ménage le fait partout."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I tuoi file restano dove li hai archiviati. Allegarne uno registra **dov’è**, non una seconda copia: così la cartella in cui scansioni resta l’unico archivio, e riordinarla lì riordina ovunque."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルは、あなたが整理した場所にそのまま残ります。添付は**どこにあるか**を記録するだけで、複製は作りません。スキャン先のフォルダが唯一の保管場所であり続け、そこを整理すればすべてが整います。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seus arquivos ficam onde você os arquivou. Anexar um registra **onde ele está**, não uma segunda cópia — assim a pasta em que você digitaliza continua sendo o único arquivo, e organizá-la ali organiza tudo."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文件仍留在你归档的位置。附加操作只记录**它在哪里**，而不会再复制一份 — 因此你扫描到的文件夹始终是唯一的档案库，在那里整理一次，处处都整理好了。"
           }
         }
       }
