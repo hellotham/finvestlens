@@ -300,6 +300,7 @@
               "items": [
                 "⌘Z undoes anything, including an import.",
                 "**Book ▸ Repair Book** runs the same checks as GnuCash's Check & Repair, and changes nothing until you choose Clean Up.",
+                "Repair Book also names any transaction posted in an impossible year. A mistyped year hides well — the entry still balances and still reconciles, it has just left the period it belongs to, so it drops out of every report that goes by date. It is reported rather than corrected, because only you know which year was meant.",
                 "An audit log is kept beside the book, recording each edit."
               ]
             }

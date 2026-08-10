@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import FinvestLensEngine
 
 /// Parses Quicken Interchange Format (QIF) files (`FR-XIO-01`).
 ///
@@ -144,8 +145,12 @@ public enum QIFImporter {
             if let date = formatter.date(from: text) {
                 // A `yyyy` pattern happily reads a two-digit year as year 26 AD;
                 // reject it so the matching `yy` pattern (which maps 26 → 2026)
-                // gets its turn.
-                if calendar.component(.year, from: date) < 1500 { continue }
+                // gets its turn. The floor is `DatePlausibility`'s, shared with
+                // the scrubber — the local 1500 it used to carry would have
+                // admitted the 1525 a real book turned out to be holding.
+                if !DatePlausibility.years.contains(calendar.component(.year, from: date)) {
+                    continue
+                }
                 return date
             }
         }

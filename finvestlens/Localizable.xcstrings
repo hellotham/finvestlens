@@ -17404,6 +17404,165 @@
         }
       }
     },
+    "Cleaning adds the balancing Imbalance split.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cleaning adds the balancing Imbalance split."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beim Bereinigen wird der ausgleichende Imbalance-Buchungsteil ergänzt."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La limpieza añade la partida de contrapartida en Imbalance."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le nettoyage ajoute la ligne d’équilibrage Imbalance."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La pulizia aggiunge la riga di pareggio Imbalance."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "整理すると、貸借を合わせる Imbalance 明細を追加します。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A limpeza adiciona a partida de equilíbrio em Imbalance."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清理会添加用于配平的 Imbalance 分录。"
+          }
+        }
+      }
+    },
+    "Cleaning files them under an Orphan account, as GnuCash does.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cleaning files them under an Orphan account, as GnuCash does."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beim Bereinigen werden sie wie in GnuCash einem Orphan-Konto zugeordnet."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La limpieza los archiva en una cuenta Orphan, como hace GnuCash."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le nettoyage les classe dans un compte Orphan, comme le fait GnuCash."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La pulizia li archivia in un conto Orphan, come fa GnuCash."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "整理すると、GnuCash と同じく Orphan 勘定に振り分けます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A limpeza os arquiva em uma conta Orphan, como o GnuCash faz."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清理会像 GnuCash 一样把它们归入 Orphan 账户。"
+          }
+        }
+      }
+    },
+    "Cleaning posts the difference to an Imbalance account, as GnuCash does.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cleaning posts the difference to an Imbalance account, as GnuCash does."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beim Bereinigen wird die Differenz wie in GnuCash auf ein Imbalance-Konto gebucht."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La limpieza contabiliza la diferencia en una cuenta Imbalance, como hace GnuCash."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le nettoyage impute la différence à un compte Imbalance, comme le fait GnuCash."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La pulizia registra la differenza su un conto Imbalance, come fa GnuCash."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "整理すると、GnuCash と同じく差額を Imbalance 勘定に記帳します。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A limpeza lança a diferença em uma conta Imbalance, como o GnuCash faz."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清理会像 GnuCash 一样把差额记入 Imbalance 账户。"
+          }
+        }
+      }
+    },
     "Clear": {
       "extractionState": "manual",
       "localizations": {
@@ -25749,6 +25908,59 @@
           "stringUnit": {
             "state": "translated",
             "value": "留空即清除"
+          }
+        }
+      }
+    },
+    "Empty transactions": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Empty transactions"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leere Buchungen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transacciones vacías"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opérations vides"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Operazioni vuote"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "空の取引"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transações vazias"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "空交易"
           }
         }
       }
@@ -39719,6 +39931,59 @@
         }
       }
     },
+    "Move no money — typically “Opening Balance” stubs GnuCash leaves for accounts created without a balance. Cleaning removes them.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move no money — typically “Opening Balance” stubs GnuCash leaves for accounts created without a balance. Cleaning removes them."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bewegen kein Geld — typischerweise „Anfangsbestand“-Reste, die GnuCash für ohne Saldo angelegte Konten hinterlässt. Beim Bereinigen werden sie entfernt."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No mueven dinero: normalmente restos de «Saldo inicial» que GnuCash deja en cuentas creadas sin saldo. La limpieza los elimina."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ne déplacent aucun montant — généralement des résidus « Solde initial » laissés par GnuCash pour des comptes créés sans solde. Le nettoyage les supprime."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non movimentano denaro: di norma residui di «Saldo iniziale» che GnuCash lascia per i conti creati senza saldo. La pulizia li rimuove."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "金額が動きません。残高なしで作成した勘定に GnuCash が残す「開始残高」の名残であることがほとんどです。整理すると削除されます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não movimentam dinheiro — normalmente restos de “Saldo inicial” que o GnuCash deixa em contas criadas sem saldo. A limpeza os remove."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有金额变动——通常是 GnuCash 为没有余额的账户留下的“期初余额”残留。清理会删除它们。"
+          }
+        }
+      }
+    },
     "Move to": {
       "extractionState": "manual",
       "localizations": {
@@ -49080,6 +49345,59 @@
         }
       }
     },
+    "Posted in %@. A mistyped year still balances and still reconciles — it just leaves the period it belongs to, so it disappears from every report that bounds by date. Search for the year to find them. Cleaning leaves these alone: only you know which year was meant.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Posted in %@. A mistyped year still balances and still reconciles — it just leaves the period it belongs to, so it disappears from every report that bounds by date. Search for the year to find them. Cleaning leaves these alone: only you know which year was meant."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gebucht in %@. Eine vertippte Jahreszahl bleibt ausgeglichen und abstimmbar — die Buchung verlässt nur den Zeitraum, in den sie gehört, und verschwindet damit aus jedem nach Datum begrenzten Bericht. Suchen Sie nach der Jahreszahl, um sie zu finden. Beim Bereinigen bleiben sie unangetastet: nur Sie wissen, welches Jahr gemeint war."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contabilizadas en %@. Un año mal escrito sigue cuadrando y sigue conciliando: solo abandona el periodo al que pertenece, así que desaparece de todo informe acotado por fecha. Busque el año para encontrarlas. La limpieza no las toca: solo usted sabe qué año se quiso poner."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enregistrées en %@. Une année mal saisie reste équilibrée et rapprochable — l’opération quitte simplement la période à laquelle elle appartient et disparaît donc de tout rapport borné par date. Recherchez l’année pour les retrouver. Le nettoyage n’y touche pas : vous seul savez quelle année était voulue."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registrate nel %@. Un anno digitato male resta quadrato e riconciliabile: l’operazione lascia soltanto il periodo a cui appartiene e sparisce così da ogni rapporto delimitato per data. Cerca l’anno per trovarle. La pulizia non le tocca: solo tu sai quale anno intendevi."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ に記帳されています。年を打ち間違えても貸借は合い、照合もできます。ただ本来の期間から外れるため、日付で区切るすべてのレポートから消えてしまいます。その年で検索すると見つかります。整理では手を触れません。どの年のつもりだったかを知っているのはあなただけです。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lançadas em %@. Um ano digitado errado continua balanceado e continua conciliando — a transação apenas sai do período a que pertence e some de todo relatório limitado por data. Busque pelo ano para encontrá-las. A limpeza não mexe nelas: só você sabe qual ano era o pretendido."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "记账年份为 %@。年份打错的交易依然借贷平衡、依然能对账——它只是离开了本该所属的期间，因而从每一份按日期取数的报表中消失。搜索该年份即可找到它们。清理不会改动它们：只有你知道原本想填的是哪一年。"
+          }
+        }
+      }
+    },
     "Postings to a matching account (`category:` also works).": {
       "extractionState": "manual",
       "localizations": {
@@ -56154,6 +56472,59 @@
         }
       }
     },
+    "Repair Book also names any transaction posted in an impossible year. A mistyped year hides well — the entry still balances and still reconciles, it has just left the period it belongs to, so it drops out of every report that goes by date. It is reported rather than corrected, because only you know which year was meant.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Repair Book also names any transaction posted in an impossible year. A mistyped year hides well — the entry still balances and still reconciles, it has just left the period it belongs to, so it drops out of every report that goes by date. It is reported rather than corrected, because only you know which year was meant."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„Buch reparieren“ benennt außerdem jede Buchung in einem unmöglichen Jahr. Eine vertippte Jahreszahl versteckt sich gut — die Buchung bleibt ausgeglichen und abstimmbar, sie hat nur den Zeitraum verlassen, in den sie gehört, und fällt damit aus jedem Bericht nach Datum heraus. Sie wird gemeldet, nicht korrigiert: nur Sie wissen, welches Jahr gemeint war."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reparar libro también señala cualquier transacción contabilizada en un año imposible. Un año mal escrito se esconde bien: el apunte sigue cuadrando y sigue conciliando, solo ha abandonado el periodo al que pertenece, así que cae fuera de todo informe por fecha. Se informa, no se corrige, porque solo usted sabe qué año se quiso poner."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réparer le livre signale aussi toute opération enregistrée dans une année impossible. Une année mal saisie se cache bien : l’écriture reste équilibrée et rapprochable, elle a seulement quitté la période à laquelle elle appartient et sort donc de tout rapport par date. Elle est signalée, non corrigée, car vous seul savez quelle année était voulue."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ripara libro segnala anche ogni operazione registrata in un anno impossibile. Un anno digitato male si nasconde bene: la scrittura resta quadrata e riconciliabile, ha solo lasciato il periodo a cui appartiene e cade quindi fuori da ogni rapporto per data. Viene segnalata, non corretta, perché solo tu sai quale anno intendevi."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「帳簿を修復」は、あり得ない年に記帳された取引も指摘します。年の打ち間違いは見つかりにくいものです。貸借は合い、照合もできるまま、本来の期間から外れているだけなので、日付で見るすべてのレポートから抜け落ちます。修正はせず報告にとどめます。どの年のつもりだったかを知っているのはあなただけだからです。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reparar livro também aponta qualquer transação lançada em um ano impossível. Um ano digitado errado se esconde bem — o lançamento continua balanceado e continua conciliando, apenas saiu do período a que pertence e por isso cai fora de todo relatório por data. Ele é relatado, não corrigido, porque só você sabe qual ano era o pretendido."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“修复账簿”还会指出记在不可能年份的交易。年份打错很难被发现——分录依然借贷平衡、依然能对账，只是离开了本该所属的期间，于是从每一份按日期取数的报表中掉了出去。它只被报告而不被更正，因为只有你知道原本想填的是哪一年。"
+          }
+        }
+      }
+    },
     "Repair Book…": {
       "extractionState": "manual",
       "localizations": {
@@ -62688,6 +63059,59 @@
         }
       }
     },
+    "Single-split transactions": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Single-split transactions"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buchungen mit nur einem Buchungsteil"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transacciones con una sola partida"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opérations à une seule ligne"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Operazioni con una sola riga"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "明細が 1 行だけの取引"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transações com uma só partida"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "只有一条分录的交易"
+          }
+        }
+      }
+    },
     "Skip": {
       "extractionState": "manual",
       "localizations": {
@@ -63530,6 +63954,59 @@
           "stringUnit": {
             "state": "translated",
             "value": "分录"
+          }
+        }
+      }
+    },
+    "Splits without an account": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Splits without an account"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buchungsteile ohne Konto"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Partidas sin cuenta"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lignes sans compte"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Righe senza conto"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "勘定のない明細"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Partidas sem conta"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有账户的分录"
           }
         }
       }
@@ -69737,6 +70214,59 @@
         }
       }
     },
+    "Transactions in an impossible year": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transactions in an impossible year"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buchungen in einem unmöglichen Jahr"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transacciones en un año imposible"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opérations dans une année impossible"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Operazioni in un anno impossibile"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "あり得ない年の取引"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transações em um ano impossível"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "年份不可能的交易"
+          }
+        }
+      }
+    },
     "Transfer": {
       "extractionState": "manual",
       "localizations": {
@@ -70297,6 +70827,59 @@
           "stringUnit": {
             "state": "translated",
             "value": "输入以搜索"
+          }
+        }
+      }
+    },
+    "Unbalanced transactions": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unbalanced transactions"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht ausgeglichene Buchungen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transacciones descuadradas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opérations déséquilibrées"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Operazioni non quadrate"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "貸借が一致しない取引"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transações desbalanceadas"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "借贷不平衡的交易"
           }
         }
       }

@@ -146,6 +146,7 @@ FinvestLens is a **document-based app** with its **own native file format** (a s
 | FR-IMP-06 | Preserve all **GUIDs**, slots/key-value data, and unrecognised elements sufficiently to round-trip. | Must | P1 |
 | FR-IMP-07 | Report a clear **import summary** (counts, warnings, unsupported elements) and fail safely on malformed files. | Must | P1 |
 | FR-IMP-08 | Validate that the double-entry invariant holds on imported data; surface imbalances rather than silently altering data. | Must | P1 |
+| FR-IMP-08a | **Check & Repair reports transactions posted in an impossible year.** A mistyped year is silent in a way a mistyped amount is not: the transaction still balances, still reconciles, still exports — it simply leaves the period it belongs to, so it vanishes from every report that bounds by date and no total ever looks wrong. One plausible-year range (`DatePlausibility.years`, 1900–2200) serves both the scrubber and the QIF importer, which previously disagreed — the importer's own floor of 1500 existed only to stop `yyyy` reading a two-digit year, and would not have caught 1525. These findings are **reported, never repaired**: which year was meant exists only in the owner's head, and a guess moves real money into a real period, so Clean Up leaves them alone and is disabled when they are the only finding. *(Aug 2026 — a real book carried `1525-01-31` for a year, entered ninety seconds after its December neighbour and ninety before its February one.)* | Must | P2 |
 
 ### 5.4 GnuCash XML export
 

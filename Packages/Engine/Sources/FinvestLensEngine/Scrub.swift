@@ -27,6 +27,15 @@ public enum Scrub {
         /// A transaction that moves no money at all — no splits, or only
         /// zero-value splits (GnuCash's "no opening balance" stubs).
         case emptyTransaction(GncGUID)
+        /// A transaction posted outside any year a person could have meant.
+        ///
+        /// Mistyping a year is silent in a way that mistyping an amount is not:
+        /// the transaction still balances, still reconciles, and simply leaves
+        /// the period it belongs to — so it vanishes from every report that
+        /// bounds by date, and no total ever looks wrong. A real book carried
+        /// `1525-01-31` for a year before anyone noticed, sitting between a
+        /// December and a February entered ninety seconds apart.
+        case implausibleDate(GncGUID, Date)
 
         public var description: String {
             switch self {
@@ -38,6 +47,8 @@ public enum Scrub {
                 return "Transaction \(guid) has \(count) split(s)"
             case let .emptyTransaction(guid):
                 return "Empty transaction \(guid) (moves no money)"
+            case let .implausibleDate(guid, date):
+                return "Transaction \(guid) is posted \(DatePlausibility.describe(date))"
             }
         }
 
@@ -82,6 +93,9 @@ public enum Scrub {
             }
             for split in transaction.splits where split.account == nil {
                 issues.append(.orphanSplit(split.guid))
+            }
+            if !DatePlausibility.isPlausible(transaction.datePosted) {
+                issues.append(.implausibleDate(transaction.guid, transaction.datePosted))
             }
         }
         return issues

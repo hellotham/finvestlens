@@ -8,17 +8,23 @@
 """Run me after touching any hook: `python3 .claude/hooks/test-gates.py`
 
 These gates are read by nobody and run on every turn, which is the worst
-combination for silent rot. Both of them have now been wrong in both
-directions: `check-no-deferrals.py` first missed a real deferral that used none
-of its vocabulary, then blocked three honest turns in a row for *quoting* that
+combination for silent rot. Both have now been wrong in both directions.
+`check-no-deferrals.py` first missed a real deferral that used none of its
+vocabulary, then blocked three honest turns in a row for *quoting* that
 vocabulary while repairing it — once in backticks, once in quotation marks,
-once in italics, each discovered a round-trip at a time. `check-docs.py`
-blocked a turn whose documentation was regenerated, verified and committed,
-because it only ever looked at the uncommitted working tree.
+once in italics, each found a round-trip at a time. `check-docs.py` blocked a
+turn whose documentation was regenerated, verified and committed, because it
+only ever looked at the uncommitted working tree.
 
-Every one of those cases is below. A gate that fires on honest work is worse
-than no gate, because it trains the person to route around it — so the
-must-allow rows matter at least as much as the must-block ones.
+Every one of those cases is below. The must-allow rows matter at least as much
+as the must-block ones: a gate that fires on honest work trains the person to
+route around it, which is worse than no gate.
+
+The `check-docs.py` cases run against a purpose-built fixture repo, never the
+real tree. They used to use the real one and so were not tests at all — "source
+edited, no doc in its commit" passed only while `docs/prd.md` happened to be
+clean, and failed the moment a turn was legitimately mid-edit on the PRD, which
+is most turns that touch a hook. The gate was right and the test was wrong.
 """
 
 from __future__ import annotations
@@ -34,11 +40,10 @@ ROOT = os.path.dirname(os.path.dirname(HOOKS))
 BT = chr(96)
 FIX = "fix everything, no deferrals"
 
-
-def transcript(records, path):
-    with open(path, "w", encoding="utf-8") as handle:
-        for record in records:
-            handle.write(json.dumps(record) + "\n")
+HELP = "Packages/FeatureUI/Sources/FinvestLensUI/HelpContent.swift"
+MANUAL = "website/src/data/manual.json"
+ENGINE = "Packages/Engine/Sources/FinvestLensEngine/Book.swift"
+ENGINE_TESTS = "Packages/Engine/Tests/FinvestLensEngineTests/BookTests.swift"
 
 
 def user(text):
@@ -49,93 +54,126 @@ def says(text):
     return {"type": "assistant", "message": {"content": [{"type": "text", "text": text}]}}
 
 
-def edits(*paths):
+def edits(root, *paths):
     return {"type": "assistant", "message": {"content": [
         {"type": "tool_use", "name": "Edit",
-         "input": {"file_path": os.path.join(ROOT, p)}} for p in paths]}}
+         "input": {"file_path": os.path.join(root, p)}} for p in paths]}}
 
 
-def run(hook, records, tmp):
+def git(repo, *args):
+    subprocess.run(["git", "-C", repo, *args],
+                   check=True, capture_output=True, text=True)
+
+
+def fixture_repo(tmp):
+    """Two commits giving the two verdicts: a source file *with* its
+    documentation, and a source file alone."""
+    repo = os.path.join(tmp, "fixture")
+    for rel, body in {HELP: "// help\n", MANUAL: "{}\n", "docs/prd.md": "# PRD\n",
+                      ENGINE: "// book\n", ENGINE_TESTS: "// tests\n"}.items():
+        path = os.path.join(repo, rel)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w") as handle:
+            handle.write(body)
+    subprocess.run(["git", "init", "-q", repo], check=True, capture_output=True, text=True)
+    git(repo, "config", "user.email", "t@example.com")
+    git(repo, "config", "user.name", "T")
+    git(repo, "add", "Packages/FeatureUI", "website", "docs", "Packages/Engine/Tests")
+    git(repo, "commit", "-q", "-m", "help and its manual, together")
+    git(repo, "add", "Packages/Engine/Sources")
+    git(repo, "commit", "-q", "-m", "engine alone")
+    return repo
+
+
+def run(hook, records, tmp, root):
     path = os.path.join(tmp, "t.jsonl")
-    transcript(records, path)
+    with open(path, "w", encoding="utf-8") as handle:
+        for record in records:
+            handle.write(json.dumps(record) + "\n")
     out = subprocess.run(
         [sys.executable, os.path.join(HOOKS, hook)],
         input=json.dumps({"transcript_path": path}),
         capture_output=True, text=True,
-        env={**os.environ, "CLAUDE_PROJECT_DIR": ROOT}).stdout
+        env={**os.environ, "CLAUDE_PROJECT_DIR": root}).stdout
     return "BLOCKED" if out.strip() else "allowed"
 
 
-# (name, want, hook, records) — "the same words, used not mentioned" is the pair
-# that keeps the mention-stripping honest: identical vocabulary, opposite verdict.
-def cases():
-    yield ("real deferral in plain prose", "BLOCKED", "check-no-deferrals.py",
-           [user(FIX), says("I fixed the register widths. I didn't fix the "
-                            "reconcile glyph - it needs a palette layer.")])
-    yield ("residual-work heading", "BLOCKED", "check-no-deferrals.py",
-           [user(FIX), says("Done.\n\n## What's still broken\n\n"
-                            "The help search matches English only.")])
-    yield ("partial-completion count", "BLOCKED", "check-no-deferrals.py",
-           [user(FIX), says("The pass landed 13 of 15 findings. Pushed.")])
-    yield ("an offer instead of the work", "BLOCKED", "check-no-deferrals.py",
-           [user(FIX), says("I fixed eight of them. Shall I do the rest?")])
-    yield ("blocker too far from its item", "BLOCKED", "check-no-deferrals.py",
-           [user(FIX), says("The rename cannot proceed until you decide on the scheme.\n\n"
-                            + "Lorem ipsum detail. " * 40
-                            + "\n\n## What's still broken\n\nHelp search is English-only.")])
+DEFERRAL = "check-no-deferrals.py"
+DOCS = "check-docs.py"
 
-    yield ("mention in backticks", "allowed", "check-no-deferrals.py",
-           [user(FIX), says("It matches " + BT + "I didn't fix..." + BT + " now. All pushed.")])
-    yield ("mention in quotation marks", "allowed", "check-no-deferrals.py",
-           [user(FIX), says('It matches "I didn\'t fix..." and "Shall I..." now. All pushed.')])
-    yield ("mention in italics", "allowed", "check-no-deferrals.py",
-           [user(FIX), says("Treating apostrophes as delimiters would let *I didn't fix the "
-                            "parser, and I can't say when* swallow its own middle.")])
-    yield ("mention in a fenced block", "allowed", "check-no-deferrals.py",
-           [user(FIX), says("The pattern is:\n\n" + BT * 3 + "\nWhat's still broken\n"
-                            + BT * 3 + "\n\nAll fixed and pushed.")])
-    yield ("blocker beside its item", "allowed", "check-no-deferrals.py",
-           [user(FIX), says("All eight fixed. The ninth remains undone because it needs "
-                            "a product decision on which schedule to target.")])
-    yield ("honest not-run report", "allowed", "check-no-deferrals.py",
-           [user(FIX), says("All fixed and pushed. iOS build not attempted; the register "
-                            "change is unverified on screen and needs a look.")])
-    yield ("clean completion", "allowed", "check-no-deferrals.py",
-           [user(FIX), says("All fifteen fixed and pushed as abc1234. Preflight green.")])
-    yield ("no fix instruction in play", "allowed", "check-no-deferrals.py",
-           [user("what does the register do?"),
-            says("## What's still broken\n\nNothing; this is just an explanation.")])
 
-    # check-docs.py — the trigger is a Swift source under a shipped target.
-    yield ("help edited, committed with its manual", "allowed", "check-docs.py",
-           [user("fix the help"),
-            edits("Packages/FeatureUI/Sources/FinvestLensUI/HelpContent.swift")])
-    yield ("source edited, no doc in its commit", "BLOCKED", "check-docs.py",
-           [user("fix the engine"),
-            edits("Packages/Engine/Sources/FinvestLensEngine/Book.swift")])
-    yield ("tests only — not a behaviour change", "allowed", "check-docs.py",
-           [user("fix the tests"),
-            edits("Packages/Engine/Tests/FinvestLensEngineTests/BookTests.swift")])
-    yield ("user waived the doc update", "allowed", "check-docs.py",
-           [user("fix the engine, no doc update"),
-            edits("Packages/Engine/Sources/FinvestLensEngine/Book.swift")])
+def cases(fixture):
+    """(name, want, hook, records, root)."""
+    def d(name, want, records):
+        return (name, want, DEFERRAL, records, ROOT)
+
+    # --- real deferrals: every shape actually seen ---
+    yield d("real deferral in plain prose", "BLOCKED",
+            [user(FIX), says("I fixed the register widths. I didn't fix the "
+                             "reconcile glyph - it needs a palette layer.")])
+    yield d("residual-work heading", "BLOCKED",
+            [user(FIX), says("Done.\n\n## What's still broken\n\n"
+                             "The help search matches English only.")])
+    yield d("partial-completion count", "BLOCKED",
+            [user(FIX), says("The pass landed 13 of 15 findings. Pushed.")])
+    yield d("an offer instead of the work", "BLOCKED",
+            [user(FIX), says("I fixed eight of them. Shall I do the rest?")])
+    yield d("blocker too far from its item", "BLOCKED",
+            [user(FIX), says("The rename cannot proceed until you decide on the scheme.\n\n"
+                             + "Lorem ipsum detail. " * 40
+                             + "\n\n## What's still broken\n\nHelp search is English-only.")])
+
+    # --- mention, not use: the same words, quoted ---
+    yield d("mention in backticks", "allowed",
+            [user(FIX), says("It matches " + BT + "I didn't fix..." + BT + " now. All pushed.")])
+    yield d("mention in quotation marks", "allowed",
+            [user(FIX), says('It matches "I didn\'t fix..." and "Shall I..." now. All pushed.')])
+    yield d("mention in italics", "allowed",
+            [user(FIX), says("Treating apostrophes as delimiters would let *I didn't fix the "
+                             "parser, and I can't say when* swallow its own middle.")])
+    yield d("mention in a fenced block", "allowed",
+            [user(FIX), says("The pattern is:\n\n" + BT * 3 + "\nWhat's still broken\n"
+                             + BT * 3 + "\n\nAll fixed and pushed.")])
+
+    # --- honest reports that must never be mistaken for deferrals ---
+    yield d("blocker beside its item", "allowed",
+            [user(FIX), says("All eight fixed. The ninth remains undone because it needs "
+                             "a product decision on which schedule to target.")])
+    yield d("honest not-run report", "allowed",
+            [user(FIX), says("All fixed and pushed. iOS build not attempted; the register "
+                             "change is unverified on screen and needs a look.")])
+    yield d("clean completion", "allowed",
+            [user(FIX), says("All fifteen fixed and pushed as abc1234. Preflight green.")])
+    yield d("no fix instruction in play", "allowed",
+            [user("what does the register do?"),
+             says("## What's still broken\n\nNothing; this is just an explanation.")])
+
+    # --- check-docs, against the fixture repo ---
+    yield ("help edited, committed with its manual", "allowed", DOCS,
+           [user("fix the help"), edits(fixture, HELP)], fixture)
+    yield ("source edited, no doc in its commit", "BLOCKED", DOCS,
+           [user("fix the engine"), edits(fixture, ENGINE)], fixture)
+    yield ("tests only — not a behaviour change", "allowed", DOCS,
+           [user("fix the tests"), edits(fixture, ENGINE_TESTS)], fixture)
+    yield ("user waived the doc update", "allowed", DOCS,
+           [user("fix the engine, no doc update"), edits(fixture, ENGINE)], fixture)
 
 
 def main():
     failures = []
     with tempfile.TemporaryDirectory() as tmp:
-        rows = list(cases())
+        rows = list(cases(fixture_repo(tmp)))
         width = max(len(name) for name, *_ in rows)
-        for name, want, hook, records in rows:
-            got = run(hook, records, tmp)
+        for name, want, hook, records, root in rows:
+            got = run(hook, records, tmp, root)
             ok = got == want
             if not ok:
-                failures.append((name, hook, want, got))
+                failures.append(name)
             print(f"  {name:<{width}}  want {want:<8} got {got:<8} "
                   f"{'ok' if ok else 'FAIL'}   [{hook}]")
     print()
     if failures:
-        print(f"{len(failures)} of {len(rows)} FAILED")
+        print(f"{len(failures)} of {len(rows)} FAILED: " + ", ".join(failures))
         return 1
     print(f"all {len(rows)} gate cases pass")
     return 0

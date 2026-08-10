@@ -25,11 +25,26 @@ public struct CleanupProposal: Identifiable, Sendable {
     public var unbalancedCount = 0
     /// Transactions with a single (non-zero) split.
     public var degenerateCount = 0
+    /// Transactions posted in a year nobody could have meant, with the years
+    /// themselves — the year *is* the finding, and there are never many.
+    ///
+    /// Reported, never repaired: which year was intended exists only in the
+    /// owner's head, and a wrong guess moves real money to a real period. The
+    /// same reason `--cash-account` is required rather than inferred.
+    public var implausibleDates: [Int] = []
     /// Import summary shown when the proposal follows a GnuCash import.
     public var importNote: String?
 
     public var isEmpty: Bool {
-        emptyCount + orphanCount + unbalancedCount + degenerateCount == 0
+        emptyCount + orphanCount + unbalancedCount + degenerateCount
+            + implausibleDates.count == 0
+    }
+
+    /// Whether Clean Up would actually do anything — false when the only
+    /// findings are ones the app refuses to guess at, so the button can say so
+    /// instead of promising a repair it will not perform.
+    public var hasRepairableIssues: Bool {
+        emptyCount + orphanCount + unbalancedCount + degenerateCount > 0
     }
 }
 
@@ -45,6 +60,8 @@ extension AppModel {
             case .orphanSplit: proposal.orphanCount += 1
             case .unbalancedTransaction: proposal.unbalancedCount += 1
             case .degenerateTransaction: proposal.degenerateCount += 1
+            case let .implausibleDate(_, date):
+                proposal.implausibleDates.append(DatePlausibility.year(of: date))
             }
         }
         return proposal.isEmpty ? nil : proposal
@@ -190,6 +207,11 @@ public struct CheckRepairSheet: View {
                             title: "Single-split transactions",
                             detail: "Cleaning adds the balancing Imbalance split.")
                     }
+                    if !proposal.implausibleDates.isEmpty {
+                        row(count: proposal.implausibleDates.count, icon: "calendar.badge.exclamationmark",
+                            title: "Transactions in an impossible year",
+                            detail: "Posted in \(yearList). A mistyped year still balances and still reconciles — it just leaves the period it belongs to, so it disappears from every report that bounds by date. Search for the year to find them. Cleaning leaves these alone: only you know which year was meant.")
+                    }
                 }
                 Section {
                     EmptyView()
@@ -206,16 +228,37 @@ public struct CheckRepairSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Clean Up") { model.applyCleanup() }
+                        // Nothing here is repairable when the only finding is a
+                        // date the app refuses to guess at; an enabled button
+                        // would promise a repair it will not perform.
+                        .disabled(!proposal.hasRepairableIssues)
                 }
             }
         }
         .frame(minWidth: 460, minHeight: 320)
     }
 
-    private func row(count: Int, icon: String, title: String, detail: String) -> some View {
+    /// The offending years, deduplicated and ordered — "1525", or "0025 and
+    /// 1525" — so the reader has something to search for.
+    private var yearList: String {
+        Set(proposal.implausibleDates).sorted()
+            .map { String(format: "%04d", $0) }
+            .formatted(.list(type: .and))
+    }
+
+    /// `title` and `detail` are `LocalizedStringKey`, not `String`.
+    ///
+    /// They were `String`, which is the trap CLAUDE.md ▸ Localization names:
+    /// `Text(detail)` then picks the *verbatim* initializer, the compiler emits
+    /// no key, and the catalog audit comes back green because there is nothing
+    /// to be missing. Every row of this sheet was English in all eight
+    /// languages. `\(Text(title))` keeps the count and title in one string so
+    /// translators can reorder them.
+    private func row(count: Int, icon: String,
+                     title: LocalizedStringKey, detail: LocalizedStringKey) -> some View {
         Label {
             VStack(alignment: .leading, spacing: 2) {
-                Text("\(count) \(title)").scaledFont(.body, weight: .medium)
+                Text("\(count) \(Text(title))").scaledFont(.body, weight: .medium)
                 Text(detail).scaledFont(.caption).foregroundStyle(.secondary)
             }
         } icon: {
