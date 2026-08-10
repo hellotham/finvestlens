@@ -94,7 +94,17 @@ def fixture_repo(tmp):
     return repo
 
 
+def run_pre(hook, payload):
+    """PreToolUse gates take the tool call on stdin and deny via JSON."""
+    out = subprocess.run([sys.executable, os.path.join(HOOKS, hook)],
+                         input=json.dumps(payload), capture_output=True,
+                         text=True).stdout
+    return "BLOCKED" if out.strip() else "allowed"
+
+
 def run(hook, records, tmp, root):
+    if isinstance(records, dict):          # a PreToolUse payload, not a transcript
+        return run_pre(hook, records)
     path = os.path.join(tmp, "t.jsonl")
     with open(path, "w", encoding="utf-8") as handle:
         for record in records:
@@ -109,6 +119,12 @@ def run(hook, records, tmp, root):
 
 DEFERRAL = "check-no-deferrals.py"
 DOCS = "check-docs.py"
+FIGURES = "no-figures-in-commits.py"
+
+
+def bash(command):
+    """A PreToolUse payload — these gates read the tool call, not a transcript."""
+    return {"tool_name": "Bash", "tool_input": {"command": command}}
 
 
 def cases(fixture):
@@ -175,6 +191,23 @@ def cases(fixture):
     yield d("the visual check the user always does", "allowed",
             [user(FIX), says("Built signed, relaunched, released. Visual result "
                              "unverified — over to you.")])
+
+    # --- a commit message is published: no real balances in one ---
+    BT3 = chr(96)
+    yield ("commit message with a real balance", "BLOCKED", FIGURES,
+           bash('git commit -m "Present $123,456.78, Cleared $123,456.78"'), ROOT)
+    yield ("commit message with seven figures", "BLOCKED", FIGURES,
+           bash('git commit -m "equal to the cent ($3,964,362.15)"'), ROOT)
+    yield ("the heredoc shape this repo uses", "BLOCKED", FIGURES,
+           bash("git commit -q -F - <<'MSG'\nweighted average $123,456.78\nMSG"), ROOT)
+    yield ("an illustrative amount", "allowed", FIGURES,
+           bash('git commit -m "a $400 dining entry moved to 2025"'), ROOT)
+    yield ("a small round number", "allowed", FIGURES,
+           bash('git commit -m "the $10 tolerance holds"'), ROOT)
+    yield ("not a commit at all", "allowed", FIGURES,
+           bash('git log -1 --format=%B | grep "$1,234,567.89"'), ROOT)
+    yield ("figure declared synthetic", "allowed", FIGURES,
+           bash('git commit -m "demo book shows $1,234,567.89 — figures are synthetic"'), ROOT)
 
     # --- check-docs, against the fixture repo ---
     yield ("help edited, committed with its manual", "allowed", DOCS,
