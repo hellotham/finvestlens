@@ -718,6 +718,72 @@ extension AppModel {
         return best?.txn
     }
 
+    /// The calendar day `date` falls on *here*, as the instant the book stores
+    /// a posting day: midnight UTC.
+    ///
+    /// A posted date is a day, not a moment, and the format says so —
+    /// GnuCash writes `2026-01-09 00:00:00 +0000` and `GnuCashDate.isDayOnly`
+    /// treats exactly midnight UTC as "carries no time of day". A date built
+    /// from a filename is midnight *local*, which in Sydney is 13:00 UTC on
+    /// the 8th: stored as-is it renders a day early anywhere that reads in UTC
+    /// — `finlens` does — and would export to GnuCash on the wrong day.
+    ///
+    /// So the local calendar day is taken and re-anchored to midnight UTC,
+    /// keeping the day the person meant and the convention the file expects.
+    static func postingDay(from date: Date) -> Date {
+        var utc = Calendar(identifier: .gregorian)
+        utc.timeZone = TimeZone(identifier: "UTC") ?? .gmt
+        let day = Calendar.current.dateComponents([.year, .month, .day], from: date)
+        return utc.date(from: day) ?? date
+    }
+
+    /// A posting day repair: what moved, and where to.
+    public struct RepostedDay: Sendable {
+        public let id: GncGUID
+        public let description: String
+        public let from: Date
+        public let to: Date
+    }
+
+    /// Re-anchors transactions that fall on a *different calendar day* read in
+    /// UTC than read here, and only those.
+    ///
+    /// The repair for entries this tool once wrote at midnight local instead
+    /// of midnight UTC: in Sydney that is 13:00 UTC the day before, so the row
+    /// sat a day early to anything reading in UTC and would have exported to
+    /// GnuCash on the wrong day.
+    ///
+    /// The predicate is deliberately "the two days disagree", not "the time is
+    /// not midnight". A first attempt used the latter and selected **759**
+    /// transactions on a real book instead of the four that were wrong —
+    /// GnuCash stores plenty of posted dates at 10:59 UTC, which is late
+    /// evening here and the same calendar day either way. Rewriting those
+    /// would have dirtied hundreds of rows that were never broken, to fix
+    /// something that was not wrong with them. A repair whose blast radius is
+    /// two orders of magnitude larger than the defect is not a repair.
+    @discardableResult
+    public func repostLinkedTransactionDays(apply: Bool) -> [RepostedDay] {
+        guard let book else { return [] }
+        var utc = Calendar(identifier: .gregorian)
+        utc.timeZone = TimeZone(identifier: "UTC") ?? .gmt
+        let local = Calendar.current
+
+        var moved: [RepostedDay] = []
+        for txn in book.transactions where txn.documentLink != nil {
+            let asUTC = utc.dateComponents([.year, .month, .day], from: txn.datePosted)
+            let asLocal = local.dateComponents([.year, .month, .day], from: txn.datePosted)
+            guard asUTC != asLocal else { continue }
+            let corrected = Self.postingDay(from: txn.datePosted)
+            guard corrected != txn.datePosted else { continue }
+            moved.append(RepostedDay(id: txn.guid, description: txn.transactionDescription,
+                                     from: txn.datePosted, to: corrected))
+            if apply {
+                editing([txn.guid], named: "Correct Posting Day") { txn.datePosted = corrected }
+            }
+        }
+        return moved
+    }
+
     /// Enters a receipt that has no transaction to match, as a cash purchase.
     ///
     /// A cash receipt is not an unmatched document — there is nothing to
@@ -760,7 +826,7 @@ extension AppModel {
             $0.isEmpty ? nil : $0
         } ?? (fileName as NSString).deletingPathExtension
         let id = try addTransaction(
-            date: date, description: description, currency: currency,
+            date: Self.postingDay(from: date), description: description, currency: currency,
             splits: [SplitInput(accountID: cashAccountID, value: -amount),
                      SplitInput(accountID: wash.guid, value: amount)],
             tags: ["cash"])

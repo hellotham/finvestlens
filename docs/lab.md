@@ -78,13 +78,33 @@ Failures are per-security and reported, not thrown: a book full of super-fund
 units, corporate-bond ISINs and delisted tickers will report a long 404 list,
 and that is the correct outcome rather than a fault.
 
+### `repair` — corrections for data this tool got wrong
+
+```bash
+finlab repair --file Book.finvestlens [--apply]
+```
+
+One repair so far: **posting days**. A transaction entered from a receipt took
+its date from the filename, which is midnight *local*; the book stores a
+posting day as midnight UTC (`GnuCashDate` writes `00:00:00 +0000`), so those
+rows sat a day early to anything reading in UTC and would have exported to
+GnuCash on the wrong day.
+
+It moves only rows whose calendar day read in UTC *disagrees* with the day read
+locally. That distinction is the whole safety of it: an earlier version asked
+merely "is the time midnight?" and selected 759 transactions on a real book
+instead of the 4 that were wrong, because GnuCash stores plenty of dates at
+10:59 UTC — late evening here, and the same day either way. Nothing is written
+without `--apply`, and the dry run lists every row it would touch.
+
 ### `documents` — ingest receipts and statements
 
 ```bash
 finlab documents --file Book.finvestlens --root ~/Documents/Receipts \
                  [--since 2026-01-01] [--until 2026-04-30] \
                  [--kind any|invoice|dividend] [--limit N] [--batch N] \
-                 [--attachments DIR] [--apply] [--report out.csv]
+                 [--attachments DIR] [--fx NZD=0.905] \
+                 [--cash-account "Assets:Someone:Cash"] [--apply] [--report out.csv]
 ```
 
 Each document is OCR'd, its amount and date read, and the book searched for an

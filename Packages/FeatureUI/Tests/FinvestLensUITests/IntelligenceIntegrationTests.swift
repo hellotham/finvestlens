@@ -298,6 +298,88 @@ struct IntelligenceIntegrationTests {
         #expect(model.uncategorizedItems().count == 1)
     }
 
+    @Test("A cash purchase is posted on the day the receipt says, in UTC")
+    func cashPurchasePostsOnTheRightDay() async throws {
+        // Caught on a real run: four receipts were entered a day early. A date
+        // built from a filename is midnight *local*, which in Sydney is 13:00
+        // UTC the day before — and the book stores a posting day as midnight
+        // UTC (GnuCashDate writes `00:00:00 +0000`). Stored raw it renders a
+        // day early anywhere reading UTC, and exports to GnuCash wrong.
+        let url = tempURL()
+        defer { try? FileManager.default.removeItem(at: url) }
+        let model = AppModel()
+        try model.newDocument(at: url)
+        defer { model.close() }
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        model.configuredDocumentFolder = folder
+
+        let cash = try #require(model.addAccount(name: "Cash", type: .cash))
+        let ninth = try #require(day("2026-01-09"))       // midnight, local
+        let entered = try await model.recordCashPurchase(
+            fileName: "2026-01-09 Tofu.png", data: Data("x".utf8), date: ninth,
+            vendor: "Artisan Tofu", amount: 25.60, cashAccountID: cash)
+
+        let book = try #require(model.book)
+        let txn = try #require(book.transaction(with: entered.id))
+        var utc = Calendar(identifier: .gregorian)
+        utc.timeZone = try #require(TimeZone(identifier: "UTC"))
+        let stored = utc.dateComponents([.year, .month, .day, .hour], from: txn.datePosted)
+        #expect(stored.year == 2026)
+        #expect(stored.month == 1)
+        #expect(stored.day == 9, "posted on the day the receipt names, read in UTC")
+        #expect(stored.hour == 0, "a posting day carries no time of day")
+    }
+
+    @Test("The posting-day repair moves only rows whose UTC and local days disagree")
+    func repairIsNarrowAndIdempotent() async throws {
+        // The first version of this repair asked "is the time midnight UTC?"
+        // and selected 759 transactions on a real book instead of the 4 that
+        // were wrong — GnuCash stores plenty of dates at 10:59 UTC, which is
+        // the same calendar day here and perfectly fine. Rewriting those would
+        // have dirtied hundreds of untouched rows to fix something that was
+        // not wrong with them.
+        let url = tempURL()
+        defer { try? FileManager.default.removeItem(at: url) }
+        let model = AppModel()
+        try model.newDocument(at: url)
+        defer { model.close() }
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        model.configuredDocumentFolder = folder
+
+        let card = try #require(model.addAccount(name: "Card", type: .credit))
+        let shop = try #require(model.addAccount(name: "Shop", type: .expense))
+
+        /// A transaction posted at an exact instant, carrying a document.
+        func linked(_ iso: String, _ name: String) throws -> GncGUID {
+            let formatter = ISO8601DateFormatter()
+            let id = try model.addTransaction(
+                date: try #require(formatter.date(from: iso)), description: name, currency: .aud,
+                splits: [SplitInput(accountID: card, value: -10), SplitInput(accountID: shop, value: 10)])
+            model.setDocumentLink("\(name).png", for: id)
+            return id
+        }
+        // GnuCash's own shape: a stray time, but the same day either way.
+        let fine = try linked("2026-01-20T10:59:00Z", "Fine")
+        // The defect: 13:00 UTC on the 8th is midnight on the 9th here.
+        let broken = try linked("2026-01-08T13:00:00Z", "Broken")
+
+        let moved = model.repostLinkedTransactionDays(apply: true)
+        #expect(moved.count == 1, "only the row whose days disagree should move")
+        #expect(moved.first?.id == broken)
+
+        let book = try #require(model.book)
+        // The untouched one keeps its exact instant, not just its day.
+        let untouched = try #require(book.transaction(with: fine))
+        #expect(untouched.datePosted == ISO8601DateFormatter().date(from: "2026-01-20T10:59:00Z"))
+
+        // And running again finds nothing.
+        #expect(model.repostLinkedTransactionDays(apply: true).isEmpty)
+    }
+
     @Test("A cash purchase with no vendor still gets a usable description")
     func cashPurchaseFallsBackToTheFileName() async throws {
         let url = tempURL()

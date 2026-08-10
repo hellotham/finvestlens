@@ -184,6 +184,29 @@ list reads bare words too, and anything ambiguous is left alone. With that
 fixed, the classifier's answers matched an independent Vision probe of the same
 receipts exactly.
 
+### Two ways a date can be a day early
+
+The four entries landed a day before their receipts. A date built from a
+filename is midnight *local*, which in Sydney is 13:00 UTC the day before, and
+a posting day is stored as midnight UTC — `GnuCashDate` writes
+`00:00:00 +0000` and `isDayOnly` treats exactly that as "carries no time of
+day". Stored raw, the rows read a day early anywhere reading UTC (`finlens`
+does) and would export to GnuCash on the wrong day.
+`AppModel.postingDay(from:)` now takes the local calendar day and re-anchors
+it to midnight UTC, so the day the person meant survives the convention the
+file expects.
+
+Repairing the four already written found the second, larger version of the same
+mistake. `finlab repair` first asked "is the posted time midnight UTC?" and
+selected **759** transactions — GnuCash stores plenty of dates at 10:59 UTC,
+which is late evening here and the same calendar day read either way. Applying
+it would have rewritten hundreds of rows that were never wrong, to fix
+something that was not wrong with them; the dry run is the only reason it
+didn't. The predicate is now "the UTC day and the local day disagree", which
+selects exactly the four, leaves a 10:59 UTC row byte-identical, and is
+idempotent on a second pass. A repair whose blast radius is two orders of
+magnitude larger than the defect is not a repair.
+
 ### Two matcher defects, found only because real documents were used
 
 **Distributions were hunted among purchases.** `parseAttachment` decided a
