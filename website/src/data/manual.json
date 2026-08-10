@@ -42,6 +42,35 @@
           ]
         },
         {
+          "id": "dashboard",
+          "title": "The dashboard",
+          "summary": "The board you land on: what matters today, at a glance.",
+          "symbol": "square.grid.2x2",
+          "keywords": "dashboard home overview net worth tiles cards alerts up next customise board",
+          "blocks": [
+            {
+              "type": "text",
+              "value": "Opening a book lands you on the dashboard — net worth and its twelve-month trend, anything the alerts have flagged, your account balances, bills coming up, and how the budget is tracking."
+            },
+            {
+              "type": "text",
+              "value": "It is a board rather than a page: it never scrolls. Cards are laid out to fill the window you actually have, so what you see is what there is. Resize the window and the board re-packs itself."
+            },
+            {
+              "type": "heading",
+              "value": "Choosing what appears"
+            },
+            {
+              "type": "text",
+              "value": "Not every card suits every book. Turn the ones you do not want off, and the rest close the gap. A card with nothing to report — no bills due, no alerts — gives up its place rather than showing you an empty box."
+            },
+            {
+              "type": "tip",
+              "value": "⌥⌘0 returns to the dashboard from anywhere. **Up Next** is the card to read first: it names the single thing most worth doing in the book right now."
+            }
+          ]
+        },
+        {
           "id": "accounts",
           "title": "Accounts",
           "summary": "The chart of accounts, and how the sidebar is organised.",
@@ -130,6 +159,18 @@
             {
               "type": "text",
               "value": "A transaction can touch more than two accounts — a pay slip split into salary, tax and superannuation, or a shopping trip split across categories. Select the row and press ⌘E, or click its disclosure arrow, to open it out — notes, tags and every leg, edited in the register itself."
+            },
+            {
+              "type": "heading",
+              "value": "Undoing a transaction that already happened"
+            },
+            {
+              "type": "text",
+              "value": "Deleting a transaction removes it. Sometimes that is wrong — a payment that bounced, or a cheque never banked, is part of the record. **Void Transaction** keeps the row and its history but takes it out of your balances; **Unvoid** puts it back. **Add Reversing Transaction** instead writes a second, opposite entry on a date you choose, which is what an accountant expects to see when a posted period must not change."
+            },
+            {
+              "type": "text",
+              "value": "**Print Check…** prints the selected transaction as a cheque."
             },
             {
               "type": "tip",
@@ -524,15 +565,15 @@
               "type": "table",
               "rows": [
                 [
-                  "tag:holiday",
+                  "`tag:holiday`",
                   "Everything tagged holiday"
                 ],
                 [
-                  "-tag:holiday",
+                  "`-tag:holiday`",
                   "Everything *not* tagged holiday"
                 ],
                 [
-                  "tag:holiday amount:>500",
+                  "`tag:holiday amount:>500`",
                   "Combine with any other search term"
                 ]
               ]
@@ -666,6 +707,44 @@
             {
               "type": "text",
               "value": "The **Financial Year Pack** gathers the statements you need at tax time into one PDF, in reading order."
+            }
+          ]
+        },
+        {
+          "id": "year-end",
+          "title": "End of the financial year",
+          "summary": "Close the year off, and produce the papers it calls for.",
+          "symbol": "calendar.badge.checkmark",
+          "keywords": "year end financial year close book closing entries retained earnings tax pack passport summary",
+          "blocks": [
+            {
+              "type": "text",
+              "value": "At the end of a financial year, income and expense accounts have done their job: they describe a period that is now over. Closing the year sweeps their balances into equity so the next year starts them at zero, and what they earned or cost is preserved as retained earnings."
+            },
+            {
+              "type": "heading",
+              "value": "Closing the year"
+            },
+            {
+              "type": "steps",
+              "items": [
+                "Choose **Book ▸ Close Financial Year…**",
+                "Set the closing date and pick the equity account to close into — Retained Earnings, typically.",
+                "Read the preview: it names how many accounts will be closed, and the totals per currency.",
+                "Post it. The whole closing is a single entry you can undo."
+              ]
+            },
+            {
+              "type": "tip",
+              "value": "You need an equity account to close into before you start. If the book has none, the sheet says so rather than inventing one."
+            },
+            {
+              "type": "heading",
+              "value": "The papers"
+            },
+            {
+              "type": "text",
+              "value": "The **Financial Year Pack** (in Reports) gathers the statements tax time asks for into one document. **Book ▸ Financial Summary (Passport)…** is the different, shorter thing: a single page — net worth, savings rate, the twelve-month trend — for when someone needs a picture of your position rather than your accounts. It says on its face that it is a snapshot prepared from your own records, not a verified statement."
             }
           ]
         },
@@ -824,6 +903,10 @@
             },
             {
               "type": "text",
+              "value": "File ▸ Export CSV writes plain spreadsheet files — your accounts, your transactions, or your price history — for anything that reads a table."
+            },
+            {
+              "type": "text",
               "value": "File ▸ Export Ledger Journal… (⇧⌘E) writes a plain-text Ledger journal, and File ▸ Import Ledger Journal… reads one back."
             },
             {
@@ -850,6 +933,43 @@
                   "The book as a Ledger journal."
                 ]
               ]
+            }
+          ]
+        },
+        {
+          "id": "outside-the-app",
+          "title": "Outside the app",
+          "summary": "Widgets, Quick Look and Shortcuts — the book without opening it.",
+          "symbol": "square.grid.3x3.topleft.filled",
+          "keywords": "widget widgets control centre control center quick look preview spotlight shortcuts siri notification alert",
+          "blocks": [
+            {
+              "type": "heading",
+              "value": "Widgets"
+            },
+            {
+              "type": "text",
+              "value": "Two widgets read the last book you had open: **Net Worth**, and **Alerts** for anything wanting attention. They show a snapshot saved when you last saved the book — they never open it themselves, so nothing is locked and nothing changes behind your back."
+            },
+            {
+              "type": "text",
+              "value": "There is also a Control Centre button that opens FinvestLens."
+            },
+            {
+              "type": "heading",
+              "value": "Quick Look"
+            },
+            {
+              "type": "text",
+              "value": "Press Space on a book in the Finder to see inside it without opening it — FinvestLens documents, and GnuCash files too, in all three shapes GnuCash writes them."
+            },
+            {
+              "type": "heading",
+              "value": "Alerts and Shortcuts"
+            },
+            {
+              "type": "text",
+              "value": "Alerts can arrive as notifications, so a bill due or a balance heading negative reaches you without the app being open. FinvestLens also publishes Shortcuts actions, so the book can take part in an automation."
             }
           ]
         },

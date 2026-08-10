@@ -1599,6 +1599,53 @@
         }
       }
     },
+    "**Match Attachments…** (⇧⌘M) does the same for receipts you already have — PDFs or photos: pick the files, and each is paired with its transaction and filed.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Belege zuordnen…** (⇧⌘M) tut dasselbe für Belege, die Sie schon haben — PDFs oder Fotos: Dateien auswählen, und jede wird ihrer Buchung zugeordnet und abgelegt."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Emparejar adjuntos…** (⇧⌘M) hace lo mismo con recibos que ya tiene —PDF o fotos—: elija los archivos y cada uno se empareja con su transacción y se archiva."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Associer les pièces jointes…** (⇧⌘M) fait de même pour les reçus que vous avez déjà — PDF ou photos : choisissez les fichiers, chacun est apparié à son opération et classé."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Abbina allegati…** (⇧⌘M) fa lo stesso per le ricevute che avete già — PDF o foto: scegliete i file e ciascuno viene abbinato alla sua transazione e archiviato."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**添付を照合…** (⇧⌘M) は、すでに手元にある領収書（PDF でも写真でも）に対して同じことを行います。ファイルを選ぶと、それぞれが該当する取引に結び付けられて保存されます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Associar anexos…** (⇧⌘M) faz o mesmo com recibos que você já tem — PDFs ou fotos: escolha os arquivos e cada um é pareado com sua transação e arquivado."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**匹配附件…**(⇧⌘M) 对你手头已有的收据做同样的事——PDF 或照片皆可：选好文件，每一份都会与其交易配对并归档。"
+          }
+        }
+      }
+    },
     "**Match Attachments…** (⇧⌘M) does the same for receipts you already have: pick the files, and each is paired with its transaction and filed.": {
       "extractionState": "manual",
       "localizations": {
@@ -1689,6 +1736,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "**占位** 科目用于归集子科目，本身不接受交易。"
+          }
+        }
+      }
+    },
+    "**Print Check…** prints the selected transaction as a cheque.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Scheck drucken…** druckt die ausgewählte Buchung als Scheck."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Imprimir cheque…** imprime la transacción seleccionada como cheque."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Imprimer un chèque…** imprime l’opération sélectionnée sous forme de chèque."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Stampa assegno…** stampa la transazione selezionata come assegno."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**小切手を印刷…** は、選択した取引を小切手として印刷します。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Imprimir cheque…** imprime a transação selecionada como cheque."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**打印支票…** 会将选中的交易打印成支票。"
           }
         }
       }
@@ -2347,6 +2441,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "无法归零的差额通常是漏记的交易、重复记录，或输入时数字颠倒。底部的累计差额会准确告诉你要找多少。"
+          }
+        }
+      }
+    },
+    "A file that matches nothing keeps its row and says why. **Manually Edit…** opens the transaction editor with the document's date, vendor and amount already filled in — for a cash purchase that was never on a statement, or one whose statement you have not imported yet.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine Datei ohne Treffer behält ihre Zeile und nennt den Grund. **Manuell bearbeiten…** öffnet den Buchungseditor mit Datum, Händler und Betrag des Belegs bereits ausgefüllt — für einen Barkauf, der nie auf einem Auszug stand, oder einen, dessen Auszug Sie noch nicht importiert haben."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un archivo que no empareja con nada conserva su fila y explica por qué. **Editar manualmente…** abre el editor de transacciones con la fecha, el comercio y el importe del documento ya rellenados: para una compra en efectivo que nunca estuvo en un extracto, o una cuyo extracto aún no ha importado."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un fichier qui ne correspond à rien garde sa ligne et en donne la raison. **Modifier manuellement…** ouvre l’éditeur d’opération avec la date, le commerçant et le montant du document déjà remplis — pour un achat en espèces qui n’a jamais figuré sur un relevé, ou dont le relevé n’est pas encore importé."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un file che non trova corrispondenza mantiene la sua riga e ne dice il motivo. **Modifica manualmente…** apre l’editor della transazione con data, esercente e importo del documento già compilati: per un acquisto in contanti mai finito su un estratto conto, o il cui estratto non avete ancora importato."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "どれにも一致しなかったファイルは行に残り、理由が表示されます。**手動で編集…** を選ぶと、書類の日付・店名・金額があらかじめ入力された状態で取引エディタが開きます。明細書に載ることのない現金払いや、明細書をまだ取り込んでいない取引のために使います。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Um arquivo que não corresponde a nada mantém sua linha e diz por quê. **Editar manualmente…** abre o editor de transações com a data, o estabelecimento e o valor do documento já preenchidos — para uma compra em dinheiro que nunca esteve num extrato, ou cujo extrato você ainda não importou."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未能匹配到任何交易的文件会保留其行并说明原因。**手动编辑…** 会打开交易编辑器，并预先填入该文件的日期、商户和金额——适用于从未出现在对账单上的现金消费，或对账单尚未导入的消费。"
           }
         }
       }
@@ -3102,6 +3243,53 @@
         }
       }
     },
+    "A tag is a free-form label on a transaction. Where an account says what something *was*, a tag says what it *belonged to* — a holiday, a renovation, a client, everything you mean to claim at tax time. One transaction can carry several, and a tag can span any number of accounts.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein Tag ist ein freies Etikett an einer Buchung. Während ein Konto sagt, *was* etwas war, sagt ein Tag, *wozu* es gehörte — ein Urlaub, eine Renovierung, ein Kunde, alles, was Sie zur Steuer geltend machen wollen. Eine Buchung kann mehrere tragen, und ein Tag kann beliebig viele Konten umspannen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una etiqueta es un rótulo libre sobre una transacción. Donde una cuenta dice *qué* fue algo, una etiqueta dice *a qué* pertenecía: unas vacaciones, una reforma, un cliente, todo lo que piensa deducir en la declaración. Una transacción puede llevar varias, y una etiqueta puede abarcar cualquier número de cuentas."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un tag est une étiquette libre posée sur une opération. Là où un compte dit *ce que* fut une dépense, un tag dit *à quoi* elle se rattachait — des vacances, une rénovation, un client, tout ce que vous comptez déduire. Une opération peut en porter plusieurs, et un tag peut couvrir un nombre quelconque de comptes."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un tag è un’etichetta libera su una transazione. Dove un conto dice *che cosa* è stata una spesa, un tag dice *a che cosa* apparteneva: una vacanza, una ristrutturazione, un cliente, tutto ciò che intendete portare in detrazione. Una transazione può portarne diversi e un tag può attraversare un numero qualsiasi di conti."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タグは取引に付ける自由なラベルです。勘定科目がそれが*何であったか*を示すのに対し、タグは*何に属していたか*を示します。旅行、リフォーム、顧客、確定申告で申告するつもりのものなどです。1 つの取引に複数付けられ、1 つのタグは任意の数の勘定科目にまたがれます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uma etiqueta é um rótulo livre numa transação. Onde a conta diz *o que* algo foi, a etiqueta diz *a que* pertencia — umas férias, uma reforma, um cliente, tudo o que você pretende deduzir no imposto. Uma transação pode levar várias, e uma etiqueta pode abranger qualquer número de contas."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "标签是加在交易上的自由标记。科目说明这笔钱*是什么*，标签则说明它*属于什么*——一次旅行、一次装修、某个客户，以及所有你打算在报税时申报的项目。一笔交易可带多个标签，一个标签也可横跨任意多个科目。"
+          }
+        }
+      }
+    },
     "A time-boxed savings push on one of your goals": {
       "extractionState": "manual",
       "localizations": {
@@ -3149,49 +3337,49 @@
         }
       }
     },
-    "A transaction can touch more than two accounts — a pay slip split into salary, tax and superannuation, or a shopping trip split across categories. Open the inspector (⌘E, or the toolbar's inspector button) to add splits.": {
+    "A transaction can touch more than two accounts — a pay slip split into salary, tax and superannuation, or a shopping trip split across categories. Select the row and press ⌘E, or click its disclosure arrow, to open it out — notes, tags and every leg, edited in the register itself.": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Eine Buchung kann mehr als zwei Konten berühren — eine Gehaltsabrechnung, aufgeteilt in Lohn, Steuer und Altersvorsorge, oder ein Einkauf, verteilt auf Kategorien. Öffnen Sie den Informationsbereich (⌘E oder die Taste in der Symbolleiste), um Buchungsteile zu ergänzen."
+            "value": "Eine Buchung kann mehr als zwei Konten berühren — eine Lohnabrechnung, aufgeteilt in Gehalt, Steuer und Altersvorsorge, oder ein Einkauf, aufgeteilt auf Kategorien. Wählen Sie die Zeile und drücken Sie ⌘E oder klicken Sie auf den Aufklapppfeil, um sie aufzuklappen — Notizen, Tags und jeder Buchungsteil, direkt im Kontobuch bearbeitet."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Una transacción puede afectar a más de dos cuentas: una nómina desglosada en sueldo, impuestos y pensión, o una compra repartida entre categorías. Abre el inspector (⌘E, o su botón en la barra de herramientas) para añadir desgloses."
+            "value": "Una transacción puede tocar más de dos cuentas: una nómina desglosada en sueldo, impuesto y jubilación, o una compra repartida entre categorías. Seleccione la fila y pulse ⌘E, o haga clic en su flecha de despliegue, para abrirla: notas, etiquetas y cada partida, editadas en el propio registro."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Une opération peut toucher plus de deux comptes — une fiche de paie ventilée en salaire, impôt et retraite, ou des courses réparties par catégorie. Ouvrez l’inspecteur (⌘E, ou son bouton dans la barre d’outils) pour ajouter des répartitions."
+            "value": "Une opération peut toucher plus de deux comptes — une fiche de paie ventilée en salaire, impôt et retraite, ou des courses réparties entre catégories. Sélectionnez la ligne et appuyez sur ⌘E, ou cliquez sur son triangle d’affichage, pour la déployer : notes, tags et chaque répartition, modifiés dans le registre lui-même."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Una transazione può interessare più di due conti: una busta paga suddivisa in stipendio, imposte e previdenza, o una spesa ripartita tra categorie. Apri l’ispettore (⌘E, o il pulsante nella barra strumenti) per aggiungere suddivisioni."
+            "value": "Una transazione può toccare più di due conti: una busta paga suddivisa fra stipendio, imposte e previdenza, o una spesa ripartita fra categorie. Selezionate la riga e premete ⌘E, oppure fate clic sulla freccia di espansione, per aprirla: note, tag e ogni suddivisione, modificati nel registro stesso."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "1 件の取引は 3 つ以上の勘定科目にまたがることがあります（給与を給料・税・年金に分ける、買い物をカテゴリ別に分けるなど）。インスペクタ (⌘E、またはツールバーのボタン) を開いてスプリットを追加します。"
+            "value": "1 つの取引が 3 つ以上の勘定科目にまたがることもあります。給与明細を給与・税金・年金に分ける場合や、買い物を複数の費目に分ける場合です。行を選んで ⌘E を押すか、開閉用の三角をクリックすると展開され、備考・タグ・すべての明細を記録簿の中で直接編集できます。"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Uma transação pode envolver mais de duas contas — um holerite dividido em salário, imposto e previdência, ou uma compra repartida entre categorias. Abra o inspetor (⌘E, ou seu botão na barra de ferramentas) para adicionar divisões."
+            "value": "Uma transação pode tocar mais de duas contas — um contracheque dividido em salário, imposto e previdência, ou uma compra repartida entre categorias. Selecione a linha e pressione ⌘E, ou clique na seta de expansão, para abri-la: notas, etiquetas e cada partida, editados no próprio registro."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "一笔交易可以涉及两个以上科目 — 例如工资单拆为薪资、税款与养老金，或一次购物按类别拆分。打开检查器（⌘E，或工具栏中的检查器按钮）即可添加分录。"
+            "value": "一笔交易可以涉及两个以上的科目——例如工资单拆分为薪金、税款和养老金，或一次购物分摊到多个类别。选中该行并按 ⌘E，或点击其展开箭头即可展开：备注、标签和每一条分录，都在账簿中直接编辑。"
           }
         }
       }
@@ -5733,6 +5921,53 @@
         }
       }
     },
+    "Adding tags": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tags hinzufügen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Añadir etiquetas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajouter des tags"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungere tag"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タグを付ける"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adicionar etiquetas"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加标签"
+          }
+        }
+      }
+    },
     "Address": {
       "extractionState": "manual",
       "localizations": {
@@ -6293,6 +6528,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "提醒"
+          }
+        }
+      }
+    },
+    "Alerts and Shortcuts": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hinweise und Kurzbefehle"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alertas y Atajos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alertes et Raccourcis"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avvisi e Comandi rapidi"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アラートとショートカット"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alertas e Atalhos"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "提醒与快捷指令"
+          }
+        }
+      }
+    },
+    "Alerts can arrive as notifications, so a bill due or a balance heading negative reaches you without the app being open. FinvestLens also publishes Shortcuts actions, so the book can take part in an automation.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hinweise können als Mitteilungen eintreffen, sodass eine fällige Rechnung oder ein ins Minus laufender Saldo Sie erreicht, ohne dass die App offen ist. FinvestLens stellt außerdem Kurzbefehl-Aktionen bereit, damit das Buch an Automationen teilnehmen kann."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Las alertas pueden llegar como notificaciones, de modo que una factura vencida o un saldo camino de números rojos le alcance sin tener la app abierta. FinvestLens también publica acciones de Atajos, para que el libro participe en una automatización."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les alertes peuvent arriver sous forme de notifications : une facture due ou un solde qui vire au négatif vous parvient sans que l’app soit ouverte. FinvestLens publie aussi des actions Raccourcis, afin que le livre participe à une automatisation."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gli avvisi possono arrivare come notifiche, così una fattura in scadenza o un saldo che va in negativo vi raggiunge senza che l’app sia aperta. FinvestLens pubblica anche azioni per Comandi rapidi, così il libro può partecipare a un’automazione."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アラートは通知として届くため、支払期限の請求や残高がマイナスに向かっていることを、アプリを開いていなくても知らせます。FinvestLens はショートカットのアクションも提供しており、帳簿を自動化に組み込めます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Os alertas podem chegar como notificações, de modo que uma conta a vencer ou um saldo indo para o negativo chegue até você sem o app estar aberto. O FinvestLens também publica ações de Atalhos, para que o livro participe de uma automação."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "提醒可以以通知形式送达，因此即便未打开应用，到期账单或即将转负的余额也能通知到你。FinvestLens 还提供快捷指令动作，可让账簿参与自动化流程。"
           }
         }
       }
@@ -7377,6 +7706,53 @@
         }
       }
     },
+    "An ordinary transfer moves one amount between two accounts. When the accounts are in different currencies there are *two* amounts — what left, and what arrived — and the rate between them is whatever the bank actually gave you.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine gewöhnliche Umbuchung bewegt einen Betrag zwischen zwei Konten. Stehen die Konten in verschiedenen Währungen, gibt es *zwei* Beträge — was abging und was ankam — und der Kurs dazwischen ist der, den die Bank Ihnen tatsächlich gab."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una transferencia corriente mueve un importe entre dos cuentas. Cuando las cuentas están en monedas distintas hay *dos* importes —lo que salió y lo que llegó— y el tipo entre ambos es el que el banco le dio realmente."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un virement ordinaire déplace un montant entre deux comptes. Quand les comptes sont dans des devises différentes, il y a *deux* montants — ce qui est parti et ce qui est arrivé — et le taux entre les deux est celui que la banque vous a réellement appliqué."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un trasferimento ordinario sposta un importo tra due conti. Quando i conti sono in valute diverse gli importi sono *due* — quanto è uscito e quanto è arrivato — e il tasso fra loro è quello che la banca vi ha effettivamente applicato."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通常の資金移動は 1 つの金額を 2 つの勘定科目の間で動かします。勘定科目の通貨が異なる場合、金額は*2 つ*になります。出ていった額と、届いた額です。両者の間のレートは、銀行が実際に適用したものです。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uma transferência comum move um valor entre duas contas. Quando as contas estão em moedas diferentes há *dois* valores — o que saiu e o que chegou — e a taxa entre eles é a que o banco de fato lhe deu."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "普通转账是在两个科目之间移动同一笔金额。当两个科目币种不同时，就有*两个*金额——转出的与到账的——而两者之间的汇率，就是银行实际给你的那个。"
+          }
+        }
+      }
+    },
     "Analysing six months of spending with Apple Intelligence…": {
       "extractionState": "manual",
       "localizations": {
@@ -7514,6 +7890,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "任何交易都可附加文稿 — 收据、发票、股息通知。流水账旁的「附件」面板会显示所选交易的文件。"
+          }
+        }
+      }
+    },
+    "Any transaction can have documents attached — a receipt, an invoice, a dividend statement. The Attachments panel beside the register shows the selected transaction's file; turn it on with **View ▸ Attachments** in the register toolbar.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "An jede Buchung lassen sich Belege anhängen — eine Quittung, eine Rechnung, eine Dividendenabrechnung. Das Belegfeld neben dem Kontobuch zeigt die Datei der ausgewählten Buchung; einschalten mit **Darstellung ▸ Belege** in der Kontobuch-Symbolleiste."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cualquier transacción puede llevar documentos adjuntos: un recibo, una factura, una liquidación de dividendos. El panel de Adjuntos junto al registro muestra el archivo de la transacción seleccionada; actívelo con **Visualización ▸ Adjuntos** en la barra del registro."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toute opération peut recevoir des documents — un reçu, une facture, un avis de dividende. Le panneau Pièces jointes à côté du registre affiche le fichier de l’opération sélectionnée ; activez-le par **Présentation ▸ Pièces jointes** dans la barre d’outils du registre."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A ogni transazione si possono allegare documenti: una ricevuta, una fattura, un avviso di dividendo. Il pannello Allegati accanto al registro mostra il file della transazione selezionata; attivatelo con **Vista ▸ Allegati** nella barra strumenti del registro."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "どの取引にも書類を添付できます。領収書、請求書、配当通知書などです。記録簿の横にある添付パネルには、選択中の取引のファイルが表示されます。記録簿のツールバーの **表示 ▸ 添付** でオンにしてください。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qualquer transação pode ter documentos anexados — um recibo, uma fatura, um aviso de dividendos. O painel Anexos ao lado do registro mostra o arquivo da transação selecionada; ative-o em **Visualizar ▸ Anexos** na barra do registro."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "任何交易都可以附加文件——收据、发票、股息通知等。账簿旁的“附件”面板会显示选中交易的文件；请在账簿工具栏中通过 **显示 ▸ 附件** 打开它。"
           }
         }
       }
@@ -8407,6 +8830,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "为该科目的子科目分配连续编号（010、020、…）。"
+          }
+        }
+      }
+    },
+    "At the end of a financial year, income and expense accounts have done their job: they describe a period that is now over. Closing the year sweeps their balances into equity so the next year starts them at zero, and what they earned or cost is preserved as retained earnings.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Am Ende eines Geschäftsjahres haben Ertrags- und Aufwandskonten ihre Aufgabe erfüllt: Sie beschreiben eine nun abgelaufene Periode. Der Jahresabschluss überträgt ihre Salden ins Eigenkapital, damit das nächste Jahr bei null beginnt; Ertrag und Aufwand bleiben als Gewinnvortrag erhalten."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Al final de un ejercicio, las cuentas de ingresos y gastos ya cumplieron su función: describen un periodo terminado. El cierre traslada sus saldos al patrimonio para que el año siguiente empiece en cero, y lo ganado o gastado se conserva como ganancias retenidas."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "À la fin d’un exercice, les comptes de produits et de charges ont fait leur travail : ils décrivent une période désormais close. La clôture transfère leurs soldes vers les capitaux propres afin que l’exercice suivant reparte de zéro ; le résultat est conservé en report à nouveau."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alla fine di un esercizio i conti di ricavo e costo hanno svolto il loro compito: descrivono un periodo ormai concluso. La chiusura trasferisce i loro saldi al patrimonio netto, così il nuovo anno riparte da zero, e il risultato resta come utili portati a nuovo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "会計年度の終わりには、収益と費用の勘定科目は役目を終えています。年度を締めると、その残高は純資産へ振り替えられ、翌年度はゼロから始まります。稼いだ額・費やした額は繰越利益として残ります。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No fim de um exercício, as contas de receita e despesa já cumpriram seu papel: descrevem um período encerrado. O encerramento transfere seus saldos para o patrimônio líquido, de modo que o ano seguinte comece do zero, e o resultado fica preservado como lucros acumulados."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "财年结束时，收入与支出科目已完成使命：它们描述的是一个已经结束的期间。结账会把它们的余额转入权益，使下一年度从零开始，所赚或所花则以留存收益的形式保留。"
           }
         }
       }
@@ -10620,6 +11090,53 @@
         }
       }
     },
+    "Book ▸ Smart Import PDFs… (⇧⌘I) reads bank statements, dividend statements and invoices **on this device** and turns them into transactions for you to review. Nothing is sent anywhere.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buch ▸ PDFs intelligent importieren… (⇧⌘I) liest Kontoauszüge, Dividendenabrechnungen und Rechnungen **auf diesem Gerät** und macht daraus Buchungen, die Sie prüfen. Nichts wird irgendwohin gesendet."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Libro ▸ Importación inteligente de PDF… (⇧⌘I) lee extractos bancarios, liquidaciones de dividendos y facturas **en este dispositivo** y los convierte en transacciones para que las revise. No se envía nada a ninguna parte."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Livre ▸ Import intelligent de PDF… (⇧⌘I) lit relevés bancaires, avis de dividende et factures **sur cet appareil** et les transforme en opérations à vérifier. Rien n’est envoyé nulle part."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Libro ▸ Importazione intelligente di PDF… (⇧⌘I) legge estratti conto, avvisi di dividendo e fatture **su questo dispositivo** e li trasforma in transazioni da verificare. Nulla viene inviato da nessuna parte."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "帳簿 ▸ PDF をスマート読み込み… (⇧⌘I) は、銀行の明細書、配当通知書、請求書を**この端末上で**読み取り、確認用の取引に変換します。どこにも送信されません。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Livro ▸ Importação inteligente de PDFs… (⇧⌘I) lê extratos bancários, avisos de dividendos e faturas **neste dispositivo** e os transforma em transações para você revisar. Nada é enviado a lugar nenhum."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“账簿 ▸ 智能导入 PDF…”(⇧⌘I) 会**在本机上**读取银行对账单、股息通知与发票，并转换成交易供你复核。不会向任何地方发送数据。"
+          }
+        }
+      }
+    },
     "Booking": {
       "extractionState": "manual",
       "localizations": {
@@ -12547,6 +13064,194 @@
         }
       }
     },
+    "Check the date and give it a description, then click **Transfer**.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prüfen Sie das Datum, geben Sie eine Beschreibung ein und klicken Sie auf **Umbuchen**."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compruebe la fecha, escriba una descripción y pulse **Transferir**."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vérifiez la date, donnez une description, puis cliquez sur **Transférer**."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Controllate la data, indicate una descrizione e fate clic su **Trasferisci**."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "日付を確認し、摘要を入力してから **振替** をクリックします。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confira a data, dê uma descrição e clique em **Transferir**."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "核对日期并填写摘要，然后点击 **转账**。"
+          }
+        }
+      }
+    },
+    "Choose **Book ▸ Close Financial Year…**": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wählen Sie **Buch ▸ Geschäftsjahr abschließen…**"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elija **Libro ▸ Cerrar ejercicio…**"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisissez **Livre ▸ Clôturer l’exercice…**"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scegliete **Libro ▸ Chiudi esercizio…**"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**帳簿 ▸ 会計年度を締める…** を選びます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escolha **Livro ▸ Encerrar exercício…**"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择 **账簿 ▸ 结清财年…**"
+          }
+        }
+      }
+    },
+    "Choose **Transaction ▸ Currency Transfer…**": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wählen Sie **Buchung ▸ Währungsumbuchung…**"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elija **Transacción ▸ Transferencia de moneda…**"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisissez **Opération ▸ Transfert de devise…**"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scegliete **Transazione ▸ Trasferimento di valuta…**"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**取引 ▸ 通貨間の振替…** を選びます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escolha **Transação ▸ Transferência de moeda…**"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择 **交易 ▸ 货币转账…**"
+          }
+        }
+      }
+    },
+    "Choose Book ▸ Import Bank File… (⌥⌘I) and pick what your bank gave you. The format is detected from the file itself — CSV, QIF, OFX/QFX, SWIFT MT940/MT942 and ISO 20022 CAMT.053 are all read.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wählen Sie Buch ▸ Bankdatei importieren… (⌥⌘I) und dann, was Ihre Bank Ihnen gegeben hat. Das Format wird aus der Datei selbst erkannt — CSV, QIF, OFX/QFX, SWIFT MT940/MT942 und ISO 20022 CAMT.053 werden alle gelesen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elija Libro ▸ Importar archivo bancario… (⌥⌘I) y seleccione lo que le dio su banco. El formato se detecta a partir del propio archivo: se leen CSV, QIF, OFX/QFX, SWIFT MT940/MT942 e ISO 20022 CAMT.053."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisissez Livre ▸ Importer un fichier bancaire… (⌥⌘I) et sélectionnez ce que votre banque vous a fourni. Le format est détecté à partir du fichier lui-même — CSV, QIF, OFX/QFX, SWIFT MT940/MT942 et ISO 20022 CAMT.053 sont tous lus."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scegliete Libro ▸ Importa file bancario… (⌥⌘I) e selezionate ciò che vi ha dato la banca. Il formato viene riconosciuto dal file stesso: CSV, QIF, OFX/QFX, SWIFT MT940/MT942 e ISO 20022 CAMT.053 sono tutti letti."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "帳簿 ▸ 銀行ファイルを読み込む… (⌥⌘I) を選び、銀行から受け取ったファイルを指定します。形式はファイル自体から判別され、CSV、QIF、OFX/QFX、SWIFT MT940/MT942、ISO 20022 CAMT.053 のいずれも読み込めます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escolha Livro ▸ Importar arquivo bancário… (⌥⌘I) e selecione o que seu banco forneceu. O formato é detectado pelo próprio arquivo — CSV, QIF, OFX/QFX, SWIFT MT940/MT942 e ISO 20022 CAMT.053 são todos lidos."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择“账簿 ▸ 导入银行文件…”(⌥⌘I)，然后选中银行提供的文件。格式会依据文件本身自动识别——CSV、QIF、OFX/QFX、SWIFT MT940/MT942 与 ISO 20022 CAMT.053 均可读取。"
+          }
+        }
+      }
+    },
     "Choose File ▸ Import Bank File… (⌥⌘I) and pick what your bank gave you. The format is detected from the file itself — CSV, QIF, OFX/QFX, SWIFT MT940/MT942 and ISO 20022 CAMT.053 are all read.": {
       "extractionState": "manual",
       "localizations": {
@@ -12590,6 +13295,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "选择「文件 ▸ 导入银行文件…」（⌥⌘I），并挑选银行提供的文件。格式会依据文件本身自动识别 — CSV、QIF、OFX/QFX、SWIFT MT940/MT942 与 ISO 20022 CAMT.053 均可读取。"
+          }
+        }
+      }
+    },
+    "Choose File ▸ Import GnuCash… and pick your `.gnucash` file. Accounts, transactions, prices, scheduled transactions and business records all come across, and you can export back to GnuCash at any time.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wählen Sie Ablage ▸ GnuCash importieren… und dann Ihre `.gnucash`-Datei. Konten, Buchungen, Kurse, terminierte Buchungen und Geschäftsdaten kommen alle mit, und Sie können jederzeit wieder nach GnuCash exportieren."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elija Archivo ▸ Importar GnuCash… y seleccione su archivo `.gnucash`. Cuentas, transacciones, cotizaciones, transacciones programadas y registros de negocio pasan todos, y puede volver a exportar a GnuCash cuando quiera."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisissez Fichier ▸ Importer GnuCash… et sélectionnez votre fichier `.gnucash`. Comptes, opérations, cours, opérations programmées et données commerciales sont tous repris, et vous pouvez réexporter vers GnuCash à tout moment."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scegliete Archivio ▸ Importa GnuCash… e selezionate il file `.gnucash`. Conti, transazioni, quotazioni, transazioni pianificate e dati aziendali vengono importati tutti, e potete riesportare verso GnuCash in qualsiasi momento."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイル ▸ GnuCash を読み込む… を選び、`.gnucash` ファイルを指定します。勘定科目、取引、価格、予定取引、business の記録がすべて引き継がれ、いつでも GnuCash へ書き戻せます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escolha Arquivo ▸ Importar GnuCash… e selecione seu arquivo `.gnucash`. Contas, transações, cotações, transações programadas e registros de negócio vêm todos, e você pode exportar de volta para o GnuCash quando quiser."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择“文件 ▸ 导入 GnuCash…”，然后选中你的 `.gnucash` 文件。科目、交易、价格、计划交易和业务记录都会一并导入，你也可以随时导出回 GnuCash。"
           }
         }
       }
@@ -13440,6 +14192,53 @@
         }
       }
     },
+    "Choosing what appears": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auswählen, was erscheint"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elegir qué aparece"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisir ce qui s’affiche"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scegliere cosa compare"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "表示する内容を選ぶ"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escolher o que aparece"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择显示哪些内容"
+          }
+        }
+      }
+    },
     "Clean Up": {
       "extractionState": "manual",
       "localizations": {
@@ -14004,6 +14803,53 @@
         }
       }
     },
+    "Close the year off, and produce the papers it calls for.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Jahr abschließen und die dafür nötigen Unterlagen erstellen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cierre el ejercicio y produzca los documentos que exige."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clôturer l’exercice et produire les documents qu’il exige."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chiudere l’esercizio e produrre i documenti che richiede."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "年度を締め、必要な書類を作成します。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Encerre o exercício e produza os documentos que ele exige."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "结清年度，并出具所需的文件。"
+          }
+        }
+      }
+    },
     "Closed %lld account%@. Undo with ⌘Z.": {
       "extractionState": "manual",
       "localizations": {
@@ -14047,6 +14893,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "已结转 %lld 个科目%@。可用 ⌘Z 撤销。"
+          }
+        }
+      }
+    },
+    "Closing the year": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Jahr abschließen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cerrar el ejercicio"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clôturer l’exercice"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chiudere l’esercizio"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "年度を締める"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Encerrar o exercício"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "结清年度"
           }
         }
       }
@@ -14281,6 +15174,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "列"
+          }
+        }
+      }
+    },
+    "Combine with any other search term": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mit jedem anderen Suchbegriff kombinierbar"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Combínelo con cualquier otro término de búsqueda"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "À combiner avec n’importe quel autre terme de recherche"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Combinabile con qualsiasi altro termine di ricerca"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ほかの検索条件と組み合わせられます"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Combine com qualquer outro termo de busca"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可与任何其他搜索条件组合"
           }
         }
       }
@@ -14562,6 +15502,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "佣金（可选）"
+          }
+        }
+      }
+    },
+    "Commit the row you are entering": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Zeile übernehmen, die Sie gerade erfassen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confirmar la fila que está introduciendo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Valider la ligne en cours de saisie"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confermare la riga che state inserendo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "入力中の行を確定する"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confirmar a linha que você está inserindo"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "提交正在录入的这一行"
           }
         }
       }
@@ -18465,6 +19452,53 @@
         }
       }
     },
+    "Delete the selected transaction": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die ausgewählte Buchung löschen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eliminar la transacción seleccionada"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supprimer l’opération sélectionnée"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eliminare la transazione selezionata"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選択した取引を削除する"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Excluir a transação selecionada"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除选中的交易"
+          }
+        }
+      }
+    },
     "Delete “%@”": {
       "extractionState": "manual",
       "localizations": {
@@ -18555,6 +19589,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "删除…"
+          }
+        }
+      }
+    },
+    "Deleting a transaction removes it. Sometimes that is wrong — a payment that bounced, or a cheque never banked, is part of the record. **Void Transaction** keeps the row and its history but takes it out of your balances; **Unvoid** puts it back. **Add Reversing Transaction** instead writes a second, opposite entry on a date you choose, which is what an accountant expects to see when a posted period must not change.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Löschen entfernt eine Buchung. Manchmal ist das falsch — eine geplatzte Zahlung oder ein nie eingelöster Scheck gehört zum Beleg. **Buchung stornieren** behält die Zeile samt Historie, nimmt sie aber aus den Salden; **Stornierung aufheben** stellt sie zurück. **Storno­buchung hinzufügen** schreibt stattdessen eine zweite, gegenläufige Buchung zu einem Datum Ihrer Wahl — das erwartet eine Buchhalterin, wenn eine abgeschlossene Periode unverändert bleiben muss."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Borrar una transacción la elimina. A veces eso es incorrecto: un pago devuelto, o un cheque nunca cobrado, forma parte del registro. **Anular transacción** conserva la fila y su historia pero la saca de sus saldos; **Desanular** la devuelve. **Añadir transacción de reversión** escribe en cambio un segundo asiento opuesto en la fecha que elija, que es lo que un contable espera ver cuando un periodo ya cerrado no debe cambiar."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supprimer une opération l’efface. Parfois c’est une erreur : un paiement rejeté, ou un chèque jamais encaissé, fait partie de l’historique. **Annuler l’opération** conserve la ligne et son historique mais la retire de vos soldes ; **Rétablir** la remet. **Ajouter une écriture d’extourne** écrit plutôt une seconde écriture opposée à la date de votre choix — c’est ce qu’un comptable attend lorsqu’une période close ne doit pas bouger."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eliminare una transazione la rimuove. A volte è sbagliato: un pagamento respinto, o un assegno mai incassato, fa parte della documentazione. **Annulla transazione** mantiene la riga e la sua storia ma la toglie dai saldi; **Ripristina** la riporta. **Aggiungi scrittura di storno** scrive invece una seconda scrittura opposta a una data a vostra scelta: è ciò che un contabile si aspetta quando un periodo già chiuso non deve cambiare."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取引を削除すると消えてしまいます。それが不適切な場合もあります。不渡りになった支払や、換金されなかった小切手も記録の一部だからです。**取引を無効化**すると、行とその履歴は残したまま残高から除かれます。**無効化を解除**すれば元に戻ります。一方、**逆仕訳を追加**は、指定した日付に反対の仕訳をもう 1 本立てます。締めた期間を動かしてはならないとき、会計担当者が期待するのはこちらです。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Excluir uma transação a remove. Às vezes isso é errado: um pagamento devolvido, ou um cheque nunca compensado, faz parte do registro. **Anular transação** mantém a linha e seu histórico, mas a tira dos seus saldos; **Desanular** a traz de volta. **Adicionar transação de estorno** escreve, em vez disso, um segundo lançamento oposto numa data à sua escolha — é o que um contador espera ver quando um período já lançado não pode mudar."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除交易会将其抹去。有时这样并不妥当——一笔退票的付款，或一张从未兑现的支票，都是记录的一部分。**作废交易**保留该行及其历史，但将其排除在余额之外；**取消作废**可恢复。而**添加冲销交易**则会在你指定的日期另立一笔相反的分录——当已过账的期间不容更改时，会计期待看到的正是这种做法。"
           }
         }
       }
@@ -19734,6 +20815,53 @@
         }
       }
     },
+    "Duplicate the selected transaction": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die ausgewählte Buchung duplizieren"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Duplicar la transacción seleccionada"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dupliquer l’opération sélectionnée"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Duplicare la transazione selezionata"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選択した取引を複製する"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Duplicar a transação selecionada"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "复制选中的交易"
+          }
+        }
+      }
+    },
     "Each edit is recorded beside the book in %@.": {
       "extractionState": "manual",
       "localizations": {
@@ -20580,53 +21708,6 @@
         }
       }
     },
-    "Edit the selected transaction in the inspector": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Die ausgewählte Buchung im Informationsbereich bearbeiten"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Editar la transacción seleccionada en el inspector"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Modifier l’opération sélectionnée dans l’inspecteur"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Modifica la transazione selezionata nell’ispettore"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "選択中の取引をインスペクタで編集"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Editar a transação selecionada no inspetor"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在检查器中编辑所选交易"
-          }
-        }
-      }
-    },
     "Edit this transaction (⌘E)": {
       "localizations": {
         "de": {
@@ -21236,6 +22317,53 @@
         }
       }
     },
+    "End of the financial year": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geschäftsjahresende"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fin del ejercicio"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fin de l’exercice"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fine dell’esercizio"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "会計年度末"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fim do exercício"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "财年结束"
+          }
+        }
+      }
+    },
     "End of year": {
       "extractionState": "manual",
       "localizations": {
@@ -21373,6 +22501,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "录入 %lld 笔到期交易%@"
+          }
+        }
+      }
+    },
+    "Enter both amounts: what was taken out, and what was received.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geben Sie beide Beträge ein: was abgebucht und was empfangen wurde."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Introduzca ambos importes: lo que se retiró y lo que se recibió."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saisissez les deux montants : ce qui a été prélevé et ce qui a été reçu."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inserite entrambi gli importi: quanto è stato prelevato e quanto ricevuto."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "両方の金額を入力します。引き落とされた額と、受け取った額です。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Informe os dois valores: o que foi retirado e o que foi recebido."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "输入两个金额：扣出的金额与收到的金额。"
           }
         }
       }
@@ -22407,6 +23582,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "日常收支"
+          }
+        }
+      }
+    },
+    "Everything *not* tagged holiday": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alles *ohne* den Tag „holiday“"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todo lo *no* etiquetado como holiday"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tout ce qui ne porte *pas* le tag holiday"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tutto ciò che *non* ha il tag holiday"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "holiday タグが付いて*いない*ものすべて"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tudo *sem* a etiqueta holiday"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "所有*不*带 holiday 标签的内容"
+          }
+        }
+      }
+    },
+    "Everything tagged holiday": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alles mit dem Tag „holiday“"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todo lo etiquetado como holiday"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tout ce qui porte le tag holiday"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tutto ciò che ha il tag holiday"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "holiday タグの付いたものすべて"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tudo com a etiqueta holiday"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "所有带 holiday 标签的内容"
           }
         }
       }
@@ -23868,6 +25137,100 @@
         }
       }
     },
+    "File ▸ Export CSV writes plain spreadsheet files — your accounts, your transactions, or your price history — for anything that reads a table.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ablage ▸ CSV exportieren schreibt schlichte Tabellendateien — Ihre Konten, Ihre Buchungen oder Ihre Kurshistorie — für alles, was eine Tabelle liest."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archivo ▸ Exportar CSV escribe archivos de hoja de cálculo sencillos —sus cuentas, sus transacciones o su histórico de cotizaciones— para cualquier cosa que lea una tabla."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fichier ▸ Exporter en CSV écrit de simples fichiers tableur — vos comptes, vos opérations ou votre historique de cours — pour tout ce qui lit un tableau."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archivio ▸ Esporta CSV scrive semplici file di foglio elettronico — i vostri conti, le transazioni o lo storico delle quotazioni — per qualsiasi cosa legga una tabella."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイル ▸ CSV を書き出す は、単純な表形式のファイルを書き出します。勘定科目、取引、価格履歴のいずれかを、表を読めるあらゆるソフト向けに出力できます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arquivo ▸ Exportar CSV grava arquivos de planilha simples — suas contas, suas transações ou seu histórico de cotações — para qualquer coisa que leia uma tabela."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“文件 ▸ 导出 CSV”会写出普通的表格文件——你的科目、交易或价格历史——供任何能读取表格的程序使用。"
+          }
+        }
+      }
+    },
+    "File ▸ Export Ledger Journal… (⇧⌘E) writes a plain-text Ledger journal, and File ▸ Import Ledger Journal… reads one back.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ablage ▸ Ledger-Journal exportieren… (⇧⌘E) schreibt ein Ledger-Journal als reinen Text, und Ablage ▸ Ledger-Journal importieren… liest eines wieder ein."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archivo ▸ Exportar diario Ledger… (⇧⌘E) escribe un diario Ledger en texto plano, y Archivo ▸ Importar diario Ledger… vuelve a leerlo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fichier ▸ Exporter le journal Ledger… (⇧⌘E) écrit un journal Ledger en texte brut, et Fichier ▸ Importer le journal Ledger… le relit."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archivio ▸ Esporta giornale Ledger… (⇧⌘E) scrive un giornale Ledger in testo semplice, e Archivio ▸ Importa giornale Ledger… lo rilegge."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイル ▸ Ledger ジャーナルを書き出す… (⇧⌘E) はプレーンテキストの Ledger ジャーナルを書き出し、ファイル ▸ Ledger ジャーナルを読み込む… はそれを読み戻します。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arquivo ▸ Exportar diário Ledger… (⇧⌘E) grava um diário Ledger em texto puro, e Arquivo ▸ Importar diário Ledger… o lê de volta."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“文件 ▸ 导出 Ledger 日记账…”(⇧⌘E) 会写出纯文本的 Ledger 日记账，“文件 ▸ 导入 Ledger 日记账…”则可将其读回。"
+          }
+        }
+      }
+    },
     "File ▸ Export ▸ Ledger Journal… (⇧⌘E) writes a plain-text Ledger journal, and File ▸ Import ▸ Ledger Journal… reads one back.": {
       "extractionState": "manual",
       "localizations": {
@@ -25133,6 +26496,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "查找交易"
+          }
+        }
+      }
+    },
+    "Finding them again": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sie wiederfinden"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Volver a encontrarlas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les retrouver"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ritrovarli"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "あとから探す"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Encontrá-las de novo"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再次查找"
           }
         }
       }
@@ -27162,6 +28572,100 @@
         }
       }
     },
+    "Go to date": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zu Datum springen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ir a la fecha"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aller à la date"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vai alla data"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "日付へ移動"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ir para a data"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "跳转到日期"
+          }
+        }
+      }
+    },
+    "Go to the other account in this transaction": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zum anderen Konto dieser Buchung springen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ir a la otra cuenta de esta transacción"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aller à l’autre compte de cette opération"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Andare all’altro conto di questa transazione"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この取引のもう一方の勘定科目へ移動する"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ir para a outra conta desta transação"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "跳转到本交易的对方科目"
+          }
+        }
+      }
+    },
     "Goal": {
       "extractionState": "manual",
       "localizations": {
@@ -27722,6 +29226,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "将指针悬停在扇区上"
+          }
+        }
+      }
+    },
+    "How much each row shows is up to you: View ▸ Register Style switches between one line per transaction (Basic Ledger), detail on the selected row (Auto Details), and every row open (Transaction Journal). View ▸ Columns switches off the columns you do not use.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wie viel jede Zeile zeigt, bestimmen Sie: Darstellung ▸ Kontobuch-Stil wechselt zwischen einer Zeile je Buchung (Einfaches Hauptbuch), Details in der ausgewählten Zeile (Automatische Details) und jeder Zeile offen (Buchungsjournal). Darstellung ▸ Spalten blendet Spalten aus, die Sie nicht brauchen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cuánto muestra cada fila lo decide usted: Visualización ▸ Estilo de registro alterna entre una línea por transacción (Libro básico), detalle en la fila seleccionada (Detalles automáticos) y todas las filas abiertas (Diario de transacciones). Visualización ▸ Columnas desactiva las columnas que no use."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce que montre chaque ligne dépend de vous : Présentation ▸ Style de registre alterne entre une ligne par opération (Grand livre simple), le détail sur la ligne sélectionnée (Détails automatiques) et toutes les lignes déployées (Journal des opérations). Présentation ▸ Colonnes masque les colonnes inutiles."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quanto mostra ogni riga dipende da voi: Vista ▸ Stile registro alterna fra una riga per transazione (Libro mastro semplice), dettaglio sulla riga selezionata (Dettagli automatici) e tutte le righe aperte (Giornale delle transazioni). Vista ▸ Colonne disattiva le colonne che non usate."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "各行にどこまで表示するかは選べます。表示 ▸ 記録簿のスタイル で、1 取引 1 行（基本元帳）、選択行のみ詳細（自動詳細）、全行を展開（取引仕訳帳）を切り替えられます。表示 ▸ 列 で使わない列を非表示にできます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quanto cada linha mostra é decisão sua: Visualizar ▸ Estilo do registro alterna entre uma linha por transação (Livro básico), detalhe na linha selecionada (Detalhes automáticos) e todas as linhas abertas (Diário de transações). Visualizar ▸ Colunas desliga as colunas que você não usa."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每行显示多少由你决定：“显示 ▸ 账簿样式”可在每笔交易一行（基本账簿）、仅选中行显示明细（自动明细）与全部展开（交易日记账）之间切换。“显示 ▸ 列”可关闭你不需要的列。"
           }
         }
       }
@@ -29793,6 +31344,53 @@
         }
       }
     },
+    "It is a board rather than a page: it never scrolls. Cards are laid out to fill the window you actually have, so what you see is what there is. Resize the window and the board re-packs itself.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Es ist eine Tafel, keine Seite: sie scrollt nie. Die Karten füllen genau das Fenster, das Sie haben — was Sie sehen, ist alles. Ändern Sie die Fenstergröße, ordnet sich die Tafel neu."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Es un tablero, no una página: nunca se desplaza. Las tarjetas se disponen para llenar la ventana que realmente tiene, así que lo que ve es todo lo que hay. Cambie el tamaño de la ventana y el tablero se recompone."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "C’est un tableau, pas une page : il ne défile jamais. Les cartes remplissent la fenêtre dont vous disposez réellement — ce que vous voyez est tout ce qu’il y a. Redimensionnez la fenêtre et le tableau se réagence."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "È una bacheca, non una pagina: non scorre mai. Le schede riempiono la finestra che avete davvero, quindi ciò che vedete è tutto. Ridimensionate la finestra e la bacheca si ricompone."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "これはページではなくボードで、スクロールしません。カードは実際のウィンドウに収まるよう配置されるため、見えているものがすべてです。ウィンドウの大きさを変えると配置し直されます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "É um quadro, não uma página: nunca rola. Os cartões são dispostos para preencher a janela que você realmente tem, então o que você vê é tudo o que há. Redimensione a janela e o quadro se reorganiza."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这是面板而非页面：它从不滚动。卡片会铺满你当前的窗口，所以看到的就是全部。调整窗口大小，面板会重新排布。"
+          }
+        }
+      }
+    },
     "Jobs": {
       "extractionState": "manual",
       "localizations": {
@@ -30306,6 +31904,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "标签"
+          }
+        }
+      }
+    },
+    "Label transactions across accounts, then find them again.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buchungen kontenübergreifend etikettieren und wiederfinden."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Etiquete transacciones de varias cuentas y vuelva a encontrarlas."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Étiqueter des opérations à travers les comptes, puis les retrouver."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Etichettate transazioni su più conti e ritrovatele."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "複数の勘定科目にまたがる取引にラベルを付け、あとから探せるようにします。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rotule transações em várias contas e depois encontre-as de novo."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "为跨科目的交易打标签，日后便于查找。"
           }
         }
       }
@@ -33741,49 +35386,49 @@
         }
       }
     },
-    "Multi-split or multi-currency — edit in the inspector (⌘E)": {
+    "Moving money between currencies": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mehrere Buchungsteile oder Währungen — im Informationsbereich bearbeiten (⌘E)"
+            "value": "Geld zwischen Währungen bewegen"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Varios desgloses o divisas: edítalo en el inspector (⌘E)"
+            "value": "Mover dinero entre monedas"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Répartitions multiples ou multidevise — modifier dans l’inspecteur (⌘E)"
+            "value": "Transférer de l’argent entre devises"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Suddivisioni multiple o multivaluta: modifica nell’ispettore (⌘E)"
+            "value": "Spostare denaro tra valute"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "複数スプリットまたは複数通貨 — インスペクタで編集 (⌘E)"
+            "value": "通貨をまたぐ資金移動"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Múltiplas divisões ou moedas — edite no inspetor (⌘E)"
+            "value": "Mover dinheiro entre moedas"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "多分录或多币种 — 请在检查器中编辑 (⌘E)"
+            "value": "在币种之间转账"
           }
         }
       }
@@ -38488,6 +40133,53 @@
         }
       }
     },
+    "Not every card suits every book. Turn the ones you do not want off, and the rest close the gap. A card with nothing to report — no bills due, no alerts — gives up its place rather than showing you an empty box.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht jede Karte passt zu jedem Buch. Schalten Sie ungewollte ab, der Rest rückt nach. Eine Karte ohne Inhalt — keine fälligen Rechnungen, keine Hinweise — gibt ihren Platz ab, statt ein leeres Feld zu zeigen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No toda tarjeta conviene a todo libro. Desactive las que no quiera y el resto cierra el hueco. Una tarjeta sin nada que informar —sin facturas vencidas, sin alertas— cede su sitio en vez de mostrarle un recuadro vacío."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toutes les cartes ne conviennent pas à tous les livres. Désactivez celles dont vous ne voulez pas : les autres comblent le vide. Une carte sans rien à signaler — aucune facture due, aucune alerte — cède sa place plutôt que d’afficher un cadre vide."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non tutte le schede servono a tutti i libri. Disattivate quelle che non volete e le altre colmano lo spazio. Una scheda senza nulla da segnalare — nessuna fattura in scadenza, nessun avviso — cede il posto invece di mostrare un riquadro vuoto."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてのカードがすべての帳簿に向くわけではありません。不要なものをオフにすると、残りが詰めて並びます。報告することがないカード（支払期限の請求もアラートもない場合）は、空の枠を見せる代わりに場所を譲ります。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nem todo cartão serve a todo livro. Desligue os que não quiser e os demais fecham o espaço. Um cartão sem nada a relatar — nenhuma conta a vencer, nenhum alerta — cede seu lugar em vez de mostrar uma caixa vazia."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "并非每张卡片都适合每个账簿。关掉不需要的，其余会自动补位。无内容可报的卡片（没有待付账单、没有提醒）会让出位置，而不是显示一个空框。"
+          }
+        }
+      }
+    },
     "Note": {
       "extractionState": "manual",
       "localizations": {
@@ -39380,6 +41072,53 @@
         }
       }
     },
+    "Oldest / newest transaction": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Älteste / neueste Buchung"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transacción más antigua / más reciente"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opération la plus ancienne / la plus récente"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transazione più vecchia / più recente"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最も古い／最も新しい取引"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transação mais antiga / mais recente"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最早 / 最新的交易"
+          }
+        }
+      }
+    },
     "On": {
       "extractionState": "manual",
       "localizations": {
@@ -40132,6 +41871,53 @@
         }
       }
     },
+    "Open the selected transaction out for editing": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die ausgewählte Buchung zum Bearbeiten aufklappen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desplegar la transacción seleccionada para editarla"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Déployer l’opération sélectionnée pour la modifier"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Espandere la transazione selezionata per modificarla"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選択した取引を展開して編集する"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expandir a transação selecionada para editar"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "展开选中的交易以进行编辑"
+          }
+        }
+      }
+    },
     "Open the transaction editor with the document beside it — enter a new transaction, or link the document to an existing one": {
       "extractionState": "manual",
       "localizations": {
@@ -40175,6 +41961,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "在文稿旁打开交易编辑器 — 录入新交易，或将该文稿关联到已有交易"
+          }
+        }
+      }
+    },
+    "Open the transaction out in the register — select it and press ⌘E, or click its disclosure arrow.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klappen Sie die Buchung im Kontobuch auf — auswählen und ⌘E drücken oder auf den Aufklapppfeil klicken."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Despliegue la transacción en el registro: selecciónela y pulse ⌘E, o haga clic en su flecha de despliegue."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Déployez l’opération dans le registre — sélectionnez-la et appuyez sur ⌘E, ou cliquez sur son triangle d’affichage."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Espandete la transazione nel registro: selezionatela e premete ⌘E, oppure fate clic sulla freccia di espansione."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "記録簿で取引を展開します。選択して ⌘E を押すか、開閉用の三角をクリックします。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expanda a transação no registro — selecione-a e pressione ⌘E, ou clique na seta de expansão."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在账簿中展开该交易——选中后按 ⌘E，或点击其展开箭头。"
           }
         }
       }
@@ -40316,6 +42149,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在打开 %@…"
+          }
+        }
+      }
+    },
+    "Opening a book lands you on the dashboard — net worth and its twelve-month trend, anything the alerts have flagged, your account balances, bills coming up, and how the budget is tracking.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beim Öffnen eines Buchs landen Sie in der Übersicht — Reinvermögen und sein Zwölfmonatsverlauf, alles von den Hinweisen Markierte, Ihre Kontensalden, anstehende Rechnungen und der Stand des Budgets."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Al abrir un libro aparece el panel: patrimonio neto y su tendencia de doce meses, lo que hayan señalado las alertas, los saldos de sus cuentas, las facturas próximas y cómo va el presupuesto."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "À l’ouverture d’un livre, le tableau de bord s’affiche : valeur nette et sa tendance sur douze mois, tout ce que les alertes ont signalé, les soldes de vos comptes, les factures à venir et le suivi du budget."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aprendo un libro si arriva alla dashboard: patrimonio netto e andamento a dodici mesi, tutto ciò che gli avvisi hanno segnalato, i saldi dei conti, le fatture in arrivo e l’andamento del budget."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "帳簿を開くとダッシュボードが表示されます。純資産と12か月の推移、アラートが示した事項、各勘定科目の残高、近く支払う請求、予算の進捗が並びます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ao abrir um livro você chega ao painel: patrimônio líquido e sua tendência de doze meses, o que os alertas sinalizaram, os saldos das contas, as contas a vencer e como está o orçamento."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开账簿后首先进入仪表板：净资产及其十二个月走势、提醒标记的事项、各科目余额、即将到期的账单，以及预算执行情况。"
           }
         }
       }
@@ -40644,6 +42524,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "展望"
+          }
+        }
+      }
+    },
+    "Outside the app": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Außerhalb der App"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fuera de la app"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En dehors de l’app"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fuori dall’app"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アプリの外で"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fora do app"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "应用之外"
           }
         }
       }
@@ -41921,6 +43848,53 @@
         }
       }
     },
+    "Pick the account the money left and the account it arrived in.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wählen Sie das Konto, von dem das Geld abging, und das, auf dem es ankam."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elija la cuenta de la que salió el dinero y aquella en la que llegó."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisissez le compte d’où l’argent est parti et celui où il est arrivé."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scegliete il conto da cui il denaro è uscito e quello in cui è arrivato."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "お金が出ていった勘定科目と、届いた勘定科目を選びます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escolha a conta de onde o dinheiro saiu e aquela em que chegou."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择资金转出的科目与到账的科目。"
+          }
+        }
+      }
+    },
     "Plan": {
       "extractionState": "manual",
       "localizations": {
@@ -42391,6 +44365,53 @@
         }
       }
     },
+    "Post it. The whole closing is a single entry you can undo.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buchen Sie. Der gesamte Abschluss ist eine einzige Buchung, die sich rückgängig machen lässt."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Regístrelo. Todo el cierre es un único asiento que puede deshacer."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Validez. Toute la clôture est une écriture unique, annulable."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registratela. L’intera chiusura è una sola scrittura, annullabile."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "記帳します。締め全体が 1 つの仕訳なので、取り消せます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lance. Todo o encerramento é um único lançamento que você pode desfazer."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "过账。整个结账是一笔可撤销的分录。"
+          }
+        }
+      }
+    },
     "Post unmatched rows to the imbalance account": {
       "extractionState": "manual",
       "localizations": {
@@ -42763,6 +44784,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "演示幻灯片"
+          }
+        }
+      }
+    },
+    "Press Space on a book in the Finder to see inside it without opening it — FinvestLens documents, and GnuCash files too, in all three shapes GnuCash writes them.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drücken Sie im Finder die Leertaste auf einem Buch, um hineinzusehen, ohne es zu öffnen — FinvestLens-Dokumente und auch GnuCash-Dateien, in allen drei Formen, die GnuCash schreibt."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pulse Espacio sobre un libro en el Finder para ver su interior sin abrirlo: documentos de FinvestLens y también archivos de GnuCash, en las tres formas en que GnuCash los escribe."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Appuyez sur Espace sur un livre dans le Finder pour en voir le contenu sans l’ouvrir — documents FinvestLens, et fichiers GnuCash aussi, dans les trois formes que GnuCash écrit."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Premete Spazio su un libro nel Finder per vederne il contenuto senza aprirlo: documenti FinvestLens e anche file GnuCash, in tutte e tre le forme in cui GnuCash li scrive."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finder で帳簿を選んでスペースキーを押すと、開かずに中身を確認できます。FinvestLens の書類だけでなく、GnuCash が書き出す 3 種類すべての GnuCash ファイルにも対応します。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pressione Espaço sobre um livro no Finder para ver seu conteúdo sem abri-lo — documentos do FinvestLens e também arquivos do GnuCash, nas três formas em que o GnuCash os grava."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在访达中选中账簿并按空格键，即可不打开而查看其内容——既支持 FinvestLens 文稿，也支持 GnuCash 文件的全部三种写入形式。"
+          }
+        }
+      }
+    },
+    "Press ⌘⏎, or click away, to commit the row.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drücken Sie ⌘⏎ oder klicken Sie weg, um die Zeile zu übernehmen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pulse ⌘⏎, o haga clic fuera, para confirmar la fila."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Appuyez sur ⌘⏎, ou cliquez ailleurs, pour valider la ligne."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Premete ⌘⏎, o fate clic altrove, per confermare la riga."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌘⏎ を押すか、ほかの場所をクリックして行を確定します。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pressione ⌘⏎, ou clique fora, para confirmar a linha."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按 ⌘⏎ 或点击别处，以提交该行。"
           }
         }
       }
@@ -44975,6 +47090,53 @@
         }
       }
     },
+    "Read the preview: it names how many accounts will be closed, and the totals per currency.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lesen Sie die Vorschau: Sie nennt, wie viele Konten abgeschlossen werden, und die Summen je Währung."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lea la vista previa: indica cuántas cuentas se cerrarán y los totales por moneda."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lisez l’aperçu : il indique combien de comptes seront clôturés et les totaux par devise."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leggete l’anteprima: indica quanti conti verranno chiusi e i totali per valuta."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プレビューを確認します。締める勘定科目の数と、通貨ごとの合計が示されます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leia a prévia: ela informa quantas contas serão encerradas e os totais por moeda."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "阅读预览：它会说明将结清多少个科目，以及各币种的合计。"
+          }
+        }
+      }
+    },
     "Reading %lld of %lld…": {
       "extractionState": "manual",
       "localizations": {
@@ -45441,6 +47603,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "收据与文稿"
+          }
+        }
+      }
+    },
+    "Receipts from a trip match too. A card charged overseas posts in your own currency, so nothing on the receipt looks like the amount in your book — but the card issuer writes the original into the transaction, and that figure is matched exactly. No exchange rate, nothing to set up.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auch Belege von einer Reise werden zugeordnet. Eine im Ausland belastete Karte bucht in Ihrer eigenen Währung, sodass nichts auf dem Beleg dem Betrag im Buch gleicht — doch der Kartenherausgeber schreibt den Originalbetrag in die Buchung, und genau dieser wird exakt abgeglichen. Kein Wechselkurs, nichts einzurichten."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los recibos de un viaje también se emparejan. Una tarjeta usada en el extranjero se carga en su propia moneda, así que nada del recibo se parece al importe del libro; pero el emisor escribe el importe original dentro de la transacción, y es esa cifra la que se empareja exactamente. Sin tipo de cambio y sin nada que configurar."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les reçus d’un voyage sont eux aussi appariés. Une carte débitée à l’étranger s’impute dans votre propre devise : rien sur le reçu ne ressemble au montant du livre — mais l’émetteur inscrit le montant d’origine dans l’opération, et c’est ce chiffre qui est apparié exactement. Aucun taux de change, rien à configurer."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anche le ricevute di un viaggio vengono abbinate. Una carta usata all’estero registra nella vostra valuta, quindi nulla sulla ricevuta somiglia all’importo nel libro — ma l’emittente scrive l’importo originale nella transazione, ed è quella cifra a essere abbinata esattamente. Nessun tasso di cambio, nulla da configurare."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "旅行先の領収書も照合されます。海外で使ったカードは自国通貨で記帳されるため、領収書の数字は帳簿の金額と一致しません。しかしカード会社は元の金額を取引の摘要に書き込んでおり、その数字が正確に照合されます。為替レートも設定も不要です。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recibos de uma viagem também são pareados. Um cartão usado no exterior lança na sua própria moeda, então nada no recibo se parece com o valor no livro — mas o emissor escreve o valor original dentro da transação, e é esse número que é pareado exatamente. Sem taxa de câmbio e sem nada a configurar."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "旅途中的收据同样能匹配。境外刷卡会以你本国货币入账，因此收据上的数字与账簿金额对不上——但发卡机构会把原始金额写进交易摘要，系统正是拿这个数字做精确匹配。无需汇率，也无需任何设置。"
           }
         }
       }
@@ -46616,6 +48825,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "记录付款"
+          }
+        }
+      }
+    },
+    "Record a transfer where the two sides are in different currencies.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine Umbuchung erfassen, deren beide Seiten in verschiedenen Währungen stehen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registre una transferencia cuyos dos lados están en monedas distintas."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enregistrer un virement dont les deux côtés sont dans des devises différentes."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registrate un trasferimento i cui due lati sono in valute diverse."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "両側の通貨が異なる資金移動を記録します。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registre uma transferência cujos dois lados estão em moedas diferentes."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "记录两端币种不同的转账。"
           }
         }
       }
@@ -50425,6 +52681,53 @@
         }
       }
     },
+    "Rules can apply them for you: a rule action **Set tags** puts the same labels on every transaction it matches, as it is imported. See Categorising and rules.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Regeln können sie für Sie setzen: Die Regelaktion **Tags setzen** vergibt dieselben Etiketten an jede passende Buchung schon beim Import. Siehe Kategorisieren und Regeln."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Las reglas pueden ponerlas por usted: la acción de regla **Establecer etiquetas** aplica los mismos rótulos a cada transacción que coincida, en el momento de importarla. Véase Categorizar y reglas."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les règles peuvent les poser pour vous : l’action **Définir les tags** applique les mêmes étiquettes à chaque opération correspondante, dès l’import. Voir Catégoriser et règles."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le regole possono applicarli al posto vostro: l’azione **Imposta tag** assegna le stesse etichette a ogni transazione corrispondente già in fase di importazione. Vedi Categorizzare e regole."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ルールで自動的に付けられます。ルールのアクション**タグを設定**は、条件に合うすべての取引に、取り込み時点で同じラベルを付けます。「分類とルール」を参照してください。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "As regras podem aplicá-las por você: a ação de regra **Definir etiquetas** coloca os mesmos rótulos em cada transação correspondente, já na importação. Veja Categorizar e regras."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "规则可以代劳：规则动作**设置标签**会在导入时，为每一笔匹配的交易加上相同的标签。参见“分类与规则”。"
+          }
+        }
+      }
+    },
     "Rules…": {
       "extractionState": "manual",
       "localizations": {
@@ -53950,6 +56253,53 @@
         }
       }
     },
+    "Set the closing date and pick the equity account to close into — Retained Earnings, typically.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Legen Sie das Abschlussdatum fest und wählen Sie das Eigenkapitalkonto, in das abgeschlossen wird — meist Gewinnvortrag."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fije la fecha de cierre y elija la cuenta de patrimonio a la que cerrar: normalmente Ganancias retenidas."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fixez la date de clôture et choisissez le compte de capitaux propres de destination — le report à nouveau, en général."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impostate la data di chiusura e scegliete il conto di patrimonio netto su cui chiudere — di solito Utili portati a nuovo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "締め日を設定し、振替先の純資産勘定を選びます。通常は繰越利益です。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Defina a data de encerramento e escolha a conta de patrimônio para onde encerrar — normalmente Lucros acumulados."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "设定结账日期，并选择结转到的权益科目——通常是留存收益。"
+          }
+        }
+      }
+    },
     "Settings": {
       "extractionState": "manual",
       "localizations": {
@@ -57287,6 +59637,53 @@
         }
       }
     },
+    "Tags are stored in the transaction itself and survive a GnuCash round-trip, so exporting and re-importing keeps them. Duplicating a transaction (⌘D) copies its tags too.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tags stehen in der Buchung selbst und überstehen einen GnuCash-Umlauf; Export und erneuter Import erhalten sie. Auch das Duplizieren einer Buchung (⌘D) übernimmt ihre Tags."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Las etiquetas se guardan en la propia transacción y sobreviven a un viaje de ida y vuelta por GnuCash, así que exportar y reimportar las conserva. Duplicar una transacción (⌘D) copia también sus etiquetas."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les tags sont stockés dans l’opération elle-même et survivent à un aller-retour GnuCash : exporter puis réimporter les conserve. Dupliquer une opération (⌘D) copie aussi ses tags."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I tag sono memorizzati nella transazione stessa e sopravvivono a un ciclo di andata e ritorno con GnuCash: esportare e reimportare li conserva. Anche duplicare una transazione (⌘D) ne copia i tag."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タグは取引そのものに保存され、GnuCash との往復でも失われません。書き出して再度読み込んでも保持されます。取引の複製 (⌘D) でもタグは引き継がれます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "As etiquetas ficam guardadas na própria transação e sobrevivem a uma ida e volta pelo GnuCash, então exportar e reimportar as preserva. Duplicar uma transação (⌘D) também copia suas etiquetas."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "标签保存在交易本身，能经受 GnuCash 的往返转换，因此导出后再导入仍会保留。复制交易 (⌘D) 时标签也会一并复制。"
+          }
+        }
+      }
+    },
     "Target amount": {
       "extractionState": "manual",
       "localizations": {
@@ -58368,6 +60765,53 @@
         }
       }
     },
+    "The **Financial Year Pack** (in Reports) gathers the statements tax time asks for into one document. **Book ▸ Financial Summary (Passport)…** is the different, shorter thing: a single page — net worth, savings rate, the twelve-month trend — for when someone needs a picture of your position rather than your accounts. It says on its face that it is a snapshot prepared from your own records, not a verified statement.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das **Jahrespaket** (unter Berichte) fasst die zur Steuerzeit verlangten Abschlüsse in einem Dokument zusammen. **Buch ▸ Finanzübersicht (Pass)…** ist etwas anderes und Kürzeres: eine einzelne Seite — Reinvermögen, Sparquote, Zwölfmonatsverlauf — für den Fall, dass jemand ein Bild Ihrer Lage braucht statt Ihrer Konten. Sie weist selbst darauf hin, dass sie eine aus eigenen Aufzeichnungen erstellte Momentaufnahme ist, kein geprüfter Abschluss."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El **Paquete de fin de ejercicio** (en Informes) reúne en un solo documento los estados que pide la temporada fiscal. **Libro ▸ Resumen financiero (Pasaporte)…** es otra cosa, más breve: una única página —patrimonio neto, tasa de ahorro, tendencia de doce meses— para cuando alguien necesita una imagen de su situación y no sus cuentas. Declara en su propia cara que es una instantánea preparada a partir de sus registros, no un estado verificado."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le **Dossier de fin d’exercice** (dans Rapports) réunit en un seul document les états réclamés au moment des impôts. **Livre ▸ Synthèse financière (Passeport)…** est autre chose, plus court : une page unique — valeur nette, taux d’épargne, tendance sur douze mois — quand quelqu’un a besoin d’une image de votre situation plutôt que de vos comptes. Elle indique d’elle-même qu’il s’agit d’un instantané établi à partir de vos propres registres, non d’un état vérifié."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il **Pacchetto di fine esercizio** (in Resoconti) raccoglie in un unico documento i bilanci richiesti al momento delle imposte. **Libro ▸ Sintesi finanziaria (Passaporto)…** è un’altra cosa, più breve: una sola pagina — patrimonio netto, tasso di risparmio, andamento a dodici mesi — per quando serve un quadro della vostra posizione anziché i conti. Dichiara essa stessa di essere un’istantanea tratta dalle vostre registrazioni, non un bilancio certificato."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**年度パック**（レポート内）は、確定申告で求められる財務諸表を 1 つの文書にまとめます。**帳簿 ▸ 財務サマリー（パスポート）…** はそれとは別の、より短いものです。純資産・貯蓄率・12 か月の推移を 1 ページにまとめたもので、勘定科目ではなく状況の全体像が必要なときに使います。自らの記録から作成したスナップショットであり、検証済みの財務諸表ではない旨が本文に明記されます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O **Pacote de fim de exercício** (em Relatórios) reúne num só documento as demonstrações que a época fiscal exige. **Livro ▸ Resumo financeiro (Passaporte)…** é outra coisa, mais curta: uma única página — patrimônio líquido, taxa de poupança, tendência de doze meses — para quando alguém precisa de um retrato da sua situação e não das suas contas. Ela própria declara ser um instantâneo preparado a partir dos seus registros, não uma demonstração verificada."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**年度资料包**（在报表中）把报税时需要的各类报表汇总为一份文件。**账簿 ▸ 财务摘要（护照）…** 则是另一种更简短的东西：单页呈现净资产、储蓄率与十二个月走势，适合别人需要了解你的整体状况而非具体科目时使用。文件正面即注明：这是依据你自己的记录生成的快照，而非经审核的报表。"
+          }
+        }
+      }
+    },
     "The **Financial Year Pack** gathers the statements you need at tax time into one PDF, in reading order.": {
       "extractionState": "manual",
       "localizations": {
@@ -58458,6 +60902,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "贷款计算器会生成还款计划表，并可为你创建预定付款，拆分为利息与本金。"
+          }
+        }
+      }
+    },
+    "The board you land on: what matters today, at a glance.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Tafel, auf der Sie landen: was heute zählt, auf einen Blick."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El tablero donde aterriza: lo que importa hoy, de un vistazo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le tableau d’accueil : l’essentiel du jour, en un coup d’œil."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La bacheca su cui atterri: ciò che conta oggi, a colpo d’occhio."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開いたときに表示されるボード。今日の要点がひと目でわかります。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O quadro em que você chega: o que importa hoje, num relance."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开后首先看到的面板：今天要紧的事，一目了然。"
           }
         }
       }
@@ -58599,6 +61090,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "会计科目表，以及边栏的组织方式。"
+          }
+        }
+      }
+    },
+    "The dashboard": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Übersicht"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El panel"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le tableau de bord"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La dashboard"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダッシュボード"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O painel"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仪表板"
           }
         }
       }
@@ -58838,6 +61376,53 @@
         }
       }
     },
+    "The menu item is unavailable until the book holds at least two currencies — add a foreign-currency account first.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Menübefehl bleibt inaktiv, solange das Buch nicht mindestens zwei Währungen enthält — legen Sie zuerst ein Fremdwährungskonto an."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La opción de menú no está disponible hasta que el libro tenga al menos dos monedas: cree antes una cuenta en moneda extranjera."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L’élément de menu reste indisponible tant que le livre ne contient pas au moins deux devises — créez d’abord un compte en devise étrangère."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La voce di menu resta non disponibile finché il libro non contiene almeno due valute: create prima un conto in valuta estera."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "帳簿に通貨が 2 つ以上そろうまで、このメニュー項目は選べません。先に外貨建ての勘定科目を作成してください。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O item de menu fica indisponível até o livro ter pelo menos duas moedas — crie antes uma conta em moeda estrangeira."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在账簿至少包含两种货币之前，该菜单项不可用——请先创建一个外币科目。"
+          }
+        }
+      }
+    },
     "The most recent reconciliation was %@. Re-opening reverts those splits to cleared so you can reconcile the statement again (FR-REC-03).": {
       "extractionState": "manual",
       "localizations": {
@@ -58881,6 +61466,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "最近一次对账是 %@。重新打开会将这些分录恢复为「已结清」，以便你重新核对该对账单。"
+          }
+        }
+      }
+    },
+    "The papers": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Unterlagen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los documentos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les documents"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I documenti"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "書類"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Os documentos"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "相关文件"
           }
         }
       }
@@ -59026,49 +61658,49 @@
         }
       }
     },
-    "The register, splits, and the transaction inspector.": {
+    "The register, splits, and editing a row in place.": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Das Kontobuch, Buchungsteile und der Informationsbereich."
+            "value": "Das Kontobuch, Buchungsteile und das Bearbeiten einer Zeile an Ort und Stelle."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "El libro, los desgloses y el inspector de transacciones."
+            "value": "El registro, los desgloses y la edición de una fila en su sitio."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Le registre, les répartitions et l’inspecteur d’opération."
+            "value": "Le registre, les répartitions et la modification d’une ligne sur place."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Il libro mastro, le suddivisioni e l’ispettore delle transazioni."
+            "value": "Il registro, le suddivisioni e la modifica di una riga sul posto."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "記入帳、スプリット、取引インスペクタ。"
+            "value": "記録簿、分割、そして行をその場で編集すること。"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "O razão, as divisões e o inspetor de transações."
+            "value": "O registro, as divisões e a edição de uma linha no próprio lugar."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "流水账、分录与交易检查器。"
+            "value": "账簿、分录，以及就地编辑某一行。"
           }
         }
       }
@@ -59261,6 +61893,53 @@
         }
       }
     },
+    "The sheet shows the rate your two amounts imply — `1 AUD = 0.92 NZD` — so you can see at a glance whether you have typed them the right way round. That rate is saved as a price, so reports can value either currency afterwards.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Fenster zeigt den Kurs, den Ihre beiden Beträge ergeben — `1 AUD = 0,92 NZD` — sodass Sie auf einen Blick sehen, ob Sie sie richtig herum eingegeben haben. Dieser Kurs wird als Preis gespeichert, damit Berichte danach beide Währungen bewerten können."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La hoja muestra el tipo que implican sus dos importes —`1 AUD = 0,92 NZD`— para que vea de un vistazo si los ha escrito en el orden correcto. Ese tipo se guarda como cotización, de modo que los informes puedan valorar después cualquiera de las dos monedas."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La fenêtre affiche le taux qu’impliquent vos deux montants — `1 AUD = 0,92 NZD` — pour voir d’un coup d’œil si vous les avez saisis dans le bon sens. Ce taux est enregistré comme cours, afin que les rapports puissent ensuite valoriser l’une ou l’autre devise."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il pannello mostra il tasso implicito nei due importi — `1 AUD = 0,92 NZD` — così vedete a colpo d’occhio se li avete inseriti nel verso giusto. Quel tasso viene salvato come quotazione, così i resoconti potranno poi valorizzare entrambe le valute."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シートには 2 つの金額から導かれるレート（`1 AUD = 0.92 NZD`）が表示されるので、入力の向きが正しいかひと目で確認できます。このレートは価格として保存され、以後どちらの通貨でも評価できます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A janela mostra a taxa que seus dois valores implicam — `1 AUD = 0,92 NZD` — para você ver num relance se os digitou na ordem certa. Essa taxa é salva como cotação, de modo que os relatórios possam depois valorar qualquer das duas moedas."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "面板会显示这两个金额所隐含的汇率（`1 AUD = 0.92 NZD`），便于你一眼看出输入方向是否正确。该汇率会作为价格保存，之后报表即可对任一币种进行估值。"
+          }
+        }
+      }
+    },
     "The splits don’t balance — off by %@.": {
       "localizations": {
         "de": {
@@ -59444,6 +62123,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "然后"
+          }
+        }
+      }
+    },
+    "There is also a Control Centre button that opens FinvestLens.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Außerdem gibt es eine Kontrollzentrum-Taste, die FinvestLens öffnet."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "También hay un botón en el Centro de control que abre FinvestLens."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il existe aussi un bouton du Centre de contrôle qui ouvre FinvestLens."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "C’è anche un pulsante di Centro di Controllo che apre FinvestLens."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コントロールセンターから FinvestLens を開くボタンもあります。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Há também um botão na Central de Controle que abre o FinvestLens."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "控制中心里还有一个可打开 FinvestLens 的按钮。"
           }
         }
       }
@@ -60999,6 +63725,53 @@
         }
       }
     },
+    "Trading accounts": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Handelskonten"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cuentas de intercambio"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comptes de change"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conti di negoziazione"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取引勘定"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contas de negociação"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "交易科目"
+          }
+        }
+      }
+    },
     "Transaction": {
       "extractionState": "manual",
       "localizations": {
@@ -61281,53 +64054,6 @@
         }
       }
     },
-    "Transactions in a foreign currency, or with more than two splits, are edited in the inspector rather than inline — the register row shows a reminder when that applies.": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Buchungen in Fremdwährung oder mit mehr als zwei Buchungsteilen werden im Informationsbereich statt direkt in der Zeile bearbeitet — die Kontobuchzeile weist darauf hin."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Las transacciones en divisa extranjera, o con más de dos desgloses, se editan en el inspector en lugar de en línea: la fila del libro te lo recuerda cuando aplica."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Les opérations en devise étrangère, ou comportant plus de deux répartitions, se modifient dans l’inspecteur plutôt qu’en ligne — la ligne du registre le rappelle le cas échéant."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Le transazioni in valuta estera, o con più di due suddivisioni, si modificano nell’ispettore invece che in linea: la riga del libro mastro lo ricorda quando serve."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "外貨建ての取引や、スプリットが 3 つ以上ある取引は、行内ではなくインスペクタで編集します。該当する場合は記入帳の行にその旨が表示されます。"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Transações em moeda estrangeira, ou com mais de duas divisões, são editadas no inspetor em vez de na linha — a linha do razão avisa quando é o caso."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "外币交易，或分录超过两条的交易，需在检查器中编辑而非行内编辑 — 遇到这种情况时流水账行会给出提示。"
-          }
-        }
-      }
-    },
     "Transfer": {
       "extractionState": "manual",
       "localizations": {
@@ -61469,6 +64195,53 @@
         }
       }
     },
+    "Turn on **Use trading accounts** in the sheet and the transfer also posts to a pair of trading accounts, so the books balance in *each* currency rather than only by value. This is GnuCash's approach, and it is what captures unrealised gains when a rate moves. Leave it off and the transfer is a plain two-sided entry. The choice is remembered in the book.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schalten Sie im Fenster **Handelskonten verwenden** ein, bucht die Umbuchung zusätzlich auf ein Paar Handelskonten, sodass das Buch in *jeder* Währung ausgeglichen ist und nicht nur wertmäßig. So macht es GnuCash, und so werden unrealisierte Kursgewinne erfasst. Bleibt es aus, ist die Umbuchung eine schlichte zweiseitige Buchung. Die Wahl wird im Buch gemerkt."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Active **Usar cuentas de intercambio** en la hoja y la transferencia se asienta además en un par de cuentas de intercambio, de modo que los libros cuadren en *cada* moneda y no solo por valor. Es el enfoque de GnuCash y es lo que capta las plusvalías no realizadas cuando se mueve el tipo. Si lo deja desactivado, la transferencia es un asiento simple de dos lados. La elección se recuerda en el libro."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Activez **Utiliser des comptes de change** dans la fenêtre et le virement s’impute aussi sur une paire de comptes de change, afin que les livres s’équilibrent dans *chaque* devise et non seulement en valeur. C’est l’approche de GnuCash, et c’est ce qui capte les gains latents quand le taux bouge. Laissez-le désactivé et le virement est une simple écriture à deux côtés. Le choix est mémorisé dans le livre."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Attivate **Usa conti di negoziazione** nel pannello e il trasferimento viene registrato anche su una coppia di conti di negoziazione, così i libri quadrano in *ogni* valuta e non solo per valore. È l’approccio di GnuCash ed è ciò che cattura gli utili non realizzati quando il tasso si muove. Lasciandolo disattivato, il trasferimento è una semplice scrittura a due lati. La scelta viene ricordata nel libro."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シートで**取引勘定を使う**を有効にすると、振替は取引勘定の組にも記帳され、帳簿は金額だけでなく*通貨ごと*に貸借が一致します。これは GnuCash の方式で、レート変動による未実現損益を捉えます。無効のままなら、振替は単純な 2 面の仕訳になります。この選択は帳簿に記憶されます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ative **Usar contas de negociação** na janela e a transferência também é lançada num par de contas de negociação, de modo que os livros fechem em *cada* moeda e não apenas por valor. É a abordagem do GnuCash e é o que capta os ganhos não realizados quando a taxa se move. Deixe desativado e a transferência é um lançamento simples de dois lados. A escolha fica lembrada no livro."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在面板中启用**使用交易科目**后，该转账还会记入一对交易科目，使账簿在*每一种币种*上都平衡，而不仅仅是金额平衡。这是 GnuCash 的做法，也是汇率变动时捕捉未实现损益的方式。不启用时，转账就是一笔普通的两方分录。该选择会记录在账簿中。"
+          }
+        }
+      }
+    },
     "Turn statements, invoices and dividend notices into transactions.": {
       "extractionState": "manual",
       "localizations": {
@@ -61516,6 +64289,53 @@
         }
       }
     },
+    "Two widgets read the last book you had open: **Net Worth**, and **Alerts** for anything wanting attention. They show a snapshot saved when you last saved the book — they never open it themselves, so nothing is locked and nothing changes behind your back.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zwei Widgets lesen das zuletzt geöffnete Buch: **Reinvermögen** und **Hinweise** für alles, was Aufmerksamkeit braucht. Sie zeigen eine Momentaufnahme vom letzten Speichern — sie öffnen das Buch nie selbst, es wird also nichts gesperrt und nichts hinter Ihrem Rücken verändert."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dos widgets leen el último libro que tuvo abierto: **Patrimonio neto** y **Alertas**, para lo que requiera atención. Muestran una instantánea guardada al guardar el libro por última vez; nunca lo abren ellos mismos, así que nada queda bloqueado ni cambia a sus espaldas."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deux widgets lisent le dernier livre ouvert : **Valeur nette** et **Alertes** pour ce qui demande attention. Ils affichent un instantané enregistré lors de votre dernière sauvegarde — ils n’ouvrent jamais le livre eux-mêmes : rien n’est verrouillé, rien ne change à votre insu."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Due widget leggono l’ultimo libro aperto: **Patrimonio netto** e **Avvisi** per ciò che richiede attenzione. Mostrano un’istantanea salvata all’ultimo salvataggio del libro: non lo aprono mai da soli, quindi nulla viene bloccato e nulla cambia alle vostre spalle."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2 つのウィジェットが、最後に開いた帳簿を読み取ります。**純資産**と、注意が必要な事項を示す**アラート**です。表示されるのは帳簿を最後に保存した時点のスナップショットで、ウィジェット自身が帳簿を開くことはありません。ロックもされず、知らないうちに変更されることもありません。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dois widgets leem o último livro que você teve aberto: **Patrimônio líquido** e **Alertas** para o que pedir atenção. Eles mostram um instantâneo salvo quando você gravou o livro pela última vez — nunca o abrem por conta própria, então nada fica bloqueado e nada muda pelas suas costas."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "两个小组件读取你最近打开过的账簿：**净资产**，以及提示需要注意事项的**提醒**。它们显示的是你上次保存账簿时的快照——小组件本身从不打开账簿，因此不会加锁，也不会在你不知情时改动任何内容。"
+          }
+        }
+      }
+    },
     "Type": {
       "extractionState": "manual",
       "localizations": {
@@ -61559,6 +64379,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "类型"
+          }
+        }
+      }
+    },
+    "Type into the **Tags** line, separating tags with commas.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tippen Sie in die Zeile **Tags** und trennen Sie Tags durch Kommas."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escriba en la línea **Etiquetas**, separando las etiquetas con comas."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saisissez dans la ligne **Tags**, en séparant les tags par des virgules."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scrivete nella riga **Tag**, separandoli con virgole."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**タグ**行に入力します。タグはカンマで区切ります。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Digite na linha **Etiquetas**, separando as etiquetas por vírgulas."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在**标签**行中输入，标签之间用逗号分隔。"
           }
         }
       }
@@ -61653,6 +64520,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "先输入日期，再输入摘要 — 输入时会自动补全以往的记录。"
+          }
+        }
+      }
+    },
+    "Type these into Find Transactions (⌘F). A tag search reaches across every account at once, which is the point of tagging rather than filing.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geben Sie diese in Buchungen suchen (⌘F) ein. Eine Tag-Suche greift über alle Konten zugleich — genau darin liegt der Sinn des Taggens gegenüber dem Einsortieren."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escríbalos en Buscar transacciones (⌘F). Una búsqueda por etiqueta alcanza todas las cuentas a la vez, que es justamente la ventaja de etiquetar frente a archivar."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saisissez-les dans Rechercher des opérations (⌘F). Une recherche par tag traverse tous les comptes d’un coup — c’est tout l’intérêt du tag par rapport au classement."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scriveteli in Trova transazioni (⌘F). Una ricerca per tag attraversa tutti i conti insieme: è proprio questo il vantaggio del tag rispetto all’archiviazione."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "これらは「取引を検索」(⌘F) に入力します。タグ検索はすべての勘定科目を一度に横断します。分類して仕舞い込むのではなくタグを使う理由がここにあります。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Digite-os em Localizar transações (⌘F). Uma busca por etiqueta alcança todas as contas de uma vez — é justamente essa a vantagem de etiquetar em vez de arquivar."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在“查找交易”(⌘F) 中输入这些条件。标签搜索一次即可跨越所有科目——这正是打标签而非归档的意义所在。"
           }
         }
       }
@@ -61794,6 +64708,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "撤销"
+          }
+        }
+      }
+    },
+    "Undoing a transaction that already happened": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine bereits erfolgte Buchung rückgängig machen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deshacer una transacción que ya ocurrió"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Annuler une opération déjà survenue"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Annullare una transazione già avvenuta"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すでに発生した取引を取り消す"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desfazer uma transação que já aconteceu"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "冲销一笔已经发生的交易"
           }
         }
       }
@@ -63584,6 +66545,100 @@
         }
       }
     },
+    "Widgets": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Widgets"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Widgets"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Widgets"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Widget"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ウィジェット"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Widgets"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "小组件"
+          }
+        }
+      }
+    },
+    "Widgets, Quick Look and Shortcuts — the book without opening it.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Widgets, Übersicht und Kurzbefehle — das Buch, ohne es zu öffnen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Widgets, Vista rápida y Atajos: el libro sin abrirlo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Widgets, Coup d’œil et Raccourcis — le livre sans l’ouvrir."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Widget, Occhiata e Comandi rapidi — il libro senza aprirlo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ウィジェット、クイックルック、ショートカット — 帳簿を開かずに。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Widgets, Visualização rápida e Atalhos — o livro sem abri-lo."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "小组件、快速查看与快捷指令——不打开也能看账簿。"
+          }
+        }
+      }
+    },
     "Windows and views": {
       "extractionState": "manual",
       "localizations": {
@@ -63913,6 +66968,53 @@
         }
       }
     },
+    "You need an equity account to close into before you start. If the book has none, the sheet says so rather than inventing one.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sie brauchen vorab ein Eigenkapitalkonto, in das abgeschlossen wird. Fehlt es im Buch, sagt das Fenster das, statt eines zu erfinden."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Necesita una cuenta de patrimonio a la que cerrar antes de empezar. Si el libro no tiene ninguna, la hoja lo dice en vez de inventarse una."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il vous faut au préalable un compte de capitaux propres de destination. Si le livre n’en a aucun, la fenêtre le signale au lieu d’en inventer un."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Serve un conto di patrimonio netto su cui chiudere prima di iniziare. Se il libro non ne ha, il pannello lo dice invece di inventarne uno."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "始める前に、振替先の純資産勘定が必要です。帳簿にない場合は、勝手に作らずその旨を表示します。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Você precisa de uma conta de patrimônio para encerrar antes de começar. Se o livro não tiver nenhuma, a janela avisa em vez de inventar uma."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "开始前需要有一个用于结转的权益科目。若账簿中没有，界面会直接说明，而不会替你新建。"
+          }
+        }
+      }
+    },
     "Your changes are held in a working copy and written back to the file when you press ⌘S, when autosave runs, or when you close the book. Autosave and its interval live in Settings ▸ General.": {
       "extractionState": "manual",
       "localizations": {
@@ -64101,6 +67203,10 @@
         }
       }
     },
+    "`-tag:holiday`": {
+      "extractionState": "manual",
+      "shouldTranslate": false
+    },
     "`account:Groceries`": {
       "extractionState": "manual",
       "shouldTranslate": false
@@ -64181,6 +67287,10 @@
       "shouldTranslate": false
     },
     "`memo:refund`": {
+      "extractionState": "manual",
+      "shouldTranslate": false
+    },
+    "`tag:holiday amount:>500`": {
       "extractionState": "manual",
       "shouldTranslate": false
     },
@@ -65423,6 +68533,98 @@
         }
       }
     },
+    "⇧⌘B": {
+      "extractionState": "manual",
+      "shouldTranslate": false
+    },
+    "⇧⌘E": {
+      "extractionState": "manual",
+      "shouldTranslate": false
+    },
+    "⇧⌘I": {
+      "extractionState": "manual",
+      "shouldTranslate": false
+    },
+    "⇧⌘L": {
+      "extractionState": "manual",
+      "shouldTranslate": false
+    },
+    "⇧⌘M": {
+      "extractionState": "manual",
+      "shouldTranslate": false
+    },
+    "⇧⌘N": {
+      "extractionState": "manual",
+      "shouldTranslate": false
+    },
+    "⇧⌘R": {
+      "extractionState": "manual",
+      "shouldTranslate": false
+    },
+    "⇧⌘U": {
+      "extractionState": "manual",
+      "shouldTranslate": false
+    },
+    "⇧⌘W": {
+      "extractionState": "manual",
+      "shouldTranslate": false
+    },
+    "⌘,": {
+      "extractionState": "manual",
+      "shouldTranslate": false
+    },
+    "⌘?": {
+      "extractionState": "manual",
+      "shouldTranslate": false
+    },
+    "⌘B": {
+      "extractionState": "manual",
+      "shouldTranslate": false
+    },
+    "⌘D": {
+      "extractionState": "manual",
+      "shouldTranslate": false
+    },
+    "⌘E": {
+      "extractionState": "manual",
+      "shouldTranslate": false
+    },
+    "⌘F": {
+      "extractionState": "manual",
+      "shouldTranslate": false
+    },
+    "⌘G": {
+      "extractionState": "manual",
+      "shouldTranslate": false
+    },
+    "⌘I": {
+      "extractionState": "manual",
+      "shouldTranslate": false
+    },
+    "⌘J": {
+      "extractionState": "manual",
+      "shouldTranslate": false
+    },
+    "⌘N": {
+      "extractionState": "manual",
+      "shouldTranslate": false
+    },
+    "⌘O": {
+      "extractionState": "manual",
+      "shouldTranslate": false
+    },
+    "⌘R": {
+      "extractionState": "manual",
+      "shouldTranslate": false
+    },
+    "⌘S": {
+      "extractionState": "manual",
+      "shouldTranslate": false
+    },
+    "⌘Z": {
+      "extractionState": "manual",
+      "shouldTranslate": false
+    },
     "⌘Z undoes anything, including an import.": {
       "extractionState": "manual",
       "localizations": {
@@ -65469,6 +68671,89 @@
           }
         }
       }
+    },
+    "⌘↑ / ⌘↓": {
+      "extractionState": "manual",
+      "shouldTranslate": false
+    },
+    "⌘⌫": {
+      "extractionState": "manual",
+      "shouldTranslate": false
+    },
+    "⌘⏎": {
+      "extractionState": "manual",
+      "shouldTranslate": false
+    },
+    "⌥⌘0": {
+      "extractionState": "manual",
+      "shouldTranslate": false
+    },
+    "⌥⌘0 returns to the dashboard from anywhere. **Up Next** is the card to read first: it names the single thing most worth doing in the book right now.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌥⌘0 kehrt von überall zur Übersicht zurück. **Als Nächstes** ist die Karte, die man zuerst liest: Sie nennt die eine Sache, die im Buch gerade am meisten lohnt."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌥⌘0 vuelve al panel desde cualquier sitio. **A continuación** es la tarjeta que conviene leer primero: nombra lo único que más merece la pena hacer ahora en el libro."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌥⌘0 ramène au tableau de bord depuis n’importe où. **À suivre** est la carte à lire en premier : elle nomme la seule chose qui vaut le plus la peine d’être faite maintenant."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌥⌘0 riporta alla dashboard da qualsiasi punto. **Prossimo passo** è la scheda da leggere per prima: indica l’unica cosa che vale di più fare adesso."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌥⌘0 でどこからでもダッシュボードに戻れます。最初に読むべきカードは**次にやること**で、いま帳簿で最も価値のある一件を示します。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌥⌘0 volta ao painel de qualquer lugar. **A seguir** é o cartão a ler primeiro: nomeia a única coisa que mais vale a pena fazer agora no livro."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在任何位置按 ⌥⌘0 都可返回仪表板。**接下来**是最该先读的卡片：它指出此刻账簿中最值得做的那一件事。"
+          }
+        }
+      }
+    },
+    "⌥⌘1": {
+      "extractionState": "manual",
+      "shouldTranslate": false
+    },
+    "⌥⌘2": {
+      "extractionState": "manual",
+      "shouldTranslate": false
+    },
+    "⌥⌘3": {
+      "extractionState": "manual",
+      "shouldTranslate": false
+    },
+    "⌥⌘I": {
+      "extractionState": "manual",
+      "shouldTranslate": false
+    },
+    "⌥⌘N": {
+      "extractionState": "manual",
+      "shouldTranslate": false
     }
   },
   "version": "1.0"

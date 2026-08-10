@@ -62,16 +62,16 @@ public enum HelpBook {
 
     public static let sections: [HelpSection] = [
         HelpSection(id: "basics", title: "Basics", topics: [
-            gettingStarted, accounts, transactions, findingThings, keepingSafe,
+            gettingStarted, dashboard, accounts, transactions, findingThings, keepingSafe,
         ]),
         HelpSection(id: "everyday", title: "Everyday money", topics: [
             importing, smartImport, categorising, reconciling, scheduled, budgets, documents, tags,
         ]),
         HelpSection(id: "growing", title: "Investments & planning", topics: [
-            investments, currencyTransfer, reports, planning, goals,
+            investments, currencyTransfer, reports, yearEnd, planning, goals,
         ]),
         HelpSection(id: "more", title: "More", topics: [
-            business, emergencyRecords, interchange, shortcuts,
+            business, emergencyRecords, interchange, outsideTheApp, shortcuts,
         ]),
     ]
 
@@ -169,6 +169,18 @@ public enum HelpBook {
                 salary, tax and superannuation, or a shopping trip split across categories. \
                 Select the row and press ⌘E, or click its disclosure arrow, to open it \
                 out — notes, tags and every leg, edited in the register itself.
+                """),
+            .heading("Undoing a transaction that already happened"),
+            .text("""
+                Deleting a transaction removes it. Sometimes that is wrong — a payment that \
+                bounced, or a cheque never banked, is part of the record. **Void Transaction** \
+                keeps the row and its history but takes it out of your balances; **Unvoid** \
+                puts it back. **Add Reversing Transaction** instead writes a second, opposite \
+                entry on a date you choose, which is what an accountant expects to see when a \
+                posted period must not change.
+                """),
+            .text("""
+                **Print Check…** prints the selected transaction as a cheque.
                 """),
             .tip("""
                 How much each row shows is up to you: View ▸ Register Style switches \
@@ -544,6 +556,101 @@ public enum HelpBook {
                 """),
         ])
 
+    static let dashboard = HelpTopic(
+        id: "dashboard",
+        title: "The dashboard",
+        summary: "The board you land on: what matters today, at a glance.",
+        symbol: "square.grid.2x2",
+        keywords: "dashboard home overview net worth tiles cards alerts up next customise board",
+        blocks: [
+            .text("""
+                Opening a book lands you on the dashboard — net worth and its twelve-month \
+                trend, anything the alerts have flagged, your account balances, bills coming \
+                up, and how the budget is tracking.
+                """),
+            .text("""
+                It is a board rather than a page: it never scrolls. Cards are laid out to fill \
+                the window you actually have, so what you see is what there is. Resize the \
+                window and the board re-packs itself.
+                """),
+            .heading("Choosing what appears"),
+            .text("""
+                Not every card suits every book. Turn the ones you do not want off, and the \
+                rest close the gap. A card with nothing to report — no bills due, no alerts — \
+                gives up its place rather than showing you an empty box.
+                """),
+            .tip("""
+                ⌥⌘0 returns to the dashboard from anywhere. **Up Next** is the card to read \
+                first: it names the single thing most worth doing in the book right now.
+                """),
+        ])
+
+    static let yearEnd = HelpTopic(
+        id: "year-end",
+        title: "End of the financial year",
+        summary: "Close the year off, and produce the papers it calls for.",
+        symbol: "calendar.badge.checkmark",
+        keywords: "year end financial year close book closing entries retained earnings tax pack passport summary",
+        blocks: [
+            .text("""
+                At the end of a financial year, income and expense accounts have done their \
+                job: they describe a period that is now over. Closing the year sweeps their \
+                balances into equity so the next year starts them at zero, and what they \
+                earned or cost is preserved as retained earnings.
+                """),
+            .heading("Closing the year"),
+            .steps([
+                "Choose **Book ▸ Close Financial Year…**",
+                "Set the closing date and pick the equity account to close into — Retained Earnings, typically.",
+                "Read the preview: it names how many accounts will be closed, and the totals per currency.",
+                "Post it. The whole closing is a single entry you can undo.",
+            ]),
+            .tip("""
+                You need an equity account to close into before you start. If the book has \
+                none, the sheet says so rather than inventing one.
+                """),
+            .heading("The papers"),
+            .text("""
+                The **Financial Year Pack** (in Reports) gathers the statements tax time asks \
+                for into one document. **Book ▸ Financial Summary (Passport)…** is the \
+                different, shorter thing: a single page — net worth, savings rate, the \
+                twelve-month trend — for when someone needs a picture of your position rather \
+                than your accounts. It says on its face that it is a snapshot prepared from \
+                your own records, not a verified statement.
+                """),
+        ])
+
+    static let outsideTheApp = HelpTopic(
+        id: "outside-the-app",
+        title: "Outside the app",
+        summary: "Widgets, Quick Look and Shortcuts — the book without opening it.",
+        symbol: "square.grid.3x3.topleft.filled",
+        keywords: "widget widgets control centre control center quick look preview spotlight shortcuts siri notification alert",
+        blocks: [
+            .heading("Widgets"),
+            .text("""
+                Two widgets read the last book you had open: **Net Worth**, and **Alerts** \
+                for anything wanting attention. They show a snapshot saved when you last \
+                saved the book — they never open it themselves, so nothing is locked and \
+                nothing changes behind your back.
+                """),
+            .text("""
+                There is also a Control Centre button that opens FinvestLens.
+                """),
+            .heading("Quick Look"),
+            .text("""
+                Press Space on a book in the Finder to see inside it without opening it — \
+                FinvestLens documents, and GnuCash files too, in all three shapes GnuCash \
+                writes them.
+                """),
+            .heading("Alerts and Shortcuts"),
+            .text("""
+                Alerts can arrive as notifications, so a bill due or a balance heading \
+                negative reaches you without the app being open. FinvestLens also publishes \
+                Shortcuts actions, so the book can take part in an automation.
+                """),
+        ])
+
     static let tags = HelpTopic(
         id: "tags",
         title: "Tags",
@@ -569,9 +676,9 @@ public enum HelpBook {
                 """),
             .heading("Finding them again"),
             .table([
-                ("tag:holiday", "Everything tagged holiday"),
-                ("-tag:holiday", "Everything *not* tagged holiday"),
-                ("tag:holiday amount:>500", "Combine with any other search term"),
+                ("`tag:holiday`", "Everything tagged holiday"),
+                ("`-tag:holiday`", "Everything *not* tagged holiday"),
+                ("`tag:holiday amount:>500`", "Combine with any other search term"),
             ]),
             .text("""
                 Type these into Find Transactions (⌘F). A tag search reaches across every \
@@ -703,6 +810,10 @@ public enum HelpBook {
                 business records all survive the trip.
                 """),
             .heading("Ledger journals"),
+            .text("""
+                File ▸ Export CSV writes plain spreadsheet files — your accounts, your \
+                transactions, or your price history — for anything that reads a table.
+                """),
             .text("""
                 File ▸ Export Ledger Journal… (⇧⌘E) writes a plain-text Ledger journal, \
                 and File ▸ Import Ledger Journal… reads one back.
