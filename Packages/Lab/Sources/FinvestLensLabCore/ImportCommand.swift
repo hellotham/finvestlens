@@ -67,9 +67,14 @@ enum ImportCommand {
                     at: destination,
                     baseCurrency: result.book.commodities.first ?? .aud,
                     breakStaleLock: options.flag("break-lock"))
+                // Release the lock and drop the working copy on *every* exit,
+                // including a throw from `save()`. Written as a trailing
+                // statement this leaked the lock on a freshly created file, so
+                // the retry was refused by the destination the failed run had
+                // just made.
+                defer { document.discard() }
                 document.replaceBook(result.book)
                 try document.save()
-                document.discard()          // release the lock, drop the working copy
             }
             writeSeconds = seconds
             log(Fmt.row("create + write + write-back", Fmt.time(seconds)))

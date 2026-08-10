@@ -63,6 +63,60 @@ private final class LockFilePresenter: NSObject, NSFilePresenter {
 /// All lock-file I/O goes through `NSFileCoordinator` with a related-item
 /// presenter, which is what lets a sandboxed app touch the sibling file at a
 /// user-selected location.
+/// Releases this process's locks when it is terminated by a signal.
+///
+/// `deinit` and `release()` cover the paths where the app gets to run code on
+/// the way out. They do not cover a `SIGTERM` from `killall`, a `SIGHUP` when
+/// a session ends, or a ⌃C in a headless run — and a lock left by one of
+/// those is indistinguishable, from outside, from a lock held by a live
+/// writer. Under a lock that *syncs*, it is worse than a local nuisance: the
+/// stranded file propagates to every other machine and locks them out too,
+/// until the heartbeat ages out.
+///
+/// `SIGKILL` and a hard power loss cannot be caught by anything, by design;
+/// those are what `FileLock.isProvablyDead` is for.
+enum LockReaper {
+    private static let queue = DispatchQueue(label: "com.hellotham.finvestlens.lockreaper")
+    /// lock file → the instance id we wrote into it, so the reaper only ever
+    /// removes a lock this process actually holds.
+    nonisolated(unsafe) private static var held: [URL: String] = [:]
+    nonisolated(unsafe) private static var sources: [DispatchSourceSignal] = []
+
+    static func register(_ url: URL, instanceID: String) {
+        queue.sync {
+            held[url] = instanceID
+            guard sources.isEmpty else { return }
+            for number in [SIGTERM, SIGINT, SIGHUP] {
+                // The default disposition kills us before a dispatch source
+                // ever runs, so it has to be ignored first.
+                signal(number, SIG_IGN)
+                let source = DispatchSource.makeSignalSource(signal: number, queue: queue)
+                source.setEventHandler { reapAndExit(number) }
+                source.resume()
+                sources.append(source)
+            }
+        }
+    }
+
+    static func deregister(_ url: URL) {
+        queue.sync { held[url] = nil }
+    }
+
+    /// Remove only the lock files still carrying our own instance id — another
+    /// process may have legitimately taken one over since.
+    private static func reapAndExit(_ number: Int32) {
+        for (url, instanceID) in held {
+            let onDisk = (try? Data(contentsOf: url)).flatMap {
+                try? JSONDecoder().decode(LockHolder.self, from: $0)
+            }
+            guard onDisk?.instanceID == instanceID else { continue }
+            try? FileManager.default.removeItem(at: url)
+        }
+        held.removeAll()
+        exit(number == SIGINT ? 130 : 143)
+    }
+}
+
 public final class FileLock {
 
     public enum LockError: Error, Equatable {
@@ -113,6 +167,12 @@ public final class FileLock {
     }
 
     deinit {
+        // A dropped lock object must not leave its file behind. This is the
+        // last of three nets — `release()` on the normal path, the signal
+        // reaper on an abnormal one, and this for an object that simply goes
+        // out of scope with the lock still held.
+        if held { release() }
+        LockReaper.deregister(lockURL)
         NSFileCoordinator.removeFilePresenter(presenter)
     }
 
@@ -158,7 +218,33 @@ public final class FileLock {
         guard let holder = currentHolder() else {
             return FileManager.default.fileExists(atPath: lockURL.path)
         }
+        if Self.isProvablyDead(holder) { return true }
         return now.timeIntervalSince(holder.heartbeatAt) > staleAfter
+    }
+
+    /// A lock whose holder we can *prove* is gone, without waiting out the
+    /// heartbeat window.
+    ///
+    /// Only ever true for a lock written by **this host**: there the pid is
+    /// ours to interrogate, and a pid that no longer exists cannot be holding
+    /// anything. A lock from another host must still be judged by heartbeat
+    /// alone — the whole point of a lock that syncs is that a holder on
+    /// another machine is real, and "that pid isn't running *here*" says
+    /// nothing about it. Getting this backwards would break the cross-machine
+    /// guarantee the lock exists to provide.
+    ///
+    /// Waiting `staleAfter` for a crash on the user's own machine is not
+    /// caution, it is a lockout: the process is measurably absent, and the
+    /// person sitting in front of it is the same person who owns the book.
+    static func isProvablyDead(_ holder: LockHolder) -> Bool {
+        guard holder.host == ProcessInfo.processInfo.hostName else { return false }
+        guard holder.pid != ProcessInfo.processInfo.processIdentifier else { return false }
+        guard holder.pid > 0 else { return true }
+        // `kill(pid, 0)` sends nothing; it only asks. ESRCH is the one answer
+        // that means "no such process" — EPERM means it exists but belongs to
+        // someone else, which is still alive. A recycled pid reads as alive,
+        // which errs towards waiting rather than towards breaking a live lock.
+        return kill(holder.pid, 0) != 0 && errno == ESRCH
     }
 
     /// Acquires the lock, throwing ``LockError/alreadyLocked(_:)`` if another
@@ -172,6 +258,7 @@ public final class FileLock {
                 try data.write(to: url, options: [.withoutOverwriting])
             }
             held = true
+            LockReaper.register(lockURL, instanceID: instanceID)
         } catch {
             if let existing = currentHolder() {
                 throw LockError.alreadyLocked(existing)
@@ -197,7 +284,8 @@ public final class FileLock {
     /// (the final `acquire` then fails with `alreadyLocked` for us).
     public func breakStaleLockAndAcquire(now: Date = Date()) throws {
         let judged = currentHolder()
-        if let judged, now.timeIntervalSince(judged.heartbeatAt) <= staleAfter {
+        if let judged, !Self.isProvablyDead(judged),
+           now.timeIntervalSince(judged.heartbeatAt) <= staleAfter {
             throw LockError.alreadyLocked(judged)
         }
         var raceWinner: LockHolder?
@@ -205,7 +293,7 @@ public final class FileLock {
             let current = (try? Data(contentsOf: url)).flatMap {
                 try? JSONDecoder().decode(LockHolder.self, from: $0)
             }
-            if let current,
+            if let current, !Self.isProvablyDead(current),
                current != judged || now.timeIntervalSince(current.heartbeatAt) <= staleAfter {
                 raceWinner = current
                 return
@@ -247,6 +335,7 @@ public final class FileLock {
             }
         }
         held = false
+        LockReaper.deregister(lockURL)
     }
 
     private func makeHolder(now: Date) -> LockHolder {

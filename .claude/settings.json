@@ -18,6 +18,22 @@
             "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/check-directives.py\""
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/check-docs.py\""
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/check-no-deferrals.py\""
+          }
+        ]
       }
     ],
     "PreToolUse": [

@@ -73,6 +73,33 @@ public struct AppDateFormat: Equatable, Sendable {
         Self.formatted(date, pattern: shortPattern)
     }
 
+    private var compactPattern: String {
+        switch order {
+        case .dmy: "d/M/yy"
+        case .mdy: "M.d.yy"
+        case .ymd: "yy-MM-dd"
+        }
+    }
+
+    /// The same date with a two-digit year — 16/12/25 — for a register too
+    /// narrow to spend four characters on the century.
+    ///
+    /// This is as far as the compression goes. Dropping the year entirely
+    /// would fit anything, and would also make a register spanning several
+    /// years unreadable at exactly the moment the running balance depends on
+    /// knowing which year a row is in. Two digits is the conventional
+    /// shortening; no digits is a different, worse document.
+    public func compact(_ date: Date) -> String {
+        Self.formatted(date, pattern: compactPattern)
+    }
+
+    /// Reads back either form — a date typed as `16/12/25` or `16/12/2025`.
+    /// The register edits in place, so whatever it *shows* must be typeable.
+    public func parseAny(_ string: String) -> Date? {
+        parseShort(string) ?? Self.formatter(pattern: compactPattern)
+            .date(from: string.trimmingCharacters(in: .whitespaces))
+    }
+
     /// Parses a date typed in the short form back to a `Date` — the inverse of
     /// ``short(_:)``, for in-place register editing. `nil` when it doesn't read
     /// as a date in the chosen order.

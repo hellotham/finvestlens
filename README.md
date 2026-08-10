@@ -172,7 +172,7 @@ Manual: [docs/lab.md](docs/lab.md).
 
 ## Help
 
-The Help menu (⌘?) opens an in-app help book — 20 topics across Basics,
+The Help menu (⌘?) opens an in-app help book — 25 topics across Basics,
 Everyday money, Investments & planning, and More — with a topic sidebar and
 search. It is written as data rather than HTML, so the pages are translated
 into every supported language alongside the rest of the interface, and the same
@@ -181,7 +181,7 @@ pages serve macOS, iPadOS and iOS.
 ## Languages
 
 FinvestLens is localized into **English, German, Spanish, French, Italian,
-Japanese, Brazilian Portuguese and Simplified Chinese** — 1,392 UI strings,
+Japanese, Brazilian Portuguese and Simplified Chinese** — 1,571 UI strings,
 with accounting terminology following GnuCash's own conventions in each
 language, so a GnuCash user reads familiar words. Dates, numbers and currency
 follow the system locale.
@@ -220,4 +220,4 @@ Exercised against a real GnuCash book — 46,553 transactions, 559 accounts, 102
 
 Performance is measured against that book, not a synthetic one. Opening it takes 1.87 s from a local SSD and 5.08 s from an SMB share, a save 9.22 s and 15.40 s respectively, and a register edit ~0.26 s (an account edit 0.067 s); the general ledger scrolls all 46k transactions with jumps to either end instant. The 2026 redesign added a further layer: the register status strip is snapshotted in the same pass that builds the rows (was three full-book scans per render), QuickFill reads a per-revision cache (was a 46k-transaction sort per keystroke), price and settings edits snapshot only what they touch for undo (was a whole-book XML export), heavy reports are memoised per (parameters, book revision) and build behind a placeholder, and an `os_signpost` harness watches every hot path. The design behind those numbers — and what is still deliberately slow — is [architecture.md §10](docs/architecture.md#10-derived-state-and-performance).
 
-The test suites stand at **1,277 tests across the eleven packages**, alongside env-gated live harnesses that re-run the real-book import, planning, and report-catalogue validations end to end. **Released as 1.0 on 25 Jul 2026** (`v1.0`); P7–P10 and the August 2026 work are post-1.0 and unreleased. iOS can open, create, and edit books but not import or export (a deliberate non-goal — see the PRD). CI tests all eleven packages and builds the unsigned app + extensions for both platforms on GitHub's macOS 26 runners; an SPDX-header gate covers every Swift target.
+The test suites stand at **1,281 tests across the eleven packages**, alongside env-gated live harnesses that re-run the real-book import, planning, and report-catalogue validations end to end. **Released as 1.0 on 25 Jul 2026** (`v1.0`); P7–P10 and the August 2026 work are post-1.0 and unreleased. iOS can open, create, and edit books but not import or export (a deliberate non-goal — see the PRD). CI tests all eleven packages and builds the unsigned app + extensions for both platforms on GitHub's macOS 26 runners; an SPDX-header gate covers every Swift target.

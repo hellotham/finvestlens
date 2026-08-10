@@ -1280,7 +1280,12 @@ struct RegisterView: View {
                 // whole register reflow: a layout shift delivered by the very
                 // feature whose contract is that nothing moves.
                 if attachmentsShown {
-                    Divider()
+                    // A draggable seam, not a plain rule: the panel is one of
+                    // the register's trailing panes and width is the scarce
+                    // resource, so the divider has to give. The hit area is
+                    // wider than the line it draws — a 1pt target is a target
+                    // you miss.
+                    AttachmentsSplitter()
                     AttachmentsPanel(model: model)
                 }
             }

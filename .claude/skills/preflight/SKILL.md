@@ -74,6 +74,23 @@ translations whose `%` specifiers do not match the key's. That last one is a
 crash, not a cosmetic defect. This is slow (two full builds) — skip it when no
 user-facing string changed, and say so.
 
+## 3c. No real financial data in published files
+
+```bash
+python3 scripts/check-no-real-data.py
+```
+
+`docs/` and `website/` are public; the reference book is one real household's
+accounts. This flags any figure that looks like a balance rather than an
+illustration — a million or more, or ten thousand-plus with cents — in the
+published files. It exists because the hand-kept rule failed: a sweep on
+10 Aug 2026 found net worth, super balance, portfolio value, realised gains,
+taxable income and two account names in committed documentation, written there
+over months as evidence that reports "matched GnuCash to the cent".
+
+Keep the claim, drop the number. If a large figure genuinely is invented, mark
+the line `<!-- synthetic -->`.
+
 ## 4. SPDX headers on changed Swift sources
 
 ```bash

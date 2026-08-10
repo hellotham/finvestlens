@@ -366,8 +366,10 @@ private enum SheetMetrics {
     static let textInset: CGFloat = 5
     /// A column may not be dragged narrower than this.
     static let minColumnWidth: CGFloat = 28
-    /// How close to a divider counts as grabbing it.
-    static let resizeGrab: CGFloat = 3
+    /// How close to a ruler counts as grabbing it. Six points of target either
+    /// side: three was a 6pt-wide sliver that had to be hit exactly, which is
+    /// most of why the columns read as fixed rather than merely fiddly.
+    static let resizeGrab: CGFloat = 6
 
     /// The disclosure triangle's gutter at the leading edge of the first
     /// column. HIG *Outline views*: "Expose data hierarchy in the first
@@ -384,12 +386,25 @@ private enum SheetMetrics {
         var x: [CGFloat]
         var width: [CGFloat]
 
-        init(totalWidth: CGFloat, overrides: [SheetColumn: CGFloat] = [:],
+        /// - Parameters:
+        ///   - natural: what each column needs for the content actually in it,
+        ///     measured in the current font (`SheetView.measureNaturalWidths`).
+        ///     These were seven literals, which is how a date came to
+        ///     ellipsise: 80pt had to hold the disclosure gutter and two
+        ///     insets — about 56pt of text — and none of it moved when the
+        ///     Text Size or the date format did. Row *height* was measured
+        ///     from the display; width never was.
+        ///   - overrides: widths the user dragged, which win over both.
+        init(totalWidth: CGFloat, natural: [SheetColumn: CGFloat] = [:],
+             overrides: [SheetColumn: CGFloat] = [:],
              hidden: Set<SheetColumn> = []) {
             var fixed: [SheetColumn: CGFloat] = [
                 .date: 80, .num: 58, .handle: 22, .transfer: 180,
                 .reconcile: 24, .amount: 100, .balance: 112,
             ]
+            for (column, width) in natural where fixed[column] != nil {
+                fixed[column] = max(SheetMetrics.minColumnWidth, width)
+            }
             for (column, width) in overrides where fixed[column] != nil {
                 fixed[column] = max(SheetMetrics.minColumnWidth, width)
             }
@@ -425,6 +440,30 @@ private enum SheetMetrics {
                 }
             }
             return nil
+        }
+
+        /// The column whose trailing ruler is under `x`, if any.
+        ///
+        /// Shared by the header and the body, because the body **draws** these
+        /// rulers full height (`draw(_:)`, "Rulers between columns") and a line
+        /// you can see running the whole way down is a line you expect to be
+        /// able to grab. Only the 26pt header used to hit-test them.
+        /// Description is excluded: it takes whatever is left, as in a Finder
+        /// window, so its trailing edge is the window's, not a divider.
+        func resizableColumn(nearX pointX: CGFloat, hidden: Set<SheetColumn>) -> SheetColumn? {
+            for column in SheetColumn.allCases
+            where column != .description && !hidden.contains(column) {
+                let edge = x[column.rawValue] + width[column.rawValue]
+                if abs(pointX - edge) <= SheetMetrics.resizeGrab { return column }
+            }
+            return nil
+        }
+
+        /// Every draggable ruler's x, for cursor rects.
+        func resizableEdges(hidden: Set<SheetColumn>) -> [CGFloat] {
+            SheetColumn.allCases
+                .filter { $0 != .description && !hidden.contains($0) }
+                .map { x[$0.rawValue] + width[$0.rawValue] }
         }
     }
 }
@@ -620,7 +659,26 @@ private final class SheetView: NSView, NSTextFieldDelegate {
     /// only, cleared whenever the selection moves.
     private var currentExpanded = false
     private var dateFormat: AppDateFormat?
+    /// Content-derived widths for the fixed columns, remeasured when the rows,
+    /// the font or the date form change.
+    private var naturalWidths: [SheetColumn: CGFloat] = [:]
+    /// A ruler drag in progress, started on the body rather than the header.
+    private var columnDrag: (column: SheetColumn, startX: CGFloat, startWidth: CGFloat)?
+    /// Whether the register is narrow enough to want two-digit years.
+    ///
+    /// Screen width is the scarce resource here: a register has seven columns
+    /// competing for it and only Description can absorb the loss, so the date
+    /// gives up the century before Description gives up readable payee names.
+    private var compactDates = false
     var onError: ((String) -> Void)?
+
+    /// The date as this register is currently showing it — the single place
+    /// that decides, so drawing, the accessibility summary and the in-place
+    /// editor can never disagree about what a row says.
+    func dateText(_ date: Date) -> String {
+        guard let dateFormat else { return "" }
+        return compactDates ? dateFormat.compact(date) : dateFormat.short(date)
+    }
 
     // Metrics. Two inputs — the app's Text Size and the row-height preference
     // — fold into one `scale` that every font, glyph and offset is a multiple
@@ -810,7 +868,7 @@ private final class SheetView: NSView, NSTextFieldDelegate {
     fileprivate func axRowSummary(_ index: Int) -> String {
         guard rows.indices.contains(index) else { return "" }
         let base = rows[index].base
-        var parts = [dateFormat?.short(base.date) ?? "", base.description]
+        var parts = [dateText(base.date), base.description]
         if !base.transferName.isEmpty { parts.append(base.transferName) }
         if !base.isHeadingOnly {
             // `spoken`, not `string`: VoiceOver does not read a leading minus
@@ -831,7 +889,7 @@ private final class SheetView: NSView, NSTextFieldDelegate {
         guard rows.indices.contains(index) else { return "" }
         let base = rows[index].base
         switch column {
-        case .date: return dateFormat?.short(base.date) ?? ""
+        case .date: return dateText(base.date)
         case .num: return base.number
         case .handle: return ""
         case .description: return base.description
@@ -1069,6 +1127,7 @@ private final class SheetView: NSView, NSTextFieldDelegate {
         if let d = draft, indexByTxn[d.transactionID] == nil { clearDraft() }
         if let c = cursor, cellRect(of: c) == nil { setCursor(nil) }
         mirrorSelection()
+        relayoutColumns()
         rebuildGeometry()
         invalidateAccessibilityTree()
         needsDisplay = true
@@ -1222,19 +1281,116 @@ private final class SheetView: NSView, NSTextFieldDelegate {
     func updateWidth(_ width: CGFloat) {
         guard abs(width - frame.width) > 0.5 else { return }
         setFrameSize(NSSize(width: width, height: frame.height))
+        // The window resized, so the date form may have to change with it.
+        relayoutColumns()
         rebuildFrames()
     }
 
-    /// A column divider was dragged in the header.
+    /// Size the fixed columns to their content, and pick the date form that
+    /// the remaining width can afford.
+    ///
+    /// Screen width is the constraint the register is laid out against: seven
+    /// columns compete for it and only Description can absorb a shortfall, so
+    /// when the fixed columns would squeeze it below a readable floor the date
+    /// gives up the century (`24/12/2026` → `24/12/26`) before payee names
+    /// start disappearing. Measured, not assumed — the answer differs by date
+    /// order, by Text Size, and by how wide the amounts in this particular
+    /// account happen to run.
+    private func relayoutColumns() {
+        guard !rows.isEmpty, dateFormat != nil else { return }
+        let floor = 220 * fontScale
+
+        compactDates = false
+        var measured = measureNaturalWidths(rows)
+        if frame.width > 0 {
+            let fixedSum = measured.values.reduce(0, +) + (measured[.handle] ?? 0)
+            if frame.width - fixedSum < floor {
+                compactDates = true
+                measured = measureNaturalWidths(rows)
+            }
+        }
+        naturalWidths = measured
+    }
+
+    /// A column divider was dragged, in the header or on the body's ruler.
     func resizeColumn(_ column: SheetColumn, to width: CGFloat) {
         columnWidths[column] = width
         ColumnWidths.save(columnWidths)
         rebuildFrames()
     }
 
+    /// What each fixed column needs for the content actually in it.
+    ///
+    /// Scalars first, strings last: finding the longest number, the widest
+    /// amount and the widest transfer name is cheap arithmetic over the rows,
+    /// and only the handful of winners are ever laid out and measured. On a
+    /// 46,000-row register that is one pass of comparisons and about eight
+    /// `size(withAttributes:)` calls, rather than 46,000 of them.
+    ///
+    /// Every column is measured against its *own* font — Amount and Balance
+    /// are monospaced-digit, the rest are not — because a column sized in the
+    /// wrong face is a column that ellipsises at some Text Sizes and not
+    /// others.
+    private func measureNaturalWidths(_ rows: [SheetRow]) -> [SheetColumn: CGFloat] {
+        guard !rows.isEmpty else { return [:] }
+        let body = [NSAttributedString.Key.font: bodyFont]
+        let mono = [NSAttributedString.Key.font: monoFont]
+
+        var widestNumber = "", widestTransfer = ""
+        var earliest = rows[0].base.date, latest = rows[0].base.date
+        var biggestAmount = Decimal(0), biggestBalance = Decimal(0)
+        for row in rows {
+            let base = row.base
+            if base.number.count > widestNumber.count { widestNumber = base.number }
+            if base.transferName.count > widestTransfer.count { widestTransfer = base.transferName }
+            if base.date < earliest { earliest = base.date }
+            if base.date > latest { latest = base.date }
+            if abs(base.amount) > biggestAmount { biggestAmount = abs(base.amount) }
+            if let balance = base.runningBalance, abs(balance) > biggestBalance {
+                biggestBalance = abs(balance)
+            }
+        }
+
+        func text(_ string: String, _ attributes: [NSAttributedString.Key: Any]) -> CGFloat {
+            ceil((string as NSString).size(withAttributes: attributes).width)
+        }
+        let pad = 2 * SheetMetrics.textInset
+        // A negative amount is the widest an amount gets, and both ends of the
+        // date range are measured because "9 Mar" is not "31 December".
+        let amount = max(text(AmountFormat.string(-biggestAmount, code: currencyCode), mono),
+                         text(AmountFormat.string(biggestAmount, code: currencyCode), mono))
+        let balance = max(text(AmountFormat.string(-biggestBalance, code: currencyCode), mono),
+                          text(AmountFormat.string(biggestBalance, code: currencyCode), mono))
+        // Measured in the form currently chosen, and at both ends of the range,
+        // because "9/3/2026" is not "24/12/2026".
+        let date = max(text(dateText(earliest), body), text(dateText(latest), body))
+
+        var natural: [SheetColumn: CGFloat] = [
+            // The disclosure gutter lives inside Date (HIG *Outline views*:
+            // hierarchy in the first column only), so it is added, not shared.
+            .date: date + caretGutter + pad,
+            .amount: amount + pad,
+            .balance: balance + pad,
+            .num: text(widestNumber, body) + pad,
+            .transfer: text(widestTransfer, body) + pad,
+        ]
+        // A column is never narrower than its own heading, or the header reads
+        // as truncated while the rows look fine.
+        let heading = [NSAttributedString.Key.font: NSFont.systemFont(ofSize: 11 * fontScale,
+                                                                     weight: .semibold)]
+        for column in natural.keys {
+            natural[column] = max(natural[column] ?? 0, text(column.title, heading) + pad + 14)
+        }
+        // Transfer names run to whole account paths; past a point the register
+        // is better served by giving the space to Description and letting the
+        // user drag it wider if they want it.
+        natural[.transfer] = min(natural[.transfer] ?? 0, 260 * fontScale)
+        return natural
+    }
+
     private func rebuildFrames() {
-        frames = SheetMetrics.Frames(totalWidth: frame.width, overrides: columnWidths,
-                                     hidden: hiddenColumns)
+        frames = SheetMetrics.Frames(totalWidth: frame.width, natural: naturalWidths,
+                                     overrides: columnWidths, hidden: hiddenColumns)
         header?.frames = frames
         header?.window?.invalidateCursorRects(for: header!)
         needsDisplay = true
@@ -1438,7 +1594,7 @@ private final class SheetView: NSView, NSTextFieldDelegate {
             drawCaret(row, drafting: drafting, in: cell(.date))
             if !skipForCursor(row, .date) {
                 let date = drafting ? (draft?.date ?? row.base.date) : row.base.date
-                drawText(dateFormat?.short(date) ?? "", in: cell(.date),
+                drawText(dateText(date), in: cell(.date),
                          leadingInset: caretGutter)
             }
             if !skipForCursor(row, .number) {
@@ -1658,6 +1814,20 @@ private final class SheetView: NSView, NSTextFieldDelegate {
             ?? model.anySplitID(ofTransaction: txn)
     }
 
+    override func mouseDragged(with event: NSEvent) {
+        guard let columnDrag else { return }
+        let point = convert(event.locationInWindow, from: nil)
+        let width = max(SheetMetrics.minColumnWidth,
+                        columnDrag.startWidth + (point.x - columnDrag.startX))
+        resizeColumn(columnDrag.column, to: width)
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        guard columnDrag != nil else { return }
+        columnDrag = nil
+        window?.invalidateCursorRects(for: self)
+    }
+
     private func mirrorSelection() {
         let ids = Set(selection.compactMap(rowSplitID(of:)))
         guard model.selectedSplitIDs != ids else { return }
@@ -1729,9 +1899,27 @@ private final class SheetView: NSView, NSTextFieldDelegate {
 
     // MARK: Mouse (find cell by pixel — gnucash-sheet.c button handler)
 
+    /// The body draws a ruler between every column, full height. A line you
+    /// can see the whole way down is a line you expect to be able to grab, so
+    /// the drag lives here as well as in the 26pt header — which was the only
+    /// place that hit-tested it, making the columns look fixed.
+    override func resetCursorRects() {
+        super.resetCursorRects()
+        for edge in frames.resizableEdges(hidden: hiddenColumns) {
+            addCursorRect(CGRect(x: edge - SheetMetrics.resizeGrab, y: 0,
+                                 width: SheetMetrics.resizeGrab * 2, height: bounds.height),
+                          cursor: .resizeLeftRight)
+        }
+    }
+
     override func mouseDown(with event: NSEvent) {
         suggestions.hide()
         let point = convert(event.locationInWindow, from: nil)
+        // Before anything else: a ruler drag is not a click on a row.
+        if let column = frames.resizableColumn(nearX: point.x, hidden: hiddenColumns) {
+            columnDrag = (column, point.x, frames.width[column.rawValue])
+            return
+        }
         guard let block = blockIndex(atY: point.y) else {
             if leaveDraft() { applySelection([], anchor: nil, lead: nil) }
             window?.makeFirstResponder(self)
@@ -2084,7 +2272,7 @@ private final class SheetView: NSView, NSTextFieldDelegate {
     private func editText(field: TransactionEditField) -> String {
         guard let d = draft else { return "" }
         switch field {
-        case .date: return dateFormat?.short(d.date) ?? ""
+        case .date: return dateText(d.date)
         case .number: return d.number
         case .description: return d.description
         case .notes: return d.notes
@@ -2105,7 +2293,7 @@ private final class SheetView: NSView, NSTextFieldDelegate {
         switch field {
         case .date:
             withDraft { d in
-                if let date = dateFormat?.parseShort(text) { d.date = date }
+                if let date = dateFormat?.parseAny(text) { d.date = date }
             }
         case .number:
             withDraft { $0.number = text }
@@ -2751,6 +2939,24 @@ private final class SheetAXColumnHeader: NSAccessibilityElement, @unchecked Send
         MainActor.assumeIsolated { header?.axSort(column) }
         return true
     }
+
+    // Resizing was a drag and nothing else — a column width the mouse could
+    // change and the keyboard could not. Increment/decrement is how VoiceOver
+    // and Full Keyboard Access drive a continuous value, so the same ruler is
+    // now adjustable without a pointer.
+    override func accessibilityPerformIncrement() -> Bool { nudge(+16) }
+    override func accessibilityPerformDecrement() -> Bool { nudge(-16) }
+
+    private func nudge(_ delta: CGFloat) -> Bool {
+        guard column != .description else { return false }   // takes the remainder
+        let (header, column) = (self.header, self.column)
+        return MainActor.assumeIsolated {
+            guard let header else { return false }
+            let current = header.frames.width[column.rawValue]
+            header.onResize?(column, max(SheetMetrics.minColumnWidth, current + delta))
+            return true
+        }
+    }
 }
 
 /// AppKit's rotor equivalent of the Table register's `.accessibilityRotor`.
@@ -3065,20 +3271,9 @@ private final class SheetHeaderView: NSView {
     /// The column whose trailing divider is under `x`, if any. Only fixed
     /// columns resize; Description takes whatever is left, as it does in a
     /// Finder window.
-    private func resizableColumn(nearX x: CGFloat) -> SheetColumn? {
-        for column in SheetColumn.allCases
-        where column != .description && !hiddenColumns.contains(column) {
-            let edge = frames.x[column.rawValue] + frames.width[column.rawValue]
-            if abs(x - edge) <= SheetMetrics.resizeGrab { return column }
-        }
-        return nil
-    }
-
     override func resetCursorRects() {
         super.resetCursorRects()
-        for column in SheetColumn.allCases
-        where column != .description && !hiddenColumns.contains(column) {
-            let edge = frames.x[column.rawValue] + frames.width[column.rawValue]
+        for edge in frames.resizableEdges(hidden: hiddenColumns) {
             addCursorRect(CGRect(x: edge - SheetMetrics.resizeGrab, y: 0,
                                  width: SheetMetrics.resizeGrab * 2,
                                  height: bounds.height),
@@ -3088,7 +3283,7 @@ private final class SheetHeaderView: NSView {
 
     override func mouseDown(with event: NSEvent) {
         let point = convert(event.locationInWindow, from: nil)
-        if let column = resizableColumn(nearX: point.x) {
+        if let column = frames.resizableColumn(nearX: point.x, hidden: hiddenColumns) {
             dragging = (column, point.x, frames.width[column.rawValue])
             return
         }

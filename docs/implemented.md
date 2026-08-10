@@ -34,6 +34,53 @@ so none of this was added to it. `Packages/Lab` is a new package whose binary
 `finlab` carries six verbs — `import`, `bench`, `prices`, `documents`,
 `repair` and `relink` — documented in [lab.md](lab.md).
 
+### The documentation was publishing the reference book (10 Aug 2026)
+
+A sweep of the published files found a complete financial profile in committed
+documentation: net worth (twice, to the cent), the SMSF balance, portfolio
+value, cost basis and realised gains, a card account's Present and Reconciled
+balances, taxable income and the resulting tax, a wellbeing score, and two
+account names. Each had been written as *evidence* — that a report matched
+GnuCash to the cent, that a rewrite left a total unchanged — and each claim
+survives without its figure.
+
+All of it is scrubbed from `docs/` and `README.md`. It remains in the git
+history, which a scrub cannot reach.
+
+The rule was already written down and was kept by hand, which is why it failed
+slowly and invisibly over months. `scripts/check-no-real-data.py` now gates
+`docs/`, `README.md` and `website/` in CI on a magnitude test rather than a
+blocklist — a real balance is large and precise, an example is small and round,
+so anything at a million or over, or ten thousand-plus carrying cents, has to be
+waived on the line with `<!-- synthetic -->`. Verified both ways: it passes on
+the scrubbed tree and fails on the worst line put back.
+
+### A lock must not outlive its holder (10 Aug 2026)
+
+`FileLock` released on the normal path and nowhere else. `deinit` removed the
+file presenter but not the lock; nothing handled signals. So a `killall`, a
+⌃C in a headless run, or a crash left the lock file behind — and because the
+lock **syncs on purpose** (§6.1, the cross-machine single-writer guard), the
+stranded file propagated to every other machine and locked them out too, until
+the heartbeat aged out.
+
+Four nets now, in the order they get a chance to run: `release()` on the normal
+path; `release()` from `deinit` for a lock object dropped while held; a
+`LockReaper` on `SIGTERM`/`SIGINT`/`SIGHUP` that removes only files still
+carrying this process's own instance id; and — for `SIGKILL`, a panic, or a
+power cut, which no handler can ever catch — `isProvablyDead`, which lets the
+*next* opener break a lock whose pid is gone.
+
+That last check is **same-host only**, and deliberately so: another machine's
+process table is not ours to read, so a remote holder is still judged by
+heartbeat alone. Getting that backwards would break the very guarantee the
+syncing lock exists to provide. Both directions are tested.
+
+Also fixed, same class: `finlab bench --save` and `finlab import` released the
+lock with a trailing statement rather than `defer`, so a throw from `save()`
+leaked it — on `import`, onto the destination the failed run had just created,
+so the retry was refused by its own wreckage.
+
 ### Attachments are links, not copies (10 Aug 2026)
 
 The ingest above attached its matches with `attachDocument(named:data:to:)`,
@@ -796,12 +843,12 @@ number traces to the book.
 
 Verified: 636 tests green across Reports/Interchange/FeatureUI (24 new for
 P9), and the plan's exit criteria on the **real book** (`LivePlanningTests`):
-bucket seeding put the SMSF's [redacted] in retirement with cash/investments/
+bucket seeding put the SMSF balance in retirement with cash/investments/
 property/debts populated, a 51-year lifetime projection ran from seeded
 defaults, the live credit card produced a five-month payoff plan, the tax
 estimate flowed tagged accounts through the FY 2026–27 brackets
-([redacted] taxable → [redacted] base + levy), insights produced grounded
-sentences, wellbeing read [redacted], and the passport assembled a [redacted] net
+(taxable income through the brackets to a base figure plus levy), insights produced grounded
+sentences, the wellbeing score resolved, and the passport assembled a net
 worth over six asset classes.
 
 ## P8 — Extended statement import: MT940/MT942 + CAMT.053 (24 Jul 2026)
@@ -909,7 +956,7 @@ Verified by `LiveBankImportTests` (env-gated on `FL_PERF_FILE` +
 (220/58/39/3), all dates in-window, the two card payments (8 Jun, 11 May) and
 the SMSF internal transfer (20 May) each land exactly once with clean legs,
 **zero false duplicates on the reference-less QIF side** (asserted: CMA.qif
-flags nothing, and the boundary window holds exactly six [redacted] legs per
+flags nothing, and the boundary window holds exactly six equal-value legs per
 side — the book's two April transfers plus all four daily-limit May chunks,
 nothing absorbed, nothing doubled), re-importing all four files is a no-op,
 and the run reports per-file coverage (e.g. VISA: 142/220 auto-categorised,
@@ -950,8 +997,8 @@ Changes in Net Worth** (opening + surplus + valuation movement = closing,
 the valuation term derived and footnoted). Prior-year comparative columns
 appear when the book reaches back.
 
-A finding on the reference book: the face's net worth ([redacted]) and
-the equity view ([redacted]) differ by ~[redacted] — real multi-currency
+A finding on the reference book: the face's net worth and the equity view
+differ — real multi-currency
 translation (income converted at posting-date rates, assets at current
 rates; GnuCash behaves identically). The composition note now reconciles
 it with a **"Currency translation and valuation differences"** line, as an
@@ -1009,7 +1056,7 @@ column conservation; deck gating on cash-only vs dividend vs securities
 books; bridge and decomposition reconciliation against engine totals; the
 validator's accept/reject cases), both platform builds, and screenshots on
 the reference book — the Statement of Financial Position face and notes,
-the Trial Balance, and deck slides ("Portfolio of [redacted] returning 63.2%
+the Trial Balance, and deck slides ("Portfolio returning 63.2%
 on money in"; "33 holdings; the top five are 28.6% of the portfolio").
 
 ## Usability & performance redesign (24 Jul 2026)
@@ -1394,7 +1441,7 @@ The lesson: a row here is a claim about code and ages like one.
 
 | Bug | Was | Now |
 |---|---|---|
-| Editing a transaction silently un-reconciled it | `updateTransaction` rebuilt every split from `SplitInput`, which carried only account, value, quantity and memo. Everything else came back as a constructor default: `reconcileState` reset to `n`, `reconcileDate`/KVP dropped, `action` lost, the split's guid regenerated. Retyping a description was enough. 34,939 of 46,553 transactions have a reconciled/cleared split, so the status-bar Reconciled balance — [redacted], matching GnuCash to the cent — would have walked down as transactions were edited. The values still balanced, so nothing downstream could see it. | The save re-attaches to the split each row came from, keyed by a `splitID` the row carries; what the editor never showed survives because it is never copied. The save also stopped assigning `dateEntered = datePosted` on every edit. |
+| Editing a transaction silently un-reconciled it | `updateTransaction` rebuilt every split from `SplitInput`, which carried only account, value, quantity and memo. Everything else came back as a constructor default: `reconcileState` reset to `n`, `reconcileDate`/KVP dropped, `action` lost, the split's guid regenerated. Retyping a description was enough. 34,939 of 46,553 transactions have a reconciled/cleared split, so the status-bar Reconciled balance — which matches GnuCash to the cent — would have walked down as transactions were edited. The values still balanced, so nothing downstream could see it. | The save re-attaches to the split each row came from, keyed by a `splitID` the row carries; what the editor never showed survives because it is never copied. The save also stopped assigning `dateEntered = datePosted` on every edit. |
 
 **Parity gaps found and since built** (all `done`; verified against GnuCash's
 own figures where possible):
@@ -1402,7 +1449,7 @@ own figures where possible):
 - **Structured Find (⌘F)** — GnuCash's Split Search: 14 of 16 criteria, all/any,
   add/remove rows. A criterion tests a *split*, not a transaction; results roll
   up to one row per transaction but keep the matched split. Verified: 5,385
-  reconciled a card account splits totalling **[redacted]**, GnuCash's own status-bar
+  reconciled splits on a real card account, GnuCash's own status-bar
   figure, to the cent. Account picker is a filterable collapsed tree (GnuCash's
   "Select Accounts to Match"); Closing Entries + All Accounts criteria;
   new/refine/add/delete search types replayed as a live pipeline; saved queries
@@ -1477,7 +1524,7 @@ landed across five commits:
 | Inline surface, no pregeneration | Reports live in the detail pane (⌘R); the detached window is an explicit menu item. Nothing computes until a report is chosen; computation runs in a task with a spinner, never in `body`. |
 | Document polish + AI notes | Statement reports render through `ReportDocument`: header, KPI callouts, charts, Grid tables with ruled totals, methodology notes, optional on-device commentary (`ReportNarrator`). PDF prints the same value the screen renders. Income Statement FY 2025–26 matches SQL to the cent (233,856.12 / 79,013.41). |
 | Commentary live-model check | `ReportNarrator` has a live on-device test (`LiveModelTests.reportCommentary`, ~1s). It surfaced a contract drift (five notes despite a two-to-four guide) — now clamped to four. |
-| Average Balance | Daily-weighted average balance per interval (min/max/gain/loss/profit), account-scoped. `FinancialReports.averageBalance` matches GnuCash's chart to zero difference across 15 monthly intervals (4 identity tests). CY 2025 weighted average [redacted] agrees across KPI and table. |
+| Average Balance | Daily-weighted average balance per interval (min/max/gain/loss/profit), account-scoped. `FinancialReports.averageBalance` matches GnuCash's chart to zero difference across 15 monthly intervals (4 identity tests). The CY 2025 weighted average agrees across KPI and table. |
 | Multicolumn statements | Period-over-period columns via a **Compare: N** stepper on Balance Sheet and Income Statement (0 = single column). Each column reuses the verified per-period computation; the scaffold gained a generic multi-column table (on screen and in PDF). Income Statement FY 2025–26 vs 2024–25 vs 2023–24 align with blanks where an account had no line. |
 
 ## Investment reports parity audit (17 Jul 2026)
@@ -1486,14 +1533,14 @@ Figure-verified Advanced Portfolio / Lots / Capital Gains against GnuCash
 5.16's own report engine (`gnucash-cli` on an identical copy; a hand-written
 saved-report config aligned the options). **Every real holding matches to the
 cent** — shares, basis, value, realised, unrealised, under FIFO and average —
-and the FIFO grand totals for basis ([redacted]) and realised gain
-([redacted]) matched exactly across ~2,069 disposals spanning 46 years. Total
-market value and total gain ([redacted] / [redacted]) match to the cent.
+and the FIFO grand totals for basis and realised gain matched exactly across
+~2,069 disposals spanning 46 years. Total market value and total gain match to
+the cent.
 
 | Item | Notes | Status |
 |---|---|---|
-| Phantom lots after an oversell | An uncovered sale discarded the deficit, so a later buy opened a fresh lot instead of covering the short — four long-exited super accounts showed ≈[redacted] of holdings that don't exist. `CostBasis` now carries the shortfall: covering buys close it (zero proceeds, buy-back cost as basis, dated at the cover) and `remainingQuantity` reflects the true balance. | fixed |
-| Brokerage-fee treatment | A `FeeTreatment` option (Ignore / Include in basis) on the cost-basis engine and investment reports, as a **Fees** picker. Include-in-basis matches GnuCash's default: a listed holding to the cent (basis [redacted], realised [redacted]). Default stays **Ignore** (our GnuCash-"ignore"-exact baseline). *Known divergence:* this book books non-fee amounts (imputation credits, capital loss, contributions tax) as expense splits inside managed-fund transactions; GnuCash's money-in/out accounting washes them out over a closed position while our per-parcel engine subtracts them (~[redacted] realised across ~6 accounts). Matching would require adopting GnuCash's money-flow model — deferred (P8), arguably not more correct. | done |
+| Phantom lots after an oversell | An uncovered sale discarded the deficit, so a later buy opened a fresh lot instead of covering the short — four long-exited super accounts showed holdings that don't exist. `CostBasis` now carries the shortfall: covering buys close it (zero proceeds, buy-back cost as basis, dated at the cover) and `remainingQuantity` reflects the true balance. | fixed |
+| Brokerage-fee treatment | A `FeeTreatment` option (Ignore / Include in basis) on the cost-basis engine and investment reports, as a **Fees** picker. Include-in-basis matches GnuCash's default on a real holding, to the cent, for both basis and realised gain. Default stays **Ignore** (our GnuCash-"ignore"-exact baseline). *Known divergence:* this book books non-fee amounts (imputation credits, capital loss, contributions tax) as expense splits inside managed-fund transactions; GnuCash's money-in/out accounting washes them out over a closed position while our per-parcel engine subtracts them (~[redacted] realised across ~6 accounts). Matching would require adopting GnuCash's money-flow model — deferred (P8), arguably not more correct. | done |
 | Average-method rounding | GnuCash rounds each sale's basis progressively; we keep full precision until the report edge — 2¢ drift on one account over 40 years. | wontfix |
 
 ## GnuCash report catalogue — build-vs-skip (17 Jul 2026)
@@ -1618,7 +1665,7 @@ The five gaps closed by the audit:
 
 | Item | Notes |
 |---|---|
-| Register summary bar | Present / Cleared / Reconciled from the engine's existing `BalanceFilter`, gated off for a mixed-commodity subtree. Matches GnuCash's status strip on a card account to the cent (Present [redacted], Reconciled [redacted]). |
+| Register summary bar | Present / Cleared / Reconciled from the engine's existing `BalanceFilter`, gated off for a mixed-commodity subtree. Matches GnuCash's status strip on a real card account to the cent, Present and Reconciled both. |
 | Linked Documents list (Book menu) | Book-wide roll-up of every `assoc_uri` link, newest first, missing files flagged — the per-transaction link was only reachable one register row at a time. |
 | Loan Calculator (Book menu) | Fixed-rate amortisation in the engine (pure `Decimal`), payment + totals + schedule. $300k @ 6% / 30yr → $1,798.65/mo. Totals summed from the schedule so they agree to the cent. |
 | Period-End Close (Book menu) | Moves income/expense into equity as of a date, one balanced closing transaction per currency, undoable, with a per-currency preview (AUD and USD shown separately, never blended). |
@@ -1664,7 +1711,7 @@ design.
 |---|---|---|
 | Opening a book blocked the main thread | isolated to a `DocumentLoader` global actor, returns `sending FinvestLensDocument` | Graph built off the main actor without making `Book` `Sendable`. `open`/`openBook` are `async`; the root view shows "Opening <book>…"; a second click mid-load can't open a second document. |
 | `refreshAll` re-sorted every price | 0.158s → 0.041s (release) | `priceRows`/`rateRows` derived on demand behind a cache dropped in `refreshAll()`/`close()`, with a `derivedRevision` counter carrying the observation dependency. |
-| `netWorthSeries` = 1.7 billion split visits | 32.329s → 0.066s (~490×, debug) | Rewritten as one pass in date order carrying a running total per account. Still [redacted] to the cent. This *was* the "navigating to the Dashboard blocks" and "main-actor tail of an open" symptoms — an algorithm, not a threading problem. |
+| `netWorthSeries` = 1.7 billion split visits | 32.329s → 0.066s (~490×, debug) | Rewritten as one pass in date order carrying a running total per account. Still identical to the cent. This *was* the "navigating to the Dashboard blocks" and "main-actor tail of an open" symptoms — an algorithm, not a threading problem. |
 | Whole-book undo snapshot per edit | pre-capture, transaction- and account-scoped | Each edit captures only what it changes before changing it; no baseline held between edits, so opening a book pays nothing. Register edit 5.79s → 0.26s; account edit 6.6s → 0.067s. |
 | Price lookup scanned 102k prices per call | binary-searched index, invalidated on `prices` change | Preserves the scan's exact tie-breaking (first price of the winning date). |
 | `balance(of:)` walked the book per call | `balancesByAccount()` one-pass | Account tree converts each account once and rolls subtree sums up. `refreshAll` 33.7s → 0.25s. |

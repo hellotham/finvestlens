@@ -105,6 +105,19 @@ jobs:
           path: strings
           if-no-files-found: error
 
+  no-real-data:
+    name: No real financial data in published files
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # docs/ and website/ are public. The reference book is one real
+      # household's accounts. A hand-kept rule let a full financial profile —
+      # net worth, super balance, portfolio value, realised gains — accumulate
+      # in committed documentation as evidence that reports "matched to the
+      # cent"; the evidence was worth keeping, the figures never were.
+      - name: Published files carry no real balances
+        run: python3 scripts/check-no-real-data.py
+
   localization:
     name: String catalogs match the compiler
     runs-on: ubuntu-latest

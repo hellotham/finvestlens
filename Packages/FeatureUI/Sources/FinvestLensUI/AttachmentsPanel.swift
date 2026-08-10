@@ -23,8 +23,76 @@ import UIKit
 /// moment its transaction is selected; the actions (open, reveal, replace,
 /// remove, web link) sit at the bottom. Links are stored relative to the
 /// document folder (Settings ▸ Documents) when the file lives inside it.
+/// The draggable seam between the register and the attachments panel.
+///
+/// It writes the same stored width the panel reads, so the two stay one
+/// setting rather than two that can disagree. Drawn as a hairline, hit as a
+/// 10pt band, because a divider you can see is not automatically a divider you
+/// can grab — which is the mistake the register's own column rulers made.
+struct AttachmentsSplitter: View {
+    @AppStorage(AttachmentsPanel.widthKey) private var storedWidth = 290.0
+    @State private var startWidth: Double?
+
+    var body: some View {
+        Divider()
+            .overlay {
+                Rectangle()
+                    .fill(.clear)
+                    .frame(width: 10)
+                    .contentShape(Rectangle())
+                    // AppKit-only: iPadOS has no pointer-shape API here, and
+                    // the drag works the same without one.
+                    #if os(macOS)
+                    .onHover { $0 ? NSCursor.resizeLeftRight.push() : NSCursor.pop() }
+                    #endif
+                    .gesture(
+                        DragGesture(minimumDistance: 1)
+                            .onChanged { value in
+                                let base = startWidth ?? storedWidth
+                                if startWidth == nil { startWidth = base }
+                                storedWidth = min(max(base - value.translation.width,
+                                                      AttachmentsPanel.minWidth),
+                                                  AttachmentsPanel.maxWidth)
+                            }
+                            .onEnded { _ in startWidth = nil })
+                    .accessibilityLabel("Resize attachments panel")
+                    .accessibilityHidden(false)
+                    // A divider that only a drag can move is a control only a
+                    // mouse can reach. `adjustable` is what VoiceOver and Full
+                    // Keyboard Access drive a continuous value with — the same
+                    // gesture as a slider — so the pane is resizable without a
+                    // pointer at all.
+                    .accessibilityValue(Text("\(Int(storedWidth)) points"))
+                    .accessibilityAdjustableAction { direction in
+                        let step = 24.0
+                        switch direction {
+                        case .increment:
+                            storedWidth = min(storedWidth + step, AttachmentsPanel.maxWidth)
+                        case .decrement:
+                            storedWidth = max(storedWidth - step, AttachmentsPanel.minWidth)
+                        @unknown default: break
+                        }
+                    }
+            }
+    }
+}
+
 struct AttachmentsPanel: View {
     @Bindable var model: AppModel
+    /// Persisted so the pane is the width you left it at, the way a Finder
+    /// sidebar is. Clamped on read, so a value dragged on a wide display can
+    /// never strand the panel off the side of a narrow one.
+    @AppStorage(AttachmentsPanel.widthKey) private var storedWidth = 290.0
+    static let widthKey = "finvestlens.attachmentsPanelWidth"
+    static let minWidth = 210.0
+    static let maxWidth = 520.0
+    var width: CGFloat { min(max(storedWidth, Self.minWidth), Self.maxWidth) }
+
+    /// Drag the divider on the panel's leading edge.
+    func resize(by delta: CGFloat) {
+        storedWidth = min(max(width - delta, Self.minWidth), Self.maxWidth)
+    }
+
     @State private var webLinkText = ""
     @State private var webFieldShown = false
     /// Bumped when a cloud download completes, so the panel re-checks the file.
@@ -75,11 +143,12 @@ struct AttachmentsPanel: View {
             .help("Every attachment in the book, with its transaction")
         }
         .padding(12)
-        // A range, not a fixed width: this panel is one of the register's
-        // trailing panes, and a hard 290 is 290 the transaction editor's
-        // inspector cannot have — which on a full-width window means the window
-        // has to grow to fit the editor, off the side of the display.
-        .frame(minWidth: 210, idealWidth: 290, maxWidth: 290, alignment: .topLeading)
+        // The width the user dragged. `maxWidth: 290` pinned this pane — with
+        // ideal and max equal there was nothing for a divider to give, so the
+        // panel could not be resized at all, on a screen where width is the
+        // scarce resource and a long account path is exactly what you want
+        // more room for.
+        .frame(width: width, alignment: .topLeading)
         // One size for every control — mixed large/small/icon-only buttons made
         // the panel read as three different UIs.
         .controlSize(.small)

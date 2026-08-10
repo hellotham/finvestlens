@@ -197,7 +197,7 @@ and insight are produced from those facts by the on-device model (a new
 ≤ 12 words + 1–2 insight sentences, grounded ONLY in the given figures — the
 established "model proposes, deterministic code disposes" contract, gated on
 availability). **Fallback:** with Apple Intelligence off, a deterministic
-composer writes the headline from the facts ("Net worth up 8.2% to [redacted]")
+composer writes the headline from the facts ("Net worth up 8.2%")
 — the deck never degrades to empty titles.
 
 **Navigation & export.** Horizontal paging with keyboard arrows and a page

@@ -137,6 +137,58 @@ struct FileLockTests {
         #expect(lock2.isHeldByUs)
     }
 
+    /// A crash on this machine must not lock its owner out of their own book.
+    ///
+    /// The heartbeat window exists for a holder we cannot interrogate — one on
+    /// another machine. A dead pid *here* is not a maybe: the process is gone,
+    /// and waiting `staleAfter` for it is a lockout, not caution. This is the
+    /// case a `killall`, a crash, or a power cut leaves behind.
+    @Test("A lock from a dead process on this host is stale immediately")
+    func deadHolderOnThisHostIsStale() throws {
+        let doc = tempURL()
+        let lock = FileLock(documentURL: doc, staleAfter: 3600)
+        // Heartbeat as of *now*, so nothing about the clock makes this stale…
+        try lock.acquire()
+        defer { lock.release() }
+
+        // …then rewrite the holder as a pid that cannot exist. Reserved and
+        // far above the system maximum, so it can never be recycled onto a
+        // live process while the test runs.
+        let holder = try #require(lock.currentHolder())
+        let dead = LockHolder(host: ProcessInfo.processInfo.hostName, user: holder.user,
+                              instanceID: holder.instanceID, pid: 999_999,
+                              acquiredAt: holder.acquiredAt, heartbeatAt: Date())
+        try JSONEncoder().encode(dead).write(to: lock.lockURL, options: .atomic)
+
+        #expect(lock.isStale(), "a fresh heartbeat from a pid that does not exist is still dead")
+
+        let other = FileLock(documentURL: doc, staleAfter: 3600)
+        defer { other.release() }
+        try other.breakStaleLockAndAcquire()
+        #expect(other.isHeldByUs)
+    }
+
+    /// The mirror image, and the one that protects the cross-machine promise:
+    /// another host's pid is none of our business. Its process table is not
+    /// ours to read, so only the heartbeat may judge it.
+    @Test("A lock from another host is never judged by pid")
+    func otherHostIsJudgedOnlyByHeartbeat() throws {
+        let doc = tempURL()
+        let lock = FileLock(documentURL: doc, staleAfter: 3600)
+        try lock.acquire()
+        defer { lock.release() }
+
+        let holder = try #require(lock.currentHolder())
+        let remote = LockHolder(host: "someone-elses-mac.local", user: "them",
+                                instanceID: holder.instanceID, pid: 999_999,
+                                acquiredAt: holder.acquiredAt, heartbeatAt: Date())
+        try JSONEncoder().encode(remote).write(to: lock.lockURL, options: .atomic)
+
+        #expect(!lock.isStale(), "a live remote holder must never be broken on a local pid check")
+        let other = FileLock(documentURL: doc, staleAfter: 3600)
+        #expect(throws: FileLock.LockError.self) { try other.breakStaleLockAndAcquire() }
+    }
+
     @Test("A stale lock is detected and can be broken")
     func staleBreaking() throws {
         let doc = tempURL()

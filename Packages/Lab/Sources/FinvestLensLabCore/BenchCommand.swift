@@ -77,11 +77,16 @@ enum BenchCommand {
                 }
                 log(Fmt.row("open read-write (lock + copy + read)", Fmt.time(openForSaveSeconds)))
 
+                // `defer`, not a trailing statement: a throw from `save()` —
+                // a full disk, a dropped share — used to skip the discard and
+                // strand the lock. Under a lock that syncs, that stranded file
+                // propagates to every other machine and locks them out too.
+                defer { document.discard() }
+
                 let (_, saveSeconds) = try Stopwatch.measure { () -> Void in
                     try document.save()
                 }
                 log(Fmt.row("save (fingerprint ×2 + write-back)", Fmt.time(saveSeconds)))
-                document.discard()
             }
 
             if pass == 1 {
