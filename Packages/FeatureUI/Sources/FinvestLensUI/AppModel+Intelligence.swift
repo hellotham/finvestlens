@@ -1139,7 +1139,7 @@ extension AppModel {
     }
 
     /// The franking split for a dividend statement, built the way the book's
-    /// existing dividends are recorded (the a card account guide): per-security income
+    /// existing dividends are recorded (the Everyday Card guide): per-security income
     /// legs (Dividends ▸ TICKER ▸ Franked / Unfranked / Imputation Credit), the
     /// gross-up offset to the imputation expense account (income + expense net
     /// to zero, so cash is untouched), and the zero-value stock link leg.

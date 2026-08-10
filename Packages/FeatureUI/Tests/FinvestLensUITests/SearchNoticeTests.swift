@@ -35,7 +35,7 @@ struct SearchNoticeTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        let bank = try #require(model.addAccount(name: "a card account", type: .bank))
+        let bank = try #require(model.addAccount(name: "Everyday Card", type: .bank))
         let expense = try #require(model.addAccount(name: "Motor", type: .expense))
         // Taken verbatim from the reference book: a description that really
         // does contain "Date:".
@@ -81,7 +81,7 @@ struct SearchNoticeTests {
         let (model, url) = try book()
         defer { model.close(); try? FileManager.default.removeItem(at: url) }
 
-        for query in ["account:a card account", "desc:NRMA", "memo:x", "amount:>1", "tag:foo", "acct:a card account"] {
+        for query in ["account:Everyday Card", "desc:NRMA", "memo:x", "amount:>1", "tag:foo", "acct:Everyday Card"] {
             model.searchQuery = query
             model.runSearch()
             #expect(model.searchNotices.isEmpty, "\(query) is a real operator")

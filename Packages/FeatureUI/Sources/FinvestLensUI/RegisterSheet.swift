@@ -171,7 +171,6 @@ private struct SheetHost: NSViewRepresentable {
             guard let model else { return }
             let target: RegisterSort? = switch column {
             case .date: .date
-            case .num: .number
             case .description: .description
             case .amount: .amount
             default: nil
@@ -200,7 +199,6 @@ private struct SheetHost: NSViewRepresentable {
 
     private var sortIndicator: (column: SheetColumn, reversed: Bool)? {
         switch sort {
-        case .number: (.num, sortReversed)
         case .date: (.date, sortReversed)
         case .description: (.description, sortReversed)
         case .amount: (.amount, sortReversed)
@@ -275,14 +273,23 @@ private enum SheetTrace {
 
 // MARK: - Geometry
 
+/// The register's columns, in the order they are laid out.
+///
+/// **Num is not among them.** It is blank on the overwhelming majority of rows —
+/// a cheque number or a bank reference, present when a transaction happens to
+/// have one — so as a column it spent width on emptiness in every row to serve
+/// a few. It now lives on its own line inside the disclosed detail, next to
+/// Notes and Tags, where it is still fully editable.
+///
+/// `handle` (the edit pencil) sits immediately after `date`, so the row's two
+/// affordances read left to right as disclosure-then-edit: the caret occupies a
+/// gutter inside Date's own cell, and the pencil follows it.
 private enum SheetColumn: Int, CaseIterable {
-    case date, num, handle, description, transfer, reconcile, amount, balance
+    case date, description, transfer, reconcile, amount, balance
 
     var title: String {
         switch self {
         case .date: String(localized: "Date")
-        case .num: String(localized: "Num")
-        case .handle: ""
         case .description: String(localized: "Description")
         case .transfer: String(localized: "Transfer")
         case .reconcile: String(localized: "R")
@@ -293,7 +300,7 @@ private enum SheetColumn: Int, CaseIterable {
 
     var trailing: Bool { self == .amount || self == .balance }
     var sortable: Bool {
-        self == .date || self == .num || self == .description || self == .amount
+        self == .date || self == .description || self == .amount
     }
 
     /// Whether the column may be switched off.
@@ -310,8 +317,8 @@ private enum SheetColumn: Int, CaseIterable {
     /// quantity (FR-REG-07), not a running balance.
     var canHide: Bool {
         switch self {
-        case .num, .transfer, .reconcile, .balance: true
-        case .date, .handle, .description, .amount: false
+        case .transfer, .reconcile, .balance: true
+        case .date, .description, .amount: false
         }
     }
 
@@ -329,7 +336,7 @@ private enum SheetColumn: Int, CaseIterable {
 /// defaults key, and a change from either side reaches the other without a
 /// second channel to keep in step.
 public enum RegisterColumnVisibility {
-    public static let key = "registerHiddenColumns"
+    public static let key = "registerHiddenColumns2"
 
     fileprivate static func hidden(from mask: Int) -> Set<SheetColumn> {
         Set(SheetColumn.allCases.filter { $0.canHide && mask & (1 << $0.rawValue) != 0 })
@@ -379,6 +386,10 @@ private enum SheetMetrics {
     /// The base width, at a 24pt row and 100% Text Size; the view scales it
     /// (`SheetView.caretGutter`) so the gutter tracks the glyph it holds.
     static let caretGutter: CGFloat = 14
+    /// The pencil sits beside the caret rather than in a column of its own, so
+    /// the row reads disclose-then-edit before the date rather than putting the
+    /// date between the two.
+    static let editGutter: CGFloat = 20
     static let washRadius: CGFloat = 8
     static let washInset: CGFloat = 4
 
@@ -399,7 +410,7 @@ private enum SheetMetrics {
              overrides: [SheetColumn: CGFloat] = [:],
              hidden: Set<SheetColumn> = []) {
             var fixed: [SheetColumn: CGFloat] = [
-                .date: 80, .num: 58, .handle: 22, .transfer: 180,
+                .date: 80, .transfer: 180,
                 .reconcile: 24, .amount: 100, .balance: 112,
             ]
             for (column, width) in natural where fixed[column] != nil {
@@ -606,8 +617,17 @@ private enum ReconcileSymbols {
         // `circle.fill`. Only the `.fill` glyph needs it; the outline ones are
         // a single layer.
         let (name, color, knockout): (String, NSColor, NSColor?) = switch glyph {
+        // Reconciliation is a **progression**, so cleared and reconciled share
+        // the app's accent and differ by weight — outline, then filled. They
+        // used to be accent and system green: two unrelated colour languages
+        // in one column, which read as arbitrary rather than as two points on
+        // the same scale.
+        //
+        // Frozen and voided keep their own colours on purpose. They are not
+        // further along the scale; they are outside it, and a colour that says
+        // so is doing real work.
         case "c": ("checkmark.circle", NSColor(Color.appAccent), nil)
-        case "y": ("checkmark.circle.fill", .systemGreen, .white)
+        case "y": ("checkmark.circle.fill", NSColor(Color.appAccent), .white)
         case "f": ("snowflake", .systemCyan, nil)
         case "v": ("xmark.circle", .systemRed, nil)
         default: ("circle.dotted", .secondaryLabelColor, nil)
@@ -695,6 +715,10 @@ private final class SheetView: NSView, NSTextFieldDelegate {
     /// scale 1.41, 19pt at 1.63). It is also the click target, which is the
     /// half that matters for a taller row.
     private var caretGutter: CGFloat = SheetMetrics.caretGutter
+    /// The edit pencil's gutter, immediately after the caret's inside the Date
+    /// cell. Wider than the caret's because the glyph is: a pencil at 15pt
+    /// against a triangle at 11.
+    private var editGutter: CGFloat = SheetMetrics.editGutter
     /// `rowHeight` resolved against this view's display, times Text Size,
     /// divided by the 24pt base. 1.0 is a 24pt row with 13pt text.
     private var fontScale: CGFloat = 0
@@ -890,8 +914,6 @@ private final class SheetView: NSView, NSTextFieldDelegate {
         let base = rows[index].base
         switch column {
         case .date: return dateText(base.date)
-        case .num: return base.number
-        case .handle: return ""
         case .description: return base.description
         case .transfer: return base.isHeadingOnly ? "" : base.transferName
         case .reconcile:
@@ -995,6 +1017,7 @@ private final class SheetView: NSView, NSTextFieldDelegate {
         fontScale = scale
         lineHeight = ceil(RegisterRowHeight.base * scale)
         caretGutter = ceil(SheetMetrics.caretGutter * scale)
+        editGutter = ceil(SheetMetrics.editGutter * scale)
         bodyFont = NSFont.systemFont(ofSize: 13 * scale)
         monoFont = NSFont.monospacedDigitSystemFont(ofSize: 13 * scale, weight: .regular)
         smallFont = NSFont.systemFont(ofSize: 11 * scale)
@@ -1221,13 +1244,17 @@ private final class SheetView: NSView, NSTextFieldDelegate {
         return lines
     }
 
+    /// How tall a block is, in lines — **derived from the line plan**, never
+    /// counted separately.
+    ///
+    /// This used to re-implement `linePlan`'s branches as arithmetic (`var
+    /// count = 3  // heading + notes + tags`). The two had to agree and nothing
+    /// enforced it: `lineCount` is the sole input to `rebuildGeometry`, so a
+    /// divergence does not throw — the rows simply draw over one another, which
+    /// is the exact class of bug the register rewrite was undertaken to fix.
+    /// Adding the Num line proved the point, leaving the count one short.
     private func lineCount(_ row: SheetRow) -> Int {
-        let drafting = draft?.transactionID == row.txn
-        guard isDisclosed(row, drafting: drafting) else { return 1 }
-        var count = 3                              // heading + notes + tags
-        count += drafting ? (draft?.lines.count ?? 0) : row.legs.count
-        if drafting, draft?.isExpanded == true { count += 1 }
-        return count
+        linePlan(row).count
     }
 
     // MARK: Geometry
@@ -1303,7 +1330,7 @@ private final class SheetView: NSView, NSTextFieldDelegate {
         compactDates = false
         var measured = measureNaturalWidths(rows)
         if frame.width > 0 {
-            let fixedSum = measured.values.reduce(0, +) + (measured[.handle] ?? 0)
+            let fixedSum = measured.values.reduce(0, +)
             if frame.width - fixedSum < floor {
                 compactDates = true
                 measured = measureNaturalWidths(rows)
@@ -1336,13 +1363,18 @@ private final class SheetView: NSView, NSTextFieldDelegate {
         let body = [NSAttributedString.Key.font: bodyFont]
         let mono = [NSAttributedString.Key.font: monoFont]
 
-        var widestNumber = "", widestTransfer = ""
+        var transferWidths: [CGFloat] = []
         var earliest = rows[0].base.date, latest = rows[0].base.date
         var biggestAmount = Decimal(0), biggestBalance = Decimal(0)
+        var transferSeen: Set<String> = []
         for row in rows {
             let base = row.base
-            if base.number.count > widestNumber.count { widestNumber = base.number }
-            if base.transferName.count > widestTransfer.count { widestTransfer = base.transferName }
+            // Account names repeat across thousands of rows; measure each
+            // distinct one once.
+            if !base.transferName.isEmpty, transferSeen.insert(base.transferName).inserted {
+                transferWidths.append((base.transferName as NSString)
+                    .size(withAttributes: body).width)
+            }
             if base.date < earliest { earliest = base.date }
             if base.date > latest { latest = base.date }
             if abs(base.amount) > biggestAmount { biggestAmount = abs(base.amount) }
@@ -1368,11 +1400,10 @@ private final class SheetView: NSView, NSTextFieldDelegate {
         var natural: [SheetColumn: CGFloat] = [
             // The disclosure gutter lives inside Date (HIG *Outline views*:
             // hierarchy in the first column only), so it is added, not shared.
-            .date: date + caretGutter + pad,
+            .date: date + caretGutter + editGutter + pad,
             .amount: amount + pad,
             .balance: balance + pad,
-            .num: text(widestNumber, body) + pad,
-            .transfer: text(widestTransfer, body) + pad,
+            .transfer: transferWidth(transferWidths) + pad,
         ]
         // A column is never narrower than its own heading, or the header reads
         // as truncated while the rows look fine.
@@ -1381,11 +1412,28 @@ private final class SheetView: NSView, NSTextFieldDelegate {
         for column in natural.keys {
             natural[column] = max(natural[column] ?? 0, text(column.title, heading) + pad + 14)
         }
-        // Transfer names run to whole account paths; past a point the register
-        // is better served by giving the space to Description and letting the
-        // user drag it wider if they want it.
-        natural[.transfer] = min(natural[.transfer] ?? 0, 260 * fontScale)
         return natural
+    }
+
+    /// How wide Transfer needs to be — sized to the **90th percentile** of the
+    /// account names in this register, not the widest.
+    ///
+    /// Sizing it to the widest was wrong, and measurably so: on the reference
+    /// book the median account name is 9 characters and the 90th percentile is
+    /// 18, but the longest of 560 is 37 — about 259pt. One account name was
+    /// therefore setting the column width for 46,000 rows and pinning it at its
+    /// cap, at Description's expense.
+    ///
+    /// The user's rule is to give Description as much room as possible and
+    /// squeeze the rest to the minimum that does not truncate. Those two pull
+    /// against each other only in the tail, so the tail is where the compromise
+    /// belongs: nine names in ten fit whole, the tenth truncates, and any of
+    /// them can be read in full by widening the column or opening the row.
+    private func transferWidth(_ widths: [CGFloat]) -> CGFloat {
+        guard !widths.isEmpty else { return 0 }
+        let sorted = widths.sorted()
+        let index = min(sorted.count - 1, Int(Double(sorted.count) * 0.9))
+        return min(sorted[index], 260 * fontScale)
     }
 
     private func rebuildFrames() {
@@ -1433,7 +1481,7 @@ private final class SheetView: NSView, NSTextFieldDelegate {
         // each cell's side borders; gnucash-header.c boxes header cells).
         // The date|handle seam is skipped — the handle shares the date zone.
         NSColor.separatorColor.setFill()
-        for column in SheetColumn.allCases where column != .date && column != .handle {
+        for column in SheetColumn.allCases where column != .date {
             CGRect(x: frames.x[column.rawValue] - 0.5, y: dirtyRect.minY,
                    width: 1, height: dirtyRect.height).fill()
         }
@@ -1591,18 +1639,19 @@ private final class SheetView: NSView, NSTextFieldDelegate {
 
         switch line {
         case .heading:
+            // Caret, pencil, date — in that reading order, both glyphs in
+            // gutters at the leading edge of the Date cell. The pencil used to
+            // be a column of its own *after* Date, which put the date text
+            // between the two affordances.
             drawCaret(row, drafting: drafting, in: cell(.date))
+            let editBox = CGRect(x: cell(.date).minX + caretGutter, y: cell(.date).minY,
+                                 width: editGutter, height: cell(.date).height)
+            drawHandle(row, drafting: drafting, in: editBox)
             if !skipForCursor(row, .date) {
                 let date = drafting ? (draft?.date ?? row.base.date) : row.base.date
                 drawText(dateText(date), in: cell(.date),
-                         leadingInset: caretGutter)
+                         leadingInset: caretGutter + editGutter)
             }
-            if !skipForCursor(row, .number) {
-                let num = drafting ? (draft?.number ?? "") : row.base.number
-                drawEditableText(num, placeholder: placeholder(for: .number),
-                                 drafting: drafting, in: cell(.num), muted: true)
-            }
-            drawHandle(row, drafting: drafting, in: cell(.handle))
             if !skipForCursor(row, .description) {
                 var inset: CGFloat = 0
                 if row.base.hasDocument {
@@ -1621,7 +1670,11 @@ private final class SheetView: NSView, NSTextFieldDelegate {
                 drawText(headingTransferName(row, drafting: drafting),
                          in: cell(.transfer), muted: true, middleTruncate: true)
             }
-            if !row.base.isHeadingOnly {
+            // Guarded on emptiness exactly as the leg rows are. Without this
+            // an unknown state fell through to the dotted "not reconciled"
+            // circle on the heading while the leg beneath it drew nothing —
+            // the same state, two glyphs, side by side in Transaction Journal.
+            if !row.base.isHeadingOnly, !row.base.reconcile.isEmpty {
                 drawSymbol(ReconcileSymbols.image(for: row.base.reconcile, scale: fontScale),
                            centeredIn: cell(.reconcile))
             }
@@ -1633,6 +1686,16 @@ private final class SheetView: NSView, NSTextFieldDelegate {
             drawHeadingBalance(row, drafting: drafting, in: cell(.balance), code: code)
 
         case .notes:
+            // Num shares this line rather than taking one of its own: it is a
+            // short token, and a line of its own for a field that is usually
+            // empty is the same waste as the column it replaced. Leading cell
+            // for Num, description cell for Notes — the arrangement leg rows
+            // already use for Action beside Memo.
+            if !skipForCursor(row, .number) {
+                let num = drafting ? (draft?.number ?? "") : row.base.number
+                drawEditableText(num, placeholder: placeholder(for: .number),
+                                 drafting: drafting, in: cell(.date), muted: true)
+            }
             if !skipForCursor(row, .notes) {
                 let text = drafting ? (draft?.notes ?? "") : row.base.notes
                 drawEditableText(text, placeholder: placeholder(for: .notes),
@@ -1965,7 +2028,14 @@ private final class SheetView: NSView, NSTextFieldDelegate {
             toggleCurrentExpanded()
             return
         }
-        if column == .handle, case .heading = line {
+        // Explicitly the *second* gutter, not merely "before the end of the
+        // second". The caret's test above is conditional on
+        // `style.allowsManualExpand`, so in Transaction Journal — where there
+        // is nothing to expand — a tap on the caret would otherwise fall
+        // through to here and start an edit.
+        if column == .date, case .heading = line,
+           point.x >= frames.x[SheetColumn.date.rawValue] + caretGutter,
+           point.x < frames.x[SheetColumn.date.rawValue] + caretGutter + editGutter {
             if drafting, draft?.isExpanded == true {
                 escapePressed()   // the cancel glyph abandons the edit
             } else {
@@ -1998,10 +2068,10 @@ private final class SheetView: NSView, NSTextFieldDelegate {
 
         let place: SheetTap? = switch (column, line) {
         case (.date, .heading): .heading(.date)
-        case (.num, .heading): .heading(.number)
         case (.description, .heading): .heading(.description)
         case (.transfer, .heading): row.base.isHeadingOnly ? nil : .heading(.transfer)
         case (.amount, .heading): row.base.isHeadingOnly ? nil : .heading(.amount)
+        case (.date, .notes): .heading(.number)
         case (.description, .notes): .heading(.notes)
         case (.description, .tags): .heading(.tags)
         case (.date, .leg(let index)): .leg(index, .action)
@@ -2176,8 +2246,7 @@ private final class SheetView: NSView, NSTextFieldDelegate {
     /// foreign or share quantity under Balance.
     private static func column(of field: TransactionEditField) -> SheetColumn {
         switch field {
-        case .date, .splitAction: .date
-        case .number: .num
+        case .date, .number, .splitAction: .date
         case .description, .notes, .tags, .splitMemo: .description
         case .transfer, .splitAccount: .transfer
         case .amount, .splitAmount: .amount
@@ -2199,7 +2268,8 @@ private final class SheetView: NSView, NSTextFieldDelegate {
         // shared with `focusOrder` so the two can never drift apart on which
         // box a field is edited in.
         let line: Int? = switch focus.field {
-        case .date, .number, .description, .transfer, .amount: lineIndex(.heading)
+        case .date, .description, .transfer, .amount: lineIndex(.heading)
+        case .number: lineIndex(.notes)
         case .notes: lineIndex(.notes)
         case .tags: lineIndex(.tags)
         case .splitAction(let id), .splitMemo(let id), .splitAccount(let id),
@@ -2820,7 +2890,6 @@ private final class SheetAXRow: NSAccessibilityElement, NSAccessibilityElementPr
             let built: [SheetAXCell]? = MainActor.assumeIsolated {
                 guard let sheet else { return nil }
                 return SheetColumn.allCases
-                    .filter { $0 != .handle }       // the handle is decoration
                     .filter { !sheet.hiddenColumns.contains($0) }
                     .map { SheetAXCell(sheet: sheet, rowIndex: index, column: $0) }
             }
@@ -3262,7 +3331,7 @@ private final class SheetHeaderView: NSView {
         }
         NSColor.separatorColor.setFill()
         CGRect(x: 0, y: bounds.height - 1, width: bounds.width, height: 1).fill()
-        for column in SheetColumn.allCases where column != .date && column != .handle {
+        for column in SheetColumn.allCases where column != .date {
             CGRect(x: frames.x[column.rawValue] - 0.5, y: 0,
                    width: 1, height: bounds.height - 1).fill()
         }

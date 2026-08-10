@@ -5,7 +5,7 @@
 //  Filtering the account tree in Find's Account criterion.
 //
 //  GnuCash shows a tree and no filter; on 559 accounts that means opening three
-//  disclosure triangles to reach Assets:Joint:a card account. The filter is the addition,
+//  disclosure triangles to reach Assets:Joint:Everyday Card. The filter is the addition,
 //  so it is the part worth pinning.
 //
 //  Copyright (C) 2026 Christine Tham
@@ -21,7 +21,7 @@ import FinvestLensEngine
 @Suite("Account match picker")
 struct AccountMatchPickerTests {
 
-    /// Assets (placeholder) → Joint (placeholder) → a card account, ANZ Access;
+    /// Assets (placeholder) → Joint (placeholder) → Everyday Card, ANZ Access;
     /// Income (placeholder) → Salary.
     private func tree() -> [AccountNode] {
         func node(_ name: String, _ full: String, placeholder: Bool = false,
@@ -33,7 +33,7 @@ struct AccountMatchPickerTests {
         return [
             node("Assets", "Assets", placeholder: true, children: [
                 node("Joint", "Assets:Joint", placeholder: true, children: [
-                    node("a card account", "Assets:Joint:a card account"),
+                    node("Everyday Card", "Assets:Joint:Everyday Card"),
                     node("ANZ Access", "Assets:Joint:ANZ Access"),
                 ]),
             ]),
@@ -46,19 +46,19 @@ struct AccountMatchPickerTests {
     @Test("An empty filter offers every postable account")
     func emptyFilterMatchesPostable() {
         let hits = AccountMatchPicker.matching(tree(), filter: "")
-        #expect(hits.map(\.name).sorted() == ["ANZ Access", "a card account", "Salary"])
+        #expect(hits.map(\.name).sorted() == ["ANZ Access", "Everyday Card", "Salary"])
     }
 
     @Test("Filtering finds an account by its own name")
     func filterByName() {
-        let hits = AccountMatchPicker.matching(tree(), filter: "cdia")
-        #expect(hits.map(\.fullName) == ["Assets:Joint:a card account"])
+        let hits = AccountMatchPicker.matching(tree(), filter: "everyday")
+        #expect(hits.map(\.fullName) == ["Assets:Joint:Everyday Card"])
     }
 
     @Test("Filtering is case-insensitive")
     func filterIsCaseInsensitive() {
-        #expect(AccountMatchPicker.matching(tree(), filter: "a card account").count == 1)
-        #expect(AccountMatchPicker.matching(tree(), filter: "cDiA").count == 1)
+        #expect(AccountMatchPicker.matching(tree(), filter: "Everyday Card").count == 1)
+        #expect(AccountMatchPicker.matching(tree(), filter: "eVeRyDaY").count == 1)
     }
 
     /// Matching the full name is what lets a parent's name find its children —
@@ -66,13 +66,13 @@ struct AccountMatchPickerTests {
     @Test("A parent's name finds the accounts under it")
     func filterByAncestorName() {
         let hits = AccountMatchPicker.matching(tree(), filter: "joint")
-        #expect(hits.map(\.name).sorted() == ["ANZ Access", "a card account"])
+        #expect(hits.map(\.name).sorted() == ["ANZ Access", "Everyday Card"])
     }
 
     @Test("A path fragment narrows further")
     func filterByPathFragment() {
-        let hits = AccountMatchPicker.matching(tree(), filter: "joint:cd")
-        #expect(hits.map(\.fullName) == ["Assets:Joint:a card account"])
+        let hits = AccountMatchPicker.matching(tree(), filter: "joint:every")
+        #expect(hits.map(\.fullName) == ["Assets:Joint:Everyday Card"])
     }
 
     /// Placeholders hold no splits, so selecting one matches nothing. Offering

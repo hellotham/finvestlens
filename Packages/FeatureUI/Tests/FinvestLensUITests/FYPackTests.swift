@@ -31,7 +31,7 @@ struct FYPackTests {
         try model.newDocument(at: url)
         defer { model.close(); try? FileManager.default.removeItem(at: url) }
 
-        let bank = try #require(model.addAccount(name: "a card account", type: .bank))
+        let bank = try #require(model.addAccount(name: "Everyday Card", type: .bank))
         let income = try #require(model.book?.account(with:
             model.addAccount(name: "Income", type: .income)!))
         let dividends = Account(name: "Dividends", type: .income, commodity: .aud)

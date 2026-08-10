@@ -35,7 +35,7 @@ struct StructuredFindTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        let bank = try #require(model.addAccount(name: "a card account", type: .bank))
+        let bank = try #require(model.addAccount(name: "Everyday Card", type: .bank))
         let income = try #require(model.addAccount(name: "Salary", type: .income))
         _ = model.addTransfer(from: income, to: bank, amount: dec("100"), date: day(0), description: "Pay one")
         _ = model.addTransfer(from: income, to: bank, amount: dec("50"), date: day(5), description: "Pay two")
@@ -204,7 +204,7 @@ struct StructuredFindTests {
 
     /// The payoff for keeping the matched split. Searching "Account is Salary"
     /// and asking to see it must open **Salary** — the heuristic prefers the
-    /// balance-sheet leg and would open a card account, which is not what was asked for.
+    /// balance-sheet leg and would open Everyday Card, which is not what was asked for.
     @Test("Show in Register opens the account the find matched")
     func showInRegisterUsesTheMatchedSplit() throws {
         let (model, url, bank, income) = try book()
@@ -213,7 +213,7 @@ struct StructuredFindTests {
         model.runFind(query(.account(.isOneOf, [income])))
         let result = try #require(model.searchResults.first)
 
-        // The heuristic on its own would say a card account.
+        // The heuristic on its own would say Everyday Card.
         #expect(model.registerAccountID(forTransaction: result.id) == bank)
 
         model.showInRegister(result.id)

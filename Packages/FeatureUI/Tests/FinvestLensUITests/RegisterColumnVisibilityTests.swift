@@ -23,7 +23,10 @@ struct RegisterColumnVisibilityTests {
         #expect(!titles.contains("Date"))
         #expect(!titles.contains("Description"))
         #expect(!titles.contains("Amount"))
-        #expect(titles.contains("Num"))
+        // Num is not offered because it is not a column: it is blank on nearly
+        // every row, so it shares the Notes line inside the disclosed detail
+        // instead of spending width in all of them.
+        #expect(!titles.contains("Num"))
         #expect(titles.contains("Transfer"))
         #expect(titles.contains("Balance"))
         // Reconcile's heading is a bare "R", which reads as nothing in a menu.

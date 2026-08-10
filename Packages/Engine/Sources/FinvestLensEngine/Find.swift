@@ -6,8 +6,8 @@
 //
 //  The dialog GnuCash shows is headed **Split Search**, and that is the whole
 //  design. A criterion is tested against a *split*, not a transaction: "Account
-//  is a card account and Reconcile is Reconciled" means one split that is both, not a
-//  transaction with a a card account split and, elsewhere, some unrelated reconciled one.
+//  is Everyday Card and Reconcile is Reconciled" means one split that is both, not a
+//  transaction with an Everyday Card split and, elsewhere, some unrelated reconciled one.
 //  Evaluating per transaction gives the wrong answer on exactly the multi-split
 //  transactions people search for — a share buy, a split payslip.
 //
@@ -172,7 +172,7 @@ public enum FindTest: Sendable, Hashable, Codable {
     case account(SetComparator, Set<GncGUID>)
     /// The transaction posts to **every** one of these accounts — GnuCash's
     /// "All Accounts" row, distinct from `account`, which asks about the one
-    /// split. "a card account and Brokerage" here means a transfer between them.
+    /// split. "Everyday Card and Brokerage" here means a transfer between them.
     case allAccounts(Set<GncGUID>)
     case balanced(Bool)
     /// GnuCash's "Closing Entries": the transactions Close Book writes, marked

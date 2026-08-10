@@ -10,8 +10,8 @@
 //          FL_IMPORT_DIR="/path/to/imports" \
 //          swift test --filter LiveBankImportTests
 //
-//  FL_IMPORT_DIR must hold "ANZ VISA.ofx", "a card account.ofx", "CMA.qif", "CMAA.qif".
-//  The scenario the four files encode: two ANZ-card payments funded from a card account
+//  FL_IMPORT_DIR must hold "ANZ VISA.ofx", "Everyday Card.ofx", "CMA.qif", "CMAA.qif".
+//  The scenario the four files encode: two ANZ-card payments funded from Everyday Card
 //  (8 Jun and 11 May 2026) and one SMSF internal transfer CMAA → CMA (20 May
 //  2026). Importing all four statements — in either order — must leave each
 //  transfer as ONE transaction with a leg in each account: no mirror-image
@@ -46,7 +46,7 @@ struct LiveBankImportTests {
     /// (file, account name in the book, format, expected row count)
     private static let statements: [(file: String, account: String, format: BankFileFormat, rows: Int)] = [
         ("ANZ VISA.ofx", "ANZ VISA", .ofx, 220),
-        ("a card account.ofx", "a card account", .ofx, 58),
+        ("Everyday Card.ofx", "Everyday Card", .ofx, 58),
         ("CMA.qif", "CMA", .qif, 39),
         ("CMAA.qif", "CMAA", .qif, 3),
     ]
@@ -54,8 +54,8 @@ struct LiveBankImportTests {
     @Test("Four real statements import with transfers matched, in either order")
     func fourStatementsBothOrders() async throws {
         guard let perfPath, let importDir else { return }
-        try await run(order: [0, 1, 2, 3], perfPath: perfPath, importDir: importDir)   // VISA → a card account → CMA → CMAA
-        try await run(order: [3, 2, 1, 0], perfPath: perfPath, importDir: importDir)   // CMAA → CMA → a card account → VISA
+        try await run(order: [0, 1, 2, 3], perfPath: perfPath, importDir: importDir)   // VISA → Everyday Card → CMA → CMAA
+        try await run(order: [3, 2, 1, 0], perfPath: perfPath, importDir: importDir)   // CMAA → CMA → Everyday Card → VISA
     }
 
     private func run(order: [Int], perfPath: String, importDir: String) async throws {
@@ -127,18 +127,18 @@ struct LiveBankImportTests {
         // The three cross-account transfers exist exactly once, with a leg in
         // each account and none left in a wash account.
         let visa = try #require(account("ANZ VISA"))
-        let cdia = try #require(account("a card account"))
+        let everyday = try #require(account("Everyday Card"))
         let cma = try #require(account("CMA"))
         let cmaa = try #require(account("CMAA"))
-        assertSingleTransfer(book: book, from: cdia, to: visa,
+        assertSingleTransfer(book: book, from: everyday, to: visa,
                              amount: Decimal(string: "4439.95")!, around: day(2026, 6, 8))
-        assertSingleTransfer(book: book, from: cdia, to: visa,
+        assertSingleTransfer(book: book, from: everyday, to: visa,
                              amount: Decimal(string: "18512.99")!, around: day(2026, 5, 11))
         assertSingleTransfer(book: book, from: cmaa, to: cma,
                              amount: Decimal(5000), around: day(2026, 5, 20))
 
-        // The daily-limit chunks: the four May [redacted] SMSF contribution
-        // transfers (a card account debits 1/2/4/5 May, CMA deposits 1/4/4/5 May) are
+        // The daily-limit chunks: the four May daily-limit SMSF contribution
+        // transfers (Everyday Card debits 1/2/4/5 May, CMA deposits 1/4/4/5 May) are
         // all distinct events on top of the book's two late-April ones —
         // nothing absorbed, nothing doubled: exactly six legs a side.
         func boundaryLegs(_ account: Account, _ value: Decimal) -> Int {
@@ -149,9 +149,9 @@ struct LiveBankImportTests {
             }.count
         }
         #expect(boundaryLegs(cma, Decimal(20000)) == 6,
-                "CMA has \(boundaryLegs(cma, Decimal(20000))) [redacted] deposits at the boundary (want 6)")
-        #expect(boundaryLegs(cdia, Decimal(-20000)) == 6,
-                "a card account has \(boundaryLegs(cdia, Decimal(-20000))) [redacted] debits at the boundary (want 6)")
+                "CMA has \(boundaryLegs(cma, Decimal(20000))) boundary-value deposits (want 6)")
+        #expect(boundaryLegs(everyday, Decimal(-20000)) == 6,
+                "Everyday Card has \(boundaryLegs(everyday, Decimal(-20000))) boundary-value debits (want 6)")
 
         // Idempotency: importing every file again changes nothing.
         for statement in Self.statements {

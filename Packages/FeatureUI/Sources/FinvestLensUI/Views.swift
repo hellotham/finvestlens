@@ -186,10 +186,10 @@ enum AmountFormat {
         value.formatted(.currency(code: code))
     }
 
-    /// "[redacted]" / "$120k" — deck callouts breathe better compact. One
+    /// "$3.8m" / "$120k" — deck callouts breathe better compact. One
     /// implementation (both review decks carried byte-identical private
     /// copies, each with a `.first`-character symbol hack that printed
-    /// "C[redacted]" for CHF and "A[redacted]" for a foreign-locale AUD).
+    /// "CHF3.8m" for CHF and "A$3.8m" for a foreign-locale AUD).
     static func compact(_ value: Decimal, code: String) -> String {
         let double = NSDecimalNumber(decimal: value).doubleValue
         // The full localized symbol: everything before the first digit of a
@@ -1029,7 +1029,7 @@ struct AccountsSidebar: View {
                 }
             } else {
                 // Filtering flattens to matches and shows full names — the same
-                // shape as Find's account picker, and the reason typing "cdia"
+                // shape as Find's account picker, and the reason typing "everyday"
                 // beats opening three disclosure triangles on 559 accounts.
                 let matches = AccountMatchPicker.matching(visibleTree, filter: trimmedFilter,
                                                           includingPlaceholders: true)
@@ -1212,8 +1212,11 @@ struct ReconcileBadge: View {
 
     static func color(_ glyph: String) -> Color {
         switch glyph {
-        case "c": .appAccent   // the banned shorthand hid here; appAccent follows the app's tint
-        case "y": .green
+        // Cleared and reconciled are two points on one scale, so they share the
+        // accent and differ by fill (see `ReconcileSymbols`, which draws the
+        // same states in the register). Frozen and voided are off the scale
+        // entirely and keep colours that say so.
+        case "c", "y": .appAccent   // the banned shorthand hid here; appAccent follows the app's tint
         case "f": .cyan
         case "v": .red
         default: .secondary
@@ -1888,7 +1891,7 @@ struct FindAccountSheet: View {
     }
 
     /// Return acts on what you can see: the chosen row, or the only match —
-    /// "cdia" narrowing to one account should not also demand an arrow key.
+    /// "everyday" narrowing to one account should not also demand an arrow key.
     private var target: GncGUID? { Self.target(selection: selection, matches: matches) }
 
     static func target(selection: GncGUID?, matches: [AccountNode]) -> GncGUID? {

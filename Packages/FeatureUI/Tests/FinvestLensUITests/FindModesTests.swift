@@ -5,7 +5,7 @@
 //  GnuCash's "Type of search" (new / refine / add / delete), saved find
 //  queries, and the two criteria Find was missing. The modes compose over the
 //  *split* set for the same reason the criteria test splits: refining "account
-//  is a card account" by "is reconciled" must mean one split that is both, not a
+//  is Everyday Card" by "is reconciled" must mean one split that is both, not a
 //  transaction that has each somewhere.
 //
 //  Copyright (C) 2026 Christine Tham

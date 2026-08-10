@@ -34,7 +34,7 @@ struct AccountSidebarFilterTests {
         return [
             node("Assets", "Assets", placeholder: true, children: [
                 node("Joint", "Assets:Joint", placeholder: true, children: [
-                    node("a card account", "Assets:Joint:a card account"),
+                    node("Everyday Card", "Assets:Joint:Everyday Card"),
                     node("ANZ Access", "Assets:Joint:ANZ Access"),
                 ]),
                 node("Closed", "Assets:Closed", hidden: true, children: [
@@ -59,7 +59,7 @@ struct AccountSidebarFilterTests {
         // The child is not itself hidden, but a visible child of a hidden
         // parent would have nowhere to hang.
         #expect(!all.contains("Assets:Closed:Old Saver"))
-        #expect(all.contains("Assets:Joint:a card account"))
+        #expect(all.contains("Assets:Joint:Everyday Card"))
     }
 
     @Test("Showing hidden accounts leaves the tree whole")
@@ -71,9 +71,9 @@ struct AccountSidebarFilterTests {
     /// triangles.
     @Test("Filtering flattens to matches on the full name")
     func filtering() {
-        let matches = AccountMatchPicker.matching(tree(), filter: "cdia",
+        let matches = AccountMatchPicker.matching(tree(), filter: "everyday",
                                                   includingPlaceholders: true)
-        #expect(matches.map(\.fullName) == ["Assets:Joint:a card account"])
+        #expect(matches.map(\.fullName) == ["Assets:Joint:Everyday Card"])
     }
 
     /// A parent's name finds its children, which is what makes the full name the
@@ -83,7 +83,7 @@ struct AccountSidebarFilterTests {
         let matches = AccountMatchPicker.matching(tree(), filter: "joint",
                                                   includingPlaceholders: true)
         #expect(matches.map(\.fullName).sorted()
-                == ["Assets:Joint", "Assets:Joint:ANZ Access", "Assets:Joint:a card account"])
+                == ["Assets:Joint", "Assets:Joint:ANZ Access", "Assets:Joint:Everyday Card"])
     }
 
     /// The sidebar shows placeholders — selecting one opens its register — while
@@ -95,7 +95,7 @@ struct AccountSidebarFilterTests {
         let find = AccountMatchPicker.matching(tree(), filter: "assets")
         #expect(sidebar.map(\.fullName).contains("Assets"))
         #expect(!find.map(\.fullName).contains("Assets"))
-        #expect(find.map(\.fullName).contains("Assets:Joint:a card account"))
+        #expect(find.map(\.fullName).contains("Assets:Joint:Everyday Card"))
     }
 
     /// Filter and hide compose: a hidden account must not come back just because

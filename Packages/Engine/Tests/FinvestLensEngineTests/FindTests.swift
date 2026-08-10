@@ -25,26 +25,26 @@ private func day(_ y: Int, _ m: Int, _ d: Int, hour: Int = 0) -> Date {
 @Suite("Find")
 struct FindTests {
 
-    /// A share buy: cash out of a card account, shares into AGL, both in one transaction.
+    /// A share buy: cash out of Everyday Card, shares into AGL, both in one transaction.
     private func book() -> (Book, Account, Account, Account) {
         let book = Book()
-        let cdia = Account(name: "a card account", type: .bank, commodity: .aud)
+        let everyday = Account(name: "Everyday Card", type: .bank, commodity: .aud)
         let agl = Account(name: "AGL", type: .stock,
                           commodity: Commodity(namespace: .security("ASX"), mnemonic: "AGL",
                                                fullName: "AGL Energy", smallestFraction: 10000))
         let fees = Account(name: "Brokerage", type: .expense, commodity: .aud)
-        book.rootAccount.addChild(cdia)
+        book.rootAccount.addChild(everyday)
         book.rootAccount.addChild(agl)
         book.rootAccount.addChild(fees)
-        return (book, cdia, agl, fees)
+        return (book, everyday, agl, fees)
     }
 
-    private func shareBuy(_ book: Book, _ cdia: Account, _ agl: Account) -> Transaction {
+    private func shareBuy(_ book: Book, _ everyday: Account, _ agl: Account) -> Transaction {
         let txn = Transaction(currency: .aud, datePosted: day(2026, 4, 28), description: "AGL buy")
         txn.notes = "CommSec confirmation 12345"
         txn.number = "T-900"
         // Cash leg: reconciled, memo "settlement".
-        txn.addSplit(account: cdia, value: dec("-11600"), quantity: dec("-11600"), memo: "settlement")
+        txn.addSplit(account: everyday, value: dec("-11600"), quantity: dec("-11600"), memo: "settlement")
         txn.splits[0].reconcileState = .reconciled
         // Share leg: 11,600 shares at $1.00, not reconciled, memo "parcel".
         txn.addSplit(account: agl, value: dec("11600"), quantity: dec("11600"), memo: "parcel")
@@ -55,60 +55,60 @@ struct FindTests {
 
     // MARK: The rule
 
-    /// The whole reason this evaluates per split. "In a card account" and "is not
+    /// The whole reason this evaluates per split. "In Everyday Card" and "is not
     /// reconciled" are both true of this transaction — but of *different*
     /// splits. GnuCash finds nothing here, and so must we. Rolling the test up
     /// to the transaction would wrongly match.
     @Test("Every criterion must hold for the same split")
     func sameSplitMustSatisfyEveryCriterion() throws {
-        let (book, cdia, agl, _) = book()
-        _ = shareBuy(book, cdia, agl)
+        let (book, everyday, agl, _) = book()
+        _ = shareBuy(book, everyday, agl)
 
         let query = FindQuery(criteria: [
-            FindCriterion(test: .account(.isOneOf, [cdia.guid])),
+            FindCriterion(test: .account(.isOneOf, [everyday.guid])),
             FindCriterion(test: .reconcile(.isOneOf, [.notReconciled])),
         ])
 
         #expect(book.splitsMatching(query).isEmpty,
-                "the a card account split is reconciled; the unreconciled split is AGL's")
+                "the Everyday Card split is reconciled; the unreconciled split is AGL's")
     }
 
     @Test("The same criteria match when one split satisfies both")
     func oneSplitSatisfyingBothMatches() throws {
-        let (book, cdia, agl, _) = book()
-        _ = shareBuy(book, cdia, agl)
+        let (book, everyday, agl, _) = book()
+        _ = shareBuy(book, everyday, agl)
 
         let query = FindQuery(criteria: [
-            FindCriterion(test: .account(.isOneOf, [cdia.guid])),
+            FindCriterion(test: .account(.isOneOf, [everyday.guid])),
             FindCriterion(test: .reconcile(.isOneOf, [.reconciled])),
         ])
 
         let hits = book.splitsMatching(query)
         #expect(hits.count == 1)
-        #expect(hits.first?.account?.name == "a card account")
+        #expect(hits.first?.account?.name == "Everyday Card")
     }
 
     /// "any" is also per split — it must not become "any criterion, any split".
     @Test("Matching any criterion still tests one split at a time")
     func anyIsStillPerSplit() throws {
-        let (book, cdia, agl, _) = book()
-        _ = shareBuy(book, cdia, agl)
+        let (book, everyday, agl, _) = book()
+        _ = shareBuy(book, everyday, agl)
 
         let query = FindQuery(criteria: [
-            FindCriterion(test: .account(.isOneOf, [cdia.guid])),
+            FindCriterion(test: .account(.isOneOf, [everyday.guid])),
             FindCriterion(test: .text(.memo, .contains, "parcel", matchCase: false)),
         ], matchAll: false)
 
         let hits = book.splitsMatching(query)
-        #expect(hits.count == 2, "the a card account split by account, the AGL split by memo")
+        #expect(hits.count == 2, "the Everyday Card split by account, the AGL split by memo")
     }
 
     // MARK: Transaction-level fields through a split
 
     @Test("Description, notes and number read through the parent transaction")
     func transactionFieldsAreVisibleFromSplits() throws {
-        let (book, cdia, agl, _) = book()
-        _ = shareBuy(book, cdia, agl)
+        let (book, everyday, agl, _) = book()
+        _ = shareBuy(book, everyday, agl)
 
         for test in [FindTest.text(.description, .contains, "AGL buy", matchCase: false),
                      .text(.notes, .contains, "CommSec", matchCase: false),
@@ -120,8 +120,8 @@ struct FindTests {
 
     @Test("Description, Notes, or Memo searches all three")
     func combinedTextField() throws {
-        let (book, cdia, agl, _) = book()
-        _ = shareBuy(book, cdia, agl)
+        let (book, everyday, agl, _) = book()
+        _ = shareBuy(book, everyday, agl)
 
         // "parcel" is only a memo, and only on one split.
         let memoHit = book.splitsMatching(FindQuery(criteria: [
@@ -138,8 +138,8 @@ struct FindTests {
     /// not "some field lacks it" — every split has fields that lack any needle.
     @Test("Does not contain means none of the fields contain it")
     func doesNotContainIsNoneOf() throws {
-        let (book, cdia, agl, _) = book()
-        _ = shareBuy(book, cdia, agl)
+        let (book, everyday, agl, _) = book()
+        _ = shareBuy(book, everyday, agl)
 
         let hits = book.splitsMatching(FindQuery(criteria: [
             FindCriterion(test: .text(.descriptionNotesOrMemo, .doesNotContain, "parcel", matchCase: false))]))
@@ -151,8 +151,8 @@ struct FindTests {
 
     @Test("Match case is honoured both ways")
     func matchCase() throws {
-        let (book, cdia, agl, _) = book()
-        _ = shareBuy(book, cdia, agl)
+        let (book, everyday, agl, _) = book()
+        _ = shareBuy(book, everyday, agl)
 
         let insensitive = book.splitsMatching(FindQuery(criteria: [
             FindCriterion(test: .text(.description, .contains, "agl BUY", matchCase: false))]))
@@ -170,12 +170,12 @@ struct FindTests {
     @Test("Dates compare by day, not by instant")
     func datesCompareByDay() throws {
         let book = Book()
-        let cdia = Account(name: "a card account", type: .bank, commodity: .aud)
+        let everyday = Account(name: "Everyday Card", type: .bank, commodity: .aud)
         let fees = Account(name: "Fees", type: .expense, commodity: .aud)
-        book.rootAccount.addChild(cdia)
+        book.rootAccount.addChild(everyday)
         book.rootAccount.addChild(fees)
         let txn = Transaction(currency: .aud, datePosted: day(2026, 4, 28, hour: 15), description: "Fee")
-        txn.addSplit(account: cdia, value: dec("-10"))
+        txn.addSplit(account: everyday, value: dec("-10"))
         txn.addSplit(account: fees, value: dec("10"))
         book.addTransaction(txn)
 
@@ -193,22 +193,22 @@ struct FindTests {
 
     @Test("Reconciled Date only matches splits that have one")
     func reconciledDateSkipsUnreconciled() throws {
-        let (book, cdia, agl, _) = book()
-        let txn = shareBuy(book, cdia, agl)
+        let (book, everyday, agl, _) = book()
+        let txn = shareBuy(book, everyday, agl)
         txn.splits[0].reconcileDate = day(2026, 5, 1)
 
         let hits = book.splitsMatching(FindQuery(criteria: [
             FindCriterion(test: .date(.reconciled, .isOn, day(2026, 5, 1)))]))
         #expect(hits.count == 1)
-        #expect(hits.first?.account?.name == "a card account")
+        #expect(hits.first?.account?.name == "Everyday Card")
     }
 
     // MARK: Numbers
 
     @Test("Shares and value are different questions")
     func sharesAndValue() throws {
-        let (book, cdia, agl, _) = book()
-        _ = shareBuy(book, cdia, agl)
+        let (book, everyday, agl, _) = book()
+        _ = shareBuy(book, everyday, agl)
 
         let byShares = book.splitsMatching(FindQuery(criteria: [
             FindCriterion(test: .number(.shares, .equalTo, dec("11600")))]))
@@ -218,7 +218,7 @@ struct FindTests {
         let byValue = book.splitsMatching(FindQuery(criteria: [
             FindCriterion(test: .number(.value, .lessThan, dec("0")))]))
         #expect(byValue.count == 1, "only the cash leg is negative")
-        #expect(byValue.first?.account?.name == "a card account")
+        #expect(byValue.first?.account?.name == "Everyday Card")
     }
 
     /// A cash split has no share price. Treating it as zero would sweep every
@@ -226,12 +226,12 @@ struct FindTests {
     @Test("A zero-quantity split has no share price, not a price of zero")
     func sharePriceUndefinedForZeroQuantity() throws {
         let book = Book()
-        let cdia = Account(name: "a card account", type: .bank, commodity: .aud)
+        let everyday = Account(name: "Everyday Card", type: .bank, commodity: .aud)
         let equity = Account(name: "Opening", type: .equity, commodity: .aud)
-        book.rootAccount.addChild(cdia)
+        book.rootAccount.addChild(everyday)
         book.rootAccount.addChild(equity)
         let txn = Transaction(currency: .aud, datePosted: day(2026, 1, 1), description: "Zero")
-        txn.addSplit(account: cdia, value: dec("0"), quantity: dec("0"))
+        txn.addSplit(account: everyday, value: dec("0"), quantity: dec("0"))
         txn.addSplit(account: equity, value: dec("0"), quantity: dec("0"))
         book.addTransaction(txn)
 
@@ -242,8 +242,8 @@ struct FindTests {
 
     @Test("Share price is value over quantity")
     func sharePrice() throws {
-        let (book, cdia, agl, _) = book()
-        _ = shareBuy(book, cdia, agl)
+        let (book, everyday, agl, _) = book()
+        _ = shareBuy(book, everyday, agl)
 
         let atOne = book.splitsMatching(FindQuery(criteria: [
             FindCriterion(test: .number(.sharePrice, .equalTo, dec("1")))]))
@@ -254,8 +254,8 @@ struct FindTests {
 
     @Test("Reconcile is-not excludes the listed states")
     func reconcileIsNot() throws {
-        let (book, cdia, agl, _) = book()
-        _ = shareBuy(book, cdia, agl)
+        let (book, everyday, agl, _) = book()
+        _ = shareBuy(book, everyday, agl)
 
         let hits = book.splitsMatching(FindQuery(criteria: [
             FindCriterion(test: .reconcile(.isNotOneOf, [.reconciled]))]))
@@ -265,11 +265,11 @@ struct FindTests {
 
     @Test("Account is-not excludes the listed accounts")
     func accountIsNot() throws {
-        let (book, cdia, agl, _) = book()
-        _ = shareBuy(book, cdia, agl)
+        let (book, everyday, agl, _) = book()
+        _ = shareBuy(book, everyday, agl)
 
         let hits = book.splitsMatching(FindQuery(criteria: [
-            FindCriterion(test: .account(.isNotOneOf, [cdia.guid]))]))
+            FindCriterion(test: .account(.isNotOneOf, [everyday.guid]))]))
         #expect(hits.count == 1)
         #expect(hits.first?.account?.name == "AGL")
     }
@@ -281,8 +281,8 @@ struct FindTests {
     /// search result, it is an accident.
     @Test("A query with no criteria matches nothing")
     func emptyQueryMatchesNothing() throws {
-        let (book, cdia, agl, _) = book()
-        _ = shareBuy(book, cdia, agl)
+        let (book, everyday, agl, _) = book()
+        _ = shareBuy(book, everyday, agl)
 
         #expect(FindQuery().isEmpty)
         #expect(book.splitsMatching(FindQuery()).isEmpty)
@@ -291,8 +291,8 @@ struct FindTests {
 
     @Test("An empty needle contains everything, as substring search does")
     func emptyNeedle() throws {
-        let (book, cdia, agl, _) = book()
-        _ = shareBuy(book, cdia, agl)
+        let (book, everyday, agl, _) = book()
+        _ = shareBuy(book, everyday, agl)
 
         let hits = book.splitsMatching(FindQuery(criteria: [
             FindCriterion(test: .text(.description, .contains, "", matchCase: false))]))
@@ -301,8 +301,8 @@ struct FindTests {
 
     @Test("Balanced finds unbalanced transactions")
     func balanced() throws {
-        let (book, cdia, agl, _) = book()
-        _ = shareBuy(book, cdia, agl)
+        let (book, everyday, agl, _) = book()
+        _ = shareBuy(book, everyday, agl)
 
         #expect(book.splitsMatching(FindQuery(criteria: [
             FindCriterion(test: .balanced(true))])).count == 2)
@@ -314,22 +314,22 @@ struct FindTests {
 @Suite("Find gaps")
 struct FindGapTests {
 
-    // MARK: Fixture: a $25 brokerage fee from a card account
+    // MARK: Fixture: a $25 brokerage fee from Everyday Card
 
-    private func makeBook() -> (book: Book, cdia: Account, fees: Account, txn: Transaction) {
+    private func makeBook() -> (book: Book, everyday: Account, fees: Account, txn: Transaction) {
         let book = Book()
-        let cdia = Account(name: "a card account", type: .bank, commodity: .aud)
+        let everyday = Account(name: "Everyday Card", type: .bank, commodity: .aud)
         let fees = Account(name: "Fees", type: .expense, commodity: .aud)
-        book.rootAccount.addChild(cdia)
+        book.rootAccount.addChild(everyday)
         book.rootAccount.addChild(fees)
         let txn = Transaction(currency: .aud, datePosted: day(2026, 3, 5),
                               description: "Brokerage fee")
         txn.number = "42"
-        txn.addSplit(account: cdia, value: dec("-25"), memo: "debit")
+        txn.addSplit(account: everyday, value: dec("-25"), memo: "debit")
         txn.addSplit(account: fees, value: dec("25"), memo: "fee")
         txn.splits[1].action = "Fee"
         book.addTransaction(txn)
-        return (book, cdia, fees, txn)
+        return (book, everyday, fees, txn)
     }
 
     private func hits(_ book: Book, _ test: FindTest) -> [Split] {
@@ -360,15 +360,15 @@ struct FindGapTests {
 
     @Test("All-accounts asks about the whole transaction")
     func allAccounts() {
-        let (book, cdia, fees, _) = makeBook()
+        let (book, everyday, fees, _) = makeBook()
         // The fee posts to both accounts → every split of it matches.
-        #expect(hits(book, .allAccounts([cdia.guid, fees.guid])).count == 2)
+        #expect(hits(book, .allAccounts([everyday.guid, fees.guid])).count == 2)
         // Requiring an account the transaction does not touch → nothing.
-        #expect(hits(book, .allAccounts([cdia.guid, GncGUID.random()])).isEmpty)
+        #expect(hits(book, .allAccounts([everyday.guid, GncGUID.random()])).isEmpty)
         // An empty set means nothing was asked → no match, like the empty query.
         #expect(hits(book, .allAccounts([])).isEmpty)
-        // A subset is enough: just a card account still matches the whole transaction.
-        #expect(hits(book, .allAccounts([cdia.guid])).count == 2)
+        // A subset is enough: just Everyday Card still matches the whole transaction.
+        #expect(hits(book, .allAccounts([everyday.guid])).count == 2)
     }
 
     // MARK: Closing entries
@@ -462,10 +462,10 @@ struct FindGapTests {
 
     @Test("Unbalanced transactions are findable")
     func unbalanced() {
-        let (book, cdia, _, _) = makeBook()
+        let (book, everyday, _, _) = makeBook()
         let lop = Transaction(currency: .aud, datePosted: day(2026, 3, 6),
                               description: "Half entered")
-        lop.addSplit(account: cdia, value: dec("-10"))
+        lop.addSplit(account: everyday, value: dec("-10"))
         book.addTransaction(lop)
         let found = hits(book, .balanced(false))
         #expect(found.count == 1)

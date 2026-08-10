@@ -7,7 +7,7 @@
 //  deterministic. Run as:
 //
 //      FL_PERF_FILE="/path/to/Book.finvestlens" \
-//          FL_FIND_ACCOUNT="Assets:Joint:a card account" \
+//          FL_FIND_ACCOUNT="Assets:Joint:Everyday Card" \
 //          FL_FIND_RECONCILED="57909.82" \
 //          swift test --filter LiveFindOracleTests
 //

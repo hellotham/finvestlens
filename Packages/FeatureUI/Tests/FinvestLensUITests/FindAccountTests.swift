@@ -28,14 +28,14 @@ struct FindAccountTests {
 
     @Test("A chosen row wins whatever else matches")
     func selectionWins() {
-        let a = node("a card account"), b = node("CBA")
+        let a = node("Everyday Card"), b = node("CBA")
         #expect(FindAccountSheet.target(selection: b.id, matches: [a, b]) == b.id)
     }
 
-    /// "cdia" narrowing to one account should not also demand an arrow key.
+    /// "everyday" narrowing to one account should not also demand an arrow key.
     @Test("The only match is the target without being selected")
     func singleMatchIsEnough() {
-        let a = node("a card account")
+        let a = node("Everyday Card")
         #expect(FindAccountSheet.target(selection: nil, matches: [a]) == a.id)
     }
 
@@ -44,7 +44,7 @@ struct FindAccountTests {
     @Test("Several matches with no choice go nowhere")
     func ambiguityGoesNowhere() {
         #expect(FindAccountSheet.target(selection: nil,
-                                        matches: [node("CBA"), node("a card account")]) == nil)
+                                        matches: [node("CBA"), node("Everyday Card")]) == nil)
     }
 
     @Test("No matches go nowhere")

@@ -208,7 +208,7 @@ public enum FinancialReports {
     /// order, carry a running total per account, and each date reads off what
     /// has landed so far. That is one visit per split, plus one conversion per
     /// account per date — measured at **0.066s** for the same series, and it
-    /// still lands on [redacted] to the cent.
+    /// still lands on the same total to the cent.
     public static func netWorthSeries(_ book: Book, dates: [Date],
                                       currency: Commodity) -> [NetWorthPoint] {
         let sortedDates = dates.sorted()

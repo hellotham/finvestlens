@@ -431,12 +431,12 @@ struct ImportTransferMatchTests {
     func fundingFallback() {
         let book = Book(baseCurrency: .aud)
         let card = book.addAccount(Account(name: "Visa", type: .credit, commodity: .aud))
-        let cdia = book.addAccount(Account(name: "a card account", type: .bank, commodity: .aud))
+        let everyday = book.addAccount(Account(name: "Everyday Card", type: .bank, commodity: .aud))
         for month in 1...3 {
             let txn = Transaction(currency: .aud, datePosted: day(2026, month, 9),
                                   description: "Direct Debit ANZ CREDIT CARD")
             txn.addSplit(account: card, value: Decimal(2000 + month))
-            txn.addSplit(account: cdia, value: Decimal(-2000 - month))
+            txn.addSplit(account: everyday, value: Decimal(-2000 - month))
             book.addTransaction(txn)
         }
 
@@ -445,7 +445,7 @@ struct ImportTransferMatchTests {
         let charge = StagedTransaction(date: day(2026, 6, 9), amount: Decimal(string: "-49.10")!,
                                        memo: "WW METRO CHATSWOOD")
         let results = ImportMatcher.match([payment, charge], into: card, book: book)
-        #expect(results[0].suggestedAccountID == cdia.guid)   // funded from a card account
+        #expect(results[0].suggestedAccountID == everyday.guid)   // funded from Everyday Card
         #expect(results[1].suggestedAccountID == nil)         // charges don't infer funding
     }
 }

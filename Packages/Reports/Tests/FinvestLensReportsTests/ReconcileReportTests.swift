@@ -63,7 +63,7 @@ struct ReconcileReportTests {
     }
 
     /// The report must agree with the balance every other part of the app shows
-    /// — this is the figure GnuCash puts at [redacted] on the reference book.
+    /// — this is the figure GnuCash puts in its status bar on the reference book.
     @Test("The reconciled balance is the book's reconciled balance")
     func agreesWithTheBook() throws {
         let (book, bank) = makeBook()

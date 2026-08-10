@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 import sys
 
 # Source that changes what the app does for a user.
@@ -124,6 +125,24 @@ def relative(path, root):
     return path[len(root):].lstrip("/") if root and path.startswith(root) else path
 
 
+def working_tree_changes(root):
+    """Repo-relative paths differing from HEAD, however they were changed."""
+    try:
+        out = subprocess.run(["git", "status", "--porcelain", "--untracked-files=all"],
+                             cwd=root or None, capture_output=True, text=True,
+                             timeout=10, check=False).stdout
+    except Exception:
+        return set()
+    paths = set()
+    for line in out.splitlines():
+        name = line[3:].strip().strip('"')
+        if " -> " in name:            # a rename: take the destination
+            name = name.split(" -> ", 1)[1]
+        if name:
+            paths.add(name)
+    return paths
+
+
 def main():
     payload = json.loads(sys.stdin.read() or "{}")
     records = load(payload.get("transcript_path", ""))
@@ -143,6 +162,16 @@ def main():
     touched = {relative(p, root) for p in edited_paths(records, last)}
     if not touched:
         return
+    # Files changed by any means, not only by the Edit/Write tools.
+    #
+    # The first version read tool calls alone and so could not see a file
+    # rewritten by a shell script — it blocked a turn whose PRD update had been
+    # made with `python3 - <<'PY'`. A gate that misreads honest work as a
+    # violation is the kind people learn to route around, so the *source*
+    # trigger still comes from this turn's tool calls (to avoid firing every
+    # turn on a long-dirty tree) while the *satisfied* check also accepts any
+    # documentation already modified against HEAD.
+    touched |= working_tree_changes(root)
 
     source = [p for p in touched
               if p.startswith(SOURCE_PREFIXES)

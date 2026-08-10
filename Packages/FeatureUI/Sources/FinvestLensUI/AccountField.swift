@@ -18,7 +18,7 @@ import FinvestLensEngine
 
 enum AccountSearch {
     /// Accounts whose full name contains every whitespace-separated term of
-    /// `query` (so "joint cdia" narrows the same way GnuCash's does). An empty
+    /// `query` (so "joint everyday" narrows the same way GnuCash's does). An empty
     /// query returns everything, in the given order.
     static func matches(_ query: String, in nodes: [AccountNode]) -> [AccountNode] {
         let terms = query.lowercased().split(whereSeparator: \.isWhitespace).map(String.init)

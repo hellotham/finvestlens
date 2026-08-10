@@ -7,7 +7,7 @@
 //
 //  GnuCash shows a collapsed tree, and on a book with 559 accounts that is the
 //  right call: nine top-level rows you can navigate beat one list you cannot.
-//  It has no filter, though, so reaching Assets:Joint:a card account still means opening
+//  It has no filter, though, so reaching Assets:Joint:Everyday Card still means opening
 //  three disclosure triangles. This keeps the tree and adds the filter — with
 //  no filter text you get GnuCash's shape, and typing flattens to matches.
 //
@@ -37,8 +37,8 @@ struct AccountMatchPicker: View {
         Self.matching(tree, filter: trimmedFilter)
     }
 
-    /// Filtering flattens: when you have typed "cdia" you want the account, not
-    /// its ancestry. Matching on the **full** name is what makes "joint:cdia"
+    /// Filtering flattens: when you have typed "everyday" you want the account, not
+    /// its ancestry. Matching on the **full** name is what makes "joint:everyday"
     /// narrow further, and what lets a parent's name find its children.
     ///
     /// Placeholders are excluded by default: here they cannot be chosen, so

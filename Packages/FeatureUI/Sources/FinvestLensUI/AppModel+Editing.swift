@@ -893,7 +893,7 @@ extension AppModel {
     /// already shows — but keep which split matched, so "Show in Register"
     /// opens the account the user actually searched for rather than guessing.
     /// The modes compose over the *split* set for the same reason the criteria
-    /// test splits: refining "account is a card account" by "is reconciled" must mean one
+    /// test splits: refining "account is Everyday Card" by "is reconciled" must mean one
     /// split that is both.
     public func runFind(_ query: FindQuery, mode: FindMode = .new) {
         guard book != nil else { return }

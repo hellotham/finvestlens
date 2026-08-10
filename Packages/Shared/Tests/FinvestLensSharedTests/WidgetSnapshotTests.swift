@@ -44,12 +44,12 @@ struct WidgetSnapshotTests {
     @Test func decodesTheDocumentedWireFormat() throws {
         let json = """
         {"alerts":[{"title":"Bill due","message":"Rent","severity":2}],\
-        "upcomingBills":"2 bills due · $50.00","netWorth":"[redacted]",\
+        "upcomingBills":"2 bills due · $50.00","netWorth":"$1,234,567.89",\
         "bookName":"Ashley Bears","updatedAt":806570717.900672}
         """
         let snap = try JSONDecoder().decode(WidgetSnapshot.self, from: Data(json.utf8))
         #expect(snap.bookName == "Ashley Bears")
-        #expect(snap.netWorth == "[redacted]")
+        #expect(snap.netWorth == "$1,234,567.89")
         #expect(snap.upcomingBills == "2 bills due · $50.00")
         #expect(snap.alerts == [.init(title: "Bill due", message: "Rent", severity: 2)])
         #expect(snap.updatedAt == Date(timeIntervalSinceReferenceDate: 806570717.900672))

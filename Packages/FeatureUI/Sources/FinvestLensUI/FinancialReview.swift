@@ -137,7 +137,7 @@ extension AppModel {
         AmountFormat.string(value, code: code)
     }
 
-    /// "[redacted]" — deck callouts breathe better compact (shared formatter).
+    /// "$3.8m" — deck callouts breathe better compact (shared formatter).
     private func compact(_ value: Decimal, _ code: String) -> String {
         AmountFormat.compact(value, code: code)
     }

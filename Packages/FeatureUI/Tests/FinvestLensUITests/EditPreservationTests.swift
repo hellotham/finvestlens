@@ -73,7 +73,7 @@ struct EditPreservationTests {
 
     /// The one that matters: a reconciled book must survive being edited. This
     /// is the assertion that stands in for the status-bar Reconciled balance,
-    /// which GnuCash puts at [redacted] on the reference book and which an edit
+    /// which GnuCash puts in its status bar on the reference book and which an edit
     /// would otherwise quietly walk down.
     @Test("Editing a transaction leaves reconcile state alone")
     func reconcileStateSurvives() throws {

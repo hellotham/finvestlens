@@ -120,7 +120,7 @@ struct FinancialReviewTests {
 
         // Grounded: quotes listed figures, rounded and abbreviated.
         let grounded = ReviewSlideStory(
-            headline: "Net worth up 1.2% to [redacted]",
+            headline: "Net worth up 1.2% to $3.8m",
             insight: "The change of 50,194.68 AUD includes a 145k surplus, ending FY 2025–26 well.")
         #expect(ReviewStoryValidator.isGrounded(grounded, facts: facts))
 
@@ -139,7 +139,7 @@ struct FinancialReviewTests {
         // Calendar years pass as dates, not figures.
         let withYear = ReviewSlideStory(
             headline: "A steady close to 2026",
-            insight: "Net worth ended at [redacted].")
+            insight: "Net worth ended at $3.8m.")
         #expect(ReviewStoryValidator.isGrounded(withYear, facts: facts))
     }
 
@@ -209,7 +209,7 @@ struct FinancialReviewTests {
         try model.newDocument(at: url)
         defer { model.close(); try? FileManager.default.removeItem(at: url) }
 
-        let bank = try #require(model.addAccount(name: "a card account", type: .bank))
+        let bank = try #require(model.addAccount(name: "Everyday Card", type: .bank))
         let income = try #require(model.book?.account(with:
             model.addAccount(name: "Income", type: .income)!))
         let dividends = Account(name: "Dividends", type: .income, commodity: .aud)
