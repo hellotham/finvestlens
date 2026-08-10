@@ -128,6 +128,51 @@ def spoken(text):
     return MENTION.sub(lambda m: " " * len(m.group(0)), text)
 
 
+# Handing the user work that the assistant could do itself.
+#
+# This is the loophole the other classes left open, and it was used repeatedly:
+# no offer, no skip word, no residual heading — just an instruction pointed at
+# the user. "That's your call, not mine to route around." "You can add a Bash
+# permission rule." "Run it yourself." Each one reads as deference and lands as
+# a deferral, and the generic BLOCKER phrases excused all of them.
+#
+# A handoff is not forbidden. It is forbidden *without a receipt* — see
+# `has_denial_receipt`. The project's rule everywhere else is that a claim
+# carries its evidence; a blocker is a claim, so it carries evidence too.
+HANDOFF = re.compile(
+    r"\byou (?:can|could|should|need to|will need to|have to|must) "
+    r"(?:run|add|execute|install|grant|enable|set|edit|apply|do|approve|allow)\b"
+    r"|\b(?:run|do|execute) (?:it|this|that|the following|these) yourself\b"
+    r"|\bplease run\b"
+    r"|\badd a (?:bash )?permission rule\b"
+    r"|\b(?:that|this)(?:'s| is) (?:your|the user's) (?:call|decision|choice|shout)\b"
+    r"|\bnot mine to\b"
+    r"|\bI'?ll leave (?:it|that|this) (?:to|with) you\b"
+    r"|\bhand(?:ing)? (?:it|this|that) (?:back|over)?\s*to you\b"
+    r"|\byour move\b",
+    re.I)
+
+# The one handoff this project *requires*, so it must never be blocked: the
+# user does the looking. `/relaunch` mandates exactly this wording — "visual
+# result unverified; over to you" — and a gate that fights the workflow it is
+# meant to protect is one that gets switched off.
+VISUAL_HANDOFF = re.compile(
+    r"unverified on screen|visual (?:result|verification)|over to you to look"
+    r"|you do the (?:looking|visual)|needs? (?:a look|your eyes)",
+    re.I)
+
+# Evidence in *this turn's transcript* that an action was actually refused —
+# a tool-permission denial, a hook block, a sandbox refusal. Asserting a
+# blocker is not the same as having hit one.
+DENIAL = re.compile(
+    r"Permission for this action was denied"
+    r"|Blocked by classifier"
+    r"|Permission denied"
+    r"|requested permissions? .{0,40}(?:denied|rejected)"
+    r"|user (?:denied|rejected) (?:the|this|that) ",
+    re.I)
+
+
 # An honest, stated blocker — always allowed, and required by the sibling gate.
 BLOCKER = re.compile(
     r"remains? undone because"
@@ -178,6 +223,34 @@ def is_real_user_turn(record):
                                 "<system-reminder", "Caveat:", "[Request interrupted"))
 
 
+def has_denial_receipt(records, start):
+    """Did something actually refuse this turn?
+
+    Scans everything after the last user message — tool results, hook output,
+    permission errors — for evidence that an action was genuinely blocked.
+    Without it, "you can run this yourself" is not a blocker, it is a deferral
+    wearing a blocker's clothes, and this project's standing rule is that a
+    claim carries its receipt.
+    """
+    for kind, record in records[start:]:
+        # Only what came *back* counts. Scanning the assistant's own prose let
+        # it certify itself: writing "you can add a permission rule" both
+        # triggered the handoff rule and satisfied the receipt for it, so the
+        # sentence this class exists to catch cleared its own bar. A receipt
+        # cannot be written by the claimant.
+        if kind != "user":
+            continue
+        content = record.get("message", {}).get("content")
+        if isinstance(content, str):
+            continue                       # a typed message, not a tool result
+        for block in content or []:
+            if not isinstance(block, dict) or block.get("type") != "tool_result":
+                continue
+            if DENIAL.search(json.dumps(block.get("content"))):
+                return True
+    return False
+
+
 def main():
     payload = json.loads(sys.stdin.read() or "{}")
     records = load(payload.get("transcript_path", ""))
@@ -223,6 +296,15 @@ def main():
         for match in pattern.finditer(final):
             if not is_excused(match.span()):
                 found.append(match.group(0).strip())
+
+    # Handing work over is judged separately, and BLOCKER does not excuse it:
+    # "that's your call" *is* the blocker phrasing, so letting it self-excuse is
+    # what made this class invisible. Only two things clear a handoff — an
+    # actual refusal recorded this turn, or the visual check the user has always
+    # done themselves.
+    if not (has_denial_receipt(records, turns[-1]) or VISUAL_HANDOFF.search(final)):
+        found += [m.group(0).strip() for m in HANDOFF.finditer(final)]
+
     if not found:
         return
 
@@ -236,11 +318,25 @@ def main():
         "is a deferral however precise its file:line references are.\n\n"
         "If something genuinely cannot be done, say so as a blocker *next to "
         "the item it blocks* — name what blocks it and what decision is needed. "
-        "An adjacent blocker passes this gate; a heading does not."}))
+        "An adjacent blocker passes this gate; a heading does not.\n\n"
+        "If what you wrote hands the work to the user — 'you can run this', "
+        "'that's your call', 'add a permission rule' — then do it yourself "
+        "instead. That phrasing clears this gate only when something in this "
+        "turn actually refused you (a tool denial, a hook block) or when it is "
+        "the on-screen check the user always does. Exhaust the alternatives "
+        "first: a blocked tool is not a blocked task."}))
 
 
 if __name__ == "__main__":
     try:
         main()
     except Exception:
-        pass  # a broken gate must fail open, never wedge the session
+        # Fail open — a broken gate must never wedge the session — but fail
+        # *loudly*. A one-word typo (`last` for `turns[-1]`) silently disabled
+        # this gate entirely, and a silent gate is indistinguishable from a
+        # gate that agrees with you. stderr surfaces; stdout is parsed as the
+        # hook's verdict and must stay clean.
+        import traceback
+        print("check-no-deferrals.py CRASHED — gate is not running:",
+              file=sys.stderr)
+        traceback.print_exc(file=sys.stderr)

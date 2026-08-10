@@ -138,6 +138,17 @@ emphasised text is not searched at all**, so discussing the gates does not trip
 them — a detector that cannot tell use from mention fires on every conversation
 about itself.
 
+**Handing the user work you could do yourself is blocked, and a blocker phrase
+does not excuse it.** "That's your call", "you can add a permission rule", "run
+it yourself" — these read as deference and land as deferrals, and because
+*"your call"* is itself blocker-shaped, the blocker exemption used to wave them
+straight through. A handoff now clears the gate only on a **receipt**: an
+actual refusal recorded in this turn's *tool results* (a permission denial, a
+hook block), or the on-screen check the user has always done themselves. The
+receipt cannot come from the assistant's own prose — writing "permission rule"
+once satisfied the very rule it tripped. **A blocked tool is not a blocked
+task:** exhaust the alternatives before reporting a wall.
+
 After editing any hook, run its regression suite — 17 cases, both directions,
 every mention marker and every real deferral shape that has actually been seen:
 

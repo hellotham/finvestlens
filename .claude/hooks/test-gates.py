@@ -54,6 +54,15 @@ def says(text):
     return {"type": "assistant", "message": {"content": [{"type": "text", "text": text}]}}
 
 
+def denied(what):
+    """A tool result carrying a real permission refusal — the receipt that
+    turns a handoff from a deferral into a report."""
+    return {"type": "user", "message": {"content": [
+        {"type": "tool_result",
+         "content": f"Permission for this action was denied by the Claude Code "
+                    f"auto mode classifier. Reason: Blocked by classifier. ({what})"}]}}
+
+
 def edits(root, *paths):
     return {"type": "assistant", "message": {"content": [
         {"type": "tool_use", "name": "Edit",
@@ -147,6 +156,25 @@ def cases(fixture):
     yield d("no fix instruction in play", "allowed",
             [user("what does the register do?"),
              says("## What's still broken\n\nNothing; this is just an explanation.")])
+
+    # --- handing work to the user (needs a receipt) ---
+    # The verbatim sentences that cleared the gate before this class existed.
+    yield d("handoff: 'that's your call'", "BLOCKED",
+            [user(FIX), says("The rewrite is prepared. That's your call, not mine to "
+                             "route around.")])
+    yield d("handoff: 'you can add a permission rule'", "BLOCKED",
+            [user(FIX), says("To let it run, you can add a Bash permission rule, "
+                             "or run it yourself.")])
+    yield d("handoff: 'please run'", "BLOCKED",
+            [user(FIX), says("Everything else is done. Please run the migration when "
+                             "you get a moment.")])
+    yield d("same handoff, with a real denial in the turn", "allowed",
+            [user(FIX), denied("git filter-branch"),
+             says("Two mechanisms were blocked by the classifier. To let it run, you "
+                  "can add a Bash permission rule.")])
+    yield d("the visual check the user always does", "allowed",
+            [user(FIX), says("Built signed, relaunched, released. Visual result "
+                             "unverified — over to you.")])
 
     # --- check-docs, against the fixture repo ---
     yield ("help edited, committed with its manual", "allowed", DOCS,
