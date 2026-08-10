@@ -913,6 +913,57 @@ private final class SheetView: NSView, NSTextFieldDelegate {
         return parts.filter { !$0.isEmpty }.joined(separator: ", ")
     }
 
+    // MARK: Copying text out
+
+    /// A row as it reads on screen, tab-separated — the text ⌘C puts on the
+    /// pasteboard.
+    ///
+    /// The register draws itself with Core Text, so `.textSelection(.enabled)`
+    /// (applied app-wide in `AppearanceModifier`) cannot reach it: every other
+    /// surface in the app is selectable and the main one was not. Asked for
+    /// three times — *"text are generally not able to be copied to clipboard"*,
+    /// *"I thought you were going to make all text copyable"*, *"I couldn't
+    /// copy any other text such as filename"* — and never built until now.
+    ///
+    /// Only the columns actually on screen are copied, and in their displayed
+    /// order, so what lands in the clipboard is what the eye saw. Amounts use
+    /// the written form, not the spoken one VoiceOver gets.
+    private func copyText(forRowAt index: Int) -> String {
+        guard rows.indices.contains(index) else { return "" }
+        let base = rows[index].base
+        return SheetColumn.allCases
+            .filter { !hiddenColumns.contains($0) }
+            .map { column -> String in
+                switch column {
+                case .date: return dateText(base.date)
+                case .description: return base.description
+                case .transfer: return base.isHeadingOnly ? "" : base.transferName
+                case .reconcile:
+                    return base.isHeadingOnly ? "" : ReconcileBadge.word(base.reconcile)
+                case .amount:
+                    return base.isHeadingOnly
+                        ? "" : AmountFormat.string(base.amount, code: currencyCode)
+                case .balance:
+                    return base.runningBalance
+                        .map { AmountFormat.string($0, code: currencyCode) } ?? ""
+                }
+            }
+            .joined(separator: "\t")
+    }
+
+    /// ⌘C. Plain ⌘C is free here — Copy *Transaction* is ⇧⌘C — so the obvious
+    /// key does the obvious thing: copies what is selected, as text.
+    @objc func copy(_ sender: Any?) {
+        let chosen = selection.isEmpty ? Set([selectedTxn].compactMap { $0 }) : selection
+        let indices = rows.indices.filter { chosen.contains(rows[$0].txn) }
+        let text = indices.map { copyText(forRowAt: $0) }
+            .filter { !$0.isEmpty }
+            .joined(separator: "\n")
+        guard !text.isEmpty else { return }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+    }
+
     fileprivate func axCellText(_ column: SheetColumn, at index: Int) -> String {
         guard rows.indices.contains(index) else { return "" }
         let base = rows[index].base

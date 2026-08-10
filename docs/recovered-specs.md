@@ -98,18 +98,18 @@ routed through it.
 
 | Requirement | Words | Status |
 |---|---|---|
-| Reconcile column as a **symbol**, not a letter | *"Consider showing the Reconciliation column as a symbol/icon/emoji rather than letter"* | Open — the column still shows `R`. |
-| Amount and Balance **right-justified** | *"Amount and Balance columns should be right justified"* | Believed done; unverified on screen. |
-| **Esc deselects** the selected transaction | *"how to unselect a transaction. Esc does not work."* | Implemented (`escapePressed`); unverified on screen. |
+| Reconcile column as a **symbol**, not a letter | *"Consider showing the Reconciliation column as a symbol/icon/emoji rather than letter"* | **Done** — `ReconcileSymbols` draws SF Symbols with a knockout layer ([RegisterSheet.swift:604](../Packages/FeatureUI/Sources/FinvestLensUI/RegisterSheet.swift)). Verified 10 Aug 2026; this row said "still shows R" long after it stopped being true. |
+| Amount and Balance **right-justified** | *"Amount and Balance columns should be right justified"* | **Done** — `column.trailing ? .right : .left` in the cell paragraph style. |
+| **Esc deselects** the selected transaction | *"how to unselect a transaction. Esc does not work."* | **Done** — keyCode 53 on macOS, `.onExitCommand` on iOS. |
 | Narrow windows may **wrap onto multiple lines** | *"Consider smart strategies on narrow windows - perhaps use multiple lines"* | Open — never built. |
 | Minimise **layout shift** when switching views | *"there is still a lot of layout shift when changing views - very annoying"* | Open — never re-verified after the register rewrite. |
 | Notes and memo shown in every view **except Basic** | *"you are not showing the notes and the memo associated with the splits even in general ledger view"* | Believed done via disclosure; unverified. |
 
 ### Elsewhere
 
-- **All text copyable.** *"text are generally not able to be copied to clipboard… I thought you were going to make all text copyable."* Raised more than once; never systematically done.
+- **All text copyable.** *"text are generally not able to be copied to clipboard… I thought you were going to make all text copyable."* Raised **three times**. Mostly done and one surface missed: `.textSelection(.enabled)` is applied app-wide in `AppearanceModifier`, so every SwiftUI label is selectable — but the register draws itself with Core Text, which that modifier cannot reach, and the register is the surface people actually want to copy from. **⌘C now copies the selected rows as tab-separated text** in the columns currently on screen, in their displayed order (`SheetView.copy(_:)`). Plain ⌘C was free because Copy *Transaction* is ⇧⌘C.
 - **Searchable account picker everywhere**, not just the transaction editor.
-- **Dashboard performance card**: a *line* chart starting at 0%, one line per holding, portfolio in bold, hover tooltip at any point. (Superseded an area-chart instruction — the reversal is the spec.)
+- **Dashboard performance card**: a *line* chart starting at 0%, one line per holding, portfolio in bold, hover tooltip at any point. **Done** — per-holding `LineMark` with the portfolio in bold and a hover tooltip (DashboardView.swift:790).
 - **FX fully automatic**: *"foreign amount auto populated, rate auto calculated, local amount auto filled so the user does not need to do anything."*
 
 ## 3. Process rules recovered (several already in CLAUDE.md)
