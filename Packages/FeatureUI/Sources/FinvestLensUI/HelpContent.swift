@@ -65,10 +65,10 @@ public enum HelpBook {
             gettingStarted, accounts, transactions, findingThings, keepingSafe,
         ]),
         HelpSection(id: "everyday", title: "Everyday money", topics: [
-            importing, smartImport, categorising, reconciling, scheduled, budgets, documents,
+            importing, smartImport, categorising, reconciling, scheduled, budgets, documents, tags,
         ]),
         HelpSection(id: "growing", title: "Investments & planning", topics: [
-            investments, reports, planning, goals,
+            investments, currencyTransfer, reports, planning, goals,
         ]),
         HelpSection(id: "more", title: "More", topics: [
             business, emergencyRecords, interchange, shortcuts,
@@ -541,6 +541,83 @@ public enum HelpBook {
             .tip("""
                 These are estimates from your own figures and assumptions. They are not \
                 financial or tax advice.
+                """),
+        ])
+
+    static let tags = HelpTopic(
+        id: "tags",
+        title: "Tags",
+        summary: "Label transactions across accounts, then find them again.",
+        symbol: "tag",
+        keywords: "tag tags label keyword holiday trip project deductible search filter rule",
+        blocks: [
+            .text("""
+                A tag is a free-form label on a transaction. Where an account says what \
+                something *was*, a tag says what it *belonged to* — a holiday, a renovation, \
+                a client, everything you mean to claim at tax time. One transaction can carry \
+                several, and a tag can span any number of accounts.
+                """),
+            .heading("Adding tags"),
+            .steps([
+                "Open the transaction out in the register — select it and press ⌘E, or click its disclosure arrow.",
+                "Type into the **Tags** line, separating tags with commas.",
+                "Press ⌘⏎, or click away, to commit the row.",
+            ]),
+            .text("""
+                Rules can apply them for you: a rule action **Set tags** puts the same labels \
+                on every transaction it matches, as it is imported. See Categorising and rules.
+                """),
+            .heading("Finding them again"),
+            .table([
+                ("tag:holiday", "Everything tagged holiday"),
+                ("-tag:holiday", "Everything *not* tagged holiday"),
+                ("tag:holiday amount:>500", "Combine with any other search term"),
+            ]),
+            .text("""
+                Type these into Find Transactions (⌘F). A tag search reaches across every \
+                account at once, which is the point of tagging rather than filing.
+                """),
+            .tip("""
+                Tags are stored in the transaction itself and survive a GnuCash round-trip, \
+                so exporting and re-importing keeps them. Duplicating a transaction (⌘D) \
+                copies its tags too.
+                """),
+        ])
+
+    static let currencyTransfer = HelpTopic(
+        id: "currency-transfer",
+        title: "Moving money between currencies",
+        summary: "Record a transfer where the two sides are in different currencies.",
+        symbol: "arrow.left.arrow.right",
+        keywords: "currency transfer foreign exchange fx rate convert trading account multi-currency",
+        blocks: [
+            .text("""
+                An ordinary transfer moves one amount between two accounts. When the accounts \
+                are in different currencies there are *two* amounts — what left, and what \
+                arrived — and the rate between them is whatever the bank actually gave you.
+                """),
+            .steps([
+                "Choose **Transaction ▸ Currency Transfer…**",
+                "Pick the account the money left and the account it arrived in.",
+                "Enter both amounts: what was taken out, and what was received.",
+                "Check the date and give it a description, then click **Transfer**.",
+            ]),
+            .text("""
+                The sheet shows the rate your two amounts imply — `1 AUD = 0.92 NZD` — so you \
+                can see at a glance whether you have typed them the right way round. That rate \
+                is saved as a price, so reports can value either currency afterwards.
+                """),
+            .heading("Trading accounts"),
+            .text("""
+                Turn on **Use trading accounts** in the sheet and the transfer also posts to a \
+                pair of trading accounts, so the books balance in *each* currency rather than \
+                only by value. This is GnuCash's approach, and it is what captures unrealised \
+                gains when a rate moves. Leave it off and the transfer is a plain two-sided \
+                entry. The choice is remembered in the book.
+                """),
+            .tip("""
+                The menu item is unavailable until the book holds at least two currencies — \
+                add a foreign-currency account first.
                 """),
         ])
 
