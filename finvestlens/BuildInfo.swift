@@ -15,10 +15,10 @@ enum BuildInfo {
     /// Marketing version (matches MARKETING_VERSION in the project).
     static let version = "1.0"
     /// Short git commit the build was cut from.
-    static let commit = "e1c742f"
+    static let commit = "5f3af3d"
     /// Human-readable build date.
-    static let buildDate = "13 July 2026"
+    static let buildDate = "10 August 2026"
 
-    /// e.g. "Version 1.0 (e1c742f)".
+    /// e.g. "Version 1.0 (5f3af3d)".
     static var versionString: String { "Version \(version) (\(commit))" }
 }
