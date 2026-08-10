@@ -122,7 +122,7 @@ struct ForecastView: View {
                     }
                     List(events) { event in
                         HStack {
-                            Text(dateFormat.short(event.date))
+                            AdaptiveDate(event.date)
                                 .foregroundStyle(.secondary)
                                 .frame(width: dateWidth, alignment: .leading)
                             Text(event.label)

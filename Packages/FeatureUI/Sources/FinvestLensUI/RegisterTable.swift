@@ -538,7 +538,9 @@ struct RegisterTableView: View {
                      isEditable: row.editable,
                      focus: RegisterFocus(row: row.id, field: .date), cursor: $cursor,
                      onEdit: { text in
-                         withDraft { if let date = dateFormat.parseShort(text) { $0.date = date } }
+                         // `parseAny` — a date typed with a two-digit year must
+                         // not be read as a year in the 0000s.
+                         withDraft { if let date = dateFormat.parseAny(text) { $0.date = date } }
                      },
                      onEscape: { escapePressed() })
         case .bookLeg(let leg):

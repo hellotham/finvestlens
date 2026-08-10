@@ -2809,6 +2809,155 @@
         }
       }
     },
+    "%lld points": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld point"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld points"
+                }
+              }
+            }
+          }
+        },
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Punkt"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Punkte"
+                }
+              }
+            }
+          }
+        },
+        "es": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld punto"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld puntos"
+                }
+              }
+            }
+          }
+        },
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld point"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld points"
+                }
+              }
+            }
+          }
+        },
+        "it": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld punto"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld punti"
+                }
+              }
+            }
+          }
+        },
+        "ja": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld ポイント"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld ポイント"
+                }
+              }
+            }
+          }
+        },
+        "pt-BR": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld ponto"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld pontos"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hans": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld 点"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld 点"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld points. Text and icons scale with the row.": {
       "extractionState": "manual",
       "localizations": {
@@ -10959,49 +11108,55 @@
         }
       }
     },
-    "Applies to every date shown in the app. Compact tables use the short form, labels and documents spell out the month, and headline dates include the weekday — always in your chosen order.": {
+    "Applies to every date shown in the app. Compact tables use the short form, labels and documents spell out the month, and headline dates include the weekday — always in your chosen order. Where a column is too narrow for all four digits of the year, it shortens to two rather than cutting the date off.": {
       "extractionState": "manual",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Applies to every date shown in the app. Compact tables use the short form, labels and documents spell out the month, and headline dates include the weekday — always in your chosen order. Where a column is too narrow for all four digits of the year, it shortens to two rather than cutting the date off."
+          }
+        },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Gilt für jedes im Programm angezeigte Datum. Kompakte Tabellen nutzen die Kurzform, Beschriftungen und Dokumente schreiben den Monat aus, und Überschriftsdaten enthalten den Wochentag — stets in Ihrer gewählten Reihenfolge."
+            "value": "Gilt für jedes Datum in der App. Kompakte Tabellen verwenden die kurze Form, Beschriftungen und Dokumente schreiben den Monat aus, und hervorgehobene Datumsangaben nennen den Wochentag — immer in der von Ihnen gewählten Reihenfolge. Ist eine Spalte zu schmal für alle vier Ziffern der Jahreszahl, wird sie auf zwei verkürzt, statt das Datum abzuschneiden."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Se aplica a todas las fechas que muestra la app. Las tablas compactas usan el formato corto, las etiquetas y los documentos escriben el mes con letras y las fechas destacadas incluyen el día de la semana, siempre en el orden que elijas."
+            "value": "Se aplica a todas las fechas de la app. Las tablas compactas usan la forma corta, las etiquetas y los documentos escriben el mes completo, y las fechas destacadas incluyen el día de la semana, siempre en el orden que haya elegido. Si una columna es demasiado estrecha para las cuatro cifras del año, se acortan a dos en lugar de cortar la fecha."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "S’applique à toutes les dates affichées dans l’app. Les tableaux compacts utilisent la forme courte, les libellés et documents écrivent le mois en toutes lettres, et les dates de titre incluent le jour de la semaine — toujours dans l’ordre que vous avez choisi."
+            "value": "S’applique à toutes les dates de l’app. Les tableaux compacts utilisent la forme courte, les libellés et les documents écrivent le mois en toutes lettres, et les dates mises en avant indiquent le jour de la semaine — toujours dans l’ordre que vous avez choisi. Si une colonne est trop étroite pour les quatre chiffres de l’année, celle-ci passe à deux chiffres plutôt que de tronquer la date."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vale per ogni data mostrata nell’app. Le tabelle compatte usano la forma breve, etichette e documenti scrivono il mese per esteso e le date in evidenza includono il giorno della settimana, sempre nell’ordine scelto."
+            "value": "Vale per ogni data mostrata nell’app. Le tabelle compatte usano la forma breve, le etichette e i documenti scrivono il mese per esteso e le date in evidenza includono il giorno della settimana, sempre nell’ordine scelto. Se una colonna è troppo stretta per tutte e quattro le cifre dell’anno, queste si riducono a due invece di troncare la data."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "アプリに表示されるすべての日付に適用されます。コンパクトな表は短い形式、ラベルや書類は月名を綴り、見出しの日付は曜日を含みます。順序は常にあなたの選択どおりです。"
+            "value": "アプリ内のすべての日付に適用されます。詰まった表では短い形式、ラベルや書類では月を文字で、見出しの日付には曜日を添えます。いずれも選んだ並び順のままです。列の幅が年の 4 桁に足りない場合は、日付を切り詰めるのではなく 2 桁に短縮します。"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Aplica-se a todas as datas exibidas no app. Tabelas compactas usam o formato curto, rótulos e documentos escrevem o mês por extenso e datas de destaque incluem o dia da semana — sempre na ordem escolhida."
+            "value": "Vale para todas as datas mostradas no app. Tabelas compactas usam a forma curta, rótulos e documentos escrevem o mês por extenso, e datas em destaque incluem o dia da semana — sempre na ordem que você escolheu. Quando uma coluna é estreita demais para os quatro dígitos do ano, ele encurta para dois em vez de cortar a data."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "适用于 App 中显示的所有日期。紧凑表格使用简短形式，标签与文稿会写出月份全称，标题日期包含星期 — 始终按你选择的顺序。"
+            "value": "适用于 App 中显示的所有日期。紧凑的表格使用简短形式，标签和文档写出月份名称，标题日期还包含星期——始终按你选择的顺序。如果某一列的宽度不足以显示四位数的年份，年份会缩短为两位，而不是把日期截断。"
           }
         }
       }
@@ -32738,6 +32893,59 @@
         }
       }
     },
+    "How dates are written": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How dates are written"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wie Datumsangaben geschrieben werden"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cómo se escriben las fechas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comment les dates sont écrites"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Come vengono scritte le date"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "日付の書式について"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Como as datas são escritas"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "日期的书写方式"
+          }
+        }
+      }
+    },
     "How much each row shows is up to you: View ▸ Register Style switches between one line per transaction (Basic Ledger), detail on the selected row (Auto Details), and every row open (Transaction Journal). View ▸ Columns switches off the columns you do not use.": {
       "extractionState": "manual",
       "localizations": {
@@ -39930,6 +40138,59 @@
           "stringUnit": {
             "state": "translated",
             "value": "名称（例如「30 天净额」）"
+          }
+        }
+      }
+    },
+    "Narrow a register and the year shortens — 24/12/2026 becomes 24/12/26 — so the date stays whole instead of being cut off. You can type either form back into the cell; a two-digit year always means this century.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Narrow a register and the year shortens — 24/12/2026 becomes 24/12/26 — so the date stays whole instead of being cut off. You can type either form back into the cell; a two-digit year always means this century."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wird ein Kontobuch schmaler, verkürzt sich die Jahreszahl — aus 24/12/2026 wird 24/12/26 —, damit das Datum vollständig bleibt statt abgeschnitten zu werden. Sie können beide Formen wieder in die Zelle eintippen; eine zweistellige Jahreszahl meint immer dieses Jahrhundert."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Si estrecha un registro, el año se acorta — 24/12/2026 pasa a 24/12/26 — para que la fecha siga entera en lugar de cortarse. Puede escribir cualquiera de las dos formas en la celda; un año de dos cifras siempre significa este siglo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rétrécissez un registre et l’année se raccourcit — 24/12/2026 devient 24/12/26 — pour que la date reste entière au lieu d’être tronquée. Vous pouvez saisir l’une ou l’autre forme dans la cellule ; une année à deux chiffres désigne toujours ce siècle."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restringendo un registro l’anno si accorcia — 24/12/2026 diventa 24/12/26 — così la data resta intera invece di essere troncata. Puoi digitare entrambe le forme nella cella; un anno a due cifre indica sempre questo secolo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "記録簿の幅を狭めると年が短くなり、24/12/2026 は 24/12/26 になります。日付が切れてしまう代わりに、全体が残ります。どちらの形でもセルに入力でき、2 桁の年は常に今世紀を指します。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estreite um registro e o ano encurta — 24/12/2026 vira 24/12/26 — para que a data continue inteira em vez de ser cortada. Você pode digitar qualquer uma das formas na célula; um ano de dois dígitos sempre significa este século."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "把账簿调窄时，年份会缩短——24/12/2026 变为 24/12/26——这样日期仍然完整，而不会被截断。两种写法都可以输入单元格；两位数的年份始终表示本世纪。"
           }
         }
       }
@@ -56970,6 +57231,59 @@
         }
       }
     },
+    "Resize attachments panel": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resize attachments panel"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anhangsbereich in der Breite ändern"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cambiar el ancho del panel de adjuntos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Redimensionner le panneau des pièces jointes"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ridimensiona il pannello degli allegati"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添付パネルの幅を変更"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Redimensionar o painel de anexos"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "调整附件面板宽度"
+          }
+        }
+      }
+    },
     "Result": {
       "extractionState": "manual",
       "localizations": {
@@ -72380,6 +72694,59 @@
           "stringUnit": {
             "state": "translated",
             "value": "年"
+          }
+        }
+      }
+    },
+    "You choose the **order** — day/month/year, month.day.year or year-month-day — in Settings ▸ General ▸ Dates. You never choose how much of a date is spelled out: FinvestLens picks that from where the date is and how much room it has, always in your order. Tables use digits, labels and documents spell the month out, and a headline date adds the weekday.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You choose the **order** — day/month/year, month.day.year or year-month-day — in Settings ▸ General ▸ Dates. You never choose how much of a date is spelled out: FinvestLens picks that from where the date is and how much room it has, always in your order. Tables use digits, labels and documents spell the month out, and a headline date adds the weekday."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sie wählen die **Reihenfolge** — Tag/Monat/Jahr, Monat.Tag.Jahr oder Jahr-Monat-Tag — unter Einstellungen ▸ Allgemein ▸ Datum. Wie ausführlich ein Datum geschrieben wird, wählen Sie nie selbst: FinvestLens entscheidet das danach, wo das Datum steht und wie viel Platz zur Verfügung steht, immer in Ihrer Reihenfolge. Tabellen verwenden Ziffern, Beschriftungen und Dokumente schreiben den Monat aus, und ein hervorgehobenes Datum nennt zusätzlich den Wochentag."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usted elige el **orden** — día/mes/año, mes.día.año o año-mes-día — en Ajustes ▸ General ▸ Fechas. Nunca elige cuánto se escribe de una fecha: FinvestLens lo decide según dónde esté la fecha y cuánto espacio tenga, siempre en su orden. Las tablas usan cifras, las etiquetas y los documentos escriben el mes completo, y una fecha destacada añade el día de la semana."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vous choisissez l’**ordre** — jour/mois/année, mois.jour.année ou année-mois-jour — dans Réglages ▸ Général ▸ Dates. Vous ne choisissez jamais le niveau de détail d’une date : FinvestLens le déduit de l’endroit où elle apparaît et de la place disponible, toujours dans votre ordre. Les tableaux utilisent des chiffres, les libellés et les documents écrivent le mois en toutes lettres, et une date mise en avant ajoute le jour de la semaine."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scegli l’**ordine** — giorno/mese/anno, mese.giorno.anno o anno-mese-giorno — in Impostazioni ▸ Generali ▸ Date. Non scegli mai quanto viene scritto per esteso: FinvestLens lo decide in base a dove si trova la data e allo spazio disponibile, sempre nel tuo ordine. Le tabelle usano le cifre, le etichette e i documenti scrivono il mese per esteso e una data in evidenza aggiunge il giorno della settimana."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "並び順（日/月/年、月.日.年、年-月-日）は設定 ▸ 一般 ▸ 日付で選びます。どこまで詳しく書くかを選ぶ必要はありません。FinvestLens が、日付の置かれた場所と使える幅から判断し、常に選んだ並び順で表示します。表では数字、ラベルや書類では月を文字で、見出しの日付にはさらに曜日を添えます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Você escolhe a **ordem** — dia/mês/ano, mês.dia.ano ou ano-mês-dia — em Ajustes ▸ Geral ▸ Datas. Você nunca escolhe o quanto de uma data é escrito por extenso: o FinvestLens decide isso pelo lugar em que a data aparece e pelo espaço disponível, sempre na sua ordem. Tabelas usam algarismos, rótulos e documentos escrevem o mês por extenso, e uma data em destaque acrescenta o dia da semana."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你只需在“设置 ▸ 通用 ▸ 日期”中选择**顺序**——日/月/年、月.日.年或年-月-日。日期写得多详细无需你来选择：FinvestLens 会根据日期所在的位置和可用的空间来决定，并始终使用你选择的顺序。表格中用数字，标签和文档中写出月份名称，而作为标题的日期还会加上星期。"
           }
         }
       }

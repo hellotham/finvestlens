@@ -110,7 +110,7 @@ public struct GeneralSettingsView: View {
                     }
                     .foregroundStyle(.secondary)
                 }
-                Text("Applies to every date shown in the app. Compact tables use the short form, labels and documents spell out the month, and headline dates include the weekday — always in your chosen order.")
+                Text("Applies to every date shown in the app. Compact tables use the short form, labels and documents spell out the month, and headline dates include the weekday — always in your chosen order. Where a column is too narrow for all four digits of the year, it shortens to two rather than cutting the date off.")
                     .scaledFont(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -195,6 +195,9 @@ public struct PricingSettingsView: View {
                 if present[kind] == true {
                     Image(systemName: "checkmark.seal.fill")
                         .foregroundStyle(.green).help("A key is saved")
+                        // Whether a key is stored is carried by this glyph
+                        // alone — the row's text is only the provider's name.
+                        .accessibilityLabel("A key is saved")
                 }
                 Spacer()
                 if let url = kind.signupURL {

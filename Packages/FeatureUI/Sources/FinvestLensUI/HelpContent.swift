@@ -106,7 +106,7 @@ public enum HelpBook {
         title: "Getting started",
         summary: "Create a book, or bring one over from GnuCash.",
         symbol: "sparkles",
-        keywords: "start begin new book open gnucash import migrate first",
+        keywords: "start begin new book open gnucash import migrate first date dates format order weekday",
         blocks: [
             .text("""
                 A **book** is your whole set of accounts and transactions, kept in one \
@@ -123,6 +123,20 @@ public enum HelpBook {
                 Choose File ▸ Import GnuCash… and pick your `.gnucash` file. Accounts, \
                 transactions, prices, scheduled transactions and business records all come \
                 across, and you can export back to GnuCash at any time.
+                """),
+            .heading("How dates are written"),
+            .text("""
+                You choose the **order** — day/month/year, month.day.year or \
+                year-month-day — in Settings ▸ General ▸ Dates. You never choose how \
+                much of a date is spelled out: FinvestLens picks that from where the \
+                date is and how much room it has, always in your order. Tables use \
+                digits, labels and documents spell the month out, and a headline date \
+                adds the weekday.
+                """),
+            .tip("""
+                Narrow a register and the year shortens — 24/12/2026 becomes 24/12/26 — \
+                so the date stays whole instead of being cut off. You can type either \
+                form back into the cell; a two-digit year always means this century.
                 """),
             .tip("""
                 Everything you do is undoable with ⌘Z — including imports. If a change \

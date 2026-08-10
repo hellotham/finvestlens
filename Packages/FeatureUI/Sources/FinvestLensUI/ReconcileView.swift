@@ -118,7 +118,7 @@ struct ReconcileView: View {
                             Image(systemName: item.isCleared ? "checkmark.circle.fill" : "circle")
                                 .foregroundStyle(item.isCleared ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
                                 .accessibilityHidden(true)
-                            Text(dateFormat.short(item.date))
+                            AdaptiveDate(item.date)
                                 .foregroundStyle(.secondary)
                                 .frame(width: dateWidth, alignment: .leading)
                             Text(item.description)

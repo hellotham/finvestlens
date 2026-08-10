@@ -247,7 +247,10 @@ public struct LockView: View {
 
     public var body: some View {
         VStack(spacing: 16) {
+            // Decorative: the heading underneath says the same thing, so
+            // announcing the glyph too just makes VoiceOver read it twice.
             Image(systemName: "lock.fill").font(.system(size: iconSize)).foregroundStyle(.tint)
+                .accessibilityHidden(true)
             Text("This book is locked").scaledFont(.title2, weight: .bold)
             Text("Authenticate to view your accounts.").foregroundStyle(.secondary)
             Button {
@@ -709,6 +712,7 @@ struct ExternalChangeBanner: View {
             Image(systemName: conflicted
                   ? "exclamationmark.triangle.fill"
                   : "arrow.triangle.2.circlepath.icloud")
+                .accessibilityHidden(true)   // the sentence beside it says this
             Text(conflicted
                  ? "This book was edited in two places at once."
                  : "This book changed on another device.")
@@ -741,6 +745,7 @@ struct OnboardingSheet: View {
             VStack(spacing: 16) {
                 Image(systemName: "sparkles")
                     .font(.system(size: iconSize)).foregroundStyle(.tint)
+                    .accessibilityHidden(true)   // decorative; the heading follows
                 Text("Welcome to your new book").scaledFont(.title2, weight: .bold)
                 Text("Start with a ready-made personal chart of accounts — cheque, savings, credit card, income and common expense categories — or begin from scratch.")
                     .multilineTextAlignment(.center).foregroundStyle(.secondary)
@@ -2190,7 +2195,10 @@ struct SearchResultsView: View {
     var body: some View {
         Table(model.searchResults, selection: $selection) {
             TableColumn("Date") { row in
-                Text(dateFormat.short(row.date))
+                // A Table column is user-resizable, so the width this cell gets
+                // is whatever the divider was last dragged to — the case the
+                // ladder exists for.
+                AdaptiveDate(row.date)
                     .scaledFont(.body)
             }
             TableColumn("Description") { row in
@@ -2748,7 +2756,9 @@ struct TransactionEditorSheet: View {
                         restSplits: [],
                         showsSecondLine: true,
                         dateText: { dateFormat.short($0) },
-                        parseDate: { dateFormat.parseShort($0) },
+                        // `parseAny`, not `parseShort`: a two-digit year typed
+                        // here would otherwise be read as a year in the 0000s.
+                        parseDate: { dateFormat.parseAny($0) },
                         draft: rowDraft,
                         cursor: $cursor,
                         focusAccountID: nil,
@@ -3107,6 +3117,8 @@ struct TransactionEditorSheet: View {
                 else { Image(systemName: "arrow.triangle.2.circlepath") }
             }
             .help("Fetch the live rate")
+            // A button whose whole label is a symbol announces nothing useful.
+            .accessibilityLabel("Fetch the live rate")
             .disabled(fxFetching)
         }
         HStack(spacing: 8) {

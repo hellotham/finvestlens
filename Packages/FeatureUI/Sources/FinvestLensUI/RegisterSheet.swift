@@ -684,12 +684,16 @@ private final class SheetView: NSView, NSTextFieldDelegate {
     private var naturalWidths: [SheetColumn: CGFloat] = [:]
     /// A ruler drag in progress, started on the body rather than the header.
     private var columnDrag: (column: SheetColumn, startX: CGFloat, startWidth: CGFloat)?
-    /// Whether the register is narrow enough to want two-digit years.
+    /// How fully this register is currently writing its dates.
     ///
-    /// Screen width is the scarce resource here: a register has seven columns
+    /// Screen width is the scarce resource here: a register has six columns
     /// competing for it and only Description can absorb the loss, so the date
     /// gives up the century before Description gives up readable payee names.
-    private var compactDates = false
+    /// A register is a dense table, so it starts at ``AppDateFormat/Form/table``
+    /// — the same ceiling every SwiftUI ``AdaptiveDate`` starts at. Space picks
+    /// downward from there, never above it.
+    private var dateForm: AppDateFormat.Form = .table
+
     var onError: ((String) -> Void)?
 
     /// The date as this register is currently showing it — the single place
@@ -697,7 +701,7 @@ private final class SheetView: NSView, NSTextFieldDelegate {
     /// editor can never disagree about what a row says.
     func dateText(_ date: Date) -> String {
         guard let dateFormat else { return "" }
-        return compactDates ? dateFormat.compact(date) : dateFormat.short(date)
+        return dateFormat.string(date, dateForm)
     }
 
     // Metrics. Two inputs — the app's Text Size and the row-height preference
@@ -1327,14 +1331,19 @@ private final class SheetView: NSView, NSTextFieldDelegate {
         guard !rows.isEmpty, dateFormat != nil else { return }
         let floor = 220 * fontScale
 
-        compactDates = false
-        var measured = measureNaturalWidths(rows)
-        if frame.width > 0 {
-            let fixedSum = measured.values.reduce(0, +)
-            if frame.width - fixedSum < floor {
-                compactDates = true
-                measured = measureNaturalWidths(rows)
-            }
+        // Walk the ladder from the richest form this context allows down to the
+        // tersest, stopping at the first that still leaves Description its
+        // floor. Written as a walk rather than as the old full-or-compact
+        // boolean so the rule is the *ladder*, not two hard-coded cases: adding
+        // a rung, or raising `dateCeiling` for a wider surface, needs no change
+        // here.
+        let ladder = AppDateFormat.Form.allCases.drop { $0 != .table }
+        var measured: [SheetColumn: CGFloat] = [:]
+        for form in ladder {
+            dateForm = form
+            measured = measureNaturalWidths(rows)
+            guard frame.width > 0 else { break }
+            if frame.width - measured.values.reduce(0, +) >= floor { break }
         }
         naturalWidths = measured
     }

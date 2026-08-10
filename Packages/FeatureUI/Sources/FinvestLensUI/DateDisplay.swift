@@ -95,9 +95,37 @@ public struct AppDateFormat: Equatable, Sendable {
 
     /// Reads back either form — a date typed as `16/12/25` or `16/12/2025`.
     /// The register edits in place, so whatever it *shows* must be typeable.
+    ///
+    /// The obvious implementation — try `yyyy`, fall back to `yy` — is wrong,
+    /// and wrong in the worst way for a ledger: `DateFormatter` is lenient
+    /// about year width, so `d/M/yyyy` reads `16/12/25` as **16 December
+    /// 0025** and reports success. The fallback never runs, no error is
+    /// raised, and a transaction moves two thousand years. That became
+    /// reachable the moment the register started *showing* two-digit years:
+    /// open a narrow register, click into a date, press Return.
+    ///
+    /// So neither pattern's success is taken as proof it read the year the way
+    /// the person typed it. The round trip is the proof — the pattern that
+    /// reproduces the typed text is the pattern the text was typed in.
     public func parseAny(_ string: String) -> Date? {
-        parseShort(string) ?? Self.formatter(pattern: compactPattern)
-            .date(from: string.trimmingCharacters(in: .whitespaces))
+        let trimmed = string.trimmingCharacters(in: .whitespaces)
+        let full = Self.formatter(pattern: shortPattern)
+        let two = Self.formatter(pattern: compactPattern)
+
+        for formatter in [full, two] {
+            if let date = formatter.date(from: trimmed),
+               formatter.string(from: date) == trimmed {
+                return date
+            }
+        }
+        // Nothing round-trips exactly — `06/12/25` and other zero-padded or
+        // odd-width spellings land here. Prefer a reading that yields a year a
+        // person could have meant over one that does not.
+        if let date = full.date(from: trimmed),
+           Self.gregorian.component(.year, from: date) >= 1000 {
+            return date
+        }
+        return two.date(from: trimmed) ?? full.date(from: trimmed)
     }
 
     /// Parses a date typed in the short form back to a `Date` — the inverse of
@@ -117,6 +145,75 @@ public struct AppDateFormat: Equatable, Sendable {
         case .ymd: "yyyy MMMM d"
         }
         return Self.formatted(date, pattern: pattern)
+    }
+
+    // MARK: Choosing a form
+
+    /// The forms a date can take, **richest first**.
+    ///
+    /// The user chooses only the *order* — d/m/y, m.d.y, y-m-d. Which of these
+    /// to render is the app's job, decided by the context and the room it has,
+    /// so a heading with a whole line to itself can spell the month out while a
+    /// register cell four characters narrower still shows a complete date
+    /// instead of an ellipsis.
+    public enum Form: CaseIterable, Sendable {
+        /// Tuesday, 16 December 2025
+        case full
+        /// 16 December 2025
+        case long
+        /// 16/12/2025 — the dense default
+        case short
+        /// 16/12/25 — when four characters of century cannot be afforded
+        case compact
+
+        /// The richest form a dense, scannable table will use, however wide the
+        /// window gets.
+        ///
+        /// Named rather than written as `.short` at each call site because it
+        /// is a *decision*, and it has to be the same decision in two places
+        /// that cannot see each other: the AppKit register sheet and every
+        /// SwiftUI ``AdaptiveDate``. `16 December 2025` down a column of a
+        /// thousand rows is harder to scan than `16/12/2025`, not easier —
+        /// spelled-out months belong to headings and documents, which set a
+        /// higher ceiling of their own.
+        public static let table: Self = .short
+    }
+
+    public func string(_ date: Date, _ form: Form) -> String {
+        switch form {
+        case .full: full(date)
+        case .long: long(date)
+        case .short: short(date)
+        case .compact: compact(date)
+        }
+    }
+
+    /// The richest form that fits `width`, measured by the caller in its own
+    /// font — falling back to the narrowest if even that will not fit, because
+    /// a truncated date is worse than a terse one.
+    ///
+    /// `ceiling` is the context: a dense table asks for `.short` and never
+    /// spells the month out however wide the window; a single headline date
+    /// asks for `.full`. Space then chooses downward from there.
+    public func fitting(_ date: Date, width: CGFloat, ceiling: Form = .full,
+                        measure: (String) -> CGFloat) -> String {
+        let ladder = Form.allCases.drop { $0 != ceiling }
+        for form in ladder where measure(string(date, form)) <= width {
+            return string(date, form)
+        }
+        return string(date, ladder.last ?? .compact)
+    }
+
+    /// The richest form that fits every one of `dates` — what a *column* needs,
+    /// since a column whose rows disagree about their format reads as a fault
+    /// rather than as a fit.
+    public func fittingForm(for dates: [Date], width: CGFloat, ceiling: Form = .table,
+                            measure: (String) -> CGFloat) -> Form {
+        let ladder = Array(Form.allCases.drop { $0 != ceiling })
+        for form in ladder where dates.allSatisfy({ measure(string($0, form)) <= width }) {
+            return form
+        }
+        return ladder.last ?? .compact
     }
 
     /// Weekday and month spelled out — where one date headlines and there is
@@ -147,6 +244,10 @@ public struct AppDateFormat: Equatable, Sendable {
     /// One configured `DateFormatter` per pattern. Formatters are expensive to
     /// build and (post-configuration) safe to share; the lock guards the
     /// dictionary itself.
+    /// The calendar every pattern is parsed in — matched to `formatter(pattern:)`
+    /// so a year read out here is the same year that was read in.
+    static let gregorian = Calendar(identifier: .gregorian)
+
     private static let cacheLock = NSLock()
     nonisolated(unsafe) private static var cache: [String: DateFormatter] = [:]
 
@@ -163,6 +264,58 @@ public struct AppDateFormat: Equatable, Sendable {
 
     private static func formatted(_ date: Date, pattern: String) -> String {
         formatter(pattern: pattern).string(from: date)
+    }
+}
+
+/// A date that writes itself out as fully as its column allows.
+///
+/// The SwiftUI half of the same rule the register applies in AppKit: the user
+/// chose the *order*, the app chooses the *form*, and the deciding input is the
+/// room actually offered. `ViewThatFits` is the framework's own spelling of
+/// that ladder — it proposes the available width to each candidate in turn and
+/// takes the first that does not need to shrink — so a Date column dragged
+/// narrow steps 16/12/2025 → 16/12/25 instead of truncating to `16/12/20…`.
+///
+/// Ellipsis is the failure this replaces. A truncated date is not a shorter
+/// date; it is an unreadable one, and in a register it hides the year the
+/// running balance depends on.
+public struct AdaptiveDate: View {
+    private let date: Date
+    private let ceiling: AppDateFormat.Form
+    private let floor: AppDateFormat.Form
+
+    @Environment(\.appDateFormat) private var dateFormat
+
+    /// - Parameters:
+    ///   - ceiling: the richest form this context would ever want. A table cell
+    ///     asks for `.short` (numeric, dense); a heading can ask for `.full`.
+    ///   - floor: how far it may compress before it stops trying. Defaults to
+    ///     `.compact`; pass `.short` where a two-digit year would be wrong.
+    public init(_ date: Date, ceiling: AppDateFormat.Form = .table,
+                floor: AppDateFormat.Form = .compact) {
+        self.date = date
+        self.ceiling = ceiling
+        self.floor = floor
+    }
+
+    private var ladder: [AppDateFormat.Form] {
+        let all = AppDateFormat.Form.allCases
+        guard let top = all.firstIndex(of: ceiling),
+              let bottom = all.firstIndex(of: floor), top <= bottom
+        else { return [ceiling] }
+        return Array(all[top...bottom])
+    }
+
+    public var body: some View {
+        ViewThatFits(in: .horizontal) {
+            ForEach(ladder, id: \.self) { form in
+                Text(dateFormat.string(date, form)).lineLimit(1).fixedSize()
+            }
+        }
+        // The last rung is what `ViewThatFits` falls back to, and it is still a
+        // whole date — but VoiceOver should hear the unabbreviated one however
+        // narrow the column happens to be.
+        .accessibilityLabel(Text(dateFormat.long(date)))
     }
 }
 

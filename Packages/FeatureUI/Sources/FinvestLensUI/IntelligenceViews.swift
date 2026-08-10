@@ -168,7 +168,7 @@ struct AutoCategorizeSheet: View {
         Toggle(isOn: accepted) {
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
-                    Text(dateFormat.short(plan.date))
+                    AdaptiveDate(plan.date)
                         .foregroundStyle(.secondary)
                         .frame(width: dateWidth, alignment: .leading)
                     Text(plan.displayDescription).fontWeight(.medium)
@@ -236,7 +236,7 @@ struct AutoCategorizeSheet: View {
     private func row(_ item: AppModel.UncategorizedItem) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
-                Text(dateFormat.short(item.date))
+                AdaptiveDate(item.date)
                     .foregroundStyle(.secondary)
                     .frame(width: dateWidth, alignment: .leading)
                 Text(item.transactionDescription)
@@ -245,6 +245,11 @@ struct AutoCategorizeSheet: View {
                         .imageScale(.small)
                         .foregroundStyle(.secondary)
                         .help("Has an attachment — Read Attachments can use it")
+                        // `.help` is a pointer tooltip, not a VoiceOver label.
+                        // This glyph is the only place the row says a document
+                        // is attached, so without a label that fact is
+                        // sighted-only. Same key as the register uses.
+                        .accessibilityLabel("Has attachment")
                 }
                 Spacer()
                 Text(AmountFormat.string(-item.amount, code: item.currencyCode))

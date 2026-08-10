@@ -45,25 +45,54 @@ These were stated, then built the other way.
 
 ## 2. Open gaps — stated, never built, not in the PRD
 
-### Dates (the largest single gap)
+### Dates — **closed 10 Aug 2026**
 
-The user specified a three-part date system. Only the first part exists.
+The user specified a three-part date system. All three parts now exist, and the
+requirement is written down as **`FR-PLT-07`** (with `FR-REG-13` reduced to the
+register's application of it) so it cannot be lost again.
 
 > "Add date format in Settings. D/M/Y - Australian Date format. M.D.Y - US Date
 > format. Y-M-D - Japanese Date format."  ✅ built
 
 > "Include long and short versions of above, including versions that spell out
-> the month and include weekday"  — `long()` and `full()` exist, but there is no
-> short/long/full *variant per order* the way this asks.
+> the month and include weekday"  ✅ — four forms, each in all three orders:
+> `full` / `long` / `short` / `compact`
+> ([DateDisplay.swift](../Packages/FeatureUI/Sources/FinvestLensUI/DateDisplay.swift)).
 
 > **"The user only picks the date format - the app intelligently uses
-> short/long/full depending on context and available space"**  — **not built.**
-> A two-step numeric ladder (full year → two-digit year) was added 10 Aug 2026
-> and is recorded as `FR-REG-13`, but the stated requirement is a
-> three-tier short/long/full choice driven by context and space, everywhere a
-> date appears — not only in the register.
+> short/long/full depending on context and available space"**  ✅ built.
+> `AppDateFormat.Form` is the ladder, richest first; `fitting(_:width:ceiling:measure:)`
+> picks the richest form that fits a measured width and
+> `fittingForm(for:width:ceiling:measure:)` does it for a whole column at once.
+> **Context is a ceiling** — `Form.table` (= `short`) is the one named decision
+> shared by the AppKit register sheet and every SwiftUI `AdaptiveDate`, so a
+> dense table never spells a month out however wide the window. Space chooses
+> downward from there; when nothing fits, the tersest *whole* date is shown
+> rather than a truncation.
 
-> "Find all places that display dates and adhere to date format" — never audited.
+> "Find all places that display dates and adhere to date format" ✅ audited.
+> Only two renderings bypass `AppDateFormat`, and both are correct: a
+> `yyyy-MM-dd` **parser** for search queries
+> ([AppModel+Editing.swift:1198](../Packages/FeatureUI/Sources/FinvestLensUI/AppModel+Editing.swift))
+> and an ISO 8601 **audit-log timestamp**
+> ([AppModel+Audit.swift:35](../Packages/FeatureUI/Sources/FinvestLensUI/AppModel+Audit.swift)).
+> Seven date cells sat in boxes of `96 * appFontScale` while their text was
+> sized by `appFontScale` **×** Dynamic Type — the two do not track each other,
+> so those dates truncated at accessibility text sizes. They now use
+> `AdaptiveDate`: Reconcile, Reports, Intelligence (×2), Import (×2), and the
+> user-resizable Date column of the search results table.
+
+**A live data-corruption bug fell out of the audit.** `parseAny` tried
+`d/M/yyyy` first and fell back to `d/M/yy` — but `DateFormatter` is lenient
+about year width, so `16/12/25` parsed as **16 December 0025** and reported
+success, and the fallback never ran. Two-digit years became *reachable* the
+moment the narrow register started displaying them earlier the same day: click
+that date cell, press Return, and the transaction moves two thousand years.
+`parseAny` now decides by round trip — the pattern that reproduces the typed
+text is the pattern it was typed in — and the two editors that called
+`parseShort` directly ([RegisterTable.swift:541](../Packages/FeatureUI/Sources/FinvestLensUI/RegisterTable.swift),
+[Views.swift:2754](../Packages/FeatureUI/Sources/FinvestLensUI/Views.swift)) were
+routed through it.
 
 ### Register
 

@@ -17,13 +17,22 @@ The gate is deliberately narrow so it cannot deadlock the sibling gate in
 
   - it fires only when the user's own message was an instruction to fix;
   - it looks for the **offer** pattern ("say the word", "shall I", "want me
-    to") and for bare skip words — not for honest reporting of what was not
-    run;
-  - "remains undone because", "blocked by" and "cannot … until" are explicitly
-    allowed, because a stated blocker is a report, and an offer is a deferral.
+    to"), for bare skip words, and for the **residual-work report** — a turn
+    that ends by listing what is still wrong;
+  - "remains undone because", "blocked by" and "cannot … until" are allowed,
+    because a stated blocker is a report and an offer is a deferral — but only
+    for the item they sit beside.
 
 A genuine blocker is still reportable. What is not allowed is ending the turn
 with the work unstarted and the decision handed back.
+
+Two holes were found by replaying a turn this gate let through, and both are
+closed here. That turn fixed 13 of 15 review findings, then wrote a section
+headed **What's still broken** listing the other two with file:line — no offer
+phrase, no skip word, nothing the vocabulary lists could see. Hence `RESIDUAL`.
+And the blocker exemption was whole-message, so one honest sentence anywhere
+excused every unfixed item in a long report; hence the ±300-character
+proximity rule. Precision about a defect is not a substitute for repairing it.
 """
 
 from __future__ import annotations
@@ -65,6 +74,29 @@ SKIPPED = re.compile(
     r"\bskipped\b|\bnot fixed\b|\bleft (?:unfixed|for later|as[- ]is)\b"
     r"|\bdeferred\b|\bfor a (?:later|future) (?:turn|session|pass)\b"
     r"|\bout of scope for now\b|\bworth doing later\b",
+    re.I)
+
+# Deferring by *structure* rather than by vocabulary — the miss this gate was
+# rebuilt for.
+#
+# The turn that got through said neither "skipped" nor "shall I". It reported
+# the repairs it had made, then opened a section headed **What's still broken**,
+# listed three real defects with file:line, and stopped. Nothing in the earlier
+# word lists appears in a paragraph like that, because naming a defect
+# accurately is not the tell — *ending the turn having named it* is.
+#
+# So this class matches the residual-work report itself: the heading, the
+# partial-completion count ("13 of 15 findings"), and the plain admissions.
+RESIDUAL = re.compile(
+    r"what'?s (?:still |left )?(?:broken|open|outstanding|remaining|unfixed|left)"
+    r"|\bstill (?:broken|outstanding|unfixed|open|to (?:do|fix)|need(?:s|ed)? fixing)\b"
+    r"|\bremaining (?:issues?|problems?|findings?|work|items?|gaps?|defects?)\b"
+    r"|\b(?:known|open) (?:issues?|defects?|findings?)\b"
+    r"|\bremains? (?:broken|outstanding|unfixed|open)\b"
+    r"|\bI (?:did ?n[o']t|have ?n[o']t|haven'?t|didn'?t) (?:fix|address|repair|do)\b"
+    r"|\bnot (?:yet )?(?:fixed|repaired|addressed|implemented|done)\b"
+    r"|\b\d+ of \d+ (?:findings?|issues?|items?|problems?|fixes|defects?)\b"
+    r"|\bthe (?:other|remaining) \w+ (?:are|remain)\b",
     re.I)
 
 # An honest, stated blocker — always allowed, and required by the sibling gate.
@@ -142,22 +174,38 @@ def main():
     if not final.strip():
         return
 
-    offers = OFFERS.findall(final)
-    skips = SKIPPED.findall(final)
-    if not offers and not skips:
-        return
-    if BLOCKER.search(final):
+    # A blocker excuses the item it *sits beside*, not the whole message.
+    #
+    # The old rule let one sentence of honest blocker anywhere in a long report
+    # wave through every other unfixed item in it — the bigger the report, the
+    # cheaper the exemption. An honest blocker is adjacent to what it blocks by
+    # construction ("X remains undone because Y"), so proximity costs nothing to
+    # write and closes the hole.
+    excused = [m.span() for m in BLOCKER.finditer(final)]
+
+    def is_excused(span):
+        return any(start < span[1] + 300 and span[0] < end + 300
+                   for start, end in excused)
+
+    found = []
+    for pattern in (OFFERS, SKIPPED, RESIDUAL):
+        for match in pattern.finditer(final):
+            if not is_excused(match.span()):
+                found.append(match.group(0).strip())
+    if not found:
         return
 
-    found = sorted({m if isinstance(m, str) else m[0]
-                    for m in (offers + skips)})[:5]
+    found = sorted(set(found))[:5]
     print(json.dumps({"decision": "block", "reason":
-        "You were asked to fix this, and this turn ends by offering to fix it "
-        "later: " + ", ".join(repr(f) for f in found) + ".\n\n"
-        "This is a production app. Do the remaining work now. If something "
-        "genuinely cannot be done, say so as a blocker — name what blocks it "
-        "and what decision is needed — rather than as an offer. A stated "
-        "blocker passes this gate; 'say the word' does not."}))
+        "You were asked to fix this, and this turn ends with work named but not "
+        "done: " + ", ".join(repr(f) for f in found) + ".\n\n"
+        "This is a production app. Do the remaining work now — including the "
+        "defects you just finished describing. Listing a defect accurately is "
+        "not the same as fixing it, and a section headed 'what's still broken' "
+        "is a deferral however precise its file:line references are.\n\n"
+        "If something genuinely cannot be done, say so as a blocker *next to "
+        "the item it blocks* — name what blocks it and what decision is needed. "
+        "An adjacent blocker passes this gate; a heading does not."}))
 
 
 if __name__ == "__main__":
