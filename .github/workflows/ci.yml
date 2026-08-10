@@ -37,6 +37,7 @@ jobs:
           - Intelligence
           - FeatureUI
           - CLI
+          - Lab
     steps:
       - uses: actions/checkout@v7
       - name: Swift version
