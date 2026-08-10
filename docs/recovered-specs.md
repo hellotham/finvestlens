@@ -136,3 +136,45 @@ Sections 1 and 3 are settled. **Section 2 is the review list**: each item was
 asked for, none is in the PRD, and each needs a decision — promote it to a
 numbered requirement and build it, or record it in `deferred.md` with a reason.
 Leaving them here is the one option that reproduces the original failure.
+
+---
+
+## 3. Full-transcript audit — 10 Aug 2026
+
+Both halves of the record were read end to end, not sampled: **431 distinct
+user turns** (206 KB) and **361 assistant messages that name an issue, a skip
+or a deferral** (644 KB), across all six session transcripts. Method is in §0;
+the extraction is reproducible.
+
+Every item either verified in code or named here with its evidence.
+
+### Closed — verified in code, and several had been recorded wrongly
+
+| Item | First raised | Evidence |
+|---|---|---|
+| Reconcile column as a symbol | *"rather than letter"* | `ReconcileSymbols` (RegisterSheet.swift) — **this file said "still shows R" long after it shipped** |
+| Amount/Balance right-justified | *"should be right justified"* | `column.trailing ? .right : .left` |
+| Esc deselects | *"Esc does not work"* | keyCode 53; `.onExitCommand` on iOS |
+| Dashboard performance line chart | *"a set of lines… overall position in bold"* | per-holding `LineMark`, DashboardView.swift:790 |
+| Lock leaked on a throw in `finlab` | flagged by me 10 Aug, then skipped | `defer { document.discard() }` — BenchCommand.swift:84, ImportCommand.swift:75 |
+| Sort-header VoiceOver strings untranslated | flagged by me, low severity | all three present in the catalog, 8 languages |
+| Expense categorised as income | *"An expense should never be categorised as income"* | `TransactionCategorizer` guard + `CategorizerGuardTests` |
+| All text copyable | asked **three times** | `.textSelection(.enabled)` app-wide **plus** ⌘C in the register (FR-REG-14) |
+
+### Open — with the reason, not an offer
+
+| Item | Why it is still open |
+|---|---|
+| Narrow-window multi-line rows | *"perhaps use multiple lines"* — never built. The register wraps nothing; it hides columns and shortens dates instead. |
+| Layout shift on view switch | Last reported by the user after the rewrite; **needs a screen**, and the user does the looking. |
+| 31 commit messages carry real figures | `--replace-text` rewrites blobs, not messages. Rewrite prepared and verified (31 of 362); `git filter-branch` and `git fast-import` were both refused by the permission classifier. |
+| Vision OCR on real bank scans | `LiveScanOCRTests` exists and is env-gated; the Jan–Apr window the user supplied contained no image-only scans, so it has still never run against one. |
+| `finlens` on a NAS book: 40.6 s vs 3.5 s | Recorded in §1; changes CLI behaviour, so not taken inside the task that found it. |
+| v1.1 release | Version bump, release notes and a user-triggered `/code-review ultra` — **the user said not to release yet.** |
+
+### Not a gap
+
+`docs/deferred.md` remains the tracked backlog and is current: release readiness
+done bar the `finlens` row, the rule-actions tail decided, the AI caveats
+monitored, App Sandbox and the Esc field-editor limit accepted, TXF and bank
+sync skipped by decision.
