@@ -52,8 +52,11 @@ enum DividendReconciler {
         var raw = franked * corporateTaxRate / (1 - corporateTaxRate)
         var rounded = Decimal()
         NSDecimalRound(&rounded, &raw, 2, .plain)
+        // Demonstrably printed: this returns a *computed* credit, so an
+        // abstention must read as "not proven" rather than "fine".
         guard rounded > 0,
-              SourceGrounding.isAmountPrinted("\(rounded)", in: source) else { return nil }
+              SourceGrounding.isAmountDemonstrablyPrinted("\(rounded)", in: source)
+        else { return nil }
         return rounded
     }
 
@@ -98,7 +101,10 @@ enum DividendReconciler {
         /// the result to be printed costs nothing real, because the figure
         /// being recovered is one the statement prints and the model misread.
         func derived(_ value: Decimal) -> Decimal? {
-            SourceGrounding.isAmountPrinted("\(value)", in: source) ? value : nil
+            // Demonstrably printed, not merely un-refused: this call *accepts*
+            // a figure the arithmetic invented, so the short-amount abstention
+            // in `isAmountPrinted` would wave through anything under $10.
+            SourceGrounding.isAmountDemonstrablyPrinted("\(value)", in: source) ? value : nil
         }
 
         if let known = net, known != 0 {

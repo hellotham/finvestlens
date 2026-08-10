@@ -240,7 +240,7 @@ struct CloseBookView: View {
                     }
                     if let posted {
                         Section {
-                            Label("Closed \(posted) account\(posted == 1 ? "" : "s"). Undo with ⌘Z.",
+                            Label("Closed \(posted) accounts. Undo with ⌘Z.",
                                   systemImage: "checkmark.circle")
                                 .foregroundStyle(.green)
                         }

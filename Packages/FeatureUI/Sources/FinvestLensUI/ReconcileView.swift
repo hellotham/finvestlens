@@ -69,9 +69,12 @@ struct ReconcileView: View {
                 Section {
                     Button("Re-open Last Reconciliation…") {
                         let reverted = model.reopenLastReconciliation(accountID: accountID)
+                        // `String(localized:)`, not a bare literal: this is a
+                        // `String`, so nothing would be extracted or looked up.
+                        // Unlike `Text`, it does resolve plural variations.
                         autoClearMessage = reverted > 0
-                            ? "Re-opened \(reverted) reconciled split\(reverted == 1 ? "" : "s") — they're now cleared and can be reconciled again."
-                            : "Nothing to re-open."
+                            ? String(localized: "Re-opened \(reverted) reconciled splits — they're now cleared and can be reconciled again.")
+                            : String(localized: "Nothing to re-open.")
                     }
                     Text("The most recent reconciliation was \(dateFormat.long(last)). Re-opening reverts those splits to cleared so you can reconcile the statement again (FR-REC-03).")
                         .scaledFont(.caption)
@@ -174,10 +177,10 @@ struct ReconcileView: View {
             let session = model.reconcileSession
             if session?.isBalanced == true {
                 autoClearStatus = matched == total
-                    ? "All \(total) transaction\(total == 1 ? "" : "s") match the statement."
-                    : "Matched \(matched) of \(total) — the statement balances. Review, then Finish."
+                    ? String(localized: "All \(total) transactions match the statement.")
+                    : String(localized: "Matched \(matched) of \(total) — the statement balances. Review, then Finish.")
             } else {
-                autoClearStatus = "Matched \(matched) of \(total) automatically — review the rest."
+                autoClearStatus = String(localized: "Matched \(matched) of \(total) automatically — review the rest.")
             }
         case .failure(let failure):
             autoClearStatus = model.describe(failure)
@@ -226,7 +229,7 @@ struct ReconcileView: View {
         .padding(.vertical, 10)
     }
 
-    private func stat(_ label: String, _ amount: Decimal, _ code: String,
+    private func stat(_ label: LocalizedStringKey, _ amount: Decimal, _ code: String,
                       highlight: Color = .primary) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(label).scaledFont(.caption).foregroundStyle(.secondary)

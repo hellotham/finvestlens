@@ -80,8 +80,43 @@ jobs:
           - 'generic/platform=iOS Simulator'
     steps:
       - uses: actions/checkout@v7
-      - run: |
+      # `-emit-localized-strings` is passed through OTHER_SWIFT_FLAGS because
+      # Xcode extracts only the targets that own a String Catalog — the app and
+      # the extensions — and never the SPM packages, where most of the strings
+      # live. The two sources are gathered separately below and checked, both
+      # platforms together, by the `localization` job.
+      - name: Build, extracting localized strings
+        run: |
+          mkdir -p strings/packages
           xcodebuild build \
             -scheme finvestlens \
             -destination '${{ matrix.destination }}' \
-            CODE_SIGNING_ALLOWED=NO
+            -derivedDataPath "$PWD/DerivedData" \
+            CODE_SIGNING_ALLOWED=NO \
+            OTHER_SWIFT_FLAGS="\$(inherited) -emit-localized-strings -emit-localized-strings-path $PWD/strings/packages"
+      - name: Gather the app's and extensions' own stringsdata
+        run: |
+          rsync -a --prune-empty-dirs \
+            --include='*/' --include='*.stringsdata' --exclude='*' \
+            DerivedData/Build/Intermediates.noindex/ strings/targets/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: stringsdata-${{ strategy.job-index }}
+          path: strings
+          if-no-files-found: error
+
+  localization:
+    name: String catalogs match the compiler
+    runs-on: ubuntu-latest
+    needs: app
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v4
+        with:
+          path: strings
+          pattern: stringsdata-*
+      # Both platforms, because each compiles code the other does not: an
+      # accessibility label inside an `#else` branch of `#if os(macOS)` shipped
+      # untranslated for months while a macOS-only audit reported full coverage.
+      - name: Every emitted key has an entry, every entry is emitted
+        run: python3 scripts/check-localization.py --strings-dir strings --no-discover

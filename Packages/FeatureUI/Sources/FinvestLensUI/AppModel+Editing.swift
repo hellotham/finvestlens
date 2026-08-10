@@ -734,6 +734,24 @@ extension AppModel {
         book?.transaction(with: id)?.splits.first?.guid
     }
 
+    /// The leg of `id` that the **register currently on screen** is showing.
+    ///
+    /// `anySplitID` returns `splits.first`, which is fine for a row that stands
+    /// for a whole transaction and wrong for one that stands for a leg — and
+    /// every consumer of `selectedSplitIDs` is leg-sensitive. Bulk Edit's
+    /// Transfer rewrite takes "the other split" relative to this one, so an
+    /// arbitrary leg re-pointed the bank side of a grocery row and moved the
+    /// money out of the wrong account; Reconcile marked a split that is not on
+    /// screen; ⌘J jumped back into the register it started in.
+    ///
+    /// `registerRows` is already scoped to the account (and its subaccounts
+    /// when that is switched on), so the row for this transaction carries
+    /// exactly the right leg. Nil on the whole-book journal, whose rows are
+    /// headings with no single leg — `anySplitID` is the honest answer there.
+    public func registerSplitID(ofTransaction id: GncGUID) -> GncGUID? {
+        registerRows.first { transactionID(ofSplit: $0.id) == id }?.id
+    }
+
     /// Every tag in the book. `Book.allTags` has existed and been tested from
     /// the start with no caller: the editor's Tags field was free text, so the
     /// only way to reuse a tag was to remember how you spelled it, and a typo

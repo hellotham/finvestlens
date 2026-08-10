@@ -265,15 +265,17 @@ date could not be read at all still falls back to the loose search.
 The Help menu opened a 72-line sheet: a paragraph on getting started, the search
 operators, and a shortcut table that had **gone stale** (it listed ⌘N as "New
 book" — ⌘N is New Transaction; ⌥⌘N is New Book — plus ⌘T and ⌘J, which do not
-exist). It is now a proper help book: **20 topics in four sections**, with a
+exist). It is now a proper help book: **25 topics in four sections**, with a
 topic sidebar, per-topic pages and search.
 
 **Built as data, not HTML.** `HelpContent.swift` is the book — sections of
 topics, each a list of typed blocks (`text`, `heading`, `bullets`, `steps`,
 `table`, `tip`) whose strings are `LocalizedStringKey`s. `HelpView.swift`
 renders them. Two consequences worth the choice: the pages **translate through
-the app's String Catalog** like every other string (all 230 new strings ship in
-the same eight languages), and the same code serves macOS, iPadOS and iOS.
+the app's String Catalog** like every other string — of the 338 help keys the
+compiler emits, the prose ships in all eight languages and 34 (shortcut glyphs
+and search operators) are marked untranslatable — and the same code serves
+macOS, iPadOS and iOS.
 An Apple Help Book (`.help` bundle, indexed HTML, Help Viewer) was the
 alternative; it would have meant a parallel localization pipeline, a `hiutil`
 index to maintain, and nothing at all on iOS.
@@ -341,15 +343,56 @@ caught five classes of bug a source scan cannot:
 
 **Deliberately not translated**: the app name, `PDF`, the URL placeholder and
 the copyright line are marked `shouldTranslate: false`. The Text Size slider's
-`A` and the reconcile column's `R` are typographic samples, not words. An App
-Intent that returns a plain `String` cannot be reached by a catalog at all and
-is left in English.
+`A` and the reconcile column's `R` are typographic samples, not words.
 
 Verified by launching the app under `-AppleLanguages` for German, Japanese and
 French and reading the result: sidebar, menus, register columns, status bar,
 inspector and toolbar all render translated, with number and currency
 formatting following the locale (`53.941,18` in German, `53 941,18 $AU` in
 French).
+
+### The gaps that audit could not see (10 Aug 2026)
+
+Three catalogs now: **1,567 keys** in the app (71 untranslatable, 37 carrying
+plural forms), 7 in Quick Look, 9 in the new widget catalog. What closed:
+
+- **Helper parameters typed `String`** — the same trap as above, in seven more
+  places: `upNextRow`, `PassportView.row`, `PlanningView.row`,
+  `ReconcileView.stat`, `BusinessView.labelled`/`totalRow`,
+  `CheckPrinting.labelled` and Quick Look's `row`. About 28 labels, including
+  the whole Up Next card on the dashboard, emitted no key at all. Where a row
+  is labelled with the owner's own account name a separate `dataRow` keeps it
+  verbatim — their words are not ours to translate.
+- **`String`-typed messages** — toasts, the reconcile status line, import
+  caveats, Siri responses and the widget's bills line are built as `String`, so
+  a bare literal is neither extracted nor looked up. They go through
+  `String(localized:)`, which *does* resolve plural variations even though
+  `Text` does not.
+- **English suffix plurals.** 28 call sites interpolated `"s"`/`"ies"`
+  (`"\(n) transaction\(n == 1 ? "" : "s")"`), which rendered "3 Änderungs" and
+  "变更s". They are single format keys with catalog plural variations now.
+  `xcstringstool` will not infer which argument drives the plural when `%lld`
+  appears twice, so the four two-count sentences use explicit substitutions.
+  Verified by rendering from the built bundle: "1 Änderung angewendet." /
+  "3 Änderungen angewendet.", and digit grouping follows the locale — 2,312 /
+  2.312 / 2 312.
+- **The widget extension had no catalog.** An extension has its own bundle, so
+  "Net Worth" and "Alerts" rendered English in every language while the help
+  promised translated names.
+- **Help search matched English only.** `HelpTopic.title` is a
+  `LocalizedStringResource` now, which unlike `LocalizedStringKey` can be read
+  back as a `String`; searching resolves through a prebuilt index.
+- **App Intent responses** reach the catalog after all, via
+  `String(localized:)` — the earlier note that they could not was wrong.
+
+The reason all of this survived an audit that reported full coverage: nothing
+ran the extractor. `scripts/check-localization.py` does, gated in CI
+(`localization` job) — it compares the compiler's emitted keys against the
+catalogs **both ways**, over **both platforms**. Both halves matter: Xcode
+extracts only targets that own a catalog, never the SPM packages where most
+strings live; and a macOS-only run never compiles the `#else` branch of
+`#if os(macOS)`, which is where `"Browse accounts"` had been shipping
+untranslated.
 
 ---
 

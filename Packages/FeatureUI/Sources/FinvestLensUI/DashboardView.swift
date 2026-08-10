@@ -114,6 +114,7 @@ extension AppModel {
 struct DashboardView: View {
     @Environment(\.appDateFormat) private var dateFormat
     @Environment(\.appFontScale) private var appFontScale
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Bindable var model: AppModel
     #if os(macOS)
     @Environment(\.openWindow) private var openWindow
@@ -327,6 +328,25 @@ struct DashboardView: View {
     }
 
     /// Deals the board: rows-per-column from the window height (row height
+    /// How much text has actually grown: the app's Text Size preference **and**
+    /// the system's Dynamic Type setting together.
+    ///
+    /// `appFontScale` alone is only half of it on iOS — `ScaledFont` also runs
+    /// the size through `UIFontMetrics` (Appearance.swift:268). Sizing tiles on
+    /// the preference alone meant that at accessibility text sizes the labels
+    /// grew and the tiles holding them did not; the board never scrolls and the
+    /// tiles are `.clipped()`, so the overflow was simply cut off. On macOS
+    /// there is no Dynamic Type, so this is exactly `appFontScale` as before.
+    private var typeScale: CGFloat {
+        // Read so a Dynamic Type change re-evaluates the layout: UIFontMetrics
+        // reads the live setting, but only an environment dependency makes
+        // SwiftUI come back and ask again.
+        _ = dynamicTypeSize
+        let base = TextStyleMetrics.size(.body)
+        guard base > 0 else { return appFontScale }
+        return TextStyleMetrics.scaledSize(.body, appScale: appFontScale) / base
+    }
+
     /// stretches so the last row lands on the bottom edge), then panels in
     /// priority order into the emptiest column that still fits them. A panel
     /// no column can hold is dropped — that is the priority list working,
@@ -337,7 +357,7 @@ struct DashboardView: View {
         let columns = columnCount(for: size.width)
         let usable = size.height - 40   // the board's own padding
         guard usable > 120 else { return Array(repeating: [], count: columns) }
-        let targetRow = 200 * appFontScale
+        let targetRow = 200 * typeScale
         let rows = max(2, Int((usable + spacing) / (targetRow + spacing)))
         let rowHeight = (usable - CGFloat(rows - 1) * spacing) / CGFloat(rows)
 
@@ -443,14 +463,14 @@ struct DashboardView: View {
                 VStack(alignment: .leading, spacing: 10) {
                     if let days = state.priceAgeDays {
                         upNextRow("clock.arrow.circlepath",
-                                  "Prices updated \(days) day\(days == 1 ? "" : "s") ago",
+                                  "Prices updated \(days) days ago",
                                   button: "Update Prices") {
                             Task { await model.updateAllPrices() }
                         }
                     }
                     if state.uncategorisedCount > 0 {
                         upNextRow("sparkles",
-                                  "\(state.uncategorisedCount) uncategorised transaction\(state.uncategorisedCount == 1 ? "" : "s")",
+                                  "\(state.uncategorisedCount) uncategorised transactions",
                                   button: "Categorise…") { model.presentedPanel = .autoCategorize }
                     }
                     if let id = state.staleReconcileID {
@@ -475,8 +495,11 @@ struct DashboardView: View {
         }
     }
 
-    private func upNextRow(_ systemImage: String, _ text: String,
-                           button: String, action: @escaping () -> Void) -> some View {
+    /// `text` and `button` are `LocalizedStringKey`, not `String`: a `String`
+    /// parameter picks `Text`'s verbatim initializer, which emits no catalog
+    /// key at all, and this card is the first thing a reader sees.
+    private func upNextRow(_ systemImage: String, _ text: LocalizedStringKey,
+                           button: LocalizedStringKey, action: @escaping () -> Void) -> some View {
         HStack(spacing: 8) {
             Label(text, systemImage: systemImage)
                 .scaledFont(.callout)
@@ -1042,7 +1065,7 @@ struct DashboardView: View {
             // tile holds more history, a cramped one holds less, and none
             // of it is half a clipped row.
             GeometryReader { geo in
-                let rowHeight = 26 * appFontScale
+                let rowHeight = 26 * typeScale
                 let budget = max(3, Int(geo.size.height / rowHeight))
                 let recent = model.recentJournalHeadings.prefix(budget)
                 VStack(alignment: .leading, spacing: 6) {

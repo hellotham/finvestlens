@@ -770,6 +770,18 @@ extension AppModel {
 
         var moved: [RepostedDay] = []
         for txn in book.transactions where txn.documentLink != nil {
+            // Already the storage form this repair *produces* — leave it be.
+            //
+            // Midnight UTC is canonical (`GnuCashDate.isDayOnly` is literally
+            // this test), and the two-days-disagree predicate below cannot see
+            // that: west of Greenwich a canonical value reads as the previous
+            // local day, so every correctly-stored row matched and was walked
+            // one day backwards. Silently, and permanently — the result is
+            // midnight UTC too, so a second run looks idempotent. This guard
+            // only ever *removes* rows from the selection, so the narrowness
+            // the comment above insists on is preserved.
+            guard txn.datePosted.timeIntervalSince1970
+                    .truncatingRemainder(dividingBy: 86_400) != 0 else { continue }
             let asUTC = utc.dateComponents([.year, .month, .day], from: txn.datePosted)
             let asLocal = local.dateComponents([.year, .month, .day], from: txn.datePosted)
             guard asUTC != asLocal else { continue }
@@ -819,7 +831,7 @@ extension AppModel {
         // that tidies those can see it.
         let washName = "Imbalance-\(currency.mnemonic)"
         guard let wash = book.accounts.first(where: { $0.isWash && $0.commodity == currency })
-                ?? ensureAccount(path: [washName], type: .bank)
+                ?? ensureAccount(path: [washName], type: .bank, commodity: currency)
         else { throw TransactionEntryError.notFound }
 
         let description = (vendor?.trimmingCharacters(in: .whitespacesAndNewlines)).flatMap {
@@ -1483,7 +1495,14 @@ extension AppModel {
 
     /// Finds or creates the account at `path` (from the root), giving new
     /// accounts the report currency.
-    func ensureAccount(path: [String], type: AccountType) -> Account? {
+    /// `commodity` defaults to the book's reporting currency, which is right
+    /// for the income and receivable accounts this creates. It is a parameter
+    /// because it is *not* right for a per-currency wash account: naming one
+    /// `Imbalance-MYR` while denominating it in AUD posts ringgit into an
+    /// Australian-dollar balance at face value, and the name-keyed lookup then
+    /// reuses that account for every later run.
+    func ensureAccount(path: [String], type: AccountType,
+                       commodity: Commodity? = nil) -> Account? {
         guard let book, !path.isEmpty else { return nil }
         var parent = book.rootAccount
         for name in path {
@@ -1492,7 +1511,8 @@ extension AppModel {
             }) {
                 parent = existing
             } else {
-                let account = Account(name: name, type: type, commodity: reportCurrency)
+                let account = Account(name: name, type: type,
+                                      commodity: commodity ?? reportCurrency)
                 book.addAccount(account, under: parent)
                 parent = account
             }

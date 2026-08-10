@@ -212,7 +212,7 @@ struct ApplyRulesSheet: View {
             Group {
                 if applied {
                     ContentUnavailableView("Done", systemImage: "checkmark.circle",
-                                           description: Text("Applied \(proposals.count) change\(proposals.count == 1 ? "" : "s")."))
+                                           description: Text("Applied \(proposals.count) changes."))
                 } else if proposals.isEmpty {
                     ContentUnavailableView("Nothing to change", systemImage: "clock.arrow.circlepath",
                                            description: Text("No historical transactions match your rules, or they’re already categorised."))

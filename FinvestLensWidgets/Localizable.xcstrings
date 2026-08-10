@@ -1,335 +1,386 @@
 {
   "sourceLanguage": "en",
+  "version": "1.0",
   "strings": {
-    "Accounts": {
+    "Alerts": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Konten"
+            "value": "Warnungen"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cuentas"
+            "value": "Avisos"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Comptes"
+            "value": "Alertes"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Conti"
+            "value": "Avvisi"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "勘定科目"
+            "value": "通知"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Contas"
+            "value": "Alertas"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "科目"
+            "value": "提醒"
           }
         }
       }
     },
-    "Commodities": {
+    "Bills due, over-budget spending and other alerts.": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wertpapiere und Währungen"
+            "value": "Fällige Rechnungen, Budgetüberschreitungen und andere Warnungen."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Valores y divisas"
+            "value": "Facturas pendientes, gastos por encima del presupuesto y otros avisos."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Titres et devises"
+            "value": "Factures à payer, dépassements de budget et autres alertes."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Titoli e valute"
+            "value": "Fatture in scadenza, spese oltre budget e altri avvisi."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "銘柄・通貨"
+            "value": "支払期日の請求、予算超過の支出、その他の通知。"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Títulos e moedas"
+            "value": "Contas a vencer, gastos acima do orçamento e outros alertas."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "证券与货币"
+            "value": "到期账单、超预算支出及其他提醒。"
           }
         }
       }
     },
-    "FinvestLens Book": {
+    "FinvestLens": {
+      "extractionState": "manual",
+      "shouldTranslate": false
+    },
+    "Net Worth": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "FinvestLens-Buch"
+            "value": "Nettovermögen"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Libro de FinvestLens"
+            "value": "Patrimonio neto"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Livre FinvestLens"
+            "value": "Valeur nette"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Libro FinvestLens"
+            "value": "Patrimonio netto"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "FinvestLens 帳簿"
+            "value": "純資産"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Livro do FinvestLens"
+            "value": "Patrimônio líquido"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "FinvestLens 账簿"
+            "value": "净资产"
           }
         }
       }
     },
-    "GnuCash Book": {
+    "Net Worth %@": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "GnuCash-Buch"
+            "value": "Nettovermögen %@"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Libro de GnuCash"
+            "value": "Patrimonio neto %@"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Livre GnuCash"
+            "value": "Valeur nette %@"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Libro GnuCash"
+            "value": "Patrimonio netto %@"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "GnuCash ブック"
+            "value": "純資産 %@"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Livro do GnuCash"
+            "value": "Patrimônio líquido %@"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "GnuCash 账簿"
+            "value": "净资产 %@"
           }
         }
       }
     },
-    "Preview unavailable": {
+    "Nothing needs your attention.": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Keine Vorschau verfügbar"
+            "value": "Nichts erfordert Ihre Aufmerksamkeit."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vista previa no disponible"
+            "value": "No hay nada que requiera su atención."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Aperçu indisponible"
+            "value": "Rien ne requiert votre attention."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Anteprima non disponibile"
+            "value": "Non c’è nulla che richieda la tua attenzione."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "プレビューを利用できません"
+            "value": "対応が必要なものはありません。"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pré-visualização indisponível"
+            "value": "Nada precisa da sua atenção."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "无法预览"
+            "value": "没有需要处理的事项。"
           }
         }
       }
     },
-    "Prices": {
+    "Open FinvestLens": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Kurse"
+            "value": "FinvestLens öffnen"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cotizaciones"
+            "value": "Abrir FinvestLens"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cours"
+            "value": "Ouvrir FinvestLens"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Quotazioni"
+            "value": "Apri FinvestLens"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "価格"
+            "value": "FinvestLens を開く"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cotações"
+            "value": "Abrir o FinvestLens"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "价格"
+            "value": "打开 FinvestLens"
           }
         }
       }
     },
-    "Transactions": {
+    "Quickly open your book.": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Buchungen"
+            "value": "Ihr Buch schnell öffnen."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Transacciones"
+            "value": "Abra su libro rápidamente."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Opérations"
+            "value": "Ouvrez rapidement votre livre."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Transazioni"
+            "value": "Apri rapidamente il tuo libro."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "取引"
+            "value": "帳簿をすばやく開きます。"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Transações"
+            "value": "Abra seu livro rapidamente."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "交易"
+            "value": "快速打开您的账簿。"
+          }
+        }
+      }
+    },
+    "Your latest net worth and upcoming bills.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ihr aktuelles Nettovermögen und anstehende Rechnungen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Su patrimonio neto más reciente y las facturas próximas."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Votre valeur nette la plus récente et vos factures à venir."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il tuo patrimonio netto più recente e le fatture in arrivo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最新の純資産と今後の請求。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seu patrimônio líquido mais recente e as contas a vencer."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "您最新的净资产与即将到期的账单。"
           }
         }
       }
     }
-  },
-  "version": "1.0"
+  }
 }

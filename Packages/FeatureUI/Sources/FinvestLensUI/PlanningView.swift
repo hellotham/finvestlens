@@ -607,13 +607,13 @@ struct TaxEstimateView: View {
 
             if !result.income.isEmpty {
                 Section("Assessable income") {
-                    ForEach(result.income) { line in row(line.name, line.amount) }
+                    ForEach(result.income) { line in dataRow(line.name, line.amount) }
                     LabeledContent("Total") { amount(result.assessableIncome, weight: .semibold) }
                 }
             }
             if !result.deductions.isEmpty {
                 Section("Deductions") {
-                    ForEach(result.deductions) { line in row(line.name, line.amount) }
+                    ForEach(result.deductions) { line in dataRow(line.name, line.amount) }
                     LabeledContent("Total") { amount(result.totalDeductions, weight: .semibold) }
                 }
             }
@@ -677,8 +677,14 @@ struct TaxEstimateView: View {
         }
     }
 
-    private func row(_ label: String, _ value: Decimal) -> some View {
+    private func row(_ label: LocalizedStringKey, _ value: Decimal) -> some View {
         LabeledContent(label) { amount(value) }
+    }
+
+    /// A row labelled with an account the owner tax-tagged. Verbatim by
+    /// design — their account names are not ours to translate.
+    private func dataRow(_ name: String, _ value: Decimal) -> some View {
+        LabeledContent(name) { amount(value) }
     }
 
     private func amount(_ value: Decimal, weight: Font.Weight = .regular) -> some View {

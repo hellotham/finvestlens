@@ -54,7 +54,7 @@ struct ScheduledView: View {
                                     .foregroundStyle(.secondary)
                             }
                         }
-                        Button("Enter \(due.count) Due Transaction\(due.count == 1 ? "" : "s")") {
+                        Button("Enter \(due.count) Due Transactions") {
                             if model.dueVariableNames().isEmpty {
                                 _ = model.postDueScheduled()
                             } else {

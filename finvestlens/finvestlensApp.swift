@@ -295,13 +295,13 @@ struct finvestlensApp: App {
                     .disabled(!model.isOpen || !model.isIntelligenceAvailable)
                     .help(model.intelligenceUnavailableReason
                           ?? "Pick receipts and statements — each is matched to its transaction, linked, and categorised")
-                Divider()
-                // ⌥⌘0, with the ⌥⌘1/2/3 go-to family: ⌘D belongs to Duplicate
-                // Transaction (the HIG-standard editing shortcut), and a
-                // menu-bar ⌘D was silently shadowing it in the register.
-                Button("Dashboard") { model.selectedAccountID = nil }
-                    .keyboardShortcut("0", modifiers: [.command, .option])
-                    .disabled(!model.isOpen)
+                // The go-to family (⌥⌘1 Dashboard, ⌥⌘2 Reports, ⌥⌘3 All
+                // Transactions) lives in the View menu, where the HIG puts
+                // commands that change what is displayed. A second "Dashboard"
+                // item sat here on ⌥⌘0 and did less than its twin — it set the
+                // sidebar selection but left an open panel and the search field
+                // alone — so two identically titled menu items behaved
+                // differently. ⌥⌘1 is the one that actually goes there.
             }
             CommandMenu("Reports") {
                 // Inline, in the detail pane, like the dashboard — a detached

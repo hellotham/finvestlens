@@ -124,7 +124,9 @@ struct AttachmentsPanel: View {
                             if model.applyAttachmentSuggestion(suggestion, to: transactionID) {
                                 categorySuggestion = nil
                             } else {
-                                categoriseError = "Couldn’t apply — edit the splits in the inspector (⌘E)."
+                                // The inspector was removed; ⌘E now opens the
+                                // row out in the register itself.
+                                categoriseError = String(localized: "Couldn’t apply — press ⌘E to open the row out and edit its splits there.")
                             }
                         }
                         .controlSize(.small)
@@ -171,7 +173,7 @@ struct AttachmentsPanel: View {
                 if let result = try await model.suggestCategoryFromAttachment(for: transactionID) {
                     categorySuggestion = result
                 } else {
-                    categoriseError = "No confident suggestion from the attachment."
+                    categoriseError = String(localized: "No confident suggestion from the attachment.")
                 }
             } catch {
                 categoriseError = error.localizedDescription

@@ -50,6 +50,17 @@ public enum ForeignAmountScanner {
     /// own initials are not mistaken for money.
     private static let currencyCodes: Set<String> = Set(Locale.commonISOCurrencyCodes)
 
+    /// Two or more digits of cents, a required gap, then the code. The gap is
+    /// what separates a real pairing from a number that merely happens to sit
+    /// before a word.
+    ///
+    /// Compiled once. `scan` is called per transaction narrative while
+    /// `foreignAmountIndex()` walks the whole book, and an
+    /// `NSRegularExpression` built inside it recompiled this pattern on every
+    /// one of those rows.
+    private static let pairing = try? NSRegularExpression(
+        pattern: #"([0-9][0-9,]*\.[0-9]{2})\s+([A-Za-z]{3})(?![A-Za-z])"#)
+
     /// `123.45  NZD` → one amount. Repeated for every occurrence.
     ///
     /// The book's own currency is *not* filtered here — the scanner does not
@@ -59,11 +70,7 @@ public enum ForeignAmountScanner {
     /// currency.
     public static func scan(_ text: String) -> [ForeignAmount] {
         guard !text.isEmpty else { return [] }
-        // Two or more digits of cents, a required gap, then the code. The gap
-        // is what separates a real pairing from a number that merely happens
-        // to sit before a word.
-        let pattern = #"([0-9][0-9,]*\.[0-9]{2})\s+([A-Za-z]{3})(?![A-Za-z])"#
-        guard let regex = try? NSRegularExpression(pattern: pattern) else { return [] }
+        guard let regex = Self.pairing else { return [] }
 
         var found: [ForeignAmount] = []
         let whole = NSRange(text.startIndex..., in: text)

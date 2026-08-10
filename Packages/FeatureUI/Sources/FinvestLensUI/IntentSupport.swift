@@ -58,9 +58,10 @@ public enum IntentSupport {
             from: now.addingTimeInterval(-30 * 86_400),
             to: now.addingTimeInterval(60 * 86_400), asOf: now
         ).filter { $0.status != .paid }
-        guard !bills.isEmpty else { return "You have no upcoming bills." }
+        guard !bills.isEmpty else { return String(localized: "You have no upcoming bills.") }
         let total = bills.reduce(Decimal(0)) { $0 + $1.amount }
-        return "You have \(bills.count) upcoming bill\(bills.count == 1 ? "" : "s") totalling \(money(total, currency))."
+        let amount = money(total, currency)
+        return String(localized: "You have \(bills.count) upcoming bills totalling \(amount).")
     }
 
     // MARK: - Accounts (App Entity / Spotlight)
@@ -126,10 +127,11 @@ public enum IntentSupport {
         ).filter { $0.status != .paid }
         let billsLine: String
         if bills.isEmpty {
-            billsLine = "No upcoming bills"
+            billsLine = String(localized: "No upcoming bills")
         } else {
             let total = bills.reduce(Decimal(0)) { $0 + $1.amount }
-            billsLine = "\(bills.count) bill\(bills.count == 1 ? "" : "s") due · \(money(total, currency))"
+            let amount = money(total, currency)
+            billsLine = String(localized: "\(bills.count) bills due · \(amount)")
         }
 
         let alerts = FinancialReports.alerts(book, scheduled: scheduled, currency: currency)

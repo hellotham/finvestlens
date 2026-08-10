@@ -191,8 +191,20 @@ public extension Transaction {
                                _ b: Transaction, action actionB: String) -> Int {
         if a === b { return 0 }
         if a.datePosted != b.datePosted { return a.datePosted < b.datePosted ? -1 : 1 }
-        // (FinvestLens has no closing-transaction concept — GnuCash sorts those
-        // after normal same-date transactions here.)
+        // Closing entries sort after normal activity on the same date, which is
+        // what GnuCash does at this exact point in `xaccTransOrder_num_action`
+        // (libgnucash/engine/Transaction.cpp:1820):
+        //
+        //     /* Always sort closing transactions after normal transactions */
+        //     gboolean ta_is_closing = xaccTransGetIsClosingTxn (ta);
+        //
+        // The book *does* have the concept now — `BookClosing.build` writes the
+        // `book_closing` slot and `FindTest.isClosing` reads it — so the step
+        // this comment used to say was unnecessary is the one keeping a year's
+        // closing entries at the foot of its last day, in the register, the
+        // journal, `finlens` and every report that orders by this.
+        let aClosing = FindTest.isClosing(a), bClosing = FindTest.isClosing(b)
+        if aClosing != bClosing { return aClosing ? 1 : -1 }
         let cmp = (!actionA.isEmpty && !actionB.isEmpty)
             ? numOrString(actionA, actionB)
             : numOrString(a.number, b.number)

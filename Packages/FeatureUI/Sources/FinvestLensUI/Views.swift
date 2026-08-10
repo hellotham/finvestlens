@@ -214,7 +214,13 @@ enum AmountFormat {
     static func spoken(_ value: Decimal, code: String) -> String {
         let money = abs(value).formatted(.currency(code: code))
         if value == 0 { return money }
-        return "\(money), \(value < 0 ? "debit" : "credit")"
+        // Two whole keys rather than one with an interpolated word: the word
+        // was a bare literal inside the interpolation, which emits no key at
+        // all, and in the languages that inflect it a spliced noun would come
+        // out ungrammatical anyway.
+        return value < 0
+            ? String(localized: "\(money), debit")
+            : String(localized: "\(money), credit")
     }
 }
 
@@ -512,6 +518,15 @@ public struct FinvestLensRootView: View {
             case .findAccount: FindAccountSheet(model: model)
             }
         }
+        // Schedule… (the register context menu and the Transaction menu) sets
+        // `schedulingTransactionID`, but the sheet that observed it hung off
+        // the old register and was deleted with it — leaving a command that
+        // set a value nothing read, and a recurrence editor nothing could
+        // reach. Hosted here beside the panel sheet, it serves both registers
+        // and the menu bar, none of which own the register view any more.
+        .sheet(item: $model.schedulingTransactionID) { id in
+            ScheduleTransactionSheet(model: model, transactionID: id)
+        }
         #if os(macOS)
         // macOS: AppKit panels — .fileImporter does not present reliably here.
         .onChange(of: model.bankImportRequested) {
@@ -788,8 +803,7 @@ struct CascadeAccountSheet: View {
         NavigationStack {
             Form {
                 Section {
-                    Text("Copy the properties you tick from “\(name)” onto "
-                         + "\(DeleteAccountSheet.count(count, "account")) beneath it.")
+                    Text("Copy the properties you tick from “\(name)” onto \(count) accounts beneath it.")
                         .scaledFont(.caption)
                         .foregroundStyle(.secondary)
                     Toggle("Colour", isOn: $options.color)
@@ -831,18 +845,6 @@ struct DeleteAccountSheet: View {
     private var plan: AppModel.AccountDeletionPlan? { model.deletionPlan(for: accountID) }
     private var name: String { model.accountName(accountID) ?? "this account" }
 
-    /// "1 split" / "2,312 splits", grouped for reading.
-    ///
-    /// Spelled out rather than `^[\(n) split](inflect: true)`: automatic
-    /// grammatical agreement resolves only for a localized string resource, and
-    /// interpolating it into a `Text` renders the markup itself — this dialog
-    /// said "^[2312 split](inflect: true) posted to “ANZ Access”".
-    static func count(_ n: Int, _ noun: String) -> String {
-        let formatted = NumberFormatter.localizedString(from: NSNumber(value: n),
-                                                        number: .decimal)
-        return "\(formatted) \(noun)\(n == 1 ? "" : "s")"
-    }
-
     private var isReady: Bool {
         guard let plan else { return false }
         if plan.needsTransactionTarget && transactionTarget == nil { return false }
@@ -859,8 +861,7 @@ struct DeleteAccountSheet: View {
                     }
                     if plan.needsTransactionTarget {
                         Section("Transactions") {
-                            Text("\(Self.count(plan.splitCount, "split")) posted to “\(name)” "
-                                 + "must move to another account.")
+                            Text("\(plan.splitCount) splits posted to “\(name)” must move to another account.")
                                 .scaledFont(.caption)
                                 .foregroundStyle(.secondary)
                             Picker("Move to", selection: $transactionTarget) {
@@ -875,11 +876,8 @@ struct DeleteAccountSheet: View {
                     if plan.needsChildTarget {
                         Section("Subaccounts") {
                             Text(plan.descendantSplitCount > 0
-                                 ? "\(Self.count(plan.childCount, "subaccount")) — carrying "
-                                   + "\(Self.count(plan.descendantSplitCount, "split")) — must "
-                                   + "move to another parent."
-                                 : "\(Self.count(plan.childCount, "subaccount")) must move to "
-                                   + "another parent.")
+                                 ? "\(plan.childCount) subaccounts — carrying \(plan.descendantSplitCount) splits — must move to another parent."
+                                 : "\(plan.childCount) subaccounts must move to another parent.")
                                 .scaledFont(.caption)
                                 .foregroundStyle(.secondary)
                             Picker("Reparent to", selection: $childTarget) {
@@ -2775,7 +2773,18 @@ struct TransactionEditorSheet: View {
                                 restSplitCount: 0)
                             switch target {
                             case .cursor(let field): cursor = field
-                            case .removeSplit(let at): lines.remove(at: at)
+                            case .removeSplit(let at):
+                                // The same guard both registers apply
+                                // (RegisterSheet.removeLine, RegisterTable
+                                // .removeLine): never below two legs, and
+                                // never an index the draft no longer has.
+                                // The index is computed from the geometry of
+                                // the row as it was drawn, so a tap that
+                                // lands after a removal can name a line that
+                                // is already gone.
+                                if lines.count > 2, lines.indices.contains(at) {
+                                    lines.remove(at: at)
+                                }
                             case .appendSplit: lines.append(EditableSplit())
                             default: break
                             }

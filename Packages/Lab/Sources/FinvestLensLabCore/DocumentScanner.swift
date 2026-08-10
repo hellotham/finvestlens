@@ -51,7 +51,7 @@ enum DocumentDate {
     static func infer(name: String, folder: String, modified: Date?) -> (date: Date?, source: Source) {
         // 1. `2026-01-02 Woolworths.png` — the naming convention used for
         //    receipts, and the most reliable date there is.
-        if let date = match(#"^(\d{4})-(\d{2})-(\d{2})"#, in: name, order: .ymd) {
+        if let date = match(Pattern.leadingISO, in: name, order: .ymd) {
             return (date, .leadingDate)
         }
         // 2. `…period end 31 January 2026…` — the registry's own statement of
@@ -61,7 +61,7 @@ enum DocumentDate {
             if let date = spelledDate(in: tail) { return (date, .periodEnd) }
         }
         // 3. `CBA_Dividend_Advice_2026_03_30.pdf`, `YMAX_Distribution_Advice_2026_04_20.pdf`
-        if let date = match(#"(\d{4})_(\d{2})_(\d{2})"#, in: name, order: .ymd) {
+        if let date = match(Pattern.underscore, in: name, order: .ymd) {
             return (date, .underscoreDate)
         }
         // 4. `Statements20260111.pdf` — but not `img20260207_20452286.png`.
@@ -71,18 +71,18 @@ enum DocumentDate {
         //    trap as the download stamp above, so it gets the same answer —
         //    fall through and let the folder say which month this belongs to.
         if !isScannerStamp(name),
-           let date = match(#"(?<!\d)(20\d{2})(\d{2})(\d{2})(?!\d)"#, in: name, order: .ymd) {
+           let date = match(Pattern.compact, in: name, order: .ymd) {
             return (date, .compactDate)
         }
         // 5. `17 Mar 2026 Dist payt.pdf`, `19 Jan 2026 dist payt.pdf`
         if let date = spelledDate(in: name) { return (date, .spelledDate) }
         // 6. Any ISO date in the name — usually a download stamp, so last of
         //    the name-derived rules.
-        if let date = match(#"(\d{4})-(\d{2})-(\d{2})"#, in: name, order: .ymd) {
+        if let date = match(Pattern.anyISO, in: name, order: .ymd) {
             return (date, .anyISODate)
         }
         // 7. `2026-01 VISA` — the folder the person filed it under.
-        if let date = match(#"(\d{4})-(\d{2})(?!\d)"#, in: folder, order: .ym) {
+        if let date = match(Pattern.folderMonth, in: folder, order: .ym) {
             return (date, .folderMonth)
         }
         if let modified { return (modified, .modified) }
@@ -95,13 +95,34 @@ enum DocumentDate {
     /// alone: `Statements20260111.pdf` is also letters followed by eight
     /// digits, and that one genuinely is the statement's date.
     private static func isScannerStamp(_ name: String) -> Bool {
-        name.range(of: #"(?i)^img\d{8}_\d{6,}"#, options: .regularExpression) != nil
+        guard let regex = Pattern.scannerStamp else { return false }
+        return regex.firstMatch(in: name, range: NSRange(name.startIndex..., in: name)) != nil
     }
 
     private enum Order { case ymd, ym }
 
-    private static func match(_ pattern: String, in text: String, order: Order) -> Date? {
-        guard let regex = try? NSRegularExpression(pattern: pattern),
+    /// The name patterns, compiled once.
+    ///
+    /// `infer` runs per file over a whole document tree, and each rule it tried
+    /// used to compile its pattern afresh — up to seven `NSRegularExpression`
+    /// builds per file, none of which the scan needs to repeat.
+    private enum Pattern {
+        static let leadingISO = regex(#"^(\d{4})-(\d{2})-(\d{2})"#)
+        static let underscore = regex(#"(\d{4})_(\d{2})_(\d{2})"#)
+        static let compact = regex(#"(?<!\d)(20\d{2})(\d{2})(\d{2})(?!\d)"#)
+        static let anyISO = regex(#"(\d{4})-(\d{2})-(\d{2})"#)
+        static let folderMonth = regex(#"(\d{4})-(\d{2})(?!\d)"#)
+        static let scannerStamp = regex(#"(?i)^img\d{8}_\d{6,}"#)
+        static let spelled = regex(
+            #"(?i)(?:(\d{1,2})\s+)?([a-z]{3,9})\.?\s+(?:(\d{1,2}),?\s+)?(\d{4})"#)
+
+        private static func regex(_ pattern: String) -> NSRegularExpression? {
+            try? NSRegularExpression(pattern: pattern)
+        }
+    }
+
+    private static func match(_ regex: NSRegularExpression?, in text: String, order: Order) -> Date? {
+        guard let regex,
               let hit = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text))
         else { return nil }
         func group(_ index: Int) -> Int? {
@@ -118,16 +139,22 @@ enum DocumentDate {
 
     /// `31 January 2026` or `17 Mar 2026`, in either order.
     private static func spelledDate(in text: String) -> Date? {
-        let pattern = #"(?i)(?:(\d{1,2})\s+)?([a-z]{3,9})\.?\s+(?:(\d{1,2}),?\s+)?(\d{4})"#
-        guard let regex = try? NSRegularExpression(pattern: pattern) else { return nil }
+        guard let regex = Pattern.spelled else { return nil }
         let whole = NSRange(text.startIndex..., in: text)
         for hit in regex.matches(in: text, range: whole) {
             func group(_ index: Int) -> String? {
                 guard let range = Range(hit.range(at: index), in: text) else { return nil }
                 return String(text[range])
             }
+            // The month name must start with the word, which accepts both the
+            // full name and any abbreviation of it ("mar", "sept"). The
+            // converse test — the word starting with the month's first three
+            // letters — accepted any word that merely opened that way, so
+            // "Marsh 2026.pdf" was filed as 1 March and "Decision 2026.pdf" as
+            // 1 December, with `dateSource` reporting "spelled date" as though
+            // the filename had said so.
             guard let monthWord = group(2)?.lowercased(),
-                  let index = monthNames.firstIndex(where: { $0.hasPrefix(monthWord) || monthWord.hasPrefix($0.prefix(3)) }),
+                  let index = monthNames.firstIndex(where: { $0.hasPrefix(monthWord) }),
                   let year = group(4).flatMap(Int.init)
             else { continue }
             let day = (group(1) ?? group(3)).flatMap(Int.init) ?? 1
@@ -140,7 +167,13 @@ enum DocumentDate {
         guard (1...12).contains(month), (1...31).contains(day), (1900...2200).contains(year) else { return nil }
         var components = DateComponents()
         components.year = year; components.month = month; components.day = day
-        return Calendar.current.date(from: components)
+        // `date(from:)` is lenient — 31 February rolls forward to 3 March, and
+        // a filename naming a day that does not exist has not told us a date.
+        // Round-trip it rather than trust the roll-over.
+        guard let date = Calendar.current.date(from: components) else { return nil }
+        let back = Calendar.current.dateComponents([.year, .month, .day], from: date)
+        guard back.year == year, back.month == month, back.day == day else { return nil }
+        return date
     }
 }
 

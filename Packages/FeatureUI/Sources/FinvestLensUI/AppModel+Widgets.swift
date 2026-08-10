@@ -76,10 +76,14 @@ extension AppModel {
         ).filter { $0.status != .paid }
         let billsLine: String
         if bills.isEmpty {
-            billsLine = "No upcoming bills"
+            billsLine = String(localized: "No upcoming bills")
         } else {
             let total = bills.reduce(Decimal(0)) { $0 + $1.amount }
-            billsLine = "\(bills.count) bill\(bills.count == 1 ? "" : "s") due · \(AmountFormat.string(total, code: currency.mnemonic))"
+            let amount = AmountFormat.string(total, code: currency.mnemonic)
+            // Localized here in the app, not in the widget: the widget target
+            // has its own bundle, and this line is written into the shared
+            // snapshot the widget only renders.
+            billsLine = String(localized: "\(bills.count) bills due · \(amount)")
         }
 
         // Computed once on the main actor and reused for both the snapshot and

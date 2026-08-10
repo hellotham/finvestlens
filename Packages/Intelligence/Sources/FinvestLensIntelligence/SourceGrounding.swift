@@ -39,6 +39,23 @@ enum SourceGrounding {
         printedCount(amount, in: source) != 0
     }
 
+    /// Whether an amount is **demonstrably** printed — no abstention.
+    ///
+    /// ``isAmountPrinted`` answers `true` for any figure of fewer than four
+    /// digits, because ``printedCount`` abstains there rather than reject a
+    /// real row on a weak test. That is the right policy when the question is
+    /// "may I refuse the model's answer?", and exactly the wrong one when the
+    /// question is "may I state a number the code just computed?" — under that
+    /// reading a fully franked $70.00 dividend produced a $30.00 franking
+    /// credit that no statement ever printed, on a tax figure.
+    ///
+    /// So: short figures are unverifiable, and unverifiable means no.
+    static func isAmountDemonstrablyPrinted(_ amount: String, in source: String) -> Bool {
+        let digits = amount.filter(\.isNumber)
+        guard !digits.isEmpty else { return false }
+        return source.contains(digits)
+    }
+
     /// How many times an amount is printed in `source`, or ``unbounded`` when
     /// the figure is too short to count on.
     ///

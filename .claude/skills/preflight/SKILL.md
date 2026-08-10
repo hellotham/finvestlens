@@ -36,13 +36,43 @@ destinations actually ran (the Stop gate checks for exactly these two strings).
 
 ## 3. Help-manual drift
 
+Run the generator and diff its output — do not merely report that
+`HelpContent.swift` changed. An echoed reminder is not a check, and CI fails
+on real drift:
+
 ```bash
-git diff HEAD --name-only | grep -q "HelpContent.swift" \
-  && echo "HelpContent changed → run: (cd website && node scripts/build-manual.mjs) and commit src/data/manual.json" \
-  || echo "no help changes"
+(cd website \
+  && before=$(shasum -a 256 src/data/manual.json) \
+  && node scripts/build-manual.mjs >/dev/null \
+  && [ "$before" = "$(shasum -a 256 src/data/manual.json)" ]) \
+  && echo "manual.json in sync" \
+  || echo "DRIFT — regenerating changed manual.json; stage the new file"
 ```
 
-CI fails if `manual.json` drifts from `HelpContent.swift`.
+Compare the file against **its own regenerated output**, not against `HEAD`.
+`git diff --exit-code src/data/manual.json` was the obvious spelling and it is
+wrong: the file is legitimately modified-and-uncommitted in exactly the case
+this step exists for — a `HelpContent.swift` change in the same working tree —
+so it cried DRIFT on a tree that was perfectly in sync. A check that fails when
+nothing is broken is a check people learn to skip.
+
+Real drift means the regenerated file must be staged alongside the
+`HelpContent.swift` change; CI fails on it.
+
+## 3b. String catalogs match the compiler
+
+The catalogs are gated in CI (`.github/workflows/ci.yml`, job
+`localization`). Locally, when UI strings changed:
+
+```bash
+python3 scripts/check-localization.py --build
+```
+
+It builds both platforms with the extractor on, then reports keys the compiler
+emits with no catalog entry, entries nothing emits, languages missing, and
+translations whose `%` specifiers do not match the key's. That last one is a
+crash, not a cosmetic defect. This is slow (two full builds) — skip it when no
+user-facing string changed, and say so.
 
 ## 4. SPDX headers on changed Swift sources
 

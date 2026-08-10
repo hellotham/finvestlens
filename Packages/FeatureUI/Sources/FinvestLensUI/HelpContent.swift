@@ -14,7 +14,14 @@
 import SwiftUI
 
 /// One piece of a help page.
-public enum HelpBlock: Identifiable, @unchecked Sendable {
+///
+/// Deliberately **not** `Identifiable`: the only identity it ever needed was
+/// its position in a topic, and the previous `id` built one by interpolating a
+/// `LocalizedStringKey` — which resolves through reflection metadata, produced
+/// a 485-character string per block on every render pass, and would have
+/// collapsed every paragraph in a topic to one id had that metadata ever been
+/// stripped. The renderer indexes instead, as it already does for the lists.
+public enum HelpBlock: @unchecked Sendable {
     /// A paragraph of prose.
     case text(LocalizedStringKey)
     /// A sub-heading inside a topic.
@@ -28,22 +35,16 @@ public enum HelpBlock: Identifiable, @unchecked Sendable {
     /// A short aside worth setting apart.
     case tip(LocalizedStringKey)
 
-    public var id: String {
-        switch self {
-        case .text(let key): "text\(key)"
-        case .heading(let key): "heading\(key)"
-        case .bullets(let items): "bullets\(items.count)\(items.first.map(String.init(describing:)) ?? "")"
-        case .steps(let items): "steps\(items.count)\(items.first.map(String.init(describing:)) ?? "")"
-        case .table(let rows): "table\(rows.count)\(rows.first.map { String(describing: $0.0) } ?? "")"
-        case .tip(let key): "tip\(key)"
-        }
-    }
 }
 
 public struct HelpTopic: Identifiable, @unchecked Sendable {
     public let id: String
-    public let title: LocalizedStringKey
-    public let summary: LocalizedStringKey
+    /// `LocalizedStringResource`, not `LocalizedStringKey`: both are extracted
+    /// by the compiler, but only this one can be *read back* as a String at
+    /// runtime. Search needs that — a `LocalizedStringKey` can only be
+    /// rendered, so matching against one silently matches English alone.
+    public let title: LocalizedStringResource
+    public let summary: LocalizedStringResource
     public let symbol: String
     /// Untranslated search terms — the topic's own English words plus obvious
     /// synonyms, so search finds a page even when the reader types the term
@@ -54,7 +55,7 @@ public struct HelpTopic: Identifiable, @unchecked Sendable {
 
 public struct HelpSection: Identifiable, @unchecked Sendable {
     public let id: String
-    public let title: LocalizedStringKey
+    public let title: LocalizedStringResource
     public let topics: [HelpTopic]
 }
 
@@ -75,11 +76,28 @@ public enum HelpBook {
         ]),
     ]
 
-    public static var allTopics: [HelpTopic] { sections.flatMap(\.topics) }
+    public static let allTopics: [HelpTopic] = sections.flatMap(\.topics)
 
-    public static func topic(id: String) -> HelpTopic? {
-        allTopics.first { $0.id == id }
-    }
+    /// Built once: `topic(id:)` is called from `body`, so a linear scan over a
+    /// freshly rebuilt array would run on every render pass.
+    private static let topicsByID: [String: HelpTopic] =
+        Dictionary(allTopics.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+
+    public static func topic(id: String) -> HelpTopic? { topicsByID[id] }
+
+    /// Lowercased search text per topic id: the title and summary **as the
+    /// reader sees them**, plus the English keywords so a term learned from
+    /// GnuCash still finds the page.
+    ///
+    /// Built once. `String(localized:)` goes through the bundle, which is far
+    /// too expensive to repeat for 25 topics on every keystroke.
+    static let searchIndex: [String: String] = Dictionary(
+        allTopics.map { topic in
+            (topic.id, [String(localized: topic.title),
+                        String(localized: topic.summary),
+                        topic.keywords].joined(separator: " ").lowercased())
+        },
+        uniquingKeysWith: { first, _ in first })
 
     // MARK: Basics
 
@@ -146,7 +164,7 @@ public enum HelpBook {
         title: "Recording transactions",
         summary: "The register, splits, and editing a row in place.",
         symbol: "square.and.pencil",
-        keywords: "transaction register enter split memo transfer edit double entry balance style columns",
+        keywords: "transaction register enter split memo transfer edit double entry balance style columns void unvoid reverse reversing cheque check print",
         blocks: [
             .text("""
                 Select an account in the sidebar to open its **register** — one row per \
@@ -170,23 +188,24 @@ public enum HelpBook {
                 Select the row and press ⌘E, or click its disclosure arrow, to open it \
                 out — notes, tags and every leg, edited in the register itself.
                 """),
-            .heading("Undoing a transaction that already happened"),
-            .text("""
-                Deleting a transaction removes it. Sometimes that is wrong — a payment that \
-                bounced, or a cheque never banked, is part of the record. **Void Transaction** \
-                keeps the row and its history but takes it out of your balances; **Unvoid** \
-                puts it back. **Add Reversing Transaction** instead writes a second, opposite \
-                entry on a date you choose, which is what an accountant expects to see when a \
-                posted period must not change.
-                """),
-            .text("""
-                **Print Check…** prints the selected transaction as a cheque.
-                """),
             .tip("""
                 How much each row shows is up to you: View ▸ Register Style switches \
                 between one line per transaction (Basic Ledger), detail on the selected \
                 row (Auto Details), and every row open (Transaction Journal). View ▸ \
                 Columns switches off the columns you do not use.
+                """),
+            .heading("Void, reverse and print"),
+            .text("""
+                Deleting a transaction removes it. Sometimes that is wrong — a payment that \
+                bounced, or a cheque never banked, is part of the record. **Void Transaction** \
+                keeps the row and its history but takes it out of your balances; **Unvoid \
+                Transaction** puts it back, though the reconcile marks its splits carried are \
+                not restored. **Add Reversing Transaction** leaves the original alone and \
+                writes a second, opposite entry beside it on the same date, so the correction \
+                shows in the record rather than being hidden by an edit.
+                """),
+            .text("""
+                **Print Check…** prints the selected transaction as a cheque.
                 """),
         ])
 
@@ -564,24 +583,27 @@ public enum HelpBook {
         keywords: "dashboard home overview net worth tiles cards alerts up next customise board",
         blocks: [
             .text("""
-                Opening a book lands you on the dashboard — net worth and its twelve-month \
-                trend, anything the alerts have flagged, your account balances, bills coming \
-                up, and how the budget is tracking.
+                The dashboard is the book at a glance — net worth and its twelve-month trend, \
+                anything the alerts have flagged, your account balances, bills coming up, and \
+                how the budget is tracking. A new book opens here; a book you have used before \
+                opens where you left off.
                 """),
             .text("""
-                It is a board rather than a page: it never scrolls. Cards are laid out to fill \
-                the window you actually have, so what you see is what there is. Resize the \
-                window and the board re-packs itself.
+                It is a board rather than a page: it never scrolls. Cards are packed into the \
+                window you actually have, and any that will not fit are left out rather than \
+                pushed below the fold — so a wider window shows more of them. Resize it and \
+                the board re-packs itself.
                 """),
             .heading("Choosing what appears"),
             .text("""
-                Not every card suits every book. Turn the ones you do not want off, and the \
-                rest close the gap. A card with nothing to report — no bills due, no alerts — \
-                gives up its place rather than showing you an empty box.
+                Not every card suits every book. **Customise**, in the dashboard’s toolbar, \
+                turns cards off one by one, and the rest close the gap. A card with nothing to \
+                report — no bills due, no goals set — gives up its place rather than showing \
+                you an empty box.
                 """),
             .tip("""
-                ⌥⌘0 returns to the dashboard from anywhere. **Up Next** is the card to read \
-                first: it names the single thing most worth doing in the book right now.
+                ⌥⌘1 returns to the dashboard from anywhere. **Up Next** is the card to read \
+                first: it lists what is most worth doing in the book right now.
                 """),
         ])
 
@@ -603,7 +625,7 @@ public enum HelpBook {
                 "Choose **Book ▸ Close Financial Year…**",
                 "Set the closing date and pick the equity account to close into — Retained Earnings, typically.",
                 "Read the preview: it names how many accounts will be closed, and the totals per currency.",
-                "Post it. The whole closing is a single entry you can undo.",
+                "Post it. Undo takes the whole closing back in one step; a book with more than one currency gets one closing entry per currency.",
             ]),
             .tip("""
                 You need an equity account to close into before you start. If the book has \
@@ -612,7 +634,7 @@ public enum HelpBook {
             .heading("The papers"),
             .text("""
                 The **Financial Year Pack** (in Reports) gathers the statements tax time asks \
-                for into one document. **Book ▸ Financial Summary (Passport)…** is the \
+                for into one document. **Reports ▸ Financial Summary (Passport)…** is the \
                 different, shorter thing: a single page — net worth, savings rate, the \
                 twelve-month trend — for when someone needs a picture of your position rather \
                 than your accounts. It says on its face that it is a snapshot prepared from \
@@ -629,10 +651,10 @@ public enum HelpBook {
         blocks: [
             .heading("Widgets"),
             .text("""
-                Two widgets read the last book you had open: **Net Worth**, and **Alerts** \
-                for anything wanting attention. They show a snapshot saved when you last \
-                saved the book — they never open it themselves, so nothing is locked and \
-                nothing changes behind your back.
+                Two widgets read the book you have open: **Net Worth**, and **Alerts** for \
+                anything wanting attention. They show a snapshot written when you save — they \
+                never open the book themselves, so nothing is locked. Close the book and they \
+                empty until you open it again.
                 """),
             .text("""
                 There is also a Control Centre button that opens FinvestLens.
@@ -646,7 +668,8 @@ public enum HelpBook {
             .heading("Alerts and Shortcuts"),
             .text("""
                 Alerts can arrive as notifications, so a bill due or a balance heading \
-                negative reaches you without the app being open. FinvestLens also publishes \
+                negative reaches you without the app in front of you. They are scheduled from \
+                the open book and cleared when you close it. FinvestLens also publishes \
                 Shortcuts actions, so the book can take part in an automation.
                 """),
         ])
@@ -801,7 +824,7 @@ public enum HelpBook {
         title: "GnuCash, Ledger and the command line",
         summary: "Move your data in and out, and script reports.",
         symbol: "terminal",
-        keywords: "gnucash ledger export import cli finlens command line journal interchange",
+        keywords: "gnucash ledger export import cli finlens command line journal interchange csv spreadsheet",
         blocks: [
             .heading("GnuCash"),
             .text("""
@@ -809,11 +832,13 @@ public enum HelpBook {
                 way without losing detail — accounts, splits, prices, schedules and \
                 business records all survive the trip.
                 """),
-            .heading("Ledger journals"),
+            .heading("Spreadsheets"),
             .text("""
-                File ▸ Export CSV writes plain spreadsheet files — your accounts, your \
-                transactions, or your price history — for anything that reads a table.
+                File ▸ Export CSV, on the Mac, writes plain spreadsheet files — your \
+                accounts, your transactions, or your price history — for anything that \
+                reads a table.
                 """),
+            .heading("Ledger journals"),
             .text("""
                 File ▸ Export Ledger Journal… (⇧⌘E) writes a plain-text Ledger journal, \
                 and File ▸ Import Ledger Journal… reads one back.
@@ -875,7 +900,6 @@ public enum HelpBook {
             ]),
             .heading("Windows and views"),
             .table([
-                ("⌥⌘0", "Dashboard"),
                 ("⌘R", "Reports"),
                 ("⇧⌘B", "Customers, vendors and invoices"),
                 ("⇧⌘L", "Lock the book now"),

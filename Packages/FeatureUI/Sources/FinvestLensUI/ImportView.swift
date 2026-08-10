@@ -311,7 +311,7 @@ struct ImportView: View {
                 Text(invError).scaledFont(.caption).foregroundStyle(.red)
             }
             if invCreated > 0 {
-                Label("Created \(invCreated) investment transaction\(invCreated == 1 ? "" : "s").",
+                Label("Created \(invCreated) investment transactions.",
                       systemImage: "checkmark.circle.fill")
                     .foregroundStyle(.green).scaledFont(.caption)
             }

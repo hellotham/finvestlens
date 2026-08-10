@@ -373,6 +373,11 @@ struct RegisterTableView: View {
                 else { return }
                 selection = [.txn(id)]
                 open(id)
+                // Honoured — clear it, or the value latches and a second ⌘E on
+                // the same transaction never changes it, so this never fires
+                // again. (Setting nil re-enters here and the `let id` guard
+                // returns.) Matches the macOS sheet.
+                model.editingTransactionID = nil
             }
             .alert("Couldn’t save", isPresented: Binding(
                 get: { saveError != nil }, set: { if !$0 { saveError = nil } })) {
@@ -382,8 +387,13 @@ struct RegisterTableView: View {
             }
             .onDisappear {
                 // Leaving the destination mid-edit: best-effort commit,
-                // GnuCash-style; an unbalanced edit is dropped.
-                if let d = draft, d != original, d.isBalanced { try? commit(d) }
+                // GnuCash-style; an unbalanced edit is dropped. A *refused*
+                // one is not the same thing as an unbalanced one, so it is
+                // recorded rather than swallowed — the destination is coming
+                // back, and the alert with it.
+                if let d = draft, d != original, d.isBalanced {
+                    do { try commit(d) } catch { saveError = error.localizedDescription }
+                }
             }
     }
 
@@ -1112,7 +1122,12 @@ struct RegisterTableView: View {
         switch rowID {
         case .split(let guid): guid
         case .txn(let guid), .notes(let guid), .tags(let guid):
-            model.anySplitID(ofTransaction: guid)
+            // This register's own leg, not `splits.first` — see
+            // `AppModel.registerSplitID(ofTransaction:)` for why that matters.
+            // The whole-book journal has no single leg per row, so it falls
+            // back.
+            (wholeBook ? nil : model.registerSplitID(ofTransaction: guid))
+                ?? model.anySplitID(ofTransaction: guid)
         case .draftLine, .addSplit: nil
         }
     }
@@ -1288,8 +1303,13 @@ struct RegisterTableView: View {
     /// settle any dirty edit, then re-arm under the new rules.
     private func settleAndReset(keepSelection: Bool = false) {
         if let d = draft, d != original {
-            if d.isBalanced { try? commit(d) }
-            else { saveError = String(localized: "Edit discarded — it didn’t balance.") }
+            if d.isBalanced {
+                // Not `try?`: the draft is cleared below either way, so a
+                // swallowed error is an edit that disappears in silence.
+                do { try commit(d) } catch { saveError = error.localizedDescription }
+            } else {
+                saveError = String(localized: "Edit discarded — it didn’t balance.")
+            }
         }
         clearDraft()
         cursor = nil

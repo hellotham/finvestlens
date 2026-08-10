@@ -45,7 +45,7 @@ struct BulkEditSheet: View {
         NavigationStack {
             Form {
                 Section {
-                    Text("Enabled fields apply uniformly to all \(transactionCount) selected transaction\(transactionCount == 1 ? "" : "s"); everything else is kept as it is.")
+                    Text("Enabled fields apply uniformly to all \(transactionCount) selected transactions; everything else is kept as it is.")
                         .scaledFont(.callout)
                         .foregroundStyle(.secondary)
                 }
@@ -72,7 +72,7 @@ struct BulkEditSheet: View {
                                 .disabled(!setTransfer)
                         }
                         if setTransfer, simpleCount < splitIDs.count {
-                            Text("Applies to the \(simpleCount) simple transfer\(simpleCount == 1 ? "" : "s") — multi-split, security and multi-currency transactions are left unchanged.")
+                            Text("Applies to the \(simpleCount) simple transfers — multi-split, security and multi-currency transactions are left unchanged.")
                                 .scaledFont(.caption)
                                 .foregroundStyle(.secondary)
                         }

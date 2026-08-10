@@ -67,7 +67,7 @@ struct AutoCategorizeSheet: View {
                     List {
                         if let scopeCount {
                             Section {
-                                Label("Categorising \(scopeCount) selected transaction\(scopeCount == 1 ? "" : "s").",
+                                Label("Categorising \(scopeCount) selected transactions.",
                                       systemImage: "line.3.horizontal.decrease.circle")
                                     .foregroundStyle(.secondary)
                             }

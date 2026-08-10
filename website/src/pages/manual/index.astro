@@ -3,11 +3,15 @@ import Base from '../../layouts/Base.astro';
 import PageHeader from '../../components/PageHeader.astro';
 import manual from '../../data/manual.json';
 import { url } from '../../data/site';
+
+// Counted from the generated book, not typed here: the manual grows and a
+// hard-coded number goes stale silently.
+const topicCount = manual.sections.reduce((n, s) => n + s.topics.length, 0);
 ---
 
 <Base
   title="User manual"
-  description="The complete FinvestLens user manual — 20 topics covering accounts, transactions, importing, reconciling, investments, reports, planning and the command line."
+  description={`The complete FinvestLens user manual — ${topicCount} topics covering accounts, transactions, importing, reconciling, investments, reports, planning and the command line.`}
 >
   <PageHeader
     eyebrow="Manual"

@@ -249,7 +249,7 @@ struct BookPreview: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
-    private func row(_ label: String, _ value: Int) -> some View {
+    private func row(_ label: LocalizedStringKey, _ value: Int) -> some View {
         GridRow {
             Text(label).foregroundStyle(.secondary)
             Text(value.formatted(.number)).gridColumnAlignment(.trailing)

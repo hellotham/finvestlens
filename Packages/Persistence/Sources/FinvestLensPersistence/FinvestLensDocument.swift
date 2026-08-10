@@ -484,7 +484,7 @@ extension FinvestLensDocument.DocumentError: LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .notAFinvestLensBook(.gnuCashBook):
-            return "This is a GnuCash book. FinvestLens keeps books in its own format — use File ▸ Import ▸ GnuCash… to bring it across."
+            return String(localized: "This is a GnuCash book. FinvestLens keeps books in its own format — use File ▸ Import GnuCash… to bring it across.")
         case .notAFinvestLensBook(.gnuCashSQLite):
             return "This is a GnuCash SQLite-backend book. In GnuCash, save it as XML first, then import it."
         case .notAFinvestLensBook(.unrecognized):

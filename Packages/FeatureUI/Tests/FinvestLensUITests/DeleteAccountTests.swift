@@ -279,18 +279,31 @@ struct DeleteAccountTests {
 /// `^[\(n) split](inflect: true)`, which only resolves for a localized string
 /// resource — interpolated into a `Text` it renders the markup, and the sheet
 /// read "^[2312 split](inflect: true) posted to “ANZ Access”".
+///
+/// The hand-rolled `count(_:_:)` helper that replaced it is gone too: it
+/// grouped the digits itself and appended an English "s", which is not a
+/// plural in seven of the eight languages the app ships. Both jobs belong to
+/// the format machinery and the catalog now — so what is left to pin here is
+/// that the number is still grouped for reading and that no markup leaks.
+/// Plural *selection* needs the catalog, which a package test host does not
+/// have; it is gated by `scripts/check-localization.py` and was verified by
+/// rendering from the built bundle.
 @MainActor
 @Suite("Delete account wording")
 struct DeleteAccountWordingTests {
 
-    @Test("Counts are pluralised and grouped, with no markup left in them")
+    @Test("The count is grouped for reading, with no markup left in it")
     func counts() {
-        #expect(DeleteAccountSheet.count(1, "split") == "1 split")
-        #expect(DeleteAccountSheet.count(0, "split") == "0 splits")
-        #expect(DeleteAccountSheet.count(2, "subaccount") == "2 subaccounts")
+        let name = "ANZ Access"
         // The real one, from the reference book's ANZ Access.
-        #expect(DeleteAccountSheet.count(2312, "split") == "2,312 splits")
-        #expect(!DeleteAccountSheet.count(2312, "split").contains("inflect"))
-        #expect(!DeleteAccountSheet.count(2312, "split").contains("^["))
+        let sentence = String(localized: "\(2312) splits posted to “\(name)” must move to another account.")
+        // Locale-independent: whatever separator this host uses, the number
+        // must be grouped rather than a bare "2312".
+        let grouped = NumberFormatter.localizedString(from: NSNumber(value: 2312),
+                                                      number: .decimal)
+        #expect(sentence.contains(grouped))
+        #expect(sentence.contains(name))
+        #expect(!sentence.contains("inflect"))
+        #expect(!sentence.contains("^["))
     }
 }

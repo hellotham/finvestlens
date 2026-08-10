@@ -38,7 +38,7 @@ struct QuotesView: View {
             }
             .onAppear(perform: ensureValidProvider)
             .confirmationDialog(
-                "Replace price history for \(selection.count) selected securit\(selection.count == 1 ? "y" : "ies")?",
+                "Replace price history for \(selection.count) selected securities?",
                 isPresented: $confirmRefetch, titleVisibility: .visible
             ) {
                 Button("Replace History", role: .destructive) { refetchSelected() }
@@ -107,7 +107,7 @@ struct QuotesView: View {
                 Label("Fetching \(what)…", systemImage: "clock").foregroundStyle(.secondary)
             }
         case .success(let count):
-            Label("Added \(count) price\(count == 1 ? "" : "s").", systemImage: "checkmark.circle")
+            Label("Added \(count) prices.", systemImage: "checkmark.circle")
                 .foregroundStyle(.green)
         case .failure(let message):
             Label(message, systemImage: "exclamationmark.triangle")

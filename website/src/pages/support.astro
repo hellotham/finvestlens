@@ -2,11 +2,15 @@
 import Base from '../layouts/Base.astro';
 import PageHeader from '../components/PageHeader.astro';
 import { site, release, url } from '../data/site';
+import manual from '../data/manual.json';
+
+// Counted from the generated book so the number cannot go stale.
+const topicCount = manual.sections.reduce((n, s) => n + s.topics.length, 0);
 
 const faqs = [
   {
     q: 'Can I move my GnuCash book across?',
-    a: 'Yes. File ▸ Import ▸ GnuCash… reads your .gnucash file — accounts, transactions, prices, scheduled transactions and business records. You can export back to GnuCash XML at any time, and the round trip is verified byte-identical.',
+    a: 'Yes. File ▸ Import GnuCash… reads your .gnucash file — accounts, transactions, prices, scheduled transactions and business records. You can export back to GnuCash XML at any time, and the round trip is verified byte-identical.',
   },
   {
     q: 'Where is my data stored?',
@@ -41,7 +45,7 @@ const faqs = [
     <div class="grid gap-4 sm:grid-cols-3">
       <a href={url('/manual/')} class="rounded-xl border border-ink-200 p-5 transition-colors hover:border-brand-300 dark:border-ink-800">
         <h2 class="font-semibold text-ink-900 dark:text-white">User manual</h2>
-        <p class="mt-1 text-sm text-ink-600 dark:text-ink-400">20 topics, also in the app under Help.</p>
+        <p class="mt-1 text-sm text-ink-600 dark:text-ink-400">{topicCount} topics, also in the app under Help.</p>
       </a>
       <a href={site.contact.issues} class="rounded-xl border border-ink-200 p-5 transition-colors hover:border-brand-300 dark:border-ink-800">
         <h2 class="font-semibold text-ink-900 dark:text-white">Report a bug</h2>

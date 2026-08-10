@@ -20,9 +20,15 @@ public struct HelpView: View {
 
     public init() {}
 
-    /// Sections filtered by the search field. A topic matches on its title,
-    /// summary or keywords; an empty search shows everything.
-    private var visibleSections: [HelpSection] {
+    /// Sections filtered by the search field, held in state rather than
+    /// recomputed: as a computed property this ran twice per keystroke — once
+    /// from `body` and again from `onChange` — and again on every unrelated
+    /// re-render.
+    @State private var visibleSections: [HelpSection] = HelpBook.sections
+
+    /// A topic matches on its title, summary or keywords; an empty search
+    /// shows everything.
+    private static func sections(matching search: String) -> [HelpSection] {
         let needle = search.trimmingCharacters(in: .whitespaces).lowercased()
         guard !needle.isEmpty else { return HelpBook.sections }
         return HelpBook.sections.compactMap { section in
@@ -65,6 +71,7 @@ public struct HelpView: View {
         }
         .frame(minWidth: 720, minHeight: 520)
         .onChange(of: search) {
+            visibleSections = Self.sections(matching: search)
             // Keep the reader on a page that is still in the list.
             let visible = visibleSections.flatMap(\.topics).map(\.id)
             if let selection, visible.contains(selection) { return }
@@ -76,12 +83,15 @@ public struct HelpView: View {
 private extension HelpTopic {
     /// Matches against the reader's own language *and* the English keywords, so
     /// searching for a term learned from GnuCash still finds the page.
+    ///
+    /// Reads the prebuilt index rather than reflecting on the title:
+    /// `String(describing:)` of a `LocalizedStringKey` returns
+    /// `LocalizedStringKey(key: "Accounts", hasFormatting: false, arguments: [])`
+    /// — the English key wrapped in debug text, whatever the reader's language.
+    /// That made search English-only, and made "key", "arguments" and "false"
+    /// match all 25 topics.
     func matches(_ needle: String) -> Bool {
-        for candidate in [String(describing: title), String(describing: summary), keywords] where
-            candidate.lowercased().contains(needle) {
-            return true
-        }
-        return false
+        HelpBook.searchIndex[id]?.contains(needle) ?? false
     }
 }
 
@@ -102,7 +112,7 @@ struct HelpTopicPage: View {
                 }
                 .padding(.bottom, 2)
 
-                ForEach(topic.blocks) { block in
+                ForEach(Array(topic.blocks.enumerated()), id: \.offset) { _, block in
                     HelpBlockView(block: block)
                 }
             }

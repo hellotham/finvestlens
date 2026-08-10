@@ -172,8 +172,10 @@ struct PassportPage: View {
             }
 
             HStack(alignment: .top, spacing: 24) {
-                classTable("Assets", rows: data.assetClasses, total: data.totalAssets)
-                classTable("Liabilities", rows: data.liabilityClasses, total: data.totalLiabilities)
+                classTable("Assets", totalLabel: "Total assets",
+                           rows: data.assetClasses, total: data.totalAssets)
+                classTable("Liabilities", totalLabel: "Total liabilities",
+                           rows: data.liabilityClasses, total: data.totalLiabilities)
             }
 
             VStack(alignment: .leading, spacing: 4) {
@@ -194,29 +196,46 @@ struct PassportPage: View {
         .environment(\.colorScheme, .light)
     }
 
-    private func classTable(_ title: String, rows: [(name: String, value: Decimal)],
+    /// `totalLabel` is passed in rather than composed as `"Total \(title)"`:
+    /// building a sentence by concatenation picks `Text`'s verbatim
+    /// initializer, and the genitive it needs differs by language anyway.
+    private func classTable(_ title: LocalizedStringKey, totalLabel: LocalizedStringKey,
+                            rows: [(name: String, value: Decimal)],
                             total: Decimal) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             heading(title)
             ForEach(rows, id: \.name) { entry in
-                row(entry.name, entry.value)
+                dataRow(entry.name, entry.value)
             }
             Divider()
-            row("Total \(title.lowercased())", total, bold: true)
+            row(totalLabel, total, bold: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func heading(_ text: String) -> some View {
-        Text(text.uppercased())
+    private func heading(_ text: LocalizedStringKey) -> some View {
+        Text(text)
+            // `.textCase` rather than `.uppercased()`: uppercasing follows the
+            // reader's locale, and a LocalizedStringKey has no such method.
+            .textCase(.uppercase)
             .scaledFont(.caption, weight: .semibold)
             .kerning(1)
             .foregroundStyle(.secondary)
     }
 
-    private func row(_ label: String, _ value: Decimal, bold: Bool = false) -> some View {
+    private func row(_ label: LocalizedStringKey, _ value: Decimal, bold: Bool = false) -> some View {
+        rowBody(Text(label), value, bold: bold)
+    }
+
+    /// A row whose label comes from the book — an account class the owner
+    /// named. Deliberately verbatim: their words are not ours to translate.
+    private func dataRow(_ name: String, _ value: Decimal) -> some View {
+        rowBody(Text(name), value, bold: false)
+    }
+
+    private func rowBody(_ label: Text, _ value: Decimal, bold: Bool) -> some View {
         HStack {
-            Text(label)
+            label
             Spacer()
             Text(AmountFormat.string(value, code: data.currencyCode))
                 .monospacedDigit()

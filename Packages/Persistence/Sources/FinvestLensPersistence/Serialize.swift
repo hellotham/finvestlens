@@ -95,12 +95,12 @@ public final class LoadWarnings: @unchecked Sendable {
     public var summary: String? {
         guard total > 0 else { return nil }
         var parts: [String] = []
-        if decimals > 0 { parts.append("\(decimals) amount\(decimals == 1 ? "" : "s")") }
-        if kvpFrames > 0 { parts.append("\(kvpFrames) detail record\(kvpFrames == 1 ? "" : "s")") }
-        if addresses > 0 { parts.append("\(addresses) address\(addresses == 1 ? "" : "es")") }
-        if guids > 0 { parts.append("\(guids) identifier\(guids == 1 ? "" : "s")") }
-        return "Opened with \(parts.joined(separator: ", ")) unreadable and defaulted — "
-            + "consider Repair Book and check the audit trail."
+        if decimals > 0 { parts.append(String(localized: "\(decimals) amounts")) }
+        if kvpFrames > 0 { parts.append(String(localized: "\(kvpFrames) detail records")) }
+        if addresses > 0 { parts.append(String(localized: "\(addresses) addresses")) }
+        if guids > 0 { parts.append(String(localized: "\(guids) identifiers")) }
+        let list = parts.joined(separator: ", ")
+        return String(localized: "Opened with \(list) unreadable and defaulted — consider Repair Book and check the audit trail.")
     }
 
     func note(_ key: ReferenceWritableKeyPath<LoadWarnings, Int>) {

@@ -140,80 +140,6 @@ enum TransactionEditField: Hashable {
     case splitQuantity(UUID)
 }
 
-// MARK: - Header
-
-/// The register's column headings. Hand-built rather than a `Table`'s, because
-/// the rows below are not table rows — a row has to be able to open out into
-/// its splits, which a `TableColumn` cell cannot do.
-///
-/// Click-to-sort is kept honest with the Sort menu: both read and write
-/// ``AppModel/registerSort``, so clicking Date here and picking Date from the
-/// menu are the same setting.
-struct RegisterHeader: View {
-    @Bindable var model: AppModel
-    let metrics: RegisterMetrics
-    var showsBalanceColumn: Bool
-    var showsAccountColumn: Bool
-
-    var body: some View {
-        HStack(spacing: 0) {
-            if metrics.showsDate {
-                heading("Date", sort: .date).frame(width: metrics.date, alignment: .leading)
-            }
-            // The edit handle's column. `Spacer`, not `Color.clear`: a colour
-            // given only a width is greedy in the *other* axis and stretches
-            // the row to the full height of the list.
-            Spacer().frame(width: metrics.handle)
-            heading("Description", sort: .description)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            if metrics.showsSide, showsAccountColumn {
-                heading("Account").frame(width: metrics.account, alignment: .leading)
-            }
-            if metrics.showsSide {
-                heading("Transfer").frame(width: metrics.transfer, alignment: .leading)
-            }
-            heading("R").frame(width: metrics.reconcile)
-            heading("Amount", sort: .amount).frame(width: metrics.amount, alignment: .trailing)
-            // Balance has no sort on purpose: each row's balance is the
-            // account's balance *as of that posting*, computed in date order —
-            // ordering by it would order by an artefact.
-            if showsBalanceColumn {
-                heading("Balance").frame(width: metrics.balance, alignment: .trailing)
-            }
-        }
-        .padding(.horizontal, metrics.rowInset)
-        .padding(.vertical, 4)
-        .background(.bar)
-        .overlay(alignment: .bottom) { Divider() }
-    }
-
-    @ViewBuilder
-    private func heading(_ title: LocalizedStringKey, sort: RegisterSort? = nil) -> some View {
-        if let sort {
-            Button {
-                if model.registerSort == sort { model.registerSortReversed.toggle() }
-                else { model.registerSort = sort; model.registerSortReversed = false }
-            } label: {
-                HStack(spacing: 2) {
-                    Text(title)
-                    if model.registerSort == sort {
-                        Image(systemName: model.registerSortReversed ? "chevron.down" : "chevron.up")
-                            .imageScale(.small)
-                    }
-                }
-                .contentShape(.rect)
-            }
-            .buttonStyle(.plain)
-            .scaledFont(.caption, weight: .semibold)
-            .foregroundStyle(.secondary)
-        } else {
-            Text(title)
-                .scaledFont(.caption, weight: .semibold)
-                .foregroundStyle(.secondary)
-        }
-    }
-}
-
 // MARK: - The cell
 
 /// One cell of the register grid — a **real text field, always present**,
@@ -627,7 +553,19 @@ struct TransactionDraft: Equatable {
             .filter { !$0.isEmpty }
     }
 
-    var imbalance: Decimal { lines.reduce(Decimal(0)) { $0 + $1.amount } }
+    /// The residual over the legs that will actually be **posted**.
+    ///
+    /// Only lines carrying an account count, because only those are submitted:
+    /// `commit` sends `lines.filter { $0.accountID != nil }`. Summing every
+    /// line instead made the draft disagree with the save. `appendLine` opens
+    /// the new leg pre-filled with the residual and no account yet, so the sum
+    /// over all lines reached zero, `isBalanced` went true, the out-of-balance
+    /// warning cleared and ⏎ was accepted — and then `updateTransaction`
+    /// rejected the very same edit as unbalanced, because the accountless leg
+    /// carrying the residual was never in the payload.
+    var imbalance: Decimal {
+        lines.reduce(Decimal(0)) { $0 + ($1.accountID == nil ? 0 : $1.amount) }
+    }
     var validLineCount: Int { lines.filter { $0.accountID != nil }.count }
     var isBalanced: Bool {
         imbalance == 0 && validLineCount >= 2 && lines.allSatisfy(\.quantityIsValid)

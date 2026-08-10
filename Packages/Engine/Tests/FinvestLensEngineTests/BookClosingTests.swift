@@ -60,6 +60,25 @@ struct BookClosingTests {
         #expect(b.balance(of: a["bank"]!).amount == dec("700"))
     }
 
+    @Test("Closing entries are marked as such, so Find can exclude them")
+    func marksClosingEntries() throws {
+        // The gap this covers: `build` wrote perfectly good closing entries
+        // that carried no `book_closing` slot, so the app's own "Closing
+        // Entries" filter could not see the transactions the app had just
+        // written, and a GnuCash export presented them as ordinary activity.
+        let (b, a) = book()
+        let result = try BookClosing.build(in: b, asOf: day(10), into: a["equity"]!)
+        #expect(!result.transactions.isEmpty)
+        for txn in result.transactions {
+            #expect(txn.kvp["book_closing"] == .int64(1))
+            #expect(FindTest.isClosing(txn))
+        }
+        // And ordinary activity is still not mistaken for a closing entry.
+        for txn in b.transactions where !result.transactions.contains(where: { $0 === txn }) {
+            #expect(!FindTest.isClosing(txn))
+        }
+    }
+
     @Test("Closing is balanced, so the book still balances afterwards")
     func staysBalanced() throws {
         let (b, a) = book()

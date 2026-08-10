@@ -91,7 +91,14 @@ struct TransactionRowView: View, @MainActor Equatable {
             && lhs.draft == rhs.draft
             && lhs.cursor.wrappedValue == rhs.cursor.wrappedValue
             && lhs.focusAccountID == rhs.focusAccountID
-            && lhs.accounts.count == rhs.accounts.count
+            // The accounts themselves, not just how many. A rename or a
+            // commodity change leaves the count alone, so the row went on
+            // offering stale full names in its Account combo and `rateCell`
+            // went on believing a leg was (or was not) foreign. Cheap in the
+            // common case: `postableAccounts` is memoised (AppModel.swift:226),
+            // so both sides are the same array instance until it is invalidated
+            // — exactly when the row *should* redraw.
+            && lhs.accounts == rhs.accounts
     }
 
     private var isEditing: Bool { draft != nil }
@@ -188,10 +195,12 @@ struct TransactionRowView: View, @MainActor Equatable {
         guard let main else { return "" }
         var parts = [dateText(main.date), main.description]
         if !main.transfer.isEmpty { parts.append(main.transfer) }
-        parts.append(AmountFormat.string(main.amount, code: currencyCode))
+        // `spoken`, not `string` — see `SheetView.axRowSummary`: the minus sign
+        // is not read aloud, so the two directions sound the same without it.
+        parts.append(AmountFormat.spoken(main.amount, code: currencyCode))
         if main.hasDocument { parts.append(String(localized: "has attachment")) }
         if let balance = main.runningBalance {
-            parts.append(String(localized: "balance \(AmountFormat.string(balance, code: currencyCode))"))
+            parts.append(String(localized: "balance \(AmountFormat.spoken(balance, code: currencyCode))"))
         }
         parts.append(ReconcileBadge.word(main.reconcile))
         return parts.joined(separator: ", ")

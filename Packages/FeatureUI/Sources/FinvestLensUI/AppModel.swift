@@ -1459,7 +1459,7 @@ public final class AppModel {
                 gnuCashImportURL: url)
         case .gnuCashSQLite:
             return DocumentError(
-                message: "“\(url.lastPathComponent)” was saved with GnuCash’s SQLite backend, which FinvestLens can’t read. In GnuCash, choose File ▸ Save As… with the XML format, then use File ▸ Import ▸ GnuCash… here.")
+                message: "“\(url.lastPathComponent)” was saved with GnuCash’s SQLite backend, which FinvestLens can’t read. In GnuCash, choose File ▸ Save As… with the XML format, then use File ▸ Import GnuCash… here.")
         case .unrecognized:
             return DocumentError(
                 message: "“\(url.lastPathComponent)” isn’t a FinvestLens book.")
@@ -1576,30 +1576,32 @@ public final class AppModel {
         do {
             let summary = try importLedger(from: source, saveAs: destination)
             recordLastBook(destination)
-            var note = "Imported \(summary.accountsCreated) accounts and "
-                + "\(summary.transactions) transactions from “\(source.lastPathComponent)”."
+            // Every fragment goes through `String(localized:)` and carries its
+            // own count: these are `String`s, so a bare literal is neither
+            // extracted nor looked up, and the old `+ (n == 1 ? "" : "s")`
+            // suffix produced "3 Zeiles" in German however good the rest was.
+            let name = source.lastPathComponent
+            var note = String(localized: "Imported \(summary.accountsCreated) accounts and \(summary.transactions) transactions from “\(name)”.")
             var caveats: [String] = []
             if summary.assertionsChecked > 0 {
-                caveats.append("\(summary.assertionsChecked) balance assertion"
-                    + (summary.assertionsChecked == 1 ? "" : "s") + " checked"
-                    + (summary.assertionsFailed > 0 ? " (\(summary.assertionsFailed) failed)" : ""))
+                caveats.append(summary.assertionsFailed > 0
+                    ? String(localized: "\(summary.assertionsChecked) balance assertions checked (\(summary.assertionsFailed) failed)")
+                    : String(localized: "\(summary.assertionsChecked) balance assertions checked"))
             }
             if summary.assignmentsResolved > 0 {
-                caveats.append("\(summary.assignmentsResolved) balance assignment"
-                    + (summary.assignmentsResolved == 1 ? "" : "s") + " resolved")
+                caveats.append(String(localized: "\(summary.assignmentsResolved) balance assignments resolved"))
             }
             if summary.unbalancedVirtualsSkipped > 0 {
-                caveats.append("\(summary.unbalancedVirtualsSkipped) unbalanced virtual posting"
-                    + (summary.unbalancedVirtualsSkipped == 1 ? "" : "s") + " skipped")
+                caveats.append(String(localized: "\(summary.unbalancedVirtualsSkipped) unbalanced virtual postings skipped"))
             }
-            if summary.periodicIgnored + summary.automatedIgnored > 0 {
-                caveats.append("\(summary.periodicIgnored + summary.automatedIgnored) periodic/automated entr"
-                    + (summary.periodicIgnored + summary.automatedIgnored == 1 ? "y" : "ies") + " not applied")
+            let ignored = summary.periodicIgnored + summary.automatedIgnored
+            if ignored > 0 {
+                caveats.append(String(localized: "\(ignored) periodic/automated entries not applied"))
             }
             let errors = summary.diagnostics.filter { $0.severity == .error }
-            if !errors.isEmpty {
-                caveats.append("\(errors.count) line" + (errors.count == 1 ? "" : "s")
-                    + " could not be read (first: \(errors[0].description))")
+            if let first = errors.first {
+                let detail = first.description
+                caveats.append(String(localized: "\(errors.count) lines could not be read (first: \(detail))"))
             }
             if !caveats.isEmpty { note += " " + caveats.joined(separator: "; ") + "." }
             if let proposal = cleanupProposal(importNote: note) {
@@ -2258,6 +2260,13 @@ public final class AppModel {
         journalTransactionCache = [:]
         journalRowCache = [:]
         autoSplitRowsCache = nil
+        // So is the rotor's, and it is keyed on `derivedRevision` — which does
+        // not move when only the *register* changes. Selecting another account
+        // (or a new sort, filter, or subaccount setting) replaces
+        // `registerRows` wholesale while that revision stands still, so the
+        // VoiceOver Unreconciled rotor went on offering the previous account's
+        // rows, keyed on split GUIDs no longer in this register at all.
+        unreconciledRowsRevision = -1
         guard let book, let id = selectedAccountID, let account = book.account(with: id) else {
             registerRows = []
             registerSummary = nil

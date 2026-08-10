@@ -87,11 +87,12 @@ struct PricesView: View {
                 }
                 let outcome = model.importPrices(csv: text)
                 if outcome.unrecognisedFormat {
-                    importMessage = "Couldn't find Date / Commodity / Price columns in the CSV header."
+                    importMessage = String(localized: "Couldn't find Date / Commodity / Price columns in the CSV header.")
                 } else {
-                    var msg = "Imported \(outcome.imported) price\(outcome.imported == 1 ? "" : "s")."
+                    var msg = String(localized: "Imported \(outcome.imported) prices.")
                     if !outcome.unmatchedSymbols.isEmpty {
-                        msg += "\nSkipped unknown symbols: \(outcome.unmatchedSymbols.joined(separator: ", "))."
+                        let symbols = outcome.unmatchedSymbols.joined(separator: ", ")
+                        msg += "\n" + String(localized: "Skipped unknown symbols: \(symbols).")
                     }
                     importMessage = msg
                 }

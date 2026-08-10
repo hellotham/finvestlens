@@ -76,7 +76,7 @@ struct MatchAttachmentsSheet: View {
                                     .padding(.horizontal, 16).padding(.vertical, 8)
                                 Divider()
                             }
-                            Text("\(matches.count) file\(matches.count == 1 ? "" : "s")")
+                            Text("\(matches.count) files")
                                 .scaledFont(.headline)
                                 .padding(.horizontal, 16).padding(.vertical, 8)
                             ForEach(matches) { match in
@@ -292,7 +292,7 @@ struct MatchAttachmentsSheet: View {
                     categorised += 1
                 }
             }
-            appliedSummary = "Linked \(linked) attachment\(linked == 1 ? "" : "s"), categorised \(categorised)."
+            appliedSummary = String(localized: "Linked \(linked) attachments, categorised \(categorised).")
             matches.removeAll { accepted.contains($0.id) && $0.transactionID != nil }
             accepted.removeAll()
         }

@@ -151,13 +151,13 @@ extension AppModel {
         }
         quoteStatus = failures.isEmpty
             ? .success(added)
-            : .failure("Added \(added). Failed — " + failures.joined(separator: "; "))
+            : .failure(String(localized: "Added \(added). Failed — \(failures.joined(separator: "; "))"))
         if failures.isEmpty {
             showToast(.success, added > 0
-                ? "Quotes fetched — \(added) price\(added == 1 ? "" : "s") added."
-                : "Quotes are already current.")
+                ? String(localized: "Quotes fetched — \(added) prices added.")
+                : String(localized: "Quotes are already current."))
         } else {
-            showToast(.failure, "Quote fetch: \(failures.count) symbol\(failures.count == 1 ? "" : "s") failed — see Prices for details.")
+            showToast(.failure, String(localized: "Quote fetch: \(failures.count) symbols failed — see Prices for details."))
         }
     }
 
@@ -288,11 +288,12 @@ extension AppModel {
         if failures.isEmpty {
             quoteStatus = .success(added)
             showToast(.success, added > 0
-                ? "Prices updated — \(added) new price\(added == 1 ? "" : "s")."
-                : "Prices are already up to date.")
+                ? String(localized: "Prices updated — \(added) new prices.")
+                : String(localized: "Prices are already up to date."))
         } else {
-            quoteStatus = .failure("Added \(added). Failed — " + failures.joined(separator: "; "))
-            showToast(.failure, "Price update: added \(added), \(failures.count) failed — see Prices for details.")
+            let detail = failures.joined(separator: "; ")
+            quoteStatus = .failure(String(localized: "Added \(added). Failed — \(detail)"))
+            showToast(.failure, String(localized: "Price update: added \(added), \(failures.count) failed — see Prices for details."))
         }
     }
 

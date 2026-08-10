@@ -813,12 +813,15 @@ private final class SheetView: NSView, NSTextFieldDelegate {
         var parts = [dateFormat?.short(base.date) ?? "", base.description]
         if !base.transferName.isEmpty { parts.append(base.transferName) }
         if !base.isHeadingOnly {
-            parts.append(AmountFormat.string(base.amount, code: currencyCode))
+            // `spoken`, not `string`: VoiceOver does not read a leading minus
+            // at default punctuation settings, so the visual form makes an
+            // $82.34 debit and an $82.34 credit sound identical.
+            parts.append(AmountFormat.spoken(base.amount, code: currencyCode))
         }
         if base.hasDocument { parts.append(String(localized: "has attachment")) }
         if let balance = base.runningBalance {
             parts.append(String(localized:
-                "balance \(AmountFormat.string(balance, code: currencyCode))"))
+                "balance \(AmountFormat.spoken(balance, code: currencyCode))"))
         }
         if !base.isHeadingOnly { parts.append(ReconcileBadge.word(base.reconcile)) }
         return parts.filter { !$0.isEmpty }.joined(separator: ", ")
@@ -837,10 +840,10 @@ private final class SheetView: NSView, NSTextFieldDelegate {
             return base.isHeadingOnly ? "" : ReconcileBadge.word(base.reconcile)
         case .amount:
             return base.isHeadingOnly
-                ? "" : AmountFormat.string(base.amount, code: currencyCode)
+                ? "" : AmountFormat.spoken(base.amount, code: currencyCode)
         case .balance:
             return base.runningBalance.map {
-                AmountFormat.string($0, code: currencyCode)
+                AmountFormat.spoken($0, code: currencyCode)
             } ?? ""
         }
     }
@@ -1022,6 +1025,14 @@ private final class SheetView: NSView, NSTextFieldDelegate {
                                           anchor: self.indexByTxn[editing],
                                           lead: self.indexByTxn[editing])
                     self.editExpanded()
+                    // A request, not a state — clear it once honoured. The
+                    // inspector binding that used to reset it went with the
+                    // inspector, which made it a write-once latch: ⌘E, ⎋, ⌘E
+                    // did nothing the second time, and a fresh SheetView
+                    // (returning to the register from anywhere) started with
+                    // `lastEditingRequest == nil` and so re-opened the same
+                    // transaction over wherever the user actually was.
+                    self.model.editingTransactionID = nil
                 }
             }
         }
@@ -1384,7 +1395,11 @@ private final class SheetView: NSView, NSTextFieldDelegate {
         }
     }
 
-    private func drawEditableText(_ text: String, placeholder: String,
+    /// `placeholder` is `@autoclosure`: it is a `String(localized:)` bundle
+    /// lookup, and it is read only when the cell is both empty and drafting.
+    /// Eager, every call site paid for one on every `draw(_:)` — roughly ten
+    /// per transaction block, per frame, and at rest every one was discarded.
+    private func drawEditableText(_ text: String, placeholder: @autoclosure () -> String,
                                   drafting: Bool, in cell: CGRect,
                                   muted: Bool = false, trailing: Bool = false,
                                   leadingInset: CGFloat = 0,
@@ -1393,7 +1408,7 @@ private final class SheetView: NSView, NSTextFieldDelegate {
             drawText(text, in: cell, trailing: trailing, muted: muted,
                      leadingInset: leadingInset, middleTruncate: middleTruncate)
         } else if drafting {
-            drawText(placeholder, in: cell, trailing: trailing,
+            drawText(placeholder(), in: cell, trailing: trailing,
                      color: .placeholderTextColor, leadingInset: leadingInset)
         }
     }
@@ -1628,8 +1643,23 @@ private final class SheetView: NSView, NSTextFieldDelegate {
     /// selection — the toolbar Edit button, attachments panel, and menu
     /// actions all read it. Deferred a beat: apply() runs inside a SwiftUI
     /// render pass, where model writes are illegal.
+    /// The split a selected row stands for — the row's **own** leg, not
+    /// `splits.first`.
+    ///
+    /// Everything reading `selectedSplitIDs` is leg-sensitive: Bulk Edit's
+    /// Transfer rewrite takes "the other split" relative to this one, so
+    /// handing it an arbitrary leg re-pointed the bank side of a grocery row
+    /// and moved the money out of the wrong account; Reconcile marked a leg
+    /// that is not on screen; ⌘J jumped back into the register it was already
+    /// in. The right value is already on the row — `anchorSplit` is what
+    /// reconcile cycling uses — and a heading row, which has none, falls back.
+    private func rowSplitID(of txn: GncGUID) -> GncGUID? {
+        indexByTxn[txn].flatMap { rows[$0].base.anchorSplit }
+            ?? model.anySplitID(ofTransaction: txn)
+    }
+
     private func mirrorSelection() {
-        let ids = Set(selection.compactMap { model.anySplitID(ofTransaction: $0) })
+        let ids = Set(selection.compactMap(rowSplitID(of:)))
         guard model.selectedSplitIDs != ids else { return }
         Task { @MainActor in
             self.model.selectedSplitIDs = ids
@@ -1810,7 +1840,11 @@ private final class SheetView: NSView, NSTextFieldDelegate {
                 applySelection([txn], anchor: block, lead: block)
             }
         }
-        let splitIDs = Set(selection.compactMap { model.anySplitID(ofTransaction: $0) })
+        // Through `rowSplitID`, not `anySplitID`: the menu's Bulk Edit and
+        // Auto-Categorise assign these straight to `model.selectedSplitIDs`,
+        // so an arbitrary leg here would overwrite what `mirrorSelection`
+        // just got right — the same wrong-account rewrite, by right-click.
+        let splitIDs = Set(selection.compactMap(rowSplitID(of:)))
         return NSHostingMenu(rootView: TransactionActions(
             model: model, splitID: splitIDs.first, selectionSplitIDs: splitIDs))
     }
@@ -2361,8 +2395,16 @@ private final class SheetView: NSView, NSTextFieldDelegate {
 
     func settleDirtyDraft() {
         if let d = draft, d != original {
-            if d.isBalanced { try? commit(d) }
-            else { onError?(String(localized: "Edit discarded — it didn’t balance.")) }
+            if d.isBalanced {
+                // Not `try?`: the draft is cleared either way, so an error
+                // swallowed here is an edit that vanishes without a word.
+                // `isBalanced` is the draft's own opinion; the engine re-checks
+                // and can still refuse (an account deleted in another window,
+                // a residual the draft rounded differently).
+                do { try commit(d) } catch { onError?(error.localizedDescription) }
+            } else {
+                onError?(String(localized: "Edit discarded — it didn’t balance."))
+            }
         }
         clearDraft()
     }

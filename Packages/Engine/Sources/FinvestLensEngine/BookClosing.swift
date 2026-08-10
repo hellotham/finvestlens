@@ -69,6 +69,14 @@ public enum BookClosing {
         for currency in byCurrency.keys.sorted(by: { $0.mnemonic < $1.mnemonic }) {
             guard let entries = byCurrency[currency], !entries.isEmpty else { continue }
             let txn = Transaction(currency: currency, datePosted: date, description: description)
+            // Mark it as a closing entry, the way GnuCash does: it stores an
+            // int64 at the `book_closing` slot
+            // (libgnucash/engine/Transaction.cpp:178, :2066) and reads it back
+            // as `*rv != 0` (:2245). Without this the entries this very
+            // function writes are invisible to `Find.isClosing`, so the
+            // "Closing Entries" filter cannot exclude them from a year's
+            // activity — and GnuCash reads them as ordinary transactions too.
+            txn.kvp["book_closing"] = .int64(1)
             var equityQuantity = Decimal(0)
             for entry in entries {
                 // Zero the account: post the negative of its balance.

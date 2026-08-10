@@ -633,14 +633,14 @@ struct PrintableInvoice: View {
         }
     }
 
-    private func labelled(_ label: String, _ value: String) -> some View {
+    private func labelled(_ label: LocalizedStringKey, _ value: String) -> some View {
         HStack(spacing: 6) {
             Text(label).font(.caption).foregroundStyle(.secondary)
             Text(value).font(.callout)
         }
     }
 
-    private func totalRow(_ label: String, _ amount: Decimal, bold: Bool = false) -> some View {
+    private func totalRow(_ label: LocalizedStringKey, _ amount: Decimal, bold: Bool = false) -> some View {
         HStack {
             Text(label)
             Spacer()
