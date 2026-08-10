@@ -119,11 +119,23 @@ These are not preferences. Each one is here because it was broken, at cost.
 Enforcement for all of the above lives in `.claude/settings.json`:
 `directive-checklist.py` restates directives at prompt time,
 `check-directives.py` blocks a stop that skipped a directive (scanning the last
-five user turns) or asserted unevidenced work, `no-chips.py` blocks chips
+five user turns) or asserted unevidenced work, `check-docs.py` blocks a stop
+where source changed and no specification document did, `check-no-deferrals.py`
+blocks a stop that ends with work named but not done — offers, skip words, and
+the residual-work report (a section headed *what's still broken*), a shape that
+needs no deferral vocabulary at all — `no-chips.py` blocks chips
 everywhere including subagents, and the `hookify.*.local.md` rules gate
 `Color.accentColor`, unsigned launches, UI review gates, and framework-blame.
 These gates are the user's, not yours: never weaken or bypass one except on an
 explicit instruction, and treat a rejection as a defect list, not an obstacle.
+
+Two things they deliberately allow, because the alternative is a gate people
+route around. A **blocker stated next to the item it blocks** passes
+`check-no-deferrals.py` ("X remains undone because Y" — the sibling gate
+*requires* exactly this); a blocker far from the item does not, since one honest
+sentence must not excuse a whole list. And **quotations and code spans are not
+searched at all**, so discussing the gates does not trip them — a detector that
+cannot tell use from mention fires on every conversation about itself.
 
 ## Theming
 

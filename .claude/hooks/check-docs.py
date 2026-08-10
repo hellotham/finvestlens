@@ -143,6 +143,36 @@ def working_tree_changes(root):
     return paths
 
 
+def commit_companions(sources, root, depth=5):
+    """Everything committed alongside `sources` in the last few commits.
+
+    Without this the gate is blind to its own success case. It compared the
+    working tree against HEAD, so a turn that updated the documentation *and
+    committed it* came out clean — the doc update became invisible at exactly
+    the moment it was done properly, and the gate blocked a turn whose
+    `manual.json` was regenerated, verified as a fixed point, and committed in
+    the same commit as the `HelpContent.swift` that triggered it.
+
+    Only commits that actually carry one of this turn's edited sources count,
+    so an unrelated older commit cannot satisfy the requirement.
+    """
+    if not sources:
+        return set()
+    try:
+        out = subprocess.run(
+            ["git", "log", "-%d" % depth, "--name-only", "--format=%x00"],
+            cwd=root or None, capture_output=True, text=True,
+            timeout=10, check=False).stdout
+    except Exception:
+        return set()
+    companions = set()
+    for chunk in out.split("\x00"):
+        files = {line.strip() for line in chunk.splitlines() if line.strip()}
+        if files & sources:
+            companions |= files
+    return companions
+
+
 def main():
     payload = json.loads(sys.stdin.read() or "{}")
     records = load(payload.get("transcript_path", ""))
@@ -179,6 +209,9 @@ def main():
               and not any(x in p for x in SOURCE_EXCLUDES)]
     if not source:
         return
+
+    # …and documentation committed in the same breath as that source counts too.
+    touched |= commit_companions(set(source), root)
 
     problems = []
     if not any(p in touched for p in SPEC_DOCS):

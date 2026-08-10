@@ -99,6 +99,33 @@ RESIDUAL = re.compile(
     r"|\bthe (?:other|remaining) \w+ (?:are|remain)\b",
     re.I)
 
+# Text that is being *mentioned* rather than *used*.
+#
+# The gate blocked the very turn that repaired it, matching "13 of 15
+# findings", "What's still broken" and "shall I" — every one of them a quotation
+# of the patterns being added, in a report whose work was complete. A detector
+# that cannot tell use from mention fires on every discussion of itself, and a
+# gate that cries wolf on honest work is one people learn to route around.
+#
+# Backticks, fenced blocks and double/curly quotes are the marks a writer uses
+# for mention, so matches inside them are ignored. **Single quotes are
+# deliberately not included**: apostrophes are everywhere in ordinary prose, and
+# treating them as delimiters would let "I didn't fix the parser, and I can't
+# say when" swallow its own middle and slip through. The residual risk — a
+# deferral written inside quotation marks — is not a shape deferrals take.
+MENTION = re.compile(
+    r"```.*?```"          # fenced code
+    r"|`[^`\n]*`"         # inline code
+    r"|\"[^\"\n]{0,160}\""  # "double quoted"
+    r"|“[^”\n]{0,160}”",  # “curly quoted”
+    re.S)
+
+
+def spoken(text):
+    """The message with quotations and code blanked out, positions preserved."""
+    return MENTION.sub(lambda m: " " * len(m.group(0)), text)
+
+
 # An honest, stated blocker — always allowed, and required by the sibling gate.
 BLOCKER = re.compile(
     r"remains? undone because"
@@ -173,6 +200,8 @@ def main():
             break
     if not final.strip():
         return
+    # Match on what the turn *says*, not on what it quotes.
+    final = spoken(final)
 
     # A blocker excuses the item it *sits beside*, not the whole message.
     #
