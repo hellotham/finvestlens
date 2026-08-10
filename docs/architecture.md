@@ -278,6 +278,20 @@ equivalent.
    stays deterministic while the reference book still gets real coverage.
    `finlab bench` ([lab.md](lab.md)) is the NFR-02 instrument.
 
+7. **A test never inherits the runner's time zone.** Anything whose behaviour
+   depends on *local* time takes the calendar as an argument
+   (`repostLinkedTransactionDays(apply:in:)`, `postingDay(from:in:)` — both
+   defaulting to `.current`, so no caller changes) and the test states the zone
+   it is reasoning about. The posting-day repair is the sharp case: it moves
+   rows whose UTC day and local day disagree, which at UTC is **unreproducible**
+   — the two never disagree there. A test that hard-coded a Sydney instant
+   therefore passed on the maintainer's machine (UTC+10) and failed on CI (UTC),
+   and because nobody read the run, the pipeline stayed red for **five
+   consecutive commits** while every local preflight came back green. The
+   divergence between a local sweep and CI is the entire reason CI exists;
+   `/preflight` now reads the previous run before pushing and watches the new
+   one after.
+
 CI (`ci.yml`) builds and tests all eleven packages plus an unsigned macOS and
 iOS app on every PR — roughly 1,300 tests — and gates SPDX headers.
 

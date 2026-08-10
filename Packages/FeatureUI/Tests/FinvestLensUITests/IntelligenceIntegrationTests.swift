@@ -369,12 +369,19 @@ struct IntelligenceIntegrationTests {
             model.setDocumentLink("\(name).png", for: id)
             return id
         }
+        // The zone is stated, not inherited. This repair is unreproducible at
+        // UTC — a UTC day and a local day never disagree there — so a test that
+        // assumed the runner sat at +11 passed in Sydney and failed on CI,
+        // which is what kept the pipeline red for five commits.
+        var sydney = Calendar(identifier: .gregorian)
+        sydney.timeZone = try #require(TimeZone(identifier: "Australia/Sydney"))
+
         // GnuCash's own shape: a stray time, but the same day either way.
         let fine = try linked("2026-01-20T10:59:00Z", "Fine")
-        // The defect: 13:00 UTC on the 8th is midnight on the 9th here.
+        // The defect: 13:00 UTC on the 8th is midnight on the 9th in Sydney.
         let broken = try linked("2026-01-08T13:00:00Z", "Broken")
 
-        let moved = model.repostLinkedTransactionDays(apply: true)
+        let moved = model.repostLinkedTransactionDays(apply: true, in: sydney)
         #expect(moved.count == 1, "only the row whose days disagree should move")
         #expect(moved.first?.id == broken)
 
@@ -384,7 +391,7 @@ struct IntelligenceIntegrationTests {
         #expect(untouched.datePosted == ISO8601DateFormatter().date(from: "2026-01-20T10:59:00Z"))
 
         // And running again finds nothing.
-        #expect(model.repostLinkedTransactionDays(apply: true).isEmpty)
+        #expect(model.repostLinkedTransactionDays(apply: true, in: sydney).isEmpty)
     }
 
     @Test("A cash purchase with no vendor still gets a usable description")

@@ -730,10 +730,14 @@ extension AppModel {
     ///
     /// So the local calendar day is taken and re-anchored to midnight UTC,
     /// keeping the day the person meant and the convention the file expects.
-    static func postingDay(from date: Date) -> Date {
+    /// - Parameter local: the calendar whose day is authoritative. Defaults to
+    ///   the machine's, which is the behaviour every caller wants; it is an
+    ///   argument only so a test can state the zone it is reasoning about
+    ///   instead of inheriting the runner's.
+    static func postingDay(from date: Date, in local: Calendar = .current) -> Date {
         var utc = Calendar(identifier: .gregorian)
         utc.timeZone = TimeZone(identifier: "UTC") ?? .gmt
-        let day = Calendar.current.dateComponents([.year, .month, .day], from: date)
+        let day = local.dateComponents([.year, .month, .day], from: date)
         return utc.date(from: day) ?? date
     }
 
@@ -762,11 +766,17 @@ extension AppModel {
     /// something that was not wrong with them. A repair whose blast radius is
     /// two orders of magnitude larger than the defect is not a repair.
     @discardableResult
-    public func repostLinkedTransactionDays(apply: Bool) -> [RepostedDay] {
+    /// - Parameter local: as ``postingDay(from:in:)`` — the machine's calendar
+    ///   unless a caller needs to name one. A test cannot assume the runner's
+    ///   zone: this repair is *unreproducible* at UTC, where a UTC day and a
+    ///   local day never disagree, so a test that hard-codes a Sydney instant
+    ///   passes at home and fails on CI. That is exactly what happened, and it
+    ///   left the pipeline red for five commits.
+    public func repostLinkedTransactionDays(apply: Bool,
+                                            in local: Calendar = .current) -> [RepostedDay] {
         guard let book else { return [] }
         var utc = Calendar(identifier: .gregorian)
         utc.timeZone = TimeZone(identifier: "UTC") ?? .gmt
-        let local = Calendar.current
 
         var moved: [RepostedDay] = []
         for txn in book.transactions where txn.documentLink != nil {
@@ -785,7 +795,7 @@ extension AppModel {
             let asUTC = utc.dateComponents([.year, .month, .day], from: txn.datePosted)
             let asLocal = local.dateComponents([.year, .month, .day], from: txn.datePosted)
             guard asUTC != asLocal else { continue }
-            let corrected = Self.postingDay(from: txn.datePosted)
+            let corrected = Self.postingDay(from: txn.datePosted, in: local)
             guard corrected != txn.datePosted else { continue }
             moved.append(RepostedDay(id: txn.guid, description: txn.transactionDescription,
                                      from: txn.datePosted, to: corrected))

@@ -100,10 +100,45 @@ git diff HEAD --name-only --diff-filter=AM | grep '\.swift$' | grep -v '^website
 
 Empty output = pass. Any listed file needs the header before committing.
 
+## 4b. What CI said about the last push
+
+**Before pushing anything new, read the previous run.** A local preflight and
+CI are not the same check, and the gap between them is the whole point of
+having CI: this machine is UTC+10, the runner is UTC, and a test that
+hard-coded a Sydney instant passed here and failed there. Nobody looked, so
+the pipeline stayed red for **five consecutive commits** while every local
+preflight came back green.
+
+```bash
+gh run list --limit 3
+```
+
+Red, or red on any earlier commit? Open it and get the actual failing test —
+the summary alone does not say which:
+
+```bash
+gh run view <run-id> --log-failed | grep -oE '✘ Test "[^"]+"' | sort -u
+```
+
+Fix it before adding to the pile. A red pipeline you pushed through is not a
+pre-existing condition, it is an unread message.
+
+## 4c. After pushing, watch it go green
+
+Pushing is not the end of the task; the run is.
+
+```bash
+gh run watch "$(gh run list --limit 1 --json databaseId --jq '.[0].databaseId')" --exit-status
+```
+
+Report the outcome. "Pushed" without the run's verdict is a claim with no
+receipt — the same rule as everything else here.
+
 ## 5. Report, then stop
 
 Produce a table: step → PASS / FAIL (with verbatim error) / SKIPPED (with
 reason), then the verdict: **safe to commit** or **not safe, because …**.
+Include what CI said about the previous push.
 
 Do not commit as part of this skill. Committing is its own instruction, and the
 repo's rules apply to it: straight to `main`, no feature branches, **no
