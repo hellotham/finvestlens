@@ -1,7 +1,12 @@
-# Deferred backlog — open items within P0–P10
+# Deferred backlog — open items
 
-Work that was **in scope for the delivered phases (all of P0–P10)** but is
-still open: deferred, partial, or not yet built. It is **ranked** — highest
+> **This file holds open work only.** Anything finished belongs in
+> [implemented.md](implemented.md); a row that has been done is moved, not
+> ticked. Five completed rows were carrying ✅ markers here on 11 Aug 2026 and
+> have been moved.
+
+Work that was in scope for the delivered phases (P0–P10, and P11 in progress)
+but is still open: deferred, partial, or not yet built. It is **ranked** — highest
 priority / readiest to pick up first.
 
 Two items were **skipped from the plan by decision** (online bank sync from
@@ -29,11 +34,7 @@ Quality automation and validation that a shippable release needs.
 
 | Item | FR / Phase | Notes |
 |---|---|---|
-| CI: app + Intelligence jobs on a hosted runner | NFR-08 / P0, P3 | ✅ **Done (26 Jul 2026).** GitHub ships `macos-26` arm64 runners; `.github/workflows/ci.yml` now runs there — all eleven packages build and test (Intelligence's live-model tests skip themselves off-device), SPDX headers are gated, and the unsigned app + extensions build (macOS and iOS Simulator) is a required job. |
-| Large-book perf validation (local + SMB/NFS) | NFR-02 / P1 | ✅ **Done (10 Aug 2026)** on real hardware — a 46,578-transaction / 103,365-posting / 54 MB book on an SMB share (`//nas3._smb._tcp.local`), measured with `finlab bench` and `finlab import`. **The open architecture decision is closed: always-working-copy stands, and direct mode is not worth building.** On a local volume the working-copy hop costs **0 ms** — it is an APFS clone — so there is nothing to win; over SMB, reading the same book *without* it (SQLite over the wire, as `finlens` does per ADR-L2) took **40.6 s against 3.5 s**, 11.6× worse, of which only 2.0 s was CPU. Numbers in [implemented.md](implemented.md). |
 | `finlens` reads a NAS book without a working copy | NFR-02 / P10 | **Open, newly found (10 Aug 2026).** ADR-L2 makes the CLI take no lock and no working copy, which is right for safety and expensive over a network: `finlens stats` on the 54 MB book took **40.6 s** (1.96 s of it CPU) where the app's copy-then-read path took 3.5 s. Copying to a local temp before opening read-only would keep every promise ADR-L2 makes — it still never writes to the book — and remove the gap. Not done here because it changes CLI behaviour outside the task that found it. |
-| Real balances in published commit messages | NFR-08 / P0 | ✅ **Rewritten and pushed 11 Aug 2026** (`3a7bb86`); GitHub's collection of the orphaned objects is the only part still outstanding. A commit message is as public as any file in the tree, and `git filter-repo --replace-text` rewrites *blobs only* — messages need `--replace-message`. A first pass on 10 Aug applied the size rule alone and left **thirteen figures across twelve messages**, several in the same sentence as `[redacted]` markers that had already landed, which is what made them easy to skim past. The second pass removed all thirteen: HEAD's tree hash is unchanged, the count is still 367 commits, and the API now serves **zero** real figures across every message. Two of the thirteen were invisible to a size threshold — a net worth in shorthand (`$…k`), and a sub-$10k account movement — and were found instead by asking which lines *assert something about the real book*. `no-figures-in-commits.py` now tests size **or** that context, blocks shorthand, and flags none of the 369 real messages; three regression cases were added (suite: 33). **Closed 11 Aug 2026.** GitHub serves unreferenced commits until it garbage-collects, and there is no API for it (`…/git/gc` → *Not Found*). Support's **first** claim to have cleared them was false — the sample SHAs still answered **HTTP 200** on the web page, the unauthenticated API and `.patch`. Asked again, they collected a second time, and this time it is real: all three orphan SHAs now return **404** on the web page and `.patch` and **422** from the API, with 0 forks and 0 network. The lesson is the check, not the outcome — a provider's word that data is gone is a claim to verify from outside, and the same three URLs answered differently on the two occasions the same sentence was written. The published history itself is clean: 378 messages on `origin/main`, none flagged by `no-figures-in-commits.py`. |
-| Localization (string catalogs) | NFR-06 / P6 | ✅ **Done (25 Jul 2026).** `finvestlens/Localizable.xcstrings` carries the app's UI strings (1,587 keys as of 11 Aug 2026) in **de, es, fr, it, ja, pt-BR, zh-Hans**, with two further catalogs for the extensions' own bundles — Quick Look and Widgets, which resolve against their own bundle rather than `Bundle.main`. Key set verified against the compiler's `-emit-localized-strings` output — no missing keys, no dead entries. Professional review by native speakers is the remaining (optional) step. |
 
 ## 2 — User-facing gaps (high value, tractable)
 
@@ -42,7 +43,6 @@ Common workflows partly built; each is a bounded piece of work.
 | Item | FR / Phase | Notes |
 |---|---|---|
 | Rule actions tail | FR-RULE-01 / P4 | **link-to-bill shipped 24 Jul 2026** (a rule stamps the payment with the schedule's GUID; bill reminders match it exactly before falling back to the name heuristic). Remaining, both left by judgement: **convert-type** (fuzzy in a double-entry model) and **set-budget** (budgets here are per-account planned amounts — a rule "assigning a budget" to a transaction has no coherent target; recorded 25 Jul 2026). |
-| Quick Look for `.gnucash` | FR-PLT-03 / P6 | ✅ **Done (9 Aug 2026).** The app now declares `org.gnucash.book` as an *imported* type (the type is GnuCash's; we only read it) and the extension previews all three shapes GnuCash writes, told apart by their first bytes rather than by extension: gzipped XML, plain XML, and its SQLite backend. Interchange was **not** linked in — that would drag Engine into an extension Quick Look launches on a Finder selection. Instead the XML paths read GnuCash's own `<gnc:count-data>` header from an inflated *prefix*, so a 9.6 MB book measured 6.7 ms; the SQLite path reuses the existing reader, telling the two schemas apart by table name (`accounts`/`transactions` vs our `account`/`txn`, read from `libgnucash/backend/sql/`). |
 
 ## 3 — Apple Intelligence import caveats (monitor)
 

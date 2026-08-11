@@ -1,4 +1,4 @@
-# Implemented — history, audits & fixes (P0–P10)
+# Implemented — history, audits & fixes (P0–P11)
 
 The record of what has been **built and verified**. **Every phase P0–P10 is
 complete**: the engine, native document + NAS locking, GnuCash import/export,
@@ -19,6 +19,103 @@ Companions: [PRD](prd.md) · [Architecture](architecture.md) · [Plan](plan.md) 
 [Deferred](deferred.md).
 
 ---
+
+## "Valued by hand" was reading a stale GnuCash flag (11 Aug 2026)
+
+Reported from the app: a security sat under **Valued by hand** while its price
+history was being updated daily. Both were true, which is the defect.
+
+`canFetchQuotes` asked `commodity.getQuotes` — GnuCash's `cmdty:get_quotes`.
+That flag records what **GnuCash** could fetch, from the much smaller set of
+providers Finance::Quote supported; a `false` there means "GnuCash could not",
+never "nothing can". The app's own fetch has never consulted it —
+`pricableSecurities` is every security — so the security stayed current while
+the table called it hand-valued. Two definitions of "can be priced", disagreeing.
+
+The flag is now read only as a **positive** signal, and its absence proves
+nothing. What counts is evidence: a `Finance::Quote…` source on any stored
+price means some provider served that security. Hand-valued is the residue —
+everything no provider has ever priced. `user:price`, `user:price-editor`,
+`user:split-import` and `user:xfer-dialog` are all typed or imported, and none
+of them count as a provider.
+
+On the reference book this moves exactly the security reported, and leaves the
+six corporate bonds where they belong until the FIIG provider lands in I4:
+25 ASX held / 0 hand-valued, 6 bonds held / 6 hand-valued, 1 WAM held / 0.
+The commodity set is memoised on the book revision — asking per security would
+rescan the price database once per row on screen.
+
+## Delisted securities rebuilt from EODHD (11 Aug 2026)
+
+Sixteen ASX securities in the reference book are absent from EODHD's live
+symbol list; all sixteen are closed positions, so none affects a current
+valuation, but their history still has to be right for capital gains.
+
+**A blanket replace would have destroyed data**, which is the finding worth
+keeping. Checking each against EODHD's own range first showed three traps: one
+security has 1,504 stored rows and EODHD has *none* for it; another's history
+starts in 1988 where EODHD's starts in 1990; a third's last ten days are in the
+book and not at the provider. Eight of the sixteen have no EODHD data at all.
+
+So the action was chosen per security rather than in bulk — six replaced where
+the provider strictly covers the stored range or the book held only a two-to-
+four row stub (+10,048 prices), two merged where the book has substantial
+history outside the provider's range (+662, and both boundaries verifiably
+intact afterwards), eight skipped. The one with no provider data was left
+untouched at its full 1,504 rows.
+
+## Real balances removed from published commit messages (10–11 Aug 2026)
+
+Commit messages in this repository carried the reference book's real balances.
+A message is as public as any file in the tree. Fixed in two passes, and the
+second existed only because the first was incomplete.
+
+`git filter-repo --replace-text` rewrites **blobs only** — it cleaned the files
+and left every message untouched, which is easy to misread as success.
+`--replace-message` is the one that does messages.
+
+The first pass applied the project's standing size rule alone (a million or
+more, or ten thousand-plus with cents) and left **thirteen figures across twelve
+messages**, several in the same sentence as `[redacted]` markers that had
+already landed — which is exactly what made them easy to skim past. Two shapes
+are invisible to a size threshold: **shorthand** (no cents to match) and
+**sub-threshold but real** (a four-figure account movement is still a real
+balance). Both were caught by a second lens — any money on a line that also
+asserts something about the real book (`Assets:`/`Liabilities:`/…, "net worth",
+"the real book"). `.claude/hooks/no-figures-in-commits.py` now applies size
+**or** that context test, blocks shorthand, and flags none of the published
+messages; three regression cases were added.
+
+The rewrite preserved the tree: HEAD's tree hash unchanged, commit count
+unchanged, one tag re-pointed.
+
+**The remediation's tail was GitHub's, and had to be verified twice.**
+Unreferenced commits stay served until GitHub garbage-collects, which is a
+support ticket rather than a command — there is no API (`POST …/git/gc` →
+*Not Found*). Support sent the same reassurance twice on 11 Aug. After the
+first, the sample SHAs still answered **HTTP 200** on the web page, the
+unauthenticated API *and* `.patch`. After the second they answer **404 / 404 /
+422**, with 0 forks and an empty network, and 378 published messages flag
+nothing. Nothing ever *referenced* the objects — refs were `main` and `v1.0`
+on current history, 0 pull requests ever — so the delay was collection, not a
+dangling reference. The lesson kept is the check rather than the outcome: a
+provider's word that data is gone is a claim to verify from outside, and those
+three URLs answered differently on the two occasions the same sentence arrived.
+
+## Quick Look for `.gnucash` (9 Aug 2026)
+
+Previously recorded as a judgement call to skip; built instead. The app
+declares `org.gnucash.book` as an **imported** type — the type is GnuCash's and
+we only read it — and the extension previews all three shapes GnuCash writes,
+told apart by their first bytes rather than by extension: gzipped XML, plain
+XML, and its SQLite backend.
+
+Interchange was deliberately **not** linked in: that would drag Engine into an
+extension Quick Look launches on a Finder selection. The XML paths instead read
+GnuCash's own `<gnc:count-data>` header from an inflated *prefix*, so a 9.6 MB
+book measured 6.7 ms; the SQLite path reuses the existing reader, telling the
+two schemas apart by table name (`accounts`/`transactions` against our
+`account`/`txn`, read from `libgnucash/backend/sql/`).
 
 ## P11 · Per-security price fetch, and NABPF from EODHD (11 Aug 2026)
 
@@ -875,7 +972,8 @@ gained the machine-readable header) and the allowed-to-fail macOS-26 job runs
 FeatureUI's tests; plan.md's P6 status, the architecture package graph (Shared
 was missing), PRD FR-FIND-01's shared-grammar claim, and deferred.md's rule
 tail were corrected to match the code, with two new recorded judgement calls
-(rule set-budget, Quick Look for `.gnucash`).
+(rule set-budget, Quick Look for `.gnucash`). *(Quick Look for `.gnucash` was
+later built — 9 Aug 2026, recorded above; only the rule tail remains a skip.)*
 
 ---
 

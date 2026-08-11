@@ -140,6 +140,44 @@ struct InvestmentRowsTests {
         #expect(spark?.allSatisfy { $0.points.count == 4 } == true)
     }
 
+    @Test("A security a provider actually prices is not filed as hand-valued")
+    func providerPricedBeatsTheFlag() throws {
+        // A book imported from GnuCash can carry get_quotes = false on a
+        // security a provider prices every day; the fetch never consults that
+        // flag, so it stayed current while the table called it hand-valued.
+        let model = try makeModel()
+        let book = model.book!
+        let quiet = Commodity(namespace: .security("ASX"), mnemonic: "QUIET",
+                              fullName: "Flag says no", smallestFraction: 10000)
+        buy(model, quiet, units: "10", cost: "1000", daysBack: 40)
+        model.refreshAll()
+        #expect(model.canFetchQuotes(for: quiet) == false, "nothing yet says a provider can price it")
+
+        book.addPrice(Price(commodity: quiet, currency: .aud, date: daysAgo(1),
+                            value: dec("100"), source: "Finance::Quote:yahoo (USD)"))
+        model.refreshAll()
+
+        #expect(model.canFetchQuotes(for: quiet) == true, "a provider-sourced price is the proof")
+        #expect(model.investmentRows().first { $0.symbol == "QUIET" }?.group == .held)
+    }
+
+    @Test("A hand-entered price is not mistaken for a provider's")
+    func userPricesStayManual() throws {
+        // The other direction, which is what keeps the super funds honest:
+        // typed, imported and dialog-entered prices all carry a `user:` source.
+        let model = try makeModel()
+        let book = model.book!
+        buy(model, fund, units: "100", cost: "10000", daysBack: 40)
+        for source in ["user:price", "user:price-editor", "user:split-import", "user:xfer-dialog"] {
+            book.addPrice(Price(commodity: fund, currency: .aud, date: daysAgo(2),
+                                value: dec("110"), source: source))
+        }
+        model.refreshAll()
+
+        #expect(model.canFetchQuotes(for: fund) == false)
+        #expect(model.investmentRows().first { $0.symbol == "FUND" }?.group == .manual)
+    }
+
     @Test("The sparkline period is adjustable, named, and remembered in the book")
     func sparkRangeIsAPreference() throws {
         let model = try makeModel()

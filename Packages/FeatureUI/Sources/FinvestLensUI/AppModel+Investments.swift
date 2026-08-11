@@ -113,7 +113,36 @@ extension AppModel {
     public func canFetchQuotes(for commodity: Commodity) -> Bool {
         if commodity.getQuotes { return true }
         if let symbol = quoteSymbol(for: commodity), !symbol.isEmpty { return true }
-        return false
+        // Proof beats declaration, and `get_quotes` is a stale declaration:
+        // it records what **GnuCash** could fetch, from the much smaller set of
+        // providers Finance::Quote supported. A false there means "GnuCash
+        // could not", never "nothing can". So the flag is read only as a
+        // positive signal and its absence proves nothing — the fetch already
+        // works that way (`pricableSecurities` is every security, flag
+        // unconsulted), which is how a security stayed current while this test
+        // filed it under "Valued by hand".
+        //
+        // What does count is evidence: a provider-sourced price in the book
+        // means some provider served this security. Hand-valued is then the
+        // residue — everything no provider has ever priced.
+        return providerPricedCommodities.contains(commodity)
+    }
+
+    /// Commodities the book holds at least one **provider-sourced** price for.
+    ///
+    /// `Price.source` records who supplied each row: `Finance::Quote…` for a
+    /// provider, `user:…` for anything typed, imported or entered through a
+    /// dialog. Memoised on the book revision — asking per security would rescan
+    /// the whole price database once per row on screen.
+    private var providerPricedCommodities: Set<Commodity> {
+        cachedReport("providerPriced") { [self] in
+            var found: Set<Commodity> = []
+            for price in book?.prices ?? []
+            where price.source.hasPrefix("Finance::Quote") {
+                found.insert(price.commodity)
+            }
+            return found
+        } ?? []
     }
 
     /// Price health across the book (`FR-INV-09`), memoised on the book
