@@ -114,12 +114,20 @@ def fixture_repo(tmp):
     return repo
 
 
+# PostToolUse hooks advise rather than refuse, so "BLOCKED"/"allowed" would
+# misdescribe them in the results table. Same runner, honest vocabulary.
+ADVISORY = {"stale-build-caches.py", "spdx-on-new-source.py"}
+
+
 def run_pre(hook, payload):
-    """PreToolUse gates take the tool call on stdin and deny via JSON."""
+    """A tool-call gate: takes the call on stdin, answers on stdout."""
     out = subprocess.run([sys.executable, os.path.join(HOOKS, hook)],
                          input=json.dumps(payload), capture_output=True,
                          text=True).stdout
-    return "BLOCKED" if out.strip() else "allowed"
+    fired = bool(out.strip())
+    if hook in ADVISORY:
+        return "fires" if fired else "quiet"
+    return "BLOCKED" if fired else "allowed"
 
 
 def run(hook, records, tmp, root):
@@ -250,6 +258,41 @@ def cases(fixture):
            bash('git log -1 --format=%B | grep "$1,234,567.89"'), ROOT)
     yield ("figure declared synthetic", "allowed", FIGURES,
            bash('git commit -m "demo book shows $1,234,567.89 — figures are synthetic"'), ROOT)
+
+    # --- PostToolUse advisories: fire on the risk, stay quiet otherwise ---
+    STALE, SPDX_HOOK = "stale-build-caches.py", "spdx-on-new-source.py"
+
+    def tool(name, path, **rest):
+        return {"tool_name": name, "tool_input": {"file_path": path, **rest}}
+
+    ENGINE = "Packages/Engine/Sources/FinvestLensEngine/DatePlausibility.swift"
+    yield ("engine gains a public type", "fires", STALE,
+           tool("Write", ENGINE, content="public enum DatePlausibility { }"), ROOT)
+    yield ("engine function body only", "quiet", STALE,
+           tool("Edit", ENGINE, new_string="    total += 1",
+                old_string="    total += 2"), ROOT)
+    # A deletion moves the interface as much as an addition, and its new text
+    # gives nothing away — the reason both sides of the edit are scanned.
+    yield ("engine loses a public type", "fires", STALE,
+           tool("Edit", ENGINE, new_string="",
+                old_string="public enum DatePlausibility { }"), ROOT)
+    yield ("a public type outside Engine", "quiet", STALE,
+           tool("Edit", "Packages/Reports/Sources/R/A.swift",
+                new_string="public struct Alpha {}"), ROOT)
+    yield ("engine *tests*, not its sources", "quiet", STALE,
+           tool("Edit", "Packages/Engine/Tests/EngineTests/BookTests.swift",
+                new_string="public struct Alpha {}"), ROOT)
+
+    NEW = "Packages/Engine/Sources/FinvestLensEngine/New.swift"
+    yield ("new Swift file, no licence line", "fires", SPDX_HOOK,
+           tool("Write", NEW, content="import Foundation\n"), ROOT)
+    yield ("new Swift file carrying it", "quiet", SPDX_HOOK,
+           tool("Write", NEW,
+                content="//  SPDX-License-Identifier: GPL-3.0-or-later\n"), ROOT)
+    yield ("editing an existing file", "quiet", SPDX_HOOK,
+           tool("Edit", NEW, new_string="import Foundation\n"), ROOT)
+    yield ("a Swift file outside the gated roots", "quiet", SPDX_HOOK,
+           tool("Write", "website/scripts/gen.swift", content="import Foundation\n"), ROOT)
 
     # --- attestation: a build claim is owed only when code changed ---
     ATTEST = "check-directives.py"

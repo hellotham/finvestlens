@@ -193,6 +193,8 @@ work, not extra scope:
 - **`/code-review`** after a substantive implementation, scaled to the change.
   `/code-review ultra` (cloud, multi-agent, billed) is **user-triggered only**:
   suggest it before releases; never attempt to launch it.
+- **`/release`** and **`/finlab`** are user-invoked only — one publishes a DMG,
+  the other writes to the real book. Both refuse to be model-invoked.
 - Useful installed extras: the `code-simplifier` agent after large
   implementations; `/feature-dev` for multi-file features; `frontend-design`,
   `tailwind-4`, and `seo-audit` apply to `website/` only, never the app.
