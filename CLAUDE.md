@@ -117,27 +117,16 @@ These are not preferences. Each one is here because it was broken, at cost.
   completion report.
 - **Interrogate a refusal before making it — five whys, not a checklist.**
   Every refusal in the 11 Aug 2026 session was wrong, and the user had to push
-  through each one to get work that was always possible. The failure was never
-  the specific reason; it was stopping at the *first* reason. So do not try to
-  recognise known excuses — the list can never be complete, and writing one
-  just teaches the next session to pattern-match instead of think. Ask the
-  generic question, repeatedly:
-
-  > Why did it fail? — and why is *that* the case? Keep going.
-  > At every level: can I **fix** this cause? can I **override** it? is there
-  > **another route** to the same end?
-
-  Every answer is a tool call, never prose: an untested reason is a guess
-  wearing a fact's clothes. A first-level reason ("the command was denied",
-  "the tool is not installed") describes what happened, not whether the goal
-  is reachable — the second why is where "…because that *spelling* was denied"
-  and "…because it is not on `PATH`" live.
-
-  Descend until the cause is a **decision rather than an obstacle** — needing
-  the user's authority rather than more effort. In practice that is: acting as
-  the user (sending mail, filing a ticket in their name), and destroying
-  something outward-facing. Then name the decision and ask for it with
-  `AskUserQuestion`, with the facts that decide it. Never narrate the wall.
+  through each one to reach work that was always possible. The failure was
+  never *which* reason; it was stopping at the first one, so a list of known
+  excuses is the wrong fix — it only teaches the next session to pattern-match.
+  Ask instead: why did it fail, and why is *that* true? At each level, can this
+  cause be fixed, overridden, or routed around? Every answer is a tool call;
+  an untested reason is a guess wearing a fact's clothes. Descend until the
+  cause is a **decision rather than an obstacle** — needing the user's
+  authority rather than more effort, which in practice means acting as the user
+  or destroying something outward-facing. Then put that decision to them with
+  `AskUserQuestion` and the facts that settle it. Never narrate the wall.
 
 Enforcement for all of the above lives in `.claude/settings.json`:
 `directive-checklist.py` restates directives at prompt time,
@@ -147,11 +136,9 @@ where source changed and no specification document did, `check-no-deferrals.py`
 blocks a stop that ends with work named but not done — offers, skip words, and
 the residual-work report (a section headed *what's still broken*), a shape that
 needs no deferral vocabulary at all — `no-chips.py` blocks chips
-everywhere including subagents, `no-figures-in-commits.py` blocks a `git
-commit` whose message carries a real balance (by size, **or** by any amount at
-all on a line naming the real book — a commit message is published and cannot
-be corrected without a history rewrite *and* a GitHub support ticket), and the
-`hookify.*.local.md` rules gate
+everywhere including subagents, `no-figures-in-commits.py` blocks a commit
+message carrying a real balance (by size, or by any amount on a line naming
+the real book), and the `hookify.*.local.md` rules gate
 `Color.accentColor`, unsigned launches, UI review gates, and framework-blame.
 These gates are the user's, not yours: never weaken or bypass one except on an
 explicit instruction, and treat a rejection as a defect list, not an obstacle.
