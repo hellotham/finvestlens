@@ -147,7 +147,11 @@ where source changed and no specification document did, `check-no-deferrals.py`
 blocks a stop that ends with work named but not done — offers, skip words, and
 the residual-work report (a section headed *what's still broken*), a shape that
 needs no deferral vocabulary at all — `no-chips.py` blocks chips
-everywhere including subagents, and the `hookify.*.local.md` rules gate
+everywhere including subagents, `no-figures-in-commits.py` blocks a `git
+commit` whose message carries a real balance (by size, **or** by any amount at
+all on a line naming the real book — a commit message is published and cannot
+be corrected without a history rewrite *and* a GitHub support ticket), and the
+`hookify.*.local.md` rules gate
 `Color.accentColor`, unsigned launches, UI review gates, and framework-blame.
 These gates are the user's, not yours: never weaken or bypass one except on an
 explicit instruction, and treat a rejection as a defect list, not an obstacle.
@@ -178,7 +182,7 @@ a wall that was not there: the receipt now only clears the gate when the turn
 is what turns a refusal into a finding; stopping at the first one is the
 behaviour the receipt was meant to prevent, not license.
 
-After editing any hook, run its regression suite — 17 cases, both directions,
+After editing any hook, run its regression suite — 34 cases, both directions,
 every mention marker and every real deferral shape that has actually been seen:
 
 ```bash
