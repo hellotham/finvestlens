@@ -20,6 +20,51 @@ Companions: [PRD](prd.md) · [Architecture](architecture.md) · [Plan](plan.md) 
 
 ---
 
+## P11 · I2a — the destination's first paint, and the Engine scans behind it (11 Aug 2026)
+
+Reported from the running app: the destination took seconds to draw, and the
+sparklines still did not line up. Both measured before being touched.
+
+**First paint: 5.99s → 0.97s** on the reference book. The cost was never in the
+new code — the sparklines and row assembly together are 0.04s. It was two
+long-standing `Engine` scans that the destination is simply the first surface to
+call once per security account:
+
+| Component | Before | After |
+| --- | --- | --- |
+| `advancedPortfolio` | 4.76s | **0.06s** |
+| `priceHealth` | 1.16s | **0.87s** |
+| Row assembly + sparklines | 0.03s | 0.04s |
+
+- **`Book.splits(for:)`** was `transactions.flatMap(\.splits).filter { … }` — a
+  walk of every transaction in the book *and* an array of every split in it,
+  **per account asked about**. It is now served from an account index built
+  alongside the existing GUID lookups and invalidated with them.
+- **`Book.lotEvents(for:)`** walked all 46,553 transactions per account for the
+  same reason. It now iterates the account's own splits, caching each
+  transaction's brokerage apportionment once.
+- **`priceHealth`** bucketed all ~150k prices into civil days *twice* — once
+  building the `TradingCalendar`, once for its own day sets. One pass now feeds
+  both (`startOfDay` alone is 0.36s over that many prices). Its movements pass
+  moved off the whole-book walk too, with an explicit book-order tie-break:
+  walking accounts groups a commodity's movements by account, two accounts can
+  move the same commodity on one day, and `sorted(by:)` is not stable — without
+  the tie-break a holding period could open and close in a different order.
+
+Cost basis is verified against GnuCash, so "the suites are green" was not
+sufficient evidence for the `lotEvents` rewrite. `LivePriceHealthTests`
+re-implements the previous algorithm verbatim and compares event for event
+across the real book: **2,248 events over 99 security accounts, all identical**.
+Every price-health figure is likewise unchanged (86.0% coverage, 25/0/7,
+17 securities with gaps while held, 2,915 days).
+
+**Sparklines share a column.** They now sit *before* the name rather than after
+it. The name column is `minWidth`, so a chart placed after it inherited that
+column's variable width and landed at a different offset on every row — the
+wander that survived the shared-axis fix. Ahead of the name it is at a fixed
+distance from the leading edge, and a chart whose purpose is comparison is
+finally comparable.
+
 ## P11 · I2 — the Investments destination (11 Aug 2026)
 
 The hub itself (`FR-INV-08`). *Prices & Securities* is gone: its sidebar row, its

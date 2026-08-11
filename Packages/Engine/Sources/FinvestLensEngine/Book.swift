@@ -317,32 +317,55 @@ public final class Book {
 
     /// The chronological acquisition/disposal events for a security `account`,
     /// derived from its non-voided splits (`FR-INV-04`).
+    /// Driven from the account's own splits rather than by walking the whole
+    /// book. The scanning form visited every transaction in the book **per
+    /// account**, so a portfolio report over eighty security accounts walked
+    /// 46,553 transactions eighty times; that, with the same pattern in
+    /// ``splits(for:)``, was 4.76s of the Investments destination's first paint.
+    ///
+    /// The event order is unchanged: ``splits(for:)`` yields splits in
+    /// transaction order and, within a transaction, in split order — exactly the
+    /// order the nested scan produced. That matters more than the speed, since
+    /// the lot engine consumes these in sequence and a reordering would move
+    /// cost basis without failing anything loudly.
     public func lotEvents(for account: Account, asOf: Date = .distantFuture) -> [LotEvent] {
         var events: [LotEvent] = []
-        for transaction in transactions where transaction.datePosted <= asOf {
-            // Brokerage/commission on the transaction: its expense-account
-            // splits, shared equally across the transaction's security splits
-            // (so a two-security swap doesn't double-count the fee).
-            var brokerage = Decimal(0)
-            var securitySplits = 0
-            for split in transaction.splits where split.reconcileState != .voided {
-                if let type = split.account?.type {
-                    if type == .expense { brokerage += split.value }
-                    else if type.isSecurityType && split.quantity != 0 { securitySplits += 1 }
-                }
-            }
-            let feePerSecurity = securitySplits > 0 ? brokerage / Decimal(securitySplits) : 0
+        // Brokerage is a property of the transaction, and a transaction can
+        // carry two splits on the same account; compute it once each.
+        var feeCache: [ObjectIdentifier: Decimal] = [:]
 
-            for split in transaction.splits
-            where split.account === account && split.reconcileState != .voided
-                && (split.quantity != 0 || split.action == "ReturnOfCapital") {
-                let isTrade = split.quantity != 0 && split.action != "Split"
-                events.append(LotEvent(date: transaction.datePosted,
-                                       quantity: split.quantity, value: split.value,
-                                       isSplit: split.action == "Split",
-                                       isReturnOfCapital: split.action == "ReturnOfCapital",
-                                       fee: isTrade ? feePerSecurity : 0))
+        for split in splits(for: account) {
+            guard let transaction = split.transaction, transaction.datePosted <= asOf,
+                  split.reconcileState != .voided,
+                  split.quantity != 0 || split.action == "ReturnOfCapital"
+            else { continue }
+
+            let key = ObjectIdentifier(transaction)
+            let feePerSecurity: Decimal
+            if let cached = feeCache[key] {
+                feePerSecurity = cached
+            } else {
+                // Brokerage/commission on the transaction: its expense-account
+                // splits, shared equally across the transaction's security
+                // splits (so a two-security swap doesn't double-count the fee).
+                var brokerage = Decimal(0)
+                var securitySplits = 0
+                for other in transaction.splits where other.reconcileState != .voided {
+                    if let type = other.account?.type {
+                        if type == .expense { brokerage += other.value }
+                        else if type.isSecurityType && other.quantity != 0 { securitySplits += 1 }
+                    }
+                }
+                feePerSecurity = securitySplits > 0 ? brokerage / Decimal(securitySplits) : 0
+                feeCache[key] = feePerSecurity
             }
+
+            let isTrade = split.quantity != 0 && split.action != "Split"
+            events.append(LotEvent(date: transaction.datePosted,
+                                   quantity: split.quantity, value: split.value,
+                                   isSplit: split.action == "Split",
+                                   isReturnOfCapital: split.action == "ReturnOfCapital",
+                                   fee: isTrade ? feePerSecurity : 0))
         }
         return events
     }
@@ -391,6 +414,8 @@ public final class Book {
     // invalidates after every edit.
     private var transactionIndex: [GncGUID: Transaction]?
     private var splitIndex: [GncGUID: Split]?
+    /// Splits bucketed by the account they post to, in transaction order.
+    private var splitsByAccount: [ObjectIdentifier: [Split]]?
     private var lookupRetriedAfterMiss = false
 
     /// Drops the GUID lookup indexes. Called by the book's own transaction
@@ -399,19 +424,27 @@ public final class Book {
     public func invalidateLookupIndexes() {
         transactionIndex = nil
         splitIndex = nil
+        splitsByAccount = nil
         lookupRetriedAfterMiss = false
     }
 
     private func buildLookupIndexesIfNeeded() {
-        guard transactionIndex == nil || splitIndex == nil else { return }
+        guard transactionIndex == nil || splitIndex == nil || splitsByAccount == nil else { return }
         var txns = [GncGUID: Transaction](minimumCapacity: transactions.count)
         var splits = [GncGUID: Split](minimumCapacity: transactions.count * 2)
+        var byAccount: [ObjectIdentifier: [Split]] = [:]
         for transaction in transactions {
             txns[transaction.guid] = transaction
-            for split in transaction.splits { splits[split.guid] = split }
+            for split in transaction.splits {
+                splits[split.guid] = split
+                if let account = split.account {
+                    byAccount[ObjectIdentifier(account), default: []].append(split)
+                }
+            }
         }
         transactionIndex = txns
         splitIndex = splits
+        splitsByAccount = byAccount
     }
 
     /// A miss can mean "genuinely absent" or "index built before this object
@@ -422,6 +455,7 @@ public final class Book {
         lookupRetriedAfterMiss = true
         transactionIndex = nil
         splitIndex = nil
+        splitsByAccount = nil
         buildLookupIndexesIfNeeded()
         return true
     }
@@ -453,9 +487,28 @@ public final class Book {
         return splitIndex?[guid]
     }
 
-    /// All splits posted to `account` across every transaction.
+    /// All splits posted to `account`, in transaction order.
+    ///
+    /// Served from the account index rather than by scanning. The scanning form
+    /// — `transactions.flatMap(\.splits).filter { $0.account === account }` —
+    /// walked every transaction in the book and allocated an array of every
+    /// split in it, **per account asked about**. Callers that ask once per
+    /// account turn that into quadratic work: on the reference book the
+    /// advanced-portfolio report spent 4.76s here, almost all of it rebuilding
+    /// the same intermediate array eighty times over.
+    ///
+    /// Order is preserved exactly — the index is filled by walking
+    /// `transactions` in the same order the scan did — because callers such as
+    /// the lot engine consume these in sequence and a reordering would silently
+    /// change cost basis.
     public func splits(for account: Account) -> [Split] {
-        transactions.flatMap { $0.splits }.filter { $0.account === account }
+        buildLookupIndexesIfNeeded()
+        if let hit = splitsByAccount?[ObjectIdentifier(account)] { return hit }
+        // A miss is either "no splits" or "index predates this account"; the
+        // same one-rebuild-per-generation rule the GUID lookups use tells them
+        // apart without letting an empty account rebuild on every call.
+        guard rebuildOnceAfterMiss() else { return [] }
+        return splitsByAccount?[ObjectIdentifier(account)] ?? []
     }
 
     // MARK: Balances

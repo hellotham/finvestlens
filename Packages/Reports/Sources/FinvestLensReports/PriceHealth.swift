@@ -59,7 +59,6 @@ public struct TradingCalendar: Sendable {
     /// Currency prices are excluded: an FX rate can be recorded on any day, so
     /// including them would invent trading days no equity market had.
     public init(book: Book, calendar: Calendar = .current) {
-        self.calendar = calendar
         var seen: [String: Set<Date>] = [:]
         var union: Set<Date> = []
         for price in book.prices where price.commodity.namespace != .currency {
@@ -67,8 +66,21 @@ public struct TradingCalendar: Sendable {
             seen[Self.exchange(of: price.commodity), default: []].insert(day)
             union.insert(day)
         }
-        daysByExchange = seen.mapValues { $0.sorted() }
-        allDays = union.sorted()
+        self.init(daysByExchange: seen, allDays: union, calendar: calendar)
+    }
+
+    /// Built from days already bucketed by the caller.
+    ///
+    /// Bucketing a timestamp into a civil day is the most expensive operation
+    /// in this file — 0.36s over the reference book's ~150k prices — and
+    /// ``priceHealth(_:currency:asOf:quotable:gapLimit:calendar:)`` needs the
+    /// same buckets for its own per-security day sets. Doing it once and
+    /// sharing the result halves the cost; the public initialiser above stays
+    /// for callers that only want a calendar.
+    init(daysByExchange: [String: Set<Date>], allDays: Set<Date>, calendar: Calendar) {
+        self.calendar = calendar
+        self.daysByExchange = daysByExchange.mapValues { $0.sorted() }
+        self.allDays = allDays.sorted()
     }
 
     /// The exchange key for a commodity — the namespace's name.
@@ -313,43 +325,72 @@ public extension FinancialReports {
                             gapLimit: Int = 100,
                             calendar: Calendar = .current) -> PortfolioPriceHealth {
         let today = calendar.startOfDay(for: asOf)
-        let tradingCalendar = TradingCalendar(book: book, calendar: calendar)
 
-        // One pass over prices: dates held per commodity, provenance, and count.
-        // The reference book has ~150k prices and ~90 securities, so anything
-        // per-security-per-price is a non-starter.
+        // **One** bucketing pass over the price database, feeding both the
+        // trading calendar and the per-security day sets. Turning a timestamp
+        // into a civil day is the dominant cost here, and building the calendar
+        // separately did it a second time over every price in the book.
         var priceDays: [Commodity: Set<Date>] = [:]
         var rowCounts: [Commodity: Int] = [:]
         var sources: [Commodity: [String: Int]] = [:]
+        var daysByExchange: [String: Set<Date>] = [:]
+        var allDays: Set<Date> = []
         for price in book.prices where price.commodity.namespace != .currency {
+            let day = calendar.startOfDay(for: price.date)
+            // The calendar describes when the market traded, so it takes every
+            // observation; the per-security sets answer "as at `asOf`".
+            daysByExchange[TradingCalendar.exchange(of: price.commodity), default: []].insert(day)
+            allDays.insert(day)
             guard price.date <= asOf else { continue }
-            priceDays[price.commodity, default: []].insert(calendar.startOfDay(for: price.date))
+            priceDays[price.commodity, default: []].insert(day)
             rowCounts[price.commodity, default: 0] += 1
             sources[price.commodity, default: [:]][price.source, default: 0] += 1
         }
+        let tradingCalendar = TradingCalendar(daysByExchange: daysByExchange, allDays: allDays,
+                                              calendar: calendar)
 
-        // One pass over transactions: quantity movements per commodity, which
-        // become holding periods.
-        var movements: [Commodity: [(date: Date, quantity: Decimal)]] = [:]
-        for transaction in book.transactions where transaction.datePosted <= asOf {
-            for split in transaction.splits where split.reconcileState != .voided {
-                // Same filter as `portfolio(_:currency:asOf:)`, deliberately:
-                // the two must agree on what "held" means, and a live harness
-                // cross-checks them against the real book.
-                guard let account = split.account, account.type.isSecurityType,
-                      !account.isPlaceholder, split.quantity != 0 else { continue }
-                movements[account.commodity, default: []]
-                    .append((calendar.startOfDay(for: transaction.datePosted), split.quantity))
+        // Quantity movements per commodity, which become holding periods. Driven
+        // from each security account's own splits rather than by walking every
+        // transaction in the book — the same change that took the advanced
+        // portfolio report from 4.76s to 0.14s on the reference book.
+        //
+        // Book order is preserved explicitly. Walking accounts instead of
+        // transactions groups a commodity's movements by account, and two
+        // accounts can move the same commodity on the same day; `sorted(by:)`
+        // is not stable, so without a tie-break the running balance could open
+        // and close a holding period in a different order than before. One
+        // cheap pass over transactions gives the tie-break the old nested scan
+        // got for free.
+        var order: [ObjectIdentifier: Int] = [:]
+        for (index, transaction) in book.transactions.enumerated() {
+            order[ObjectIdentifier(transaction)] = index
+        }
+        var movements: [Commodity: [(rank: Int, date: Date, quantity: Decimal)]] = [:]
+        // Same filter as `portfolio(_:currency:asOf:)`, deliberately: the two
+        // must agree on what "held" means, and a live harness cross-checks them
+        // against the real book.
+        for account in book.accounts where account.type.isSecurityType && !account.isPlaceholder {
+            for split in book.splits(for: account) {
+                guard split.reconcileState != .voided, split.quantity != 0,
+                      let transaction = split.transaction, transaction.datePosted <= asOf
+                else { continue }
+                movements[account.commodity, default: []].append(
+                    (order[ObjectIdentifier(transaction)] ?? 0,
+                     calendar.startOfDay(for: transaction.datePosted), split.quantity))
             }
+        }
+        let ordered = movements.mapValues { entries in
+            entries.sorted { ($0.date, $0.rank) < ($1.date, $1.rank) }
+                .map { (date: $0.date, quantity: $0.quantity) }
         }
 
         var results: [SecurityPriceHealth] = []
-        for commodity in Set(priceDays.keys).union(movements.keys) {
+        for commodity in Set(priceDays.keys).union(ordered.keys) {
             let exchange = TradingCalendar.exchange(of: commodity)
             let days = priceDays[commodity] ?? []
             let last = days.max()
-            let periods = holdingPeriods(from: movements[commodity] ?? [], asOf: today)
-            let units = (movements[commodity] ?? []).reduce(Decimal(0)) { $0 + $1.quantity }
+            let periods = holdingPeriods(from: ordered[commodity] ?? [], asOf: today)
+            let units = (ordered[commodity] ?? []).reduce(Decimal(0)) { $0 + $1.quantity }
 
             let behind = last.map {
                 tradingCalendar.tradingDaysBehind($0, for: exchange, asOf: today)

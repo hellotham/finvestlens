@@ -337,15 +337,20 @@ private struct InvestmentRowView: View {
                 .foregroundStyle(row.freshness.style)
                 .accessibilityHidden(true)
 
+            // Ahead of the name, at a fixed offset from the leading edge.
+            // Sitting after the name it inherited that column's width, and the
+            // name column was `minWidth` — so every differing name length put
+            // the chart somewhere else and the column visibly wandered down the
+            // page. A chart whose whole job is comparison has to be comparable.
+            Sparkline(segments: row.spark, window: sparkWindow)
+                .frame(width: 72, height: 22)
+                .accessibilityHidden(true)
+
             VStack(alignment: .leading, spacing: 1) {
                 Text(row.symbol).fontWeight(.medium)
                 Text(row.name).scaledFont(.caption).foregroundStyle(.secondary).lineLimit(1)
             }
             .frame(minWidth: 90, alignment: .leading)
-
-            Sparkline(segments: row.spark, window: sparkWindow)
-                .frame(width: 72, height: 22)
-                .accessibilityHidden(true)
 
             Spacer(minLength: 4)
 

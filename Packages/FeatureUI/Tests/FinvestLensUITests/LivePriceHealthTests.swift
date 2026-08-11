@@ -111,4 +111,156 @@ struct LivePriceHealthTests {
         // pass that a header band shows on arrival has to stay in that league.
         #expect(elapsed < 5, "price health took \(String(format: "%.2fs", elapsed))")
     }
+
+    @Test("The indexed lot events are identical to the scanning form, event for event")
+    func lotEventsMatchTheScan() async throws {
+        guard let perfPath else { return }
+        let source = URL(fileURLWithPath: perfPath)
+        let copy = FileManager.default.temporaryDirectory
+            .appendingPathComponent("fllots-\(UUID().uuidString).finvestlens")
+        try FileManager.default.copyItem(at: source, to: copy)
+        defer {
+            try? FileManager.default.removeItem(at: copy)
+            try? FileManager.default.removeItem(at: URL(fileURLWithPath: copy.path + ".audit.log"))
+        }
+
+        let model = AppModel()
+        await model.openBook(at: copy, breakStaleLock: true)
+        defer { model.close() }
+        let book = try #require(model.book)
+
+        /// The pre-index algorithm, verbatim: walk every transaction in the
+        /// book, per account. Cost basis is verified against GnuCash, so the
+        /// replacement has to be provably identical rather than merely green —
+        /// a reordering here moves realised gains without failing loudly.
+        func scanned(_ account: Account) -> [LotEvent] {
+            var events: [LotEvent] = []
+            for transaction in book.transactions {
+                var brokerage = Decimal(0)
+                var securitySplits = 0
+                for split in transaction.splits where split.reconcileState != .voided {
+                    if let type = split.account?.type {
+                        if type == .expense { brokerage += split.value }
+                        else if type.isSecurityType && split.quantity != 0 { securitySplits += 1 }
+                    }
+                }
+                let feePerSecurity = securitySplits > 0 ? brokerage / Decimal(securitySplits) : 0
+                for split in transaction.splits
+                where split.account === account && split.reconcileState != .voided
+                    && (split.quantity != 0 || split.action == "ReturnOfCapital") {
+                    let isTrade = split.quantity != 0 && split.action != "Split"
+                    events.append(LotEvent(date: transaction.datePosted,
+                                           quantity: split.quantity, value: split.value,
+                                           isSplit: split.action == "Split",
+                                           isReturnOfCapital: split.action == "ReturnOfCapital",
+                                           fee: isTrade ? feePerSecurity : 0))
+                }
+            }
+            return events
+        }
+
+        var accounts = 0, compared = 0
+        for account in book.accounts where account.type.isSecurityType && !account.isPlaceholder {
+            let indexed = book.lotEvents(for: account)
+            let reference = scanned(account)
+            accounts += 1
+            compared += reference.count
+            #expect(indexed.count == reference.count,
+                    "\(account.commodity.mnemonic): \(indexed.count) events against \(reference.count)")
+            for (lhs, rhs) in zip(indexed, reference) {
+                #expect(lhs.date == rhs.date && lhs.quantity == rhs.quantity
+                        && lhs.value == rhs.value && lhs.fee == rhs.fee
+                        && lhs.isSplit == rhs.isSplit && lhs.isReturnOfCapital == rhs.isReturnOfCapital,
+                        "\(account.commodity.mnemonic): an event differs from the scanning form")
+            }
+        }
+        print("lot events: \(compared) compared across \(accounts) security accounts, all identical")
+        #expect(accounts > 0)
+        #expect(compared > 0)
+    }
+
+    @Test("Building the holdings table repeatedly costs almost nothing after the first")
+    func rowsAreMemoised() async throws {
+        guard let perfPath else { return }
+        let source = URL(fileURLWithPath: perfPath)
+        let copy = FileManager.default.temporaryDirectory
+            .appendingPathComponent("flrows-\(UUID().uuidString).finvestlens")
+        try FileManager.default.copyItem(at: source, to: copy)
+        defer {
+            try? FileManager.default.removeItem(at: copy)
+            try? FileManager.default.removeItem(at: URL(fileURLWithPath: copy.path + ".audit.log"))
+        }
+
+        let model = AppModel()
+        await model.openBook(at: copy, breakStaleLock: true)
+        defer { model.close() }
+        let book = try #require(model.book)
+
+        // A SwiftUI body pass reads the rows many times over — once per group in
+        // the table, again per section header, again for the empty check. If
+        // each of those rebuilds the series from ~150k prices the destination
+        // takes seconds to draw, which is exactly what it did.
+        // Where the first build's time actually goes, measured rather than
+        // guessed: each of these memoises on `derivedRevision`, so timing them
+        // in order attributes the cost to the right component.
+        // Inside price health: the per-price day bucketing is the suspect, so
+        // time it alone rather than infer it.
+        let calendar = Calendar.current
+        let prices = book.prices
+        let tDay = Date()
+        var sink = 0
+        for price in prices { sink &+= calendar.startOfDay(for: price.date).hashValue }
+        let dayCost = Date().timeIntervalSince(tDay)
+        print("startOfDay over \(prices.count) prices: \(String(format: "%.2fs", dayCost)) (sink \(sink == 0 ? 0 : 1))")
+
+        let t0 = Date()
+        _ = model.priceHealth()
+        let healthCost = Date().timeIntervalSince(t0)
+
+        let t1 = Date()
+        _ = model.advancedPortfolio(asOf: AppModel.endOfToday())
+        let portfolioCost = Date().timeIntervalSince(t1)
+
+        let t2 = Date()
+        _ = model.investmentRows()
+        let remainder = Date().timeIntervalSince(t2)
+        print("""
+              first-build breakdown: priceHealth \(String(format: "%.2fs", healthCost)), \
+              advancedPortfolio \(String(format: "%.2fs", portfolioCost)), \
+              rows assembly + sparklines \(String(format: "%.2fs", remainder))
+              """)
+
+        // The number a person feels: everything the destination must compute
+        // before it can draw, from a book just opened. The three phases above
+        // are that total, since each was measured cold in turn.
+        let coldTotal = healthCost + portfolioCost + remainder
+        let rows = model.investmentRows()
+
+        let repeated = Date()
+        for _ in 0..<20 { _ = model.investmentRows() }
+        let warm = Date().timeIntervalSince(repeated) / 20
+
+        print("""
+              investmentRows: \(rows.count) rows, \
+              cold total \(String(format: "%.2fs", coldTotal)), \
+              repeat \(String(format: "%.4fs", warm))
+              """)
+
+        #expect(!rows.isEmpty)
+        // Was 5.99s before the split index, the lot-event rewrite and sharing
+        // one day-bucketing pass. The budget is deliberately well under that
+        // rather than at it, so a regression is caught while it is still small.
+        #expect(coldTotal < 2.0, "first paint needs \(String(format: "%.2fs", coldTotal))")
+        // Redrawing must be free: a SwiftUI body pass reads the rows many times
+        // over, once per group and again per section header.
+        #expect(warm < 0.2, "a repeat build costs \(String(format: "%.3fs", warm))")
+
+        // Changing the period must invalidate: the window is part of the answer.
+        model.sparkRange = .year
+        let yearRows = model.investmentRows()
+        #expect(yearRows.count == rows.count)
+        #expect(yearRows.reduce(0) { $0 + $1.spark.flatMap(\.points).count }
+                > rows.reduce(0) { $0 + $1.spark.flatMap(\.points).count },
+                "a longer window must produce more points, not a stale cache hit")
+    }
 }
