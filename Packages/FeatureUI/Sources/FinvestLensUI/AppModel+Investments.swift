@@ -259,7 +259,12 @@ extension AppModel {
         guard let health = priceHealth() else { return [] }
         var issues: [InvestmentIssue] = []
 
-        func add(_ kind: InvestmentIssue.Kind, _ matching: (SecurityPriceHealth) -> Bool) {
+        // `@MainActor` on the predicate is load-bearing: without it the closure
+        // is task-isolated while `filter`'s closure is main-actor-isolated, and
+        // Swift 6 rejects passing one into the other. Debug builds let it pass;
+        // the release build does not, so this only appeared when `finlab` was
+        // built with `-c release`.
+        func add(_ kind: InvestmentIssue.Kind, _ matching: @MainActor (SecurityPriceHealth) -> Bool) {
             let hits = health.securities.filter { $0.isHeld && matching($0) }
             guard !hits.isEmpty else { return }
             issues.append(InvestmentIssue(kind: kind, count: hits.count,

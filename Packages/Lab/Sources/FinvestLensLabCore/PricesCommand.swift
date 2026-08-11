@@ -35,8 +35,42 @@ enum PricesCommand {
         }
         defer { _ = model.saveAndCloseIfOpen() }
 
-        let securities = model.pricableSecurities
-        log("Prices for \(file.lastPathComponent) — \(securities.count) securit\(securities.count == 1 ? "y" : "ies")")
+        // `--symbol` scopes the run. A keyed provider's quota is finite and a
+        // book of eighty securities is mostly fine at any moment; when one
+        // holding has fallen behind, fetching the other seventy-nine is waste
+        // that also rewrites data nobody asked to touch.
+        let wanted = (options.string("symbol") ?? "")
+            .split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespaces).uppercased() }
+            .filter { !$0.isEmpty }
+        let all = model.pricableSecurities
+        let securities: [Commodity]
+        if wanted.isEmpty {
+            securities = all
+        } else {
+            // Match the book's mnemonic or the ticker override actually sent to
+            // the provider, so `--symbol NABPF` finds `NABPF.AX` either way.
+            securities = all.filter { commodity in
+                let mnemonic = commodity.mnemonic.uppercased()
+                let override = (model.quoteSymbol(for: commodity) ?? "").uppercased()
+                return wanted.contains { want in
+                    mnemonic == want || override == want
+                        || mnemonic.hasPrefix(want + ".") || override.hasPrefix(want + ".")
+                }
+            }
+            let missing = wanted.filter { want in
+                !securities.contains { $0.mnemonic.uppercased() == want
+                    || $0.mnemonic.uppercased().hasPrefix(want + ".")
+                    || (model.quoteSymbol(for: $0) ?? "").uppercased() == want }
+            }
+            if !missing.isEmpty {
+                throw LabError.message("no security matches \(missing.joined(separator: ", ")) — "
+                                       + "the book knows \(all.count) securities")
+            }
+        }
+
+        log("Prices for \(file.lastPathComponent) — \(securities.count) securit\(securities.count == 1 ? "y" : "ies")"
+            + (wanted.isEmpty ? "" : " of \(all.count)"))
         log(Fmt.row("open book", Fmt.time(openSeconds)))
         log("  provider: \(kind)")
 
@@ -44,6 +78,7 @@ enum PricesCommand {
             log("  nothing to price.")
             return
         }
+        if options.flag("replace") { log("  mode: REPLACE — existing prices for these securities are discarded") }
         if options.flag("dry-run") {
             log("  --dry-run: would fetch " + securities.map(\.mnemonic).sorted().joined(separator: ", "))
             return
@@ -55,9 +90,21 @@ enum PricesCommand {
         func storedPoints() -> Int {
             securities.reduce(0) { $0 + model.priceHistory(for: $1).count }
         }
+        let replacing = options.flag("replace")
         let before = storedPoints()
         let (_, fetchSeconds) = await Stopwatch.measure {
-            await model.updatePriceHistory(using: kind)
+            if replacing {
+                // Everything this provider has, in place of what is there —
+                // for a security whose stored series came from several sources
+                // and should come from one. Destructive, hence opt-in, and the
+                // engine only overwrites a security whose fetch actually
+                // returned data, so a failed run cannot empty a series.
+                await model.refetchPriceHistory(for: securities, using: kind)
+            } else {
+                // Merging: fills the dates the book lacks and leaves the ones
+                // it has, so history a provider no longer serves survives.
+                await model.updatePriceHistory(for: securities, using: kind)
+            }
         }
         let after = storedPoints()
 

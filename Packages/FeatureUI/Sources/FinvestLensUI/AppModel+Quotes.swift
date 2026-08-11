@@ -175,6 +175,21 @@ extension AppModel {
                            label: "Update Price History")
     }
 
+    /// The same gap-filling update, scoped to chosen securities (`FR-INV-23`).
+    ///
+    /// The distinction from ``refetchPriceHistory(for:using:)`` is the one that
+    /// matters when a single holding has fallen behind: this **merges**, adding
+    /// only dates the book does not already hold, while refetch replaces the
+    /// series outright. A security whose early history was imported from
+    /// GnuCash and whose recent years a provider stopped serving needs the
+    /// former — the replacing form would discard the good years to fix the bad
+    /// ones.
+    public func updatePriceHistory(for commodities: [Commodity],
+                                   using kind: QuoteProviderKind) async {
+        await fetchHistory(for: commodities, using: kind, replacing: false,
+                           label: "Update Price History")
+    }
+
     /// The one-click path (redesign 6.4, ⌘⇧U): update every security's price
     /// history with the default provider and toast the outcome. The journey's
     /// most frequent task, callable from the menu, the Up Next card, and the

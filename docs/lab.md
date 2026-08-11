@@ -61,11 +61,25 @@ against the file in place, which is the number a person feels when they press
 ⌘S on a book that lives on a NAS. Reports whether the volume is local or a
 share — read from the filesystem, not guessed from the path.
 
-### `prices` — refresh every security
+### `prices` — refresh securities
 
 ```bash
-finlab prices --file Book.finvestlens [--provider yahoo|stooq|…] [--dry-run]
+finlab prices --file Book.finvestlens [--provider yahoo|stooq|…] \
+              [--symbol NABPF,CBA] [--replace] [--dry-run]
 ```
+
+`--symbol` scopes the run to named securities (comma-separated, matched against
+the book's mnemonic or the ticker override, so `NABPF` finds `NABPF.AX`). A
+keyed provider's quota is finite, and when one holding has fallen behind,
+fetching the other seventy-nine is waste that also rewrites data nobody asked
+to touch. An unmatched name is an error rather than a silent no-op.
+
+`--replace` discards the named securities' stored prices and rebuilds them from
+this provider, instead of the default merge that only adds dates the book
+lacks. Use it when a series has accumulated several sources and should come
+from one; the merge is right when a provider no longer serves history the book
+already holds. The engine only overwrites a security whose fetch actually
+returned data, so a failed run cannot empty a series.
 
 Goes through `AppModel.updatePriceHistory`, the same call ⌘⇧U makes. Yahoo (the
 default) and Stooq need no API key; keyed providers read

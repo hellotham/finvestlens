@@ -20,6 +20,45 @@ Companions: [PRD](prd.md) · [Architecture](architecture.md) · [Plan](plan.md) 
 
 ---
 
+## P11 · Per-security price fetch, and NABPF from EODHD (11 Aug 2026)
+
+The first thing the new destination was used for found a real hole: one holding
+had been effectively unpriced since 2023 — 41 rows across three and a half
+years where about 875 belong — because Yahoo does not serve that ASX hybrid.
+Exactly the case `FR-INV-03c` names EODHD for.
+
+Nothing could act on it. `updatePriceHistory` covers *every* security and
+`refetchPriceHistory` covers a subset but **replaces**; there was no way to fill
+one security's gaps. Added, as the first half of `FR-INV-23`:
+
+- `AppModel.updatePriceHistory(for:using:)` — the merging update, scoped to
+  chosen securities. The distinction from the replacing twin is the one that
+  matters here: a security whose early history came from GnuCash and whose
+  recent years a provider stopped serving needs a merge, because replacing
+  would discard the good years to fix the bad ones.
+- `finlab prices --symbol` (comma-separated, matched on mnemonic or ticker
+  override) and `--replace`. An unmatched name is an error, not a silent no-op.
+
+Both were used on the reference book: a merge added 858 prices for 2022–2026
+and left the 2019–2021 GnuCash rows untouched, then — on the maintainer's
+instruction to single-source the security — a replace rebuilt the whole series
+from EODHD: **1,846 rows, one source, 2019-03-21 through 2026-07-17, no
+duplicate days**. EODHD's own history was checked first and covers the book's
+full range; replacing a longer series with a shorter one loses data silently,
+so that is a check and not a formality.
+
+Neither provider has anything after 17 July 2026 and EODHD still lists the
+security, so the remaining absence is the market's, not the database's.
+
+`finlab` reads keys from `FINLAB_<PROVIDER>_KEY` and never from the Keychain —
+the app's items carry an ACL naming the app binary. The key was passed by shell
+substitution from the Keychain so it was never written down anywhere.
+
+Fixed while building this: `investmentIssues`' predicate needed `@MainActor`.
+Task-isolated closures cannot be passed into `filter`'s main-actor-isolated one
+under Swift 6 — debug builds accept it and `-c release` does not, so it only
+appeared when `finlab` was built for release.
+
 ## P11 · I2a — the destination's first paint, and the Engine scans behind it (11 Aug 2026)
 
 Reported from the running app: the destination took seconds to draw, and the
