@@ -143,8 +143,12 @@ the real book), and the `hookify.*.local.md` rules gate
 These gates are the user's, not yours: never weaken or bypass one except on an
 explicit instruction, and treat a rejection as a defect list, not an obstacle.
 
-Two things they deliberately allow, because the alternative is a gate people
-route around. A **blocker stated next to the item it blocks** passes
+Three things they deliberately allow, because the alternative is a gate people
+route around. **No code changed means no build is owed** — `check-directives.py`
+skips its build attestations unless the turn edited a `.swift` file, and reads
+a not-run report ("iOS build not attempted") as the honesty it is rather than
+as a claim; it once cost two full platform builds on a turn that changed one
+Markdown file. A **blocker stated next to the item it blocks** passes
 `check-no-deferrals.py` ("X remains undone because Y" — the sibling gate
 *requires* exactly this); a blocker far from the item does not, since one honest
 sentence must not excuse a whole list. And **quoted, code-spanned and

@@ -70,6 +70,19 @@ def tried(*commands):
         {"type": "tool_use", "name": "Bash", "input": {"command": c}} for c in commands]}}
 
 
+def wrote(*paths):
+    """Assistant edits to specific files — a `.swift` path is what makes a
+    build claim answerable, and a `.md` path is what makes it moot."""
+    return {"type": "assistant", "message": {"content": [
+        {"type": "tool_use", "name": "Edit", "input": {"file_path": p}} for p in paths]}}
+
+
+def ran(*commands):
+    """Assistant Bash calls, as the evidence scanner sees them."""
+    return {"type": "assistant", "message": {"content": [
+        {"type": "tool_use", "name": "Bash", "input": {"command": c}} for c in commands]}}
+
+
 def edits(root, *paths):
     return {"type": "assistant", "message": {"content": [
         {"type": "tool_use", "name": "Edit",
@@ -237,6 +250,30 @@ def cases(fixture):
            bash('git log -1 --format=%B | grep "$1,234,567.89"'), ROOT)
     yield ("figure declared synthetic", "allowed", FIGURES,
            bash('git commit -m "demo book shows $1,234,567.89 — figures are synthetic"'), ROOT)
+
+    # --- attestation: a build claim is owed only when code changed ---
+    ATTEST = "check-directives.py"
+    TIDY = "tidy the working rules"
+    MACOS = "xcodebuild build -scheme finvestlens -destination 'platform=macOS'"
+    IOS = "xcodebuild build -scheme finvestlens -destination 'generic/platform=iOS Simulator'"
+
+    # The verbatim failure: a Markdown-only turn, honestly reporting that the
+    # builds were not run, blocked because "both platform builds" reads as a
+    # claim. Two full builds were then run to satisfy it — pure make-work.
+    yield ("prose-only turn, builds honestly not run", "allowed", ATTEST,
+           [user(TIDY), wrote("CLAUDE.md"),
+            says("Trimmed the rule. Not run: the package suites and both platform "
+                 "builds — a Markdown file is not an input to any Swift target.")],
+           ROOT)
+    yield ("code changed, build claimed, none run", "BLOCKED", ATTEST,
+           [user(TIDY), wrote("Packages/Engine/Sources/FinvestLensEngine/Book.swift"),
+            says("Fixed the parser. Both platforms build.")], ROOT)
+    yield ("code changed, both builds actually run", "allowed", ATTEST,
+           [user(TIDY), wrote("Packages/Engine/Sources/FinvestLensEngine/Book.swift"),
+            ran(MACOS, IOS), says("Fixed the parser. Both platforms build.")], ROOT)
+    yield ("code changed, honest not-attempted report", "allowed", ATTEST,
+           [user(TIDY), wrote("Packages/Engine/Sources/FinvestLensEngine/Book.swift"),
+            ran(MACOS), says("macOS builds. iOS build not attempted.")], ROOT)
 
     # --- check-docs, against the fixture repo ---
     yield ("help edited, committed with its manual", "allowed", DOCS,

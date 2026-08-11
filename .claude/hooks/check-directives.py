@@ -139,11 +139,35 @@ HYPOTHETICAL = re.compile(
 )
 
 
+# A claim that is *denied* is not a claim. CLAUDE.md ▸ Working rules requires
+# naming what was **not** run ("iOS build not attempted"), and the only way to
+# write that sentence is with the same words as the claim — so a gate that
+# cannot tell "both platforms build" from "both platform builds — not run"
+# punishes precisely the honesty it exists to demand. The negation can sit on
+# either side of the match, so both are read.
+NOT_RUN = re.compile(
+    r"\b(?:not|never|isn'?t|wasn'?t|weren'?t|aren'?t|didn'?t|don'?t|no)\b"
+    r"[^.\n]{0,20}\b(?:re)?(?:run|ran|attempt(?:ed)?|built|build|rebuilt|needed"
+    r"|required|necessary|executed|tried|touched)\b"
+    r"|\bskipped\b|\bnothing to (?:re)?build\b|\bunverified\b",
+    re.I)
+
+# Compiled-from-source claims only need a fresh receipt when the turn produced
+# something new to compile. Demanding a rebuild after a prose-only turn is not
+# rigour, it is make-work — and it taught exactly that: two full platform
+# builds were run to satisfy this gate on a turn whose only change was one
+# Markdown file. The user's rule: "if you did not change code, you shouldn't
+# rebuild."
+BUILD_CLAIMS = {"a build result", "both platforms building (needs both destinations)"}
+SOURCE_EDIT = r'"file_path"\s*:\s*"[^"]+\.swift"'
+
+
 def asserted(claim_pattern, text):
     """True iff `text` states the claim as a done fact at least once."""
     for match in re.finditer(claim_pattern, text, re.I):
+        window = text[max(0, match.start() - 60):match.end() + 60]
         before = text[max(0, match.start() - 60):match.start()]
-        if HYPOTHETICAL.search(before):
+        if HYPOTHETICAL.search(before) or NOT_RUN.search(window):
             continue
         return True
     return False
@@ -275,7 +299,10 @@ def main():
             break
     unproven = []
     last_user = user_idx[-1]
+    touched_source = evidence_after(records, last_user, [SOURCE_EDIT])
     for label, claim, evidence in CLAIMS:
+        if label in BUILD_CLAIMS and not touched_source:
+            continue                 # nothing new to compile; no receipt owed
         if asserted(claim, final) \
                 and not evidence_after(records, last_user, evidence):
             unproven.append(label)
