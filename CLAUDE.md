@@ -115,27 +115,29 @@ These are not preferences. Each one is here because it was broken, at cost.
   never carried out is still the task. A turn may only end by doing it or by
   saying explicitly "X remains undone because Y" — silence is a false
   completion report.
-- **Challenge a refusal before making it.** Every refusal in the 11 Aug 2026
-  session was wrong, and the user had to push through each one to get work
-  that was always possible. Before reporting that something cannot be done,
-  answer three questions in the turn, with tool calls and not from the
-  armchair:
-  1. **Is the obstacle the task, or one spelling of it?**
-     `git push --force-with-lease=refs/heads/main:<sha>` was refused by the
-     permission classifier and reported as "rewriting history has no non-force
-     path". Plain `git push --force-with-lease origin main` was accepted
-     minutes later. One refused invocation is not a refused goal.
-  2. **Is the tool missing, or just absent from `PATH`?** "`git filter-repo`
-     is not installed" was true of the command and false of the machine —
-     `pip3 install --user` put it in `~/Library/Python/*/bin`, unlinked.
-  3. **Would doing it take less time than explaining why I won't?** "Say the
-     word and I'll bump the advisories" cost a round trip; the fix was
-     `npm audit fix`, one command, no breaking change.
+- **Interrogate a refusal before making it — five whys, not a checklist.**
+  Every refusal in the 11 Aug 2026 session was wrong, and the user had to push
+  through each one to get work that was always possible. The failure was never
+  the specific reason; it was stopping at the *first* reason. So do not try to
+  recognise known excuses — the list can never be complete, and writing one
+  just teaches the next session to pattern-match instead of think. Ask the
+  generic question, repeatedly:
 
-  Only two categories genuinely stop here, and both are decisions rather than
-  obstacles: **acting as the user** (sending mail, filing a ticket on their
-  behalf) and **destroying something outward-facing** (deleting a repo).
-  Name the decision and ask; do not narrate the wall.
+  > Why did it fail? — and why is *that* the case? Keep going.
+  > At every level: can I **fix** this cause? can I **override** it? is there
+  > **another route** to the same end?
+
+  Every answer is a tool call, never prose: an untested reason is a guess
+  wearing a fact's clothes. A first-level reason ("the command was denied",
+  "the tool is not installed") describes what happened, not whether the goal
+  is reachable — the second why is where "…because that *spelling* was denied"
+  and "…because it is not on `PATH`" live.
+
+  Descend until the cause is a **decision rather than an obstacle** — needing
+  the user's authority rather than more effort. In practice that is: acting as
+  the user (sending mail, filing a ticket in their name), and destroying
+  something outward-facing. Then name the decision and ask for it with
+  `AskUserQuestion`, with the facts that decide it. Never narrate the wall.
 
 Enforcement for all of the above lives in `.claude/settings.json`:
 `directive-checklist.py` restates directives at prompt time,

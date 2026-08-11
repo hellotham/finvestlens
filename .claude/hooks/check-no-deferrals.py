@@ -358,8 +358,18 @@ def main():
         "'that's your call', 'add a permission rule' — then do it yourself "
         "instead. That phrasing clears this gate only when something in this "
         "turn actually refused you (a tool denial, a hook block) or when it is "
-        "the on-screen check the user always does. Exhaust the alternatives "
-        "first: a blocked tool is not a blocked task."}))
+        "the on-screen check the user always does.\n\n"
+        "Before you write that something cannot be done, interrogate it. Ask "
+        "why it failed; then ask why of that answer, and again — five levels "
+        "is usually more than enough. At every level ask the same three "
+        "questions: can I FIX this cause, can I OVERRIDE it, is there ANOTHER "
+        "ROUTE to the same end? Answer each with a tool call, not with prose — "
+        "an untested reason is a guess. A first-level reason ('the command was "
+        "denied', 'the tool is not installed') is never the last word: it says "
+        "what happened, not whether the goal is reachable. Stop only when the "
+        "cause is a DECISION rather than an obstacle — something needing the "
+        "user's authority rather than more effort — and then name the decision "
+        "and ask for it. A blocked tool is not a blocked task."}))
 
 
 if __name__ == "__main__":
