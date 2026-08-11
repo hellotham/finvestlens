@@ -18,15 +18,15 @@ struct DocumentClassifierIncomeTests {
 
     @Test("A capital-note advice that never says “dividend” is still income")
     func distributionWithoutTheWordDividend() {
-        // NAB capital notes: the word "dividend" appears nowhere. Requiring it
+        // Capital notes: the word "dividend" appears nowhere. Requiring it
         // sent this to the invoice path, which then hunted for that amount going
         // *out* of the account — while the deposit sat in the book on the day
         // the advice names.
         let advice = """
-            NAB CAPITAL NOTES 2 — DISTRIBUTION PAYMENT ADVICE
+            XYZ CAPITAL NOTES 2 — DISTRIBUTION PAYMENT ADVICE
             Record Date: 9 March 2026      Payment Date: 17 March 2026
-            Distribution rate per note   $0.9338
-            Franked amount   500.00
+            Distribution rate per note   $0.7000
+            Franked amount   350.00
             """
         #expect(DocumentClassifier.isSecurityIncome(advice))
     }

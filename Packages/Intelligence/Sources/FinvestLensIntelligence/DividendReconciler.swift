@@ -116,9 +116,9 @@ enum DividendReconciler {
             // If one component already accounts for the whole payment, the other
             // is necessarily zero — they sum to it. Worth stating explicitly,
             // because the figure that turns up in the column that should be empty
-            // is a *rate* read as an amount: NAB capital-note statements print a
-            // distribution of $0.9338 per note, and that figure is on the page, so
-            // the printed-check has no grounds to refuse it. The arithmetic does.
+            // is a *rate* read as an amount: capital-note statements print a
+            // distribution per note, and that figure is on the page, so the
+            // printed-check has no grounds to refuse it. The arithmetic does.
             if franked == known, unfranked != 0 { unfranked = 0 }
             else if unfranked == known, franked != 0 { franked = 0 }
         } else if let franked, let unfranked, franked + unfranked != 0 {

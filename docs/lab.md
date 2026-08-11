@@ -65,11 +65,11 @@ share — read from the filesystem, not guessed from the path.
 
 ```bash
 finlab prices --file Book.finvestlens [--provider yahoo|stooq|…] \
-              [--symbol NABPF,CBA] [--replace] [--dry-run]
+              [--symbol CBA,BHP] [--replace] [--dry-run]
 ```
 
 `--symbol` scopes the run to named securities (comma-separated, matched against
-the book's mnemonic or the ticker override, so `NABPF` finds `NABPF.AX`). A
+the book's mnemonic or the ticker override, so `CBA` finds `CBA.AX`). A
 keyed provider's quota is finite, and when one holding has fallen behind,
 fetching the other seventy-nine is waste that also rewrites data nobody asked
 to touch. An unmatched name is an error rather than a silent no-op.

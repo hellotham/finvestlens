@@ -49,7 +49,7 @@ enum PricesCommand {
             securities = all
         } else {
             // Match the book's mnemonic or the ticker override actually sent to
-            // the provider, so `--symbol NABPF` finds `NABPF.AX` either way.
+            // the provider, so `--symbol CBA` finds `CBA.AX` either way.
             securities = all.filter { commodity in
                 let mnemonic = commodity.mnemonic.uppercased()
                 let override = (model.quoteSymbol(for: commodity) ?? "").uppercased()

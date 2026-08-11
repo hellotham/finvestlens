@@ -56,9 +56,9 @@ public enum DividendExtractor {
 
     /// Field order matters, and the order that works is not the printed one.
     /// Asking for Unfranked before Franked — as the table prints them — made
-    /// every Plato statement come back as the $0.0055 rate in all three
-    /// columns and NAB's unfranked amount as 85, the cents figure. Franked
-    /// first holds the row in place. Measured, not reasoned.
+    /// one issuer's statements come back with the per-unit *rate* in all three
+    /// columns, and another's unfranked amount as just the cents figure.
+    /// Franked first holds the row in place. Measured, not reasoned.
     @Generable
     struct ModelDividend {
         @Guide(description: "Company or fund name paying the dividend")
@@ -89,9 +89,9 @@ public enum DividendExtractor {
         //
         // The franking credit has its own column whose header wraps across two
         // lines — "Franking" above "Credit" — and without being told that, the
-        // model misses the column on every statement tried: it returned 0 with
-        // $728.57 (NAB) and $252.86 (Plato) printed on the page. Naming the
-        // column fixes both.
+        // model misses the column on every statement tried: it returned 0 on
+        // two different issuers' statements with the credit plainly printed on
+        // the page. Naming the column fixes both.
         //
         // "Never subtract" earns its place too. Mentioning franking credits at
         // all makes the model want to net them off the payment, and it will

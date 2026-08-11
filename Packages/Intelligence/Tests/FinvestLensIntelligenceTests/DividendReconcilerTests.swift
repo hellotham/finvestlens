@@ -99,23 +99,23 @@ struct DividendReconcilerTests {
 
     @Test("A rate read into the empty component column is zeroed")
     func rateInTheWrongColumn() {
-        // NAB capital-note statements print a distribution per note, and the
+        // Capital-note statements print a distribution per note, and the
         // model puts that rate in the Unfranked column. It is on the page, so
         // the printed-check cannot object — but the franked amount already
         // equals the payment, and the two components sum to it, so the other
         // one can only be zero.
         let notes = """
-            NAB CAPITAL NOTES (ASX: NABPF)
-            Distribution rate per note   $0.9338
+            CAPITAL NOTES (ASX: XYZPA)
+            Distribution rate per note   $0.7000
             Unfranked   Franked   Franking Credit
-            0.00   466.90   200.10   Net Payment:   466.90
+            0.00   350.00   150.00   Net Payment:   350.00
             """
         let details = DividendReconciler.details(
-            from: RawDividendFigures(franked: "466.90", unfranked: "0.9338",
-                                     credits: "200.10", net: "466.90"),
+            from: RawDividendFigures(franked: "350.00", unfranked: "0.7000",
+                                     credits: "150.00", net: "350.00"),
             printedIn: notes)
         #expect(details.unfrankedAmount == 0)
-        #expect(details.frankedAmount == Decimal(string: "466.90"))
+        #expect(details.frankedAmount == Decimal(string: "350.00"))
         #expect(details.componentsMatchPayment)
     }
 
@@ -127,13 +127,13 @@ struct DividendReconcilerTests {
         // all of it. Refused, then recovered by grossing up.
         let notes = """
             Unfranked   Franked   Franking Credit
-            0.00   466.90   200.10   Net Payment:   466.90
+            0.00   350.00   150.00   Net Payment:   350.00
             """
         let details = DividendReconciler.details(
-            from: RawDividendFigures(franked: "466.90", unfranked: "0.00",
-                                     credits: "466.90", net: "466.90"),
+            from: RawDividendFigures(franked: "350.00", unfranked: "0.00",
+                                     credits: "350.00", net: "350.00"),
             printedIn: notes)
-        #expect(details.frankingCredits == Decimal(string: "200.10"))
+        #expect(details.frankingCredits == Decimal(string: "150.00"))
     }
 
     @Test("An unfranked distribution grosses up to nothing")

@@ -20,6 +20,68 @@ Companions: [PRD](prd.md) · [Architecture](architecture.md) · [Plan](plan.md) 
 
 ---
 
+## The real-data gate never looked at fixtures (12 Aug 2026)
+
+`check-no-real-data.py` opens by naming the rule it enforces — the reference
+book's contents "never reach **fixtures**, screenshots, logs or the website" —
+and then scanned `docs/`, `website/` and `README.md` only. Fixtures, named
+first, were the one root it had never opened.
+
+Found by hand in that blind spot: a dividend reconciler test carrying a real
+capital-note statement — a net payment, its franking credits, and the
+distribution rate per note, all copied off the page while reproducing a parser
+defect. The payment alone is modest, which is exactly why no magnitude rule
+reached it; but the printed rate divides into the payment a whole number of
+times, so the fixture published the size of the holding as well as its issuer.
+Replaced with synthetic figures preserving every property the two tests assert
+(franked equals the net payment; credits are three sevenths of the dividend, so
+the gross-up recovery still lands): 11 tests, all green.
+
+The first grep found one file; sweeping properly found four. The same statement
+had seeded a classifier fixture, and two source comments recorded real payment
+amounts as evidence for why the extraction prompt is ordered the way it is —
+the claim survives without them ("it returned 0 on two different issuers'
+statements with the credit plainly printed"), which is the same substitution
+the commit-message cleanup made in July. `DividendReconcilerTests` had said in
+its own header that the figures were changed; they were internally consistent
+with the real per-note rate, so that statement is now true rather than
+intended.
+
+Left alone deliberately: institution names in importer fixtures (`ANZ CREDIT
+CARD` in an MT940 narrative, an ETF's actual name, `Commonwealth Bank` as a
+commodity's `fullName`). Those are *formats*, not holdings — genericising them
+would cost the fixtures their realism and protect nothing. So are ordinary
+illustration amounts, a grocery line or a single distribution with no printed
+rate to divide by: nothing is recoverable from one figure.
+
+The gate now covers `Packages/**/*.swift` and `finvestlens/**/*.swift`, with
+`.build/` skipped beside `node_modules/` and `dist/` — 1,928 of the 2,371 Swift
+files under `Packages/` are third-party checkouts, and a hit in someone else's
+code is noise, not a finding.
+
+Two changes were needed to make that scope survivable:
+
+- **A waiver Swift can express.** The only waiver was `<!-- synthetic -->`. The
+  widget's sample balance sits inside a multi-line string literal on a line
+  ending in a `\` continuation, where any trailing token corrupts the JSON
+  under test — so the waiver now also accepts `//` and `#` openers.
+- **A placeholder rule.** `$1,234,567.89` is nobody's balance. A run of
+  ascending digits from 1 is recognised as invented, rather than demanding a
+  waiver on the one figure that is self-evidently not real.
+
+What the gate still does not catch is stated in its own docstring rather than
+left implied: those figures sit beneath any threshold that would not also flag
+every share price in the suite. Magnitude is what a regex can judge;
+provenance — *where did this number come from* — stays the maintainer's, which
+is what CLAUDE.md ▸ Review gates already assigns to a person. Verified in both
+directions with 13 cases over `offending()`, and clean on the tree.
+
+Also genericised: `NABPF` as the worked example in `finlab prices --symbol`
+([lab.md](lab.md), `PricesCommand.swift`) and in this file's own P11 heading.
+The ticker is public, but as the example in a page about maintaining *the*
+reference book it implied a holding; `CBA` is the repo's existing illustration
+and carries no such signal.
+
 ## One clock for prices — GnuCash's neutral time (11 Aug 2026)
 
 A price is a fact about a **day**, and storing it as an instant let conventions
@@ -156,7 +218,7 @@ book measured 6.7 ms; the SQLite path reuses the existing reader, telling the
 two schemas apart by table name (`accounts`/`transactions` against our
 `account`/`txn`, read from `libgnucash/backend/sql/`).
 
-## P11 · Per-security price fetch, and NABPF from EODHD (11 Aug 2026)
+## P11 · Per-security price fetch, and a single-source rebuild (11 Aug 2026)
 
 The first thing the new destination was used for found a real hole: one holding
 had been effectively unpriced since 2023 — 41 rows across three and a half

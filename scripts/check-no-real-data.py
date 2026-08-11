@@ -25,6 +25,18 @@ obviously synthetic or explicitly waived on the line.
 
 Waive with a trailing `<!-- synthetic -->` comment when a large figure really is
 made up (the Acme/Globex business fixtures, a loan-calculator illustration).
+
+The magnitude rule has a known floor, and it is not an oversight to fix by
+lowering `THRESHOLD`. A real dividend payment and its franking credits were
+sitting in a reconciler fixture on 12 Aug 2026 — three figures under a hundred
+dollars each, and between them enough to recover the size of the holding, since
+the printed per-note rate divides into the payment. No size rule reaches that:
+small amounts are exactly what a legitimate example looks like, and dropping
+the threshold far enough to catch them would flag every share price in the
+suite, which is how a gate gets ignored. What catches that class is a person
+reading the fixture and asking where the number came from — the judgement
+CLAUDE.md deliberately leaves with the maintainer. This gate covers magnitude;
+it does not claim to cover provenance.
 """
 
 from __future__ import annotations
@@ -39,6 +51,15 @@ ROOTS = [
     ("docs", "*.md"),
     ("website/src", "*"),
     ("website/public", "*"),
+    # Fixtures are named first in the rule above and were the one place this
+    # gate never looked. A test file is as public as a doc — same repository,
+    # same GitHub page — and it is where a figure copied off a real statement
+    # while reproducing a parser defect actually lands.
+    ("Packages", "*.swift"),
+    ("finvestlens", "*.swift"),
+    # Including this file: a gate that quotes the figure it caught republishes
+    # it, and that is the mistake this whole entry is about.
+    ("scripts", "*"),
 ]
 EXTRA_FILES = ["README.md"]
 
@@ -49,7 +70,20 @@ SKIP = {"docs/ledger-format-reference.md", "docs/ledger-cli-reference.md"}
 THRESHOLD = 10_000
 
 MONEY = re.compile(r"\$([0-9][0-9,]*)(\.[0-9]{2})?\b")
-WAIVER = re.compile(r"<!--\s*synthetic\s*-->", re.I)
+# `<!--` suits Markdown; Swift and Python need their own comment openers, and
+# without one the Swift roots could not be waived at all — the widget's sample
+# balance sits inside a multi-line string literal whose line ends in a `\`
+# continuation, where any trailing token would corrupt the JSON being tested.
+WAIVER = re.compile(r"(?:<!--|//|#)\s*synthetic", re.I)
+# 1234567 is nobody's balance. A run of ascending digits from 1 is the
+# universal placeholder, and demanding a waiver comment for it would put the
+# burden on the one figure that is self-evidently invented.
+DIGITS = "123456789"
+
+
+def isPlaceholder(whole: str) -> bool:
+    bare = whole.replace(",", "")
+    return len(bare) >= 4 and DIGITS.startswith(bare)
 
 
 def offending(line: str) -> list[str]:
@@ -60,6 +94,8 @@ def offending(line: str) -> list[str]:
         try:
             value = int(whole.replace(",", ""))
         except ValueError:
+            continue
+        if isPlaceholder(whole):
             continue
         # Cents on a large number is the signature of a real balance; a
         # round million is one whichever way it is written.
@@ -78,7 +114,7 @@ def main() -> int:
     problems: list[str] = []
     for path in sorted(set(files)):
         rel = str(path.relative_to(REPO))
-        if rel in SKIP or "/node_modules/" in rel or "/dist/" in rel:
+        if rel in SKIP or any(d in rel for d in ("/node_modules/", "/dist/", "/.build/")):
             continue
         try:
             text = path.read_text(encoding="utf-8")
