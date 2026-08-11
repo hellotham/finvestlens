@@ -20,6 +20,58 @@ Companions: [PRD](prd.md) · [Architecture](architecture.md) · [Plan](plan.md) 
 
 ---
 
+## P11 · I1 — the price-health models (11 Aug 2026)
+
+First phase of the Investments hub ([investments-design.md](investments-design.md)).
+**Models only — no UI changed, and the Prices & Securities destination is
+untouched until I2.** `FinancialReports.priceHealth(_:currency:asOf:…)` in
+`Packages/Reports/Sources/FinvestLensReports/PriceHealth.swift`.
+
+Three ideas, each replacing something the old destination got wrong:
+
+- **Freshness against observed trading days** (`FR-INV-10`). `TradingCalendar`
+  infers each exchange's trading days from the book's own price history rather
+  than shipping holiday tables — self-maintaining, and automatically right about
+  weekends, holidays and half-days. An exchange too sparse to speak for itself
+  (a handful of bonds) borrows the book-wide union; only an empty book falls
+  back to bare weekdays. Freshness is measured against the exchange's latest
+  observed day, not against `asOf`, so **a Friday close reads as current on
+  Monday** — the false alarm elapsed-day arithmetic produces every week.
+- **Holding-aware gaps** (`FR-INV-26`). A missing price is a defect only inside
+  a period the security was held; that is when it silently corrupts historical
+  net worth. `holdingPeriods(from:asOf:)` derives those periods from split
+  quantities (a partial sale does not close one). This is what makes
+  `FR-INV-25` precise — fetch a closed position where its held period has holes,
+  not for today's price.
+- **Value-weighted coverage** (`FR-INV-09`). The fraction of *held market value*
+  priced on the latest trading day. A count cannot distinguish "all fine" from
+  "one holding is most of the book and a month stale". `nil` when nothing held
+  can be valued — a different statement from 0%.
+
+Also surfaced: per-source provenance (`FR-INV-27`), which the book has always
+recorded and no UI has ever shown; and `priceCount` (rows) alongside
+`pricedDays` (distinct days), whose difference counts duplicate same-day prices.
+
+`priceHealth` takes an explicit `Calendar` rather than always using `.current`:
+every date it returns is a start-of-day in that calendar, so a caller — or a CI
+machine in another zone — has to be able to agree on which one.
+
+**Verified.** 15 unit tests (`PriceHealthTests`), and `LivePriceHealthTests`
+against the real book behind `FL_PERF_FILE`, which computes health for 81
+securities in 1.13 s and cross-checks the held population against
+`FinancialReports.portfolio` — two independent paths that must not disagree in
+front of the user. Its first run found a real defect (rows vs days), which is
+why the harness exists.
+
+**What it measured**, and what justifies the rest of P11: 86.0% value-weighted
+coverage; 25 held securities current, 7 old, 7 that no provider can price; and
+**17 securities with gaps inside periods they were held, totalling 2,915 missing
+trading days** — historical valuations that are silently wrong today.
+
+Corrected in the PRD at the same time: `FR-INV-03a` claimed the Yahoo provider
+fetched dividends and splits. It never has — `YahooQuoteProvider` uses only
+`v8/finance/chart`.
+
 ## Large-book validation on real NAS hardware, and `finlab` (10 Aug 2026)
 
 The last item in [deferred.md](deferred.md) §1 that said "needs real NAS

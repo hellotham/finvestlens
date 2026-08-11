@@ -212,7 +212,7 @@ FinvestLens is a **document-based app** with its **own native file format** (a s
 | FR-INV-01 | Support **stock and mutual-fund accounts** denominated in a security commodity. | Must | P5 |
 | FR-INV-02 | Provide a **Price Editor / database**: manual entry and listing of commodity prices over time. | Must | P5 |
 | FR-INV-03 | Retrieve **online price quotes** for securities and currencies via **pluggable providers**, with user-triggered and scheduled refresh, a user-chosen default and fallback order. Results populate the Price DB. *(Jul 2026 redesign: a one-click **Update Prices** (⌘⇧U) fills every security's missing history with the default provider — from the menu, the dashboard's Up Next card, or the Prices toolbar — with determinate progress and a completion toast; "last updated" shows in the Prices header.)* | Should | P5 |
-| FR-INV-03a | Provide a **keyless "yfinance-like" Yahoo provider** (no API key) for current and **historical** quotes, dividends, and splits — the default out-of-box source, with **Stooq** as a second keyless fallback. | Should | P5 |
+| FR-INV-03a | Provide a **keyless "yfinance-like" Yahoo provider** (no API key) for current and **historical** quotes — the default out-of-box source, with **Stooq** as a second keyless fallback. *(Corrected 11 Aug 2026: this row also claimed dividends and splits. It never fetched either — `YahooQuoteProvider` uses only `v8/finance/chart`. Dividends and corporate actions are `FR-INV-19`/`FR-INV-21` under P11.)* | Should | P5 |
 | FR-INV-03b | Support **keyed providers** where the user enters an **API key** (stored in the **Keychain**), including **EODHD**, Alpha Vantage, Finnhub, and Twelve Data. Keys are entered by the user in Settings and sent only to that provider. | Should | P5 |
 | FR-INV-03c | Support **EODHD** specifically for **historical prices of delisted securities** (and deep multi-decade history). | Should | P5 |
 | FR-INV-03d | Support **historical price backfill** over a date range (not just latest), to populate the Price DB for valuation and reports. | Should | P5 |
@@ -221,6 +221,44 @@ FinvestLens is a **document-based app** with its **own native file format** (a s
 | FR-INV-05 | Compute **capital gains/losses** using lots (cost basis) via a **Lots Editor**, rather than manual computation. | Should | P5 |
 | FR-INV-06 | Value holdings and portfolios in a chosen base currency using the price database. | Should | P5 |
 | FR-INV-07 | Provide a **Security Editor** to add/edit commodities (securities & currencies) and configure their online-quote source. | Should | P5 |
+
+#### The Investments hub (P11)
+
+Agreed 11 Aug 2026. Full rationale, surfaces and phasing in
+[investments-design.md](investments-design.md); `FR-INV-02`'s "listing of
+commodity prices over time" is **narrowed** by `FR-INV-29` — prices are listed
+per security and exported, never as one book-wide table.
+
+| ID | Requirement | Pri | Phase |
+|---|---|---|---|
+| FR-INV-08 | Replace *Prices & Securities* with an **Investments** destination, promoted out of *Records*. | Should | P11 |
+| FR-INV-09 | Show **price-database health**: value-weighted coverage of held positions, per-holding freshness, last run, failures, next scheduled run. | Should | P11 |
+| FR-INV-10 | Judge freshness against the **exchange's observed trading days**, not elapsed calendar days. | Should | P11 |
+| FR-INV-11 | Present a **holdings table**: units, last price, age, market value, allocation, return since holding. | Should | P11 |
+| FR-INV-12 | Draw a **price sparkline per holding**, showing missing data as breaks rather than interpolating over them. | Should | P11 |
+| FR-INV-13 | Offer a **needs-attention worklist** — classes of problem with counts and inline fixes; empty on a healthy book. | Should | P11 |
+| FR-INV-14 | Show **return since holding** per security, from the existing lot engine (`FR-RPT-02a`). | Should | P11 |
+| FR-INV-15 | Provide a **security detail page**: profile, price history, financials, dividends, transactions, lots, prices, settings. | Should | P11 |
+| FR-INV-16 | Overlay **the user's own buys, sells, average cost and holding periods** on the price chart. | Should | P11 |
+| FR-INV-17 | Fetch a **company profile**, Yahoo by default and a keyed provider when one is configured. | Could | P11 |
+| FR-INV-18 | Fetch **financial statements** (income, balance sheet, cash flow), cached. | Could | P11 |
+| FR-INV-19 | Fetch **declared dividend history**, with yield on cost. | Could | P11 |
+| FR-INV-20 | **Reconcile declared dividends against recorded income**, reporting: declared-not-recorded, recorded-not-declared, amount mismatch, and missing DRP units. | Could | P11 |
+| FR-INV-21 | **Detect corporate actions** — a provider-reported split with no matching book transaction is flagged, since prices before it are inconsistent with units held. | Could | P11 |
+| FR-INV-22 | Let the user **choose the provider** for a refresh, per run and per security. | Should | P11 |
+| FR-INV-23 | **Refetch one security or all**, either filling gaps or replacing history. | Should | P11 |
+| FR-INV-24 | **Hide closed positions** by default, with a control to reveal them. | Should | P11 |
+| FR-INV-25 | Include closed positions in a fetch **where their held period contains gaps**, so historical valuations stay correct without paying for dead symbols daily. | Should | P11 |
+| FR-INV-26 | **Report price gaps**, flagging those that fall inside a holding period — the only ones that corrupt a valuation. | Should | P11 |
+| FR-INV-27 | Make **price provenance visible** — the recorded source of every price, on the row and on the chart. | Should | P11 |
+| FR-INV-28 | **Flag implausible prices** (decimal slips, wrong-currency entries) against their neighbours. | Could | P11 |
+| FR-INV-29 | **Export a security's prices to CSV.** No book-wide price list is shown at any altitude. | Should | P11 |
+| FR-INV-30 | Treat **manual valuation as a first-class category** — securities no provider can price get inline entry and an expected cadence, not permanent failures. | Should | P11 |
+| FR-INV-31 | Provide a **FIIG provider** for Australian corporate bonds, matched by **ISIN**, fetched as one batch and converted from percent-of-par. | Could | P11 |
+| FR-INV-32 | Treat **ISIN as a first-class, editable identifier** (GnuCash `cmdty:xcode`). | Should | P11 |
+| FR-INV-33 | Show **FX-rate health** alongside price health, so a foreign holding cannot be silently unvalued. | Should | P11 |
+| FR-INV-34 | Preview a refresh **before it runs** — which securities, which gaps, how many requests. | Could | P11 |
+| FR-INV-35 | Keep fetched fundamentals in a **sidecar cache, never in the book**, so the GnuCash XML round-trip is untouched. | Must | P11 |
 
 ### 5.10 Multiple currencies
 

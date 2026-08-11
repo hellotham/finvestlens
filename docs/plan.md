@@ -314,6 +314,52 @@ journals, and GnuCash files.
 **Dependencies.** P1 (store), P3 (interchange patterns), P5 (PriceDB for valuation).
 **Risks.** Grammar breadth; output-fidelity expectations; foreign journals vs the double-entry invariant — mitigations in the design doc §8.
 
+## 13c. Phase P11 — The Investments hub
+
+**Status.** 🔄 **In progress (from 11 Aug 2026)** — I1 delivered. Design, decisions
+and the full requirement list live in
+[investments-design.md](investments-design.md); requirements are `FR-INV-08`
+… `FR-INV-35`.
+
+**Objective.** Replace the *Prices & Securities* destination — a database editor
+that showed 148,458 price rows when 7 needed attention — with an **Investments**
+hub: a portfolio instrument panel that answers "can I trust today's numbers"
+in three seconds, volunteers only rows that need a human, and drills to one
+security's whole story. Prices stop being a subject and become a precondition.
+
+**Sub-phases** (each releasable; exit criteria in the design doc §14):
+- ✅ **I1** — the models: trading-calendar freshness, holding-aware gaps,
+  value-weighted coverage, provenance. Pure `Reports` additions, no UI.
+  *(FR-INV-09, 10, 26, 27)*
+- **I2** — the overview: destination, confidence band, worklist, holdings table
+  with sparklines, grouping, FX line; old destination removed.
+  *(FR-INV-08, 11, 12, 13, 14, 24, 33)*
+- **I3** — the security detail page, price chart with transaction overlay,
+  per-security price table, CSV export, per-security settings incl. ISIN.
+  *(FR-INV-15, 16, 29, 32)*
+- **I4** — the FIIG bond provider: batch protocol, ISIN matching, percent-of-par
+  conversion. *(FR-INV-31)*
+- **I5** — fundamentals: sidecar cache, Yahoo `quoteSummary`, keyed-provider
+  preference, profile + statements + dividends. *(FR-INV-17, 18, 19, 35)*
+- **I6** — reconciliation: dividends declared vs recorded, corporate actions,
+  outlier prices. *(FR-INV-20, 21, 28)*
+- **I7** — polish: manual-valuation cadence, run preview, iOS parity,
+  localization, help. *(FR-INV-22, 23, 25, 30, 34)*
+
+**Dependencies.** P5 (price DB, providers), P6 (dashboard/alerts patterns),
+the lot engine behind `FR-RPT-02a` (return since holding is already computed
+there and merely unsurfaced).
+
+**Verification.** The real book is the acceptance harness throughout
+(`FL_PERF_FILE`): ~150k prices across ~90 securities, half no longer held, is
+the case that broke the old design and the only one worth accepting on. A
+synthetic fixture cannot reproduce it.
+
+**Risks.** Yahoo's `quoteSummary` is unofficial and needs a crumb handshake —
+fundamentals must degrade to "unavailable" rather than look broken. FIIG
+geo-restricts non-AU egress and serves an incomplete certificate chain. Both
+are contained: neither can affect prices already in the book.
+
 ## 14. Quality gates (apply every phase)
 
 1. **Double-entry invariant** — no unbalanced transaction persists (`FR-ENG-06`). *Hard gate.*
