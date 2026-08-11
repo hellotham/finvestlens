@@ -63,10 +63,29 @@ public struct TradingCalendar: Sendable {
         var union: Set<Date> = []
         for price in book.prices where price.commodity.namespace != .currency {
             let day = calendar.startOfDay(for: price.date)
+            guard Self.isCredibleTradingDay(day, calendar: calendar) else { continue }
             seen[Self.exchange(of: price.commodity), default: []].insert(day)
             union.insert(day)
         }
         self.init(daysByExchange: seen, allDays: union, calendar: calendar)
+    }
+
+    /// Whether a priced day can be believed as a day the market opened.
+    ///
+    /// A weekend cannot. No exchange trades on one, so a price stamped there is
+    /// a timestamp artefact or a hand entry — never evidence of a session. This
+    /// matters because the book stores prices under several clock conventions
+    /// (`10:59`, `00:00` and `23:00` all appear), and a `23:00` UTC row bucketed
+    /// into local time lands on the **next** day: a Friday close becomes
+    /// Saturday, inventing a trading day.
+    ///
+    /// Left unfiltered, the reference book's inferred ASX calendar held 278–282
+    /// days a year against a real ~250, and every security without a price on
+    /// one of those phantom days was reported as having a gap — about thirty
+    /// per security per year, for twenty-five years. The gap count the hub
+    /// exists to report was mostly measuring its own artefact.
+    static func isCredibleTradingDay(_ day: Date, calendar: Calendar) -> Bool {
+        !calendar.isDateInWeekend(day)
     }
 
     /// Built from days already bucketed by the caller.
@@ -206,6 +225,19 @@ public enum PriceFreshness: String, Sendable, CaseIterable, Codable {
     case old
     /// No price at all.
     case missing
+    /// The security has stopped trading: its last price is **final**, not late.
+    ///
+    /// A separate state rather than a permanent `old`, because freshness does
+    /// not apply to a series that has ended. A redeemed note or a delisted
+    /// share can still be held — it is worth its last trade until disposed —
+    /// and judging it against today's market puts it on a worklist nobody can
+    /// ever clear and holds value-weighted coverage below 100% forever.
+    case ceased
+
+    /// Whether this state describes something a person should act on.
+    public var needsAttention: Bool {
+        self == .old || self == .missing
+    }
 
     /// The count of trading days at which each band begins.
     static func band(daysBehind: Int) -> PriceFreshness {
@@ -298,7 +330,12 @@ public struct PortfolioPriceHealth: Sendable {
     /// Securities a person should act on: held, and either unpriceable today or
     /// more than a trading week behind. The worklist in the overview (`FR-INV-13`).
     public var needsAttention: [SecurityPriceHealth] {
-        securities.filter { $0.isHeld && ($0.freshness == .old || $0.freshness == .missing) }
+        securities.filter { $0.isHeld && $0.freshness.needsAttention }
+    }
+
+    /// Held securities that have stopped trading — shown, never nagged about.
+    public var ceasedCount: Int {
+        securities.filter { $0.isHeld && $0.freshness == .ceased }.count
     }
 }
 
@@ -320,8 +357,13 @@ public extension FinancialReports {
     ///   returns is a start-of-day in *this* calendar, so a caller comparing
     ///   those dates to its own must be able to agree on the zone — and a test
     ///   or a CI machine in another one must still get the same answer.
+    /// - Parameter ceased: whether a security has stopped trading, so its last
+    ///   price is final rather than late. Nothing derives this — a thin note
+    ///   and a delisted one look identical from the data — so it is the app's
+    ///   recorded answer, not a guess.
     static func priceHealth(_ book: Book, currency: Commodity, asOf: Date = Date(),
                             quotable: (Commodity) -> Bool = { $0.getQuotes },
+                            ceased: (Commodity) -> Bool = { _ in false },
                             gapLimit: Int = 100,
                             calendar: Calendar = .current) -> PortfolioPriceHealth {
         let today = calendar.startOfDay(for: asOf)
@@ -338,9 +380,13 @@ public extension FinancialReports {
         for price in book.prices where price.commodity.namespace != .currency {
             let day = calendar.startOfDay(for: price.date)
             // The calendar describes when the market traded, so it takes every
-            // observation; the per-security sets answer "as at `asOf`".
-            daysByExchange[TradingCalendar.exchange(of: price.commodity), default: []].insert(day)
-            allDays.insert(day)
+            // *credible* observation; the per-security sets answer "as at
+            // `asOf`" and keep every price, weekend rows included — a price is
+            // still a price, it is just not proof of a session.
+            if TradingCalendar.isCredibleTradingDay(day, calendar: calendar) {
+                daysByExchange[TradingCalendar.exchange(of: price.commodity), default: []].insert(day)
+                allDays.insert(day)
+            }
             guard price.date <= asOf else { continue }
             priceDays[price.commodity, default: []].insert(day)
             rowCounts[price.commodity, default: 0] += 1
@@ -395,7 +441,12 @@ public extension FinancialReports {
             let behind = last.map {
                 tradingCalendar.tradingDaysBehind($0, for: exchange, asOf: today)
             } ?? 0
-            let freshness: PriceFreshness = last == nil ? .missing : .band(daysBehind: behind)
+            let freshness: PriceFreshness
+            if ceased(commodity) && last != nil {
+                freshness = .ceased
+            } else {
+                freshness = last == nil ? .missing : .band(daysBehind: behind)
+            }
 
             let found = gaps(for: commodity, pricedDays: days, periods: periods,
                              calendar: tradingCalendar, exchange: exchange, asOf: today)
@@ -424,7 +475,11 @@ public extension FinancialReports {
         // cannot drag the number down, and a large stale one cannot hide behind
         // a crowd of small healthy ones.
         let held = results.filter(\.isHeld)
-        let valued = held.compactMap { security -> (Decimal, Bool)? in
+        // A ceased security is out of the coverage question entirely: it can
+        // never be priced today, so counting it as stale would hold the figure
+        // under 100% permanently, and counting it as current would claim a
+        // freshness nobody has.
+        let valued = held.filter { $0.freshness != .ceased }.compactMap { security -> (Decimal, Bool)? in
             guard let value = security.marketValue else { return nil }
             return (abs(value), security.freshness == .current)
         }
@@ -442,7 +497,7 @@ public extension FinancialReports {
             heldCount: held.count,
             currentCount: held.filter { $0.freshness == .current }.count,
             staleCount: held.filter { $0.freshness == .stale }.count,
-            oldCount: held.filter { $0.freshness == .old || $0.freshness == .missing }.count,
+            oldCount: held.filter { $0.freshness.needsAttention }.count,
             securitiesWithHeldGaps: held.filter { $0.missingWhileHeld > 0 }.count,
             missingWhileHeld: held.reduce(0) { $0 + $1.missingWhileHeld },
             manualCount: held.filter { !$0.isQuotable }.count)

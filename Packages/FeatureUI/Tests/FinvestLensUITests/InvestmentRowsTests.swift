@@ -161,6 +161,77 @@ struct InvestmentRowsTests {
         #expect(model.investmentRows().first { $0.symbol == "QUIET" }?.group == .held)
     }
 
+    @Test("A security marked no-longer-trading stops being chased, and is not stale")
+    func delistedIsFinalNotStale() throws {
+        let model = try makeModel()
+        let book = model.book!
+        buy(model, acme, units: "10", cost: "1000", daysBack: 400)
+        // Priced long ago and never since — indistinguishable from a neglected
+        // holding until someone says the series has ended.
+        book.addPrice(Price(commodity: acme, currency: .aud, date: daysAgo(200),
+                            value: dec("100"), source: "Finance::Quote:eodhd"))
+        model.refreshAll()
+
+        let before = model.investmentRows().first { $0.symbol == "ACME" }
+        #expect(before?.freshness == .old)
+        #expect(before?.needsAttention == true)
+        #expect(model.investmentIssues().contains { $0.kind == .stale })
+        #expect(model.fetchableSecurities.contains(acme), "still worth asking about")
+
+        model.setDelisted(acme, true)
+        model.refreshAll()
+
+        let after = model.investmentRows().first { $0.symbol == "ACME" }
+        #expect(after?.freshness == .ceased, "the last price is final, not late")
+        #expect(after?.needsAttention == false)
+        #expect(model.investmentIssues().contains { $0.kind == .stale } == false,
+                "a worklist item nobody can ever clear is worse than none")
+        #expect(model.fetchableSecurities.contains(acme) == false,
+                "asking a provider again spends a request to be told nothing")
+        #expect(model.priceHealth()?.ceasedCount == 1)
+        #expect(model.book?.kvp["finvestlens/delistedSecurities"] != nil, "remembered with the book")
+
+        // And it is reversible — a mistaken mark must not be a one-way door.
+        model.setDelisted(acme, false)
+        model.refreshAll()
+        #expect(model.investmentRows().first { $0.symbol == "ACME" }?.freshness == .old)
+    }
+
+    @Test("A ceased holding does not hold valuation confidence below 100%")
+    func ceasedIsOutOfCoverage() throws {
+        let model = try makeModel()
+        let book = model.book!
+        // Enough observations for the exchange's own trading calendar to be
+        // inferred; with only a couple of priced days it falls back to bare
+        // weekdays and yesterday's close reads as a day behind.
+        let market = Commodity(namespace: .security("ASX"), mnemonic: "MKT",
+                               fullName: "Market", smallestFraction: 10000, getQuotes: true)
+        var seeded: [Date] = []
+        var back = 0
+        while seeded.count < 30 {
+            let day = daysAgo(back)
+            if !Calendar.current.isDateInWeekend(day) {
+                seeded.append(day)
+                book.addPrice(Price(commodity: market, currency: .aud, date: day, value: dec("100")))
+            }
+            back += 1
+        }
+        let latest = seeded[0]
+
+        buy(model, acme, units: "10", cost: "1000", daysBack: 400)
+        buy(model, other, units: "10", cost: "1000", daysBack: 400)
+        book.addPrice(Price(commodity: acme, currency: .aud, date: daysAgo(200), value: dec("100")))
+        book.addPrice(Price(commodity: other, currency: .aud, date: latest, value: dec("100")))
+        model.refreshAll()
+        #expect(model.investmentRows().first { $0.symbol == "OTHR" }?.freshness == .current)
+        #expect((model.priceHealth()?.valueCoverage ?? 1) < 1, "one stale holding drags it down")
+
+        model.setDelisted(acme, true)
+        model.refreshAll()
+        // Not counted as fresh either — it is out of the question entirely.
+        #expect(model.priceHealth()?.valueCoverage == 1.0)
+    }
+
     @Test("A hand-entered price is not mistaken for a provider's")
     func userPricesStayManual() throws {
         // The other direction, which is what keeps the super funds honest:

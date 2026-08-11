@@ -259,6 +259,8 @@ per security and exported, never as one book-wide table.
 | FR-INV-33 | Show **FX-rate health** alongside price health, so a foreign holding cannot be silently unvalued. | Should | P11 |
 | FR-INV-34 | Preview a refresh **before it runs** — which securities, which gaps, how many requests. | Could | P11 |
 | FR-INV-35 | Keep fetched fundamentals in a **sidecar cache, never in the book**, so the GnuCash XML round-trip is untouched. | Must | P11 |
+| FR-INV-36 | Judge "can a provider price this" on **evidence** — a provider-sourced price in the book — rather than on GnuCash's `cmdty:get_quotes`, which records only what Finance::Quote could reach. | Should | P11 |
+| FR-INV-37 | Let a security be marked **no longer trading**: its last price is final, so it is not fetched, not judged for freshness, and not counted in valuation coverage. Reversible. | Should | P11 |
 
 ### 5.10 Multiple currencies
 

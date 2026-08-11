@@ -348,6 +348,37 @@ struct PriceHealthTests {
 
     // MARK: Calendar
 
+    @Test("A weekend-stamped price does not invent a trading day")
+    func weekendPricesAreNotSessions() {
+        // The book stores prices under several clock conventions, and a 23:00
+        // UTC row bucketed into local time lands on the next day — a Friday
+        // close becomes Saturday. Believed, that Saturday becomes a trading day
+        // every other security is then "missing", which on the reference book
+        // inflated the ASX calendar to 278–282 days a year against a real ~250
+        // and reported about thirty phantom gaps per security per year.
+        let friday = day(2026, 8, 7)
+        let saturday = day(2026, 8, 8)
+        #expect(utc.isDateInWeekend(saturday), "fixture must really be a weekend")
+
+        let book = Book(baseCurrency: .aud)
+        seedCalendar(book, endingOn: friday)
+        // One stray weekend row, from one security only.
+        book.addPrice(Price(commodity: market, currency: .aud, date: saturday, value: dec("100")))
+
+        let calendar = TradingCalendar(book: book, calendar: utc)
+        #expect(calendar.tradingDays(for: "ASX", from: saturday, to: saturday).isEmpty,
+                "no exchange trades on a Saturday")
+        #expect(calendar.latestTradingDay(for: "ASX", onOrBefore: saturday) == friday)
+
+        // And a security priced every session must show no gap because of it.
+        let days = weekdaysBack(from: friday, count: 30)
+        buy(book, acme, units: "10", cost: "1000", on: days.last!)
+        for date in days {
+            book.addPrice(Price(commodity: acme, currency: .aud, date: date, value: dec("120")))
+        }
+        #expect(health(book, asOf: friday).find("ACME")?.missingWhileHeld == 0)
+    }
+
     @Test("A sparse exchange borrows the book's calendar rather than assuming weekdays")
     func sparseExchangeFallsBackToBook() {
         // Bonds have a handful of prices, so their own series says nothing. The

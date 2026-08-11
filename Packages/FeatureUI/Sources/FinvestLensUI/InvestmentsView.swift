@@ -377,6 +377,13 @@ private struct InvestmentRowView: View {
         .accessibilityLabel(voiceOver)
         .contextMenu {
             Button("Set Price Target…", action: onTarget)
+            // A held security can stop trading without being disposed of — a
+            // note is redeemed, a company delists. Its last price is then final
+            // rather than late, and nothing should chase it or count it against
+            // valuation confidence (`FR-INV-37`).
+            Toggle("No Longer Trading", isOn: Binding(
+                get: { model.isDelisted(row.commodity) },
+                set: { model.setDelisted(row.commodity, $0) }))
             if model.isWatchOnly(row.commodity) {
                 Button("Stop Watching", role: .destructive) {
                     model.removeWatchSecurity(row.commodity)
@@ -389,6 +396,7 @@ private struct InvestmentRowView: View {
         switch row.freshness {
         case .current: return String(localized: "today")
         case .missing: return String(localized: "never")
+        case .ceased: return String(localized: "final")
         case .stale, .old: return String(localized: "\(row.tradingDaysBehind)d")
         }
     }
@@ -506,6 +514,8 @@ private extension PriceFreshness {
         case .stale: "circle.bottomhalf.filled"
         case .old: "exclamationmark.circle.fill"
         case .missing: "questionmark.circle"
+        // Not a warning shape: nothing is wrong with a series that has ended.
+        case .ceased: "flag.checkered"
         }
     }
 
@@ -515,6 +525,7 @@ private extension PriceFreshness {
         case .stale: .orange
         case .old: .red
         case .missing: .secondary
+        case .ceased: .secondary
         }
     }
 
@@ -524,6 +535,7 @@ private extension PriceFreshness {
         case .missing: String(localized: "never priced")
         case .stale, .old:
             String(localized: "\(tradingDaysBehind) trading days behind")
+        case .ceased: String(localized: "no longer trading, last price is final")
         }
     }
 }

@@ -78,6 +78,21 @@ enum PricesCommand {
             log("  nothing to price.")
             return
         }
+        // Marking a security as no longer trading governs whether it is fetched
+        // at all, so it belongs on the command that does the fetching. It acts
+        // and returns: this is a property change, not a run.
+        if options.flag("set-delisted") || options.flag("set-trading") {
+            guard !wanted.isEmpty else {
+                throw LabError.message("--set-delisted / --set-trading need --symbol")
+            }
+            let delisted = options.flag("set-delisted")
+            for commodity in securities { model.setDelisted(commodity, delisted) }
+            log("  \(securities.map(\.mnemonic).sorted().joined(separator: ", ")) marked "
+                + (delisted ? "no longer trading" : "trading"))
+            let (_, saveSeconds) = try Stopwatch.measure { try model.save() }
+            log(Fmt.row("save", Fmt.time(saveSeconds)))
+            return
+        }
         if options.flag("replace") { log("  mode: REPLACE — existing prices for these securities are discarded") }
         if options.flag("dry-run") {
             log("  --dry-run: would fetch " + securities.map(\.mnemonic).sorted().joined(separator: ", "))

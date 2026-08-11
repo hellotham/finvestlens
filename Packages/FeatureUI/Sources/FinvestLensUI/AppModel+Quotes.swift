@@ -108,7 +108,7 @@ extension AppModel {
     /// price for each success. Failures for individual symbols are collected but
     /// do not abort the run (`FR-INV-03`).
     public func fetchLatestQuotes(using kind: QuoteProviderKind) async {
-        let commodities = pricableSecurities
+        let commodities = fetchableSecurities
         guard !commodities.isEmpty else {
             quoteStatus = .failure("No securities to price.")
             return
@@ -171,7 +171,7 @@ extension AppModel {
     /// have no observation and are not treated as gaps. Providers without a
     /// history endpoint (Finnhub) fall back to a single latest quote.
     public func updatePriceHistory(using kind: QuoteProviderKind) async {
-        await fetchHistory(for: pricableSecurities, using: kind, replacing: false,
+        await fetchHistory(for: fetchableSecurities, using: kind, replacing: false,
                            label: "Update Price History")
     }
 
@@ -195,7 +195,7 @@ extension AppModel {
     /// most frequent task, callable from the menu, the Up Next card, and the
     /// Prices toolbar — no sheet, no provider picker.
     public func updateAllPrices() async {
-        guard !pricableSecurities.isEmpty else {
+        guard !fetchableSecurities.isEmpty else {
             showToast(.info, "No securities to price.")
             return
         }

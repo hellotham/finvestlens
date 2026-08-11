@@ -107,6 +107,31 @@ struct LivePriceHealthTests {
         let duplicates = health.securities.reduce(0) { $0 + ($1.priceCount - $1.pricedDays) }
         print("duplicate same-day prices: \(duplicates) rows across \(health.securities.count) securities")
 
+        // Where the missing days actually are, by exchange rather than by name:
+        // knowing they sit in one namespace is what tells you whether a provider
+        // can fix them at all.
+        var byExchange: [String: Int] = [:]
+        for security in health.securities where security.missingWhileHeld > 0 {
+            byExchange[TradingCalendar.exchange(of: security.commodity), default: 0]
+                += security.missingWhileHeld
+        }
+        print("missing days while held, by exchange: "
+              + byExchange.sorted { $0.value > $1.value }
+                  .map { "\($0.key) \($0.value)" }.joined(separator: ", "))
+
+        // Per-security detail goes to a file when asked, never to the log: this
+        // harness prints counts only, and a security's name is the book's.
+        if let path = ProcessInfo.processInfo.environment["FL_GAP_REPORT"] {
+            let lines = health.securities
+                .filter { $0.missingWhileHeld > 0 }
+                .sorted { $0.missingWhileHeld > $1.missingWhileHeld }
+                .map { "\($0.commodity.mnemonic)\t\($0.missingWhileHeld)\t\($0.isHeld ? "held" : "closed")"
+                       + "\t\($0.priceCount) rows\t\($0.sources.keys.sorted().joined(separator: "+"))" }
+            try? (["symbol\tmissing\tposition\trows\tsources"] + lines)
+                .joined(separator: "\n").write(toFile: path, atomically: true, encoding: .utf8)
+            print("gap detail written to FL_GAP_REPORT (\(lines.count) securities)")
+        }
+
         // The old destination's per-edit price-row build cost ~0.09s; a health
         // pass that a header band shows on arrival has to stay in that league.
         #expect(elapsed < 5, "price health took \(String(format: "%.2fs", elapsed))")
@@ -256,11 +281,19 @@ struct LivePriceHealthTests {
         #expect(warm < 0.2, "a repeat build costs \(String(format: "%.3fs", warm))")
 
         // Changing the period must invalidate: the window is part of the answer.
+        //
+        // The starting range is *set*, not assumed. It is a book preference, so
+        // the reference book carries whatever was last chosen in the app — this
+        // asserted against the default and failed the moment someone picked a
+        // different period on screen, which is the preference working correctly.
+        model.sparkRange = .quarter
+        let quarterPoints = model.investmentRows().reduce(0) { $0 + $1.spark.flatMap(\.points).count }
         model.sparkRange = .year
+        let yearPoints = model.investmentRows().reduce(0) { $0 + $1.spark.flatMap(\.points).count }
+        print("spark points: quarter \(quarterPoints), year \(yearPoints)")
         let yearRows = model.investmentRows()
         #expect(yearRows.count == rows.count)
-        #expect(yearRows.reduce(0) { $0 + $1.spark.flatMap(\.points).count }
-                > rows.reduce(0) { $0 + $1.spark.flatMap(\.points).count },
+        #expect(yearPoints > quarterPoints,
                 "a longer window must produce more points, not a stale cache hit")
     }
 }

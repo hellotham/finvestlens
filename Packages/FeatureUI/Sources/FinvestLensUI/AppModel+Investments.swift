@@ -71,7 +71,7 @@ public struct InvestmentRow: Identifiable, Sendable {
     public var spark: [SparkSegment]
 
     public var needsAttention: Bool {
-        group == .held && (freshness == .old || freshness == .missing)
+        group == .held && freshness.needsAttention
     }
 }
 
@@ -128,6 +128,41 @@ extension AppModel {
         return providerPricedCommodities.contains(commodity)
     }
 
+    // MARK: Securities that have stopped trading (`FR-INV-37`)
+
+    /// Whether a security has stopped trading, so its last price is final.
+    ///
+    /// Nothing infers this. A thinly-traded note that has not printed for a
+    /// month and a redeemed one look identical from the price data, and
+    /// guessing wrong either nags forever about a security nobody can price or
+    /// silently stops chasing one that is merely quiet. It is recorded.
+    public func isDelisted(_ commodity: Commodity) -> Bool {
+        delistedSecurities.contains(securityKey(commodity))
+    }
+
+    /// Marks a security as no longer trading, or returns it to the fold.
+    public func setDelisted(_ commodity: Commodity, _ delisted: Bool) {
+        let key = securityKey(commodity)
+        guard delisted != delistedSecurities.contains(key) else { return }
+        if delisted {
+            delistedSecurities.append(key)
+        } else {
+            delistedSecurities.removeAll { $0 == key }
+        }
+        commitKvpCollections(named: delisted ? "Mark as No Longer Trading" : "Mark as Trading")
+    }
+
+    private func securityKey(_ commodity: Commodity) -> String {
+        "\(commodity.namespace)|\(commodity.mnemonic)"
+    }
+
+    /// The securities a fetch should actually ask a provider about: everything
+    /// pricable, less the ones that have stopped trading. Asking after those
+    /// spends a request to be told nothing, every run, forever.
+    public var fetchableSecurities: [Commodity] {
+        pricableSecurities.filter { !isDelisted($0) }
+    }
+
     /// Commodities the book holds at least one **provider-sourced** price for.
     ///
     /// `Price.source` records who supplied each row: `Finance::Quote…` for a
@@ -153,7 +188,8 @@ extension AppModel {
         let asOf = Self.endOfToday()
         return cachedReport("pxhealth:\(asOf.timeIntervalSinceReferenceDate)") {
             FinancialReports.priceHealth(book, currency: reportCurrency, asOf: asOf,
-                                         quotable: { [self] in canFetchQuotes(for: $0) })
+                                         quotable: { [self] in canFetchQuotes(for: $0) },
+                                         ceased: { [self] in isDelisted($0) })
         }
     }
 
