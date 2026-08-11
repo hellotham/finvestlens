@@ -50,6 +50,26 @@ renamed `PriceEntrySheets.swift` / `SecurityEditSheets.swift`.
   each run were a distinct series, and declaring that series needs a
   `PlottableValue` label — which the string extractor then demands translated in
   eight languages, for text that is never displayed.
+
+  **Corrected the same day, on first sight of the running app.** The first cut
+  scaled each line to *its own* first and last price, which made the column
+  unreadable — nothing lined up down the page — and, worse, dishonest: five
+  days of data stretched the full width, and a holding a month stale still drew
+  to the right-hand edge as though it were current. The time axis is now
+  **shared by the whole table**, so a horizontal position is the same date on
+  every row and a line that stops short is a line whose data stops short. Value
+  scale stays per row, because two securities' prices have no common measure.
+
+  The period is now **named and adjustable** (`AppModel.SparkRange`, a book
+  preference): one month through five years, chosen from a **Price History**
+  toolbar picker and stated in words above the first group. Written out rather
+  than abbreviated — "3M" is a hint, not a name, and VoiceOver reads it as
+  "three em". The gap threshold scales with the period too (a week's floor,
+  else 2% of the window), because a fortnight is a third of a one-month chart
+  and half a percent of a five-year one; a fixed threshold shattered long
+  windows into confetti. The empty case keeps the same 22pt box as a drawn
+  line — collapsing it to a bare rule let the `HStack` centre a shorter view,
+  so rows without history sat at a different height and the column wandered.
 - **Exchange rates** (`FR-INV-33`) get one line rather than a list: the same
   trust question, since a holding in a currency with no rate is silently
   unvalued.
@@ -70,11 +90,20 @@ published. The string catalog gained 67 keys in eight languages (with plural
 variations) and lost 31 orphans; `scripts/check-localization.py --build` reports
 the catalogs match the compiler.
 
-**Verified.** 7 new tests (`InvestmentRowsTests`) over grouping, the closed-
-position preference, quotability via override, sparkline segmentation, the
-worklist, value ordering and rate health; 1,319 tests across eleven packages;
-both platform builds. **Not verified: on screen.** The layout, the ring and the
-sparklines have not been looked at.
+**Verified.** 10 tests (`InvestmentRowsTests`) over grouping, the closed-position
+preference, quotability via override, sparkline segmentation, the worklist, value
+ordering, rate health, the period preference, the shared window, and the gap
+threshold scaling with it; 1,322 tests across eleven packages; both platform
+builds; catalogs matching the compiler.
+
+Two of those tests first passed for the wrong reason and were rewritten to
+discriminate: `"BIG"` sorts before `"SMALL"` alphabetically as well as by value,
+and a `monthly <= fiveYears` segment count is true however the threshold behaves.
+Both now use inputs whose expected answer is the opposite of the accidental one.
+
+**Not verified: on screen** beyond the two defects reported from the running app
+and fixed above. The ring, the worklist and the row layout have not been looked
+at.
 
 ## P11 · I1 — the price-health models (11 Aug 2026)
 

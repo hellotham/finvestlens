@@ -5487,6 +5487,59 @@
         }
       }
     },
+    "**A break in the line means missing prices** — it is never drawn through days that have none. What counts as a break scales with the period, so a week's absence shows over a month and not over five years.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Eine Lücke in der Linie bedeutet fehlende Kurse** — sie wird nie durch Tage ohne Kurs gezogen. Was als Lücke gilt, richtet sich nach dem Zeitraum: eine fehlende Woche zeigt sich über einen Monat, nicht über fünf Jahre."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**A break in the line means missing prices** — it is never drawn through days that have none. What counts as a break scales with the period, so a week's absence shows over a month and not over five years."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Una interrupción en la línea significa precios ausentes**: nunca se traza a través de días sin precio. Lo que cuenta como interrupción depende del período, así que una semana ausente se ve en un mes y no en cinco años."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Une rupture de la courbe signale des cours manquants** — elle n'est jamais tracée à travers des jours sans cours. Ce qui compte comme rupture dépend de la période : une semaine absente se voit sur un mois, pas sur cinq ans."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Un'interruzione nella linea indica prezzi mancanti** — non viene mai tracciata attraverso giorni che non ne hanno. Ciò che conta come interruzione dipende dal periodo: una settimana assente si vede su un mese, non su cinque anni."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**線の途切れは価格の欠落を意味します** — 価格のない日をまたいで線を引くことはありません。何を途切れとみなすかは期間に応じて変わるため、1週間の欠落は1か月では現れ、5年では現れません。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Uma quebra na linha significa preços ausentes** — ela nunca é traçada através de dias sem preço. O que conta como quebra acompanha o período, então uma semana ausente aparece em um mês e não em cinco anos."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**线条中断表示价格缺失**——绝不会跨越没有价格的日期绘制。何为中断取决于所选期间：缺失一周在一个月的图中会显示，在五年的图中则不会。"
+          }
+        }
+      }
+    },
     "**Add Web Link…** stores a URL instead of a file.": {
       "extractionState": "manual",
       "localizations": {
@@ -6216,6 +6269,59 @@
         }
       }
     },
+    "**Price History** in the toolbar sets the period every small chart covers — a month through five years. The period is named above the first group, and remembered with the book.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Kursverlauf** in der Symbolleiste legt den Zeitraum aller kleinen Diagramme fest — ein Monat bis fünf Jahre. Der Zeitraum steht über der ersten Gruppe und wird mit dem Buch gespeichert."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Price History** in the toolbar sets the period every small chart covers — a month through five years. The period is named above the first group, and remembered with the book."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Historial de precios** en la barra de herramientas fija el período que abarca cada minigráfico: de un mes a cinco años. El período aparece sobre el primer grupo y se guarda con el libro."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Historique des cours** dans la barre d'outils définit la période couverte par chaque courbe — d'un mois à cinq ans. La période est indiquée au-dessus du premier groupe et mémorisée avec le livre."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Storico prezzi** nella barra strumenti imposta il periodo coperto da ogni grafico — da un mese a cinque anni. Il periodo è indicato sopra il primo gruppo e viene ricordato con il libro."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ツールバーの**価格履歴**で、各ミニチャートが対象とする期間を1か月から5年の範囲で設定します。期間は最初のグループの上に表示され、帳簿とともに記憶されます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Histórico de preços** na barra de ferramentas define o período que cada minigráfico cobre — de um mês a cinco anos. O período aparece acima do primeiro grupo e é lembrado com o livro."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "工具栏中的**价格历史**用于设置每个迷你图表涵盖的期间——从一个月到五年。该期间显示在第一个分组上方，并随账簿一同记住。"
+          }
+        }
+      }
+    },
     "**Print Check…** prints the selected transaction as a cheque.": {
       "extractionState": "manual",
       "localizations": {
@@ -6658,6 +6764,271 @@
     "1 %@ = %@ %@": {
       "extractionState": "manual",
       "shouldTranslate": false
+    },
+    "1 month": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 Monat"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 month"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 mes"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 mois"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 mese"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1か月"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 mês"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1个月"
+          }
+        }
+      }
+    },
+    "1 year": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 Jahr"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 year"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 año"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 an"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 anno"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1年"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 ano"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1年"
+          }
+        }
+      }
+    },
+    "3 months": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "3 Monate"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "3 months"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "3 meses"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "3 mois"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "3 mesi"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "3か月"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "3 meses"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "3个月"
+          }
+        }
+      }
+    },
+    "5 years": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "5 Jahre"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "5 years"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "5 años"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "5 ans"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "5 anni"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "5年"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "5 anos"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "5年"
+          }
+        }
+      }
+    },
+    "6 months": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "6 Monate"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "6 months"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "6 meses"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "6 mois"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "6 mesi"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "6か月"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "6 meses"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "6个月"
+          }
+        }
+      }
     },
     "= %@": {
       "extractionState": "manual",
@@ -29405,6 +29776,59 @@
         }
       }
     },
+    "Every chart uses **the same time axis**, so the same position means the same date on every row: a line that stops short of the right-hand edge is one whose prices stop there.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Diagramme nutzen **dieselbe Zeitachse**: dieselbe Position bedeutet in jeder Zeile dasselbe Datum. Eine Linie, die vor dem rechten Rand endet, hat dort auch keine Kurse mehr."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Every chart uses **the same time axis**, so the same position means the same date on every row: a line that stops short of the right-hand edge is one whose prices stop there."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todos los gráficos usan **el mismo eje temporal**, así que una misma posición es la misma fecha en cada fila: una línea que no llega al borde derecho es una cuyos precios terminan ahí."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toutes les courbes partagent **le même axe temporel** : une même position correspond à la même date sur chaque ligne. Une courbe qui s'arrête avant le bord droit est une courbe dont les cours s'arrêtent là."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tutti i grafici usano **lo stesso asse temporale**: la stessa posizione indica la stessa data in ogni riga. Una linea che si ferma prima del bordo destro è una linea i cui prezzi finiscono lì."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてのチャートは**同じ時間軸**を使うため、同じ位置はどの行でも同じ日付を表します。右端まで届かない線は、そこで価格が途切れていることを意味します。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todos os gráficos usam **o mesmo eixo de tempo**, então a mesma posição significa a mesma data em cada linha: uma linha que para antes da borda direita é uma cujos preços param ali."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "所有图表共用**同一时间轴**，因此相同的位置在每一行都代表同一日期：未延伸到右边缘的线，说明其价格数据到此为止。"
+          }
+        }
+      }
+    },
     "Every holding is priced": {
       "extractionState": "manual",
       "localizations": {
@@ -35116,6 +35540,59 @@
         }
       }
     },
+    "Heights are *not* comparable between rows. Each chart uses its own scale, because two securities' prices have no common measure.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Höhen sind zwischen Zeilen *nicht* vergleichbar. Jedes Diagramm hat seine eigene Skala, denn die Kurse zweier Wertpapiere haben kein gemeinsames Maß."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heights are *not* comparable between rows. Each chart uses its own scale, because two securities' prices have no common measure."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Las alturas *no* son comparables entre filas. Cada gráfico usa su propia escala, porque los precios de dos valores no tienen una medida común."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les hauteurs ne sont *pas* comparables d'une ligne à l'autre. Chaque courbe a sa propre échelle, car les cours de deux titres n'ont pas de mesure commune."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le altezze *non* sono confrontabili tra righe. Ogni grafico usa la propria scala, perché i prezzi di due titoli non hanno una misura comune."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "高さは行どうしで比較*できません*。2つの銘柄の価格に共通の尺度はないため、各チャートは独自のスケールを使います。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "As alturas *não* são comparáveis entre linhas. Cada gráfico usa a própria escala, porque os preços de dois títulos não têm medida comum."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不同行之间的高度*不可*比较。每个图表使用各自的刻度，因为两只证券的价格没有共同的量度。"
+          }
+        }
+      }
+    },
     "Held over 12 months": {
       "extractionState": "manual",
       "localizations": {
@@ -35600,6 +36077,59 @@
           "stringUnit": {
             "state": "translated",
             "value": "每行显示多少由你决定：“显示 ▸ 账簿样式”可在每笔交易一行（基本账簿）、仅选中行显示明细（自动明细）与全部展开（交易日记账）之间切换。“显示 ▸ 列”可关闭你不需要的列。"
+          }
+        }
+      }
+    },
+    "How much price history each holding's sparkline covers": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wie viel Kursverlauf die Sparkline jeder Position abdeckt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How much price history each holding's sparkline covers"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cuánto historial de precios abarca el minigráfico de cada posición"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La période couverte par la courbe de chaque position"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quanto storico prezzi copre il grafico di ogni posizione"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "各保有銘柄のスパークラインが対象とする価格履歴の期間"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quanto histórico de preços o minigráfico de cada posição cobre"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每个持仓的迷你走势图涵盖的价格历史长度"
           }
         }
       }
@@ -52566,6 +53096,59 @@
         }
       }
     },
+    "Price History": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kursverlauf"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Price History"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Historial de precios"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Historique des cours"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Storico prezzi"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "価格履歴"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Histórico de preços"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "价格历史"
+          }
+        }
+      }
+    },
     "Price Target": {
       "extractionState": "manual",
       "localizations": {
@@ -53171,6 +53754,59 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "Prices · %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kurse · %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prices · %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Precios · %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cours · %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prezzi · %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "価格 · %@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preços · %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "价格 · %@"
           }
         }
       }
@@ -65934,6 +66570,59 @@
         }
       }
     },
+    "Sparklines cover %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sparklines umfassen %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sparklines cover %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los minigráficos abarcan %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les courbes couvrent %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I grafici coprono %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スパークラインは%@を対象とします"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Os minigráficos cobrem %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "迷你走势图涵盖%@"
+          }
+        }
+      }
+    },
     "Spending Insights": {
       "extractionState": "manual",
       "localizations": {
@@ -70278,59 +70967,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "面板会显示这两个金额所隐含的汇率（`1 AUD = 0.92 NZD`），便于你一眼看出输入方向是否正确。该汇率会作为价格保存，之后报表即可对任一币种进行估值。"
-          }
-        }
-      }
-    },
-    "The small chart is the last three months. **A break in the line means missing prices** — it is never drawn through days that have none.": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Das kleine Diagramm zeigt die letzten drei Monate. **Eine Lücke in der Linie bedeutet fehlende Kurse** – sie wird nie über Tage ohne Kurs hinweggezeichnet."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The small chart is the last three months. **A break in the line means missing prices** — it is never drawn through days that have none."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "El gráfico pequeño abarca los últimos tres meses. **Un corte en la línea significa precios ausentes**: nunca se traza sobre días que no los tienen."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Le petit graphique couvre les trois derniers mois. **Une rupture dans la ligne signale des cours manquants** — elle n’est jamais tracée par-dessus des jours sans cours."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Il grafico piccolo copre gli ultimi tre mesi. **Un’interruzione nella linea indica prezzi mancanti**: non viene mai tracciata sui giorni che non ne hanno."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "小さなチャートは直近3か月です。**線の途切れは価格の欠落**を意味し、価格のない日をまたいで線を引くことはありません。"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "O gráfico pequeno cobre os últimos três meses. **Uma quebra na linha indica preços ausentes** — ela nunca é traçada sobre dias sem preço."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "小图表显示最近三个月。**线条的断口表示价格缺失**——绝不会跨越没有价格的日子连线。"
           }
         }
       }

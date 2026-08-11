@@ -537,7 +537,10 @@ public enum HelpBook {
             .heading("Holdings"),
             .bullets([
                 "Each row shows units, value, return since you bought, and how old the price is.",
-                "The small chart is the last three months. **A break in the line means missing prices** — it is never drawn through days that have none.",
+                "**Price History** in the toolbar sets the period every small chart covers — a month through five years. The period is named above the first group, and remembered with the book.",
+                "Every chart uses **the same time axis**, so the same position means the same date on every row: a line that stops short of the right-hand edge is one whose prices stop there.",
+                "**A break in the line means missing prices** — it is never drawn through days that have none. What counts as a break scales with the period, so a week's absence shows over a month and not over five years.",
+                "Heights are *not* comparable between rows. Each chart uses its own scale, because two securities' prices have no common measure.",
                 "**Valued by hand** collects securities no price service covers, such as super funds. They are not failures; enter their prices from **More ▸ Enter a Price…**",
                 "**Closed positions** are hidden. Show them from **More ▸ Show Closed Positions**; their history is always kept for capital gains.",
             ]),

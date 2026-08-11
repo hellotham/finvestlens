@@ -34,6 +34,9 @@ private let acme = Commodity(namespace: .security("ASX"), mnemonic: "ACME",
                              fullName: "Acme", smallestFraction: 10000, getQuotes: true)
 private let fund = Commodity(namespace: .security("Super"), mnemonic: "FUND",
                              fullName: "Super Fund", smallestFraction: 10000)
+/// A second quotable security, for tests that need two lines on one axis.
+private let other = Commodity(namespace: .security("ASX"), mnemonic: "OTHR",
+                              fullName: "Other", smallestFraction: 10000, getQuotes: true)
 
 @MainActor
 private func makeModel() throws -> AppModel {
@@ -135,6 +138,87 @@ struct InvestmentRowsTests {
         let spark = model.investmentRows().first { $0.symbol == "ACME" }?.spark
         #expect(spark?.count == 2, "one segment per contiguous run")
         #expect(spark?.allSatisfy { $0.points.count == 4 } == true)
+    }
+
+    @Test("The sparkline period is adjustable, named, and remembered in the book")
+    func sparkRangeIsAPreference() throws {
+        let model = try makeModel()
+        #expect(model.sparkRange == .quarter, "a sensible default, not the longest")
+
+        model.sparkRange = .year
+        #expect(model.sparkRange == .year)
+        #expect(model.book?.kvp["finvestlens/sparkRange"] != nil, "persisted with the book")
+
+        // Every period says what it is in words. An abbreviation is what made
+        // the axis unreadable, and VoiceOver would say "three em".
+        for range in AppModel.SparkRange.allCases {
+            #expect(!range.label.isEmpty)
+            #expect(range.label.rangeOfCharacter(from: .letters) != nil)
+        }
+    }
+
+    @Test("The window follows the chosen period, and is the same for every row")
+    func windowIsSharedAndFollowsRange() throws {
+        let model = try makeModel()
+        let book = model.book!
+        buy(model, acme, units: "10", cost: "1000", daysBack: 400)
+        buy(model, other, units: "10", cost: "1000", daysBack: 400)
+        // ACME priced right up to today; OTHR stopped six months ago.
+        for day in [3, 2, 1] {
+            book.addPrice(Price(commodity: acme, currency: .aud, date: daysAgo(day), value: dec("100")))
+        }
+        for day in [184, 183, 182] {
+            book.addPrice(Price(commodity: other, currency: .aud, date: daysAgo(day), value: dec("50")))
+        }
+        model.refreshAll()
+
+        // At three months the stale holding contributes no points at all, so it
+        // cannot possibly draw across the full width as though it were current
+        // — which is what a per-row axis did.
+        model.sparkRange = .quarter
+        let quarterWindow = model.sparkWindow
+        let quarterRows = model.investmentRows()
+        #expect(quarterRows.first { $0.symbol == "OTHR" }?.spark.isEmpty == true)
+        #expect(quarterRows.first { $0.symbol == "ACME" }?.spark.isEmpty == false)
+
+        // Widen the period and the same security comes into view.
+        model.sparkRange = .year
+        let yearWindow = model.sparkWindow
+        #expect(model.investmentRows().first { $0.symbol == "OTHR" }?.spark.isEmpty == false)
+
+        // The window is what widened, and it ends at the same clock reading for
+        // every row rather than at each row's own last price.
+        #expect(yearWindow.upperBound == quarterWindow.upperBound)
+        #expect(yearWindow.lowerBound < quarterWindow.lowerBound)
+        for row in model.investmentRows() {
+            for point in row.spark.flatMap(\.points) {
+                #expect(yearWindow.contains(point.date) || point.date >= yearWindow.lowerBound)
+            }
+        }
+    }
+
+    @Test("The same gap breaks a short window and not a long one")
+    func gapThresholdScales() throws {
+        let model = try makeModel()
+        let book = model.book!
+        buy(model, acme, units: "10", cost: "1000", daysBack: 400)
+        // Daily prices for over a year, with one 19-day hole inside the last
+        // month. Nineteen days is a third of a one-month chart and half a
+        // percent of a five-year one, so the *same* data must break in one and
+        // not the other — a fixed threshold cannot be right for both.
+        for day in 0...400 where !(8...26).contains(day) {
+            book.addPrice(Price(commodity: acme, currency: .aud, date: daysAgo(day), value: dec("100")))
+        }
+        model.refreshAll()
+
+        model.sparkRange = .month
+        let monthly = model.investmentRows().first { $0.symbol == "ACME" }?.spark.count ?? 0
+
+        model.sparkRange = .fiveYears
+        let fiveYears = model.investmentRows().first { $0.symbol == "ACME" }?.spark.count ?? 0
+
+        #expect(monthly == 2, "the hole is a third of the chart — it must read as a break")
+        #expect(fiveYears == 1, "the same hole is sub-pixel over five years")
     }
 
     @Test("The worklist is empty on a healthy book and names the problem on a broken one")

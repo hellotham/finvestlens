@@ -84,6 +84,21 @@ struct InvestmentsView: View {
             }
         }
         ToolbarItem {
+            // The sparkline period, named rather than abbreviated, and
+            // adjustable: a line's shape says nothing until you know whether it
+            // spans a month or five years (`FR-INV-12`).
+            Picker(selection: Binding(get: { model.sparkRange },
+                                      set: { model.sparkRange = $0 })) {
+                ForEach(AppModel.SparkRange.allCases) { range in
+                    Text(range.label).tag(range)
+                }
+            } label: {
+                Label("Price History", systemImage: "chart.xyaxis.line")
+            }
+            .pickerStyle(.menu)
+            .help("How much price history each holding's sparkline covers")
+        }
+        ToolbarItem {
             Menu("More", systemImage: "ellipsis.circle") {
                 Button("Watch Security…", systemImage: "eye") { showingAddWatch = true }
                 Button("Enter a Price…", systemImage: "plus") { showingAddPrice = true }
@@ -134,6 +149,18 @@ struct InvestmentsView: View {
 
     // MARK: Holdings (`FR-INV-11`)
 
+    /// One window for the whole table, read once per body pass.
+    private var sparkWindow: ClosedRange<Date> { model.sparkWindow }
+
+    /// The first group with rows on screen — where the period legend goes, so
+    /// it is stated once and never lands on an empty book.
+    private var firstVisibleGroup: InvestmentGroup? {
+        InvestmentGroup.allCases.first { group in
+            (group != .closed || model.showsClosedPositions)
+                && rows.contains { $0.group == group }
+        }
+    }
+
     @ViewBuilder
     private var holdings: some View {
         ForEach(InvestmentGroup.allCases, id: \.self) { group in
@@ -142,28 +169,41 @@ struct InvestmentsView: View {
                 Section {
                     if expanded.contains(group) {
                         ForEach(members) { row in
-                            InvestmentRowView(row: row, model: model,
+                            InvestmentRowView(row: row, model: model, sparkWindow: sparkWindow,
                                               onTarget: { targeting = CommodityTarget(commodity: row.commodity) })
                         }
                     }
                 } header: {
-                    Button {
-                        if expanded.contains(group) { expanded.remove(group) }
-                        else { expanded.insert(group) }
-                    } label: {
-                        HStack {
-                            Image(systemName: expanded.contains(group)
-                                  ? "chevron.down" : "chevron.right")
+                    HStack {
+                        Button {
+                            if expanded.contains(group) { expanded.remove(group) }
+                            else { expanded.insert(group) }
+                        } label: {
+                            HStack {
+                                Image(systemName: expanded.contains(group)
+                                      ? "chevron.down" : "chevron.right")
+                                    .scaledFont(.caption2)
+                                Text(group.title)
+                                Text("\(members.count)").foregroundStyle(.secondary)
+                                Spacer()
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(expanded.contains(group)
+                                            ? "Collapse \(group.title), \(members.count) securities"
+                                            : "Expand \(group.title), \(members.count) securities")
+
+                        // The period, legible without opening a menu. Outside
+                        // the disclosure button so it is not part of that tap
+                        // target, and stated once on the first section rather
+                        // than repeated over every group.
+                        if group == firstVisibleGroup {
+                            Text("Prices · \(model.sparkRange.label)")
                                 .scaledFont(.caption2)
-                            Text(group.title)
-                            Text("\(members.count)").foregroundStyle(.secondary)
-                            Spacer()
+                                .foregroundStyle(.secondary)
+                                .accessibilityLabel("Sparklines cover \(model.sparkRange.label)")
                         }
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(expanded.contains(group)
-                                        ? "Collapse \(group.title), \(members.count) securities"
-                                        : "Expand \(group.title), \(members.count) securities")
                 }
             }
         }
@@ -285,6 +325,9 @@ private struct ConfidenceBand: View {
 private struct InvestmentRowView: View {
     let row: InvestmentRow
     @Bindable var model: AppModel
+    /// Passed in rather than read per row, so every line in the table shares
+    /// one time axis and one clock reading.
+    let sparkWindow: ClosedRange<Date>
     let onTarget: () -> Void
     @Environment(\.appDateFormat) private var dateFormat
 
@@ -300,7 +343,7 @@ private struct InvestmentRowView: View {
             }
             .frame(minWidth: 90, alignment: .leading)
 
-            Sparkline(segments: row.spark)
+            Sparkline(segments: row.spark, window: sparkWindow)
                 .frame(width: 72, height: 22)
                 .accessibilityHidden(true)
 
@@ -367,24 +410,50 @@ private struct InvestmentRowView: View {
 /// data reads as a **break** rather than an invented straight line (`FR-INV-12`).
 private struct Sparkline: View {
     let segments: [SparkSegment]
+    /// The table-wide time axis. Every row is drawn against the same one, so a
+    /// horizontal position means the same date in every line.
+    let window: ClosedRange<Date>
 
     var body: some View {
-        if segments.isEmpty {
-            Rectangle().fill(.quaternary).frame(height: 1)
-                .accessibilityHidden(true)
-        } else {
-            Canvas { context, size in
-                guard let bounds = Self.bounds(of: segments) else { return }
-                for segment in segments {
-                    var path = Path()
-                    for (index, point) in segment.points.enumerated() {
-                        let position = Self.point(point, in: bounds, size: size)
-                        if index == 0 { path.move(to: position) } else { path.addLine(to: position) }
-                    }
-                    context.stroke(path, with: .color(.appAccent), lineWidth: 1.2)
+        // The empty case keeps the same 22pt box as a drawn line, with its rule
+        // on the vertical centre. Collapsing it to a bare 1pt `Rectangle` let
+        // the `HStack` centre a shorter view, so rows without history sat at a
+        // different height from rows with it and the column visibly wandered.
+        Canvas { context, size in
+            let midY = size.height / 2
+            guard let value = Self.valueBounds(of: segments) else {
+                var rule = Path()
+                rule.move(to: CGPoint(x: 0, y: midY))
+                rule.addLine(to: CGPoint(x: size.width, y: midY))
+                context.stroke(rule, with: .color(.secondary.opacity(0.25)), lineWidth: 1)
+                return
+            }
+            // One expression: a `...` broken across lines parses as a partial
+            // range and silently changes the type.
+            let from = window.lowerBound.timeIntervalSinceReferenceDate
+            let to = max(window.upperBound.timeIntervalSinceReferenceDate, from + 1)
+            let bounds = (x: from...to, y: value)
+            for segment in segments {
+                var path = Path()
+                for (index, point) in segment.points.enumerated() {
+                    let position = Self.point(point, in: bounds, size: size)
+                    if index == 0 { path.move(to: position) } else { path.addLine(to: position) }
                 }
+                context.stroke(path, with: .color(.appAccent), lineWidth: 1.2)
             }
         }
+        .drawingGroup()
+    }
+
+    /// The value range is still per row: two securities' prices are not
+    /// comparable in absolute terms, so each line uses its own vertical scale.
+    /// Only the *time* axis is shared — that is the one that has to be.
+    private static func valueBounds(of segments: [SparkSegment]) -> ClosedRange<Double>? {
+        let values = segments.flatMap(\.points).map(\.value)
+        guard let low = values.min(), let high = values.max() else { return nil }
+        // A flat series would divide by zero; give it a hair of height so it
+        // draws as the horizontal line it is.
+        return low...(high > low ? high : low + 1)
     }
 
     // Drawn by hand rather than with Swift Charts, for two reasons. A `Chart`
@@ -394,19 +463,6 @@ private struct Sparkline: View {
     // string extractor then demands a translation for in eight languages, for
     // text that is never displayed.
 
-    private static func bounds(of segments: [SparkSegment]) -> (x: ClosedRange<Double>, y: ClosedRange<Double>)? {
-        let points = segments.flatMap(\.points)
-        guard let firstDate = points.map(\.date).min(), let lastDate = points.map(\.date).max(),
-              let low = points.map(\.value).min(), let high = points.map(\.value).max()
-        else { return nil }
-        let x = firstDate.timeIntervalSinceReferenceDate...max(lastDate.timeIntervalSinceReferenceDate,
-                                                              firstDate.timeIntervalSinceReferenceDate + 1)
-        // A flat series would divide by zero; give it a hair of height so it
-        // draws as the horizontal line it is.
-        let y = low...(high > low ? high : low + 1)
-        return (x, y)
-    }
-
     private static func point(_ point: SparkPoint,
                               in bounds: (x: ClosedRange<Double>, y: ClosedRange<Double>),
                               size: CGSize) -> CGPoint {
@@ -414,8 +470,13 @@ private struct Sparkline: View {
         let spanY = bounds.y.upperBound - bounds.y.lowerBound
         let fractionX = (point.date.timeIntervalSinceReferenceDate - bounds.x.lowerBound) / spanX
         let fractionY = (point.value - bounds.y.lowerBound) / spanY
+        // Inset by half the stroke so the extremes are not shaved off by the
+        // canvas edge — without it every line's high and low read as clipped,
+        // and the top of one row sat flush against the bottom of the next.
+        let inset = 1.0
+        let usable = max(1, size.height - 2 * inset)
         return CGPoint(x: fractionX * size.width,
-                       y: size.height - fractionY * size.height)   // y grows downward
+                       y: inset + usable - fractionY * usable)   // y grows downward
     }
 }
 

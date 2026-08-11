@@ -133,8 +133,12 @@ extension AppModel {
     /// Sorted by market value descending within each group: the position that
     /// most affects whether the total is right belongs at the top, which is not
     /// what alphabetical order gives you.
-    public func investmentRows(sparkDays: Int = 90) -> [InvestmentRow] {
+    public func investmentRows(range: SparkRange? = nil) -> [InvestmentRow] {
         guard let book, let health = priceHealth() else { return [] }
+        let window = range.map { chosen -> ClosedRange<Date> in
+            let end = Self.endOfToday()
+            return (Calendar.current.date(byAdding: .day, value: -chosen.days, to: end) ?? end)...end
+        } ?? sparkWindow
         let asOf = Self.endOfToday()
         let advanced = advancedPortfolio(asOf: asOf)
 
@@ -154,8 +158,7 @@ extension AppModel {
         }
 
         let watched = Set(watchlist.map { "\($0.namespace)|\($0.mnemonic)" })
-        let cutoff = Calendar.current.date(byAdding: .day, value: -sparkDays, to: Date()) ?? Date()
-        let series = sparkSeries(book: book, since: cutoff)
+        let series = sparkSeries(book: book, window: window)
 
         var rows: [InvestmentRow] = []
         for security in health.securities {
@@ -206,30 +209,35 @@ extension AppModel {
         }
     }
 
-    /// Sparkline segments per commodity over the recent window (`FR-INV-12`).
+    /// Sparkline segments per commodity over `window` (`FR-INV-12`).
     ///
     /// One pass over the price database rather than a filter per security: the
     /// reference book holds ~150k prices and this runs for every row on screen.
-    private func sparkSeries(book: Book, since: Date) -> [Commodity: [SparkSegment]] {
+    private func sparkSeries(book: Book, window: ClosedRange<Date>) -> [Commodity: [SparkSegment]] {
         var byCommodity: [Commodity: [(Date, Double)]] = [:]
         for price in book.prices
-        where price.commodity.namespace != .currency && price.date >= since {
+        where price.commodity.namespace != .currency && window.contains(price.date) {
             byCommodity[price.commodity, default: []]
                 .append((price.date, NSDecimalNumber(decimal: price.value).doubleValue))
         }
+
+        // Break the line where an absence is actually visible. A week is the
+        // floor — a weekend is not a gap, a fortnight is — but a week drawn
+        // across five years is a third of a pixel, so the threshold also has to
+        // scale with the window or a 5Y line shatters into confetti.
+        let span = window.upperBound.timeIntervalSince(window.lowerBound)
+        let breakAfter = max(7 * 86_400, span * 0.02)
 
         let calendar = Calendar.current
         var out: [Commodity: [SparkSegment]] = [:]
         for (commodity, raw) in byCommodity {
             let points = raw.sorted { $0.0 < $1.0 }
                 .map { SparkPoint(date: calendar.startOfDay(for: $0.0), value: $0.1) }
-            // Break the line wherever more than a week of calendar time passes
-            // with no observation. A weekend is not a gap; a fortnight is.
             var segments: [SparkSegment] = []
             var current: [SparkPoint] = []
             for point in points {
                 if let last = current.last,
-                   point.date.timeIntervalSince(last.date) > 7 * 86_400 {
+                   point.date.timeIntervalSince(last.date) > breakAfter {
                     if current.count > 1 { segments.append(SparkSegment(id: segments.count, points: current)) }
                     current = []
                 }
@@ -283,6 +291,76 @@ extension AppModel {
         }
         return RateHealth(currencies: others.count, priced: others.count - missing.count,
                           missing: missing)
+    }
+
+    // MARK: The sparkline window (`FR-INV-12`)
+
+    /// The period every holding's sparkline covers.
+    ///
+    /// Named on screen and adjustable, because an unlabelled line is unreadable:
+    /// a shape means nothing until you know whether it spans a month or a
+    /// decade, and the answer changes which shapes are worth worrying about.
+    public enum SparkRange: String, CaseIterable, Sendable, Identifiable {
+        case month, quarter, halfYear, year, fiveYears
+        public var id: String { rawValue }
+
+        /// Days back from today.
+        public var days: Int {
+            switch self {
+            case .month: return 30
+            case .quarter: return 91
+            case .halfYear: return 183
+            case .year: return 365
+            case .fiveYears: return 1826
+            }
+        }
+
+        /// The written-out name, used everywhere a person reads it: the picker,
+        /// the column legend and VoiceOver. There is deliberately no "3M" form —
+        /// an abbreviation is what made the axis unreadable in the first place,
+        /// and VoiceOver would say "three em".
+        public var label: String {
+            switch self {
+            case .month: String(localized: "1 month")
+            case .quarter: String(localized: "3 months")
+            case .halfYear: String(localized: "6 months")
+            case .year: String(localized: "1 year")
+            case .fiveYears: String(localized: "5 years")
+            }
+        }
+    }
+
+    /// The chosen sparkline period. A book preference: it belongs to how this
+    /// book's holdings behave, not to the app.
+    public var sparkRange: SparkRange {
+        get {
+            if case let .string(raw)? = book?.kvp["finvestlens/sparkRange"],
+               let range = SparkRange(rawValue: raw) { return range }
+            return .quarter
+        }
+        set {
+            editingBookKvp(named: "Change Sparkline Period") {
+                book?.kvp["finvestlens/sparkRange"] = .string(newValue.rawValue)
+            }
+        }
+    }
+
+    /// The window every sparkline is drawn against — **one axis for the whole
+    /// table**, not one per row.
+    ///
+    /// Scaling each row to its own first and last price made the column
+    /// unreadable and, worse, dishonest: five days of data stretched the full
+    /// width, and a holding a month stale still drew to the right-hand edge as
+    /// though it were current. Sharing the axis means a horizontal position is
+    /// the same date on every row, and a line that stops short is a line whose
+    /// data stops short — which is the point.
+    /// Anchored to `endOfToday()` rather than `Date()` for the same reason the
+    /// report cache is: a live clock makes every redraw a different window, so
+    /// nothing downstream can ever compare equal.
+    public var sparkWindow: ClosedRange<Date> {
+        let end = Self.endOfToday()
+        let start = Calendar.current.date(byAdding: .day, value: -sparkRange.days, to: end) ?? end
+        return start...end
     }
 
     // MARK: Closed positions (`FR-INV-24`)
