@@ -265,16 +265,19 @@ def cases(fixture):
     def tool(name, path, **rest):
         return {"tool_name": name, "tool_input": {"file_path": path, **rest}}
 
-    ENGINE = "Packages/Engine/Sources/FinvestLensEngine/DatePlausibility.swift"
+    # Distinct name: a bare `ENGINE` here shadows the module-level fixture
+    # path for every later case in this function, and the check-docs rows
+    # then pointed at a file the fixture never created.
+    ENGINE_SRC = "Packages/Engine/Sources/FinvestLensEngine/DatePlausibility.swift"
     yield ("engine gains a public type", "fires", STALE,
-           tool("Write", ENGINE, content="public enum DatePlausibility { }"), ROOT)
+           tool("Write", ENGINE_SRC, content="public enum DatePlausibility { }"), ROOT)
     yield ("engine function body only", "quiet", STALE,
-           tool("Edit", ENGINE, new_string="    total += 1",
+           tool("Edit", ENGINE_SRC, new_string="    total += 1",
                 old_string="    total += 2"), ROOT)
     # A deletion moves the interface as much as an addition, and its new text
     # gives nothing away — the reason both sides of the edit are scanned.
     yield ("engine loses a public type", "fires", STALE,
-           tool("Edit", ENGINE, new_string="",
+           tool("Edit", ENGINE_SRC, new_string="",
                 old_string="public enum DatePlausibility { }"), ROOT)
     yield ("a public type outside Engine", "quiet", STALE,
            tool("Edit", "Packages/Reports/Sources/R/A.swift",
@@ -327,6 +330,13 @@ def cases(fixture):
            [user("fix the tests"), edits(fixture, ENGINE_TESTS)], fixture)
     yield ("user waived the doc update", "allowed", DOCS,
            [user("fix the engine, no doc update"), edits(fixture, ENGINE)], fixture)
+    # A scratch file written and deleted inside one turn — a probe used to
+    # prove a hook fires — is in the tool log and nowhere else. Nothing can
+    # document a file that does not exist.
+    yield ("source written then deleted in the turn", "allowed", DOCS,
+           [user("fix the engine"),
+            edits(fixture, "Packages/Engine/Sources/FinvestLensEngine/__Probe.swift")],
+           fixture)
 
 
 def main():

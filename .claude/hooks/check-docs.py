@@ -107,7 +107,19 @@ def user_text(record):
 
 
 def edited_paths(records, start):
-    """Files written by Edit/Write/MultiEdit after index `start`."""
+    """Source files this turn actually left behind, after index `start`.
+
+    The tool-call log says what was *written*, which is not the same as what
+    changed. A file created and deleted inside one turn — a scratch probe used
+    to confirm a hook fires, say — appears in the log and nowhere else, and
+    demanding a specification entry for a file that does not exist is a
+    demand nobody can satisfy honestly.
+
+    So the log supplies the candidates and the filesystem is the authority: a
+    path that is gone is not a behaviour change. This is the same principle
+    the sibling gate learned — probe the repository, do not trust a narrative
+    about it.
+    """
     paths = set()
     for _, record in records[start:]:
         for block in blocks(record):
@@ -116,7 +128,7 @@ def edited_paths(records, start):
             if block.get("name") not in ("Edit", "Write", "MultiEdit", "NotebookEdit"):
                 continue
             path = (block.get("input") or {}).get("file_path")
-            if isinstance(path, str):
+            if isinstance(path, str) and os.path.exists(path):
                 paths.add(path)
     return paths
 
