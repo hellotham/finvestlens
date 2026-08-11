@@ -200,6 +200,17 @@ def cases(fixture):
            bash('git commit -m "equal to the cent ($3,964,362.15)"'), ROOT)
     yield ("the heredoc shape this repo uses", "BLOCKED", FIGURES,
            bash("git commit -q -F - <<'MSG'\nweighted average $123,456.78\nMSG"), ROOT)
+    # The three shapes that survived the 10 Aug rewrite because it applied the
+    # size rule only. Each is a verbatim fragment of a message that shipped.
+    yield ("shorthand over a million", "BLOCKED", FIGURES,
+           bash('git commit -m "total value reached $3.96M after the fix"'), ROOT)
+    yield ("shorthand under a million, about the real book", "BLOCKED", FIGURES,
+           bash('git commit -m "the real test book: net worth $981k shown"'), ROOT)
+    yield ("sub-threshold movement on an account line", "BLOCKED", FIGURES,
+           bash('git commit -m "moved to Assets:Chris Tham:Cash; Joint fell by $8,228.38"'), ROOT)
+
+    yield ("a mortgage illustration in shorthand", "allowed", FIGURES,
+           bash('git commit -m "$300k at 6% over 30 years is $1,798.65/mo"'), ROOT)
     yield ("an illustrative amount", "allowed", FIGURES,
            bash('git commit -m "a $400 dining entry moved to 2025"'), ROOT)
     yield ("a small round number", "allowed", FIGURES,

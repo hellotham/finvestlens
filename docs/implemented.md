@@ -639,8 +639,10 @@ was registration-order dependent), `BookKvpKeys` (Engine constants for the
 cross-module slots), `StatementLabels.uncategorised` (seven comparison sites),
 `DividendAccounts` paths, the narrative tokeniser
 (`ImportMatcher.narrativeTokens` with an opt-in date-token filter),
-`AmountFormat.compact` (the two decks' copies had a symbol hack that printed
-"C[redacted]" for CHF), `ReportPeriod.financialYearLabel`, and
+`AmountFormat.compact` (the two decks' copies each took only the *first*
+character of the currency symbol, so a multi-character symbol was truncated —
+"CHF " became "C"; the unified one keeps everything before the first digit),
+`ReportPeriod.financialYearLabel`, and
 `GnuCashDate.parseDayOnly` (CAMT allocated a `DateFormatter` per entry row).
 Dead code deleted: `AsyncReport`, `detailLine`/`legDetailLine`,
 `debtPlanResults`, `financialYearPackDocuments`, `apiKey`/`setAPIKey`,
