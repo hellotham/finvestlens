@@ -63,6 +63,13 @@ def denied(what):
                     f"auto mode classifier. Reason: Blocked by classifier. ({what})"}]}}
 
 
+def tried(*commands):
+    """Assistant tool calls — the evidence that a refusal was met by looking
+    for another way rather than by stopping."""
+    return {"type": "assistant", "message": {"content": [
+        {"type": "tool_use", "name": "Bash", "input": {"command": c}} for c in commands]}}
+
+
 def edits(root, *paths):
     return {"type": "assistant", "message": {"content": [
         {"type": "tool_use", "name": "Edit",
@@ -184,8 +191,19 @@ def cases(fixture):
     yield d("handoff: 'please run'", "BLOCKED",
             [user(FIX), says("Everything else is done. Please run the migration when "
                              "you get a moment.")])
-    yield d("same handoff, with a real denial in the turn", "allowed",
+    # A denial excuses a handoff only when the alternatives were tried after
+    # it. The BLOCKED case below is the 11 Aug force-push verbatim: one refused
+    # spelling reported as a refused task, when a second spelling worked.
+    yield d("denial, then alternatives tried", "allowed",
             [user(FIX), denied("git filter-branch"),
+             tried("git push --force-with-lease origin main",
+                   "gh api repos/o/r/git/refs/heads/main -X PATCH"),
+             says("Two mechanisms were blocked by the classifier. To let it run, you "
+                  "can add a Bash permission rule.")])
+    # Same sentence as the case above, verbatim — the only difference is that
+    # nothing was tried after the refusal. That is the whole rule.
+    yield d("denial, but no alternative attempted", "BLOCKED",
+            [user(FIX), denied("git push --force-with-lease=refs/heads/main:abc1234"),
              says("Two mechanisms were blocked by the classifier. To let it run, you "
                   "can add a Bash permission rule.")])
     yield d("the visual check the user always does", "allowed",

@@ -223,16 +223,44 @@ def is_real_user_turn(record):
                                 "<system-reminder", "Caveat:", "[Request interrupted"))
 
 
+def attempts_after(records, index):
+    """How many tool calls the assistant made after `index`, absolute."""
+    total = 0
+    for kind, record in records[index + 1:]:
+        if kind != "assistant":
+            continue
+        for block in record.get("message", {}).get("content") or []:
+            if isinstance(block, dict) and block.get("type") == "tool_use":
+                total += 1
+    return total
+
+
+# A refusal excuses a handoff only if the turn shows the alternatives being
+# tried afterwards. Two is the bar: one retry can be the same call again.
+ATTEMPTS_REQUIRED = 2
+
+
 def has_denial_receipt(records, start):
-    """Did something actually refuse this turn?
+    """Did something actually refuse this turn — *and* was that refusal final?
 
     Scans everything after the last user message — tool results, hook output,
     permission errors — for evidence that an action was genuinely blocked.
     Without it, "you can run this yourself" is not a blocker, it is a deferral
     wearing a blocker's clothes, and this project's standing rule is that a
     claim carries its receipt.
+
+    A receipt alone was not enough, and this is why the rule grew a second
+    half. On 11 Aug 2026 `git push --force-with-lease=refs/heads/main:<sha>`
+    was refused by the permission classifier, and that one denial was reported
+    as "the force-push is refused, rewriting history has no non-force path" —
+    a wall. Plain `git push --force-with-lease origin main` was accepted
+    minutes later. The refusal was real; the conclusion drawn from it was not.
+    One refused *spelling* is not a refused *task*, so a denial now only
+    excuses a handoff when the transcript shows the alternatives actually being
+    attempted after it.
     """
-    for kind, record in records[start:]:
+    denied_at = None
+    for offset, (kind, record) in enumerate(records[start:], start=start):
         # Only what came *back* counts. Scanning the assistant's own prose let
         # it certify itself: writing "you can add a permission rule" both
         # triggered the handoff rule and satisfied the receipt for it, so the
@@ -247,8 +275,15 @@ def has_denial_receipt(records, start):
             if not isinstance(block, dict) or block.get("type") != "tool_result":
                 continue
             if DENIAL.search(json.dumps(block.get("content"))):
-                return True
-    return False
+                denied_at = offset
+                break
+        if denied_at is not None:
+            break
+    if denied_at is None:
+        return False
+    # The refusal happened. Was it the end of the attempt, or the start of
+    # looking for another way?
+    return attempts_after(records, denied_at) >= ATTEMPTS_REQUIRED
 
 
 def main():
