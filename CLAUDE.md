@@ -128,53 +128,18 @@ These are not preferences. Each one is here because it was broken, at cost.
   or destroying something outward-facing. Then put that decision to them with
   `AskUserQuestion` and the facts that settle it. Never narrate the wall.
 
-Enforcement for all of the above lives in `.claude/settings.json`:
-`directive-checklist.py` restates directives at prompt time,
-`check-directives.py` blocks a stop that skipped a directive (scanning the last
-five user turns) or asserted unevidenced work, `check-docs.py` blocks a stop
-where source changed and no specification document did, `check-no-deferrals.py`
-blocks a stop that ends with work named but not done — offers, skip words, and
-the residual-work report (a section headed *what's still broken*), a shape that
-needs no deferral vocabulary at all — `no-chips.py` blocks chips
-everywhere including subagents, `no-figures-in-commits.py` blocks a commit
-message carrying a real balance (by size, or by any amount on a line naming
-the real book), and the `hookify.*.local.md` rules gate
-`Color.accentColor`, unsigned launches, UI review gates, and framework-blame.
-These gates are the user's, not yours: never weaken or bypass one except on an
-explicit instruction, and treat a rejection as a defect list, not an obstacle.
+**These rules are enforced by hooks, not by memory.** `.claude/settings.json`
+wires `.claude/hooks/*.py`; `.claude/hookify.*.local.md` adds pattern rules.
+A hook can *probe* — did this turn change a `.swift` file, does this commit
+message carry a balance, is this launch unsigned — where prose can only ask you
+to remember. **Each hook's own docstring is the authority** for what it checks,
+why, and which exemptions it deliberately allows; that is the copy to read, and
+the only copy to change. Do not restate it here: this paragraph has already
+gone stale once by trying to.
 
-Three things they deliberately allow, because the alternative is a gate people
-route around. **No code changed means no build is owed** — `check-directives.py`
-skips its build attestations unless the turn edited a `.swift` file, and reads
-a not-run report ("iOS build not attempted") as the honesty it is rather than
-as a claim; it once cost two full platform builds on a turn that changed one
-Markdown file. A **blocker stated next to the item it blocks** passes
-`check-no-deferrals.py` ("X remains undone because Y" — the sibling gate
-*requires* exactly this); a blocker far from the item does not, since one honest
-sentence must not excuse a whole list. And **quoted, code-spanned and
-emphasised text is not searched at all**, so discussing the gates does not trip
-them — a detector that cannot tell use from mention fires on every conversation
-about itself.
-
-**Handing the user work you could do yourself is blocked, and a blocker phrase
-does not excuse it.** "That's your call", "you can add a permission rule", "run
-it yourself" — these read as deference and land as deferrals, and because
-*"your call"* is itself blocker-shaped, the blocker exemption used to wave them
-straight through. A handoff now clears the gate only on a **receipt**: an
-actual refusal recorded in this turn's *tool results* (a permission denial, a
-hook block), or the on-screen check the user has always done themselves. The
-receipt cannot come from the assistant's own prose — writing "permission rule"
-once satisfied the very rule it tripped. **A blocked tool is not a blocked
-task:** exhaust the alternatives before reporting a wall.
-
-A denial on its own is no longer enough, because a real one was used to excuse
-a wall that was not there: the receipt now only clears the gate when the turn
-*also* shows at least two tool calls **after** the refusal. Trying another way
-is what turns a refusal into a finding; stopping at the first one is the
-behaviour the receipt was meant to prevent, not license.
-
-After editing any hook, run its regression suite — 34 cases, both directions,
-every mention marker and every real deferral shape that has actually been seen:
+They are the user's, not yours — never weaken or bypass one except on an
+explicit instruction, and treat a block as a defect list rather than an
+obstacle. After editing any hook, run both directions of its suite:
 
 ```bash
 python3 .claude/hooks/test-gates.py
@@ -237,6 +202,6 @@ work, not extra scope:
 ## Conventions
 
 - Every Swift source in `Packages/`, the app target, and the extensions carries `// SPDX-License-Identifier: GPL-3.0-or-later` — CI gates exactly those roots; the `website/scripts/` tooling sits outside the gate.
-- Commit straight to `main` — no feature branches, no Co-Authored-By or model-attribution trailers. Run the package suites and both app builds first.
+- Commit straight to `main`. Run the package suites and both app builds first. (Branch creation and model-attribution trailers are hook-gated, so they need no rule here.)
 - After adding or changing `Engine` types, clear dependent packages' `.build` directories and the app's DerivedData `Build` folder — stale module caches will happily link old package code.
-- `imports/` (real bank exports) and `Ashley Bears.finvestlens` (a real book used as the standard manual-test fixture; changes to it may be left permanent) are gitignored **real financial data**: never commit them and never let their contents reach fixtures, screenshots, or the website. Public imagery comes from the synthetic generator in `website/scripts/demo-book/`. Before capturing app imagery, disable session restore (`defaults write com.hellotham.finvestlensapp finvestlens.reopenLastBook -bool false`, restore afterwards) — it defaults to on and will silently reopen the last-used real book over a demo book.
+- `imports/` (real bank exports) and `Ashley Bears.finvestlens` (a real book used as the standard manual-test fixture; changes to it may be left permanent) are **real financial data**. Staging them is hook-gated; what a hook cannot see is their *contents* reaching fixtures, screenshots, logs or the website, so that judgement stays yours. Public imagery comes from the synthetic generator in `website/scripts/demo-book/`. Before capturing app imagery, disable session restore (`defaults write com.hellotham.finvestlensapp finvestlens.reopenLastBook -bool false`, restore afterwards) — it defaults to on and will silently reopen the last-used real book over a demo book.

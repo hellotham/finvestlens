@@ -85,8 +85,14 @@ dist/
 *.finvestlens.audit.log
 build/
 
-# Hookify rules are personal/local (the plugin reads them; they are not shared).
-.claude/*.local.md
+# Hookify rules encode *project* policy — a banned API, real-data safety, the
+# commit conventions — so they are tracked like `hooks/`, `skills/` and
+# `settings.json`. The `.local.md` suffix is the plugin's filename convention,
+# not a statement that a rule is personal, and treating it as one meant every
+# rule vanished on a fresh clone. That became load-bearing the moment CLAUDE.md
+# was trimmed on the strength of these rules enforcing what its prose had said.
+# A genuinely personal rule goes in `.claude/personal.*.local.md`.
+.claude/personal.*.local.md
 
 # Build/test artifacts.
 *.profraw
