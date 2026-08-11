@@ -316,7 +316,10 @@ public enum LedgerImport {
                 let currency = self.commodity(symbol: price.price.commodity)
                 book.addPrice(Price(commodity: commodity, currency: currency,
                                     date: price.date, value: price.price.quantity,
-                                    source: "ledger:import"))
+                                    source: "ledger:import",
+                                    // A journal's own timestamps round-trip
+                                    // verbatim, as the GnuCash importer's do.
+                                    preservingTime: true))
                 summary.pricesImported += 1
             }
             return book

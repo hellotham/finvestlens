@@ -387,7 +387,11 @@ public extension FinancialReports {
                 daysByExchange[TradingCalendar.exchange(of: price.commodity), default: []].insert(day)
                 allDays.insert(day)
             }
-            guard price.date <= asOf else { continue }
+            // Compared by **day**, not by instant. Prices are day-facts
+            // stored at a neutral time (10:59:00Z), so an instant comparison
+            // against a caller's midnight `asOf` silently drops every price
+            // dated that very day.
+            guard day <= today else { continue }
             priceDays[price.commodity, default: []].insert(day)
             rowCounts[price.commodity, default: 0] += 1
             sources[price.commodity, default: [:]][price.source, default: 0] += 1
@@ -418,7 +422,8 @@ public extension FinancialReports {
         for account in book.accounts where account.type.isSecurityType && !account.isPlaceholder {
             for split in book.splits(for: account) {
                 guard split.reconcileState != .voided, split.quantity != 0,
-                      let transaction = split.transaction, transaction.datePosted <= asOf
+                      let transaction = split.transaction,
+                      calendar.startOfDay(for: transaction.datePosted) <= today
                 else { continue }
                 movements[account.commodity, default: []].append(
                     (order[ObjectIdentifier(transaction)] ?? 0,

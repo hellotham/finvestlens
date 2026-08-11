@@ -20,6 +20,45 @@ Companions: [PRD](prd.md) · [Architecture](architecture.md) · [Plan](plan.md) 
 
 ---
 
+## One clock for prices — GnuCash's neutral time (11 Aug 2026)
+
+A price is a fact about a **day**, and storing it as an instant let conventions
+accumulate: the reference book carried **twenty-four** distinct clock times for
+the same idea. Days then differed by reader, which is how an inferred trading
+calendar reached 278 days a year against a real 250.
+
+The convention is GnuCash's, read from its source rather than chosen —
+`libgnucash/engine/gnc-date.h`: *"adjust it to 10:59:00Z of that day"*, with
+`gnc-date.cpp`'s `gnc_tm_get_day_neutral` taking the day via `gnc_localtime_r`,
+so the civil day is the **local** one. 10:59Z is neutral because it stays on the
+same civil day from UTC−10 through UTC+13.
+
+- `Price.dayNeutral(_:)` and `Price.isDayNeutral` in `Engine`; the memberwise
+  initialiser normalises by default, with `preservingTime:` for importers.
+- **Importers opt out.** The GnuCash XML and Ledger importers pass
+  `preservingTime: true`: a file's timestamps are data, and rewriting them would
+  break fidelity to the source.
+- **So does the store**, and that one was nearly shipped as a bug.
+  `SQLiteDocumentStore` reads prices with `preservingTime: true`; without it,
+  *loading* a book silently restamped every price in memory, so the next save
+  would rewrite timestamps with no migration ever run — and the importers' own
+  opt-out would be defeated the moment a book was stored and reloaded. It hid
+  itself well: a survey of the loaded book reported "0 to restamp" while the
+  file on disk still held five visible conventions. Checking the disk rather
+  than the loaded model is what caught it.
+- `finlab prices --normalise-times` migrates an existing book.
+- `priceHealth` now compares `asOf` **by day**, not by instant: a price stored
+  at 10:59Z was dropped by a caller passing that same day's midnight.
+
+Verified on a copy of the reference book: 160,139 prices in, 160,139 out, one
+convention on disk afterwards, and **zero prices changed which day they
+describe** — only the time within a day moves.
+
+`normalisePriceTimes` was quadratic on the first attempt (`removePrices` once
+per price, each a full scan) and ran ten minutes before being killed. Same shape
+as the `splits(for:)` defect fixed earlier the same day — twice in one day for
+one mistake.
+
 ## "Valued by hand" was reading a stale GnuCash flag (11 Aug 2026)
 
 Reported from the app: a security sat under **Valued by hand** while its price

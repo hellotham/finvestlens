@@ -128,6 +128,50 @@ extension AppModel {
         }
     }
 
+    /// How many clock conventions the stored prices actually use, and how many
+    /// rows are not yet on the canonical one. Public because `finlab` reports
+    /// it before touching anything, and the book itself is not its to read.
+    public func priceTimeConventions() -> (total: Int, conventions: [String], stale: Int) {
+        var utc = Calendar(identifier: .gregorian)
+        utc.timeZone = TimeZone(secondsFromGMT: 0)!
+        var seen: Set<String> = []
+        var stale = 0
+        let prices = book?.prices ?? []
+        for price in prices {
+            let parts = utc.dateComponents([.hour, .minute], from: price.date)
+            seen.insert(String(format: "%02d:%02d", parts.hour ?? 0, parts.minute ?? 0))
+            if !price.isDayNeutral { stale += 1 }
+        }
+        return (prices.count, seen.sorted(), stale)
+    }
+
+    /// Restamps every stored price to the book's one convention — 10:59:00Z of
+    /// the day it already belongs to (`Price.dayNeutral`).
+    ///
+    /// Only the time within a day moves; the day itself never does, so no price
+    /// changes which session it describes. Idempotent, and undoable as a single
+    /// edit like any other.
+    public func normalisePriceTimes(onChange: () -> Void = {}) {
+        guard let book else { return }
+        let stale = book.prices.filter { !$0.isDayNeutral }
+        guard !stale.isEmpty else { return }
+        // One removal pass for all of them, not one per price: `removePrices`
+        // scans the whole database, so calling it per row turns a migration of
+        // sixty thousand prices into sixty thousand scans of a hundred and
+        // sixty thousand. The same shape as the Engine's `splits(for:)`, and it
+        // ran for ten minutes before being killed.
+        let staleGuids = Set(stale.map(\.guid))
+        editingPrices(named: "Normalise Price Times") {
+            book.removePrices { staleGuids.contains($0.guid) }
+            for price in stale {
+                var restamped = price
+                restamped.date = Price.dayNeutral(price.date)
+                book.addPrice(restamped)
+                onChange()
+            }
+        }
+    }
+
     /// The advanced portfolio (cost basis, avg cost, unrealized/realized gain,
     /// allocation) under the selected cost-basis method (`FR-RPT-02a`).
     public func advancedPortfolio(asOf: Date = Date()) -> AdvancedPortfolio? {

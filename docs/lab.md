@@ -74,6 +74,16 @@ keyed provider's quota is finite, and when one holding has fallen behind,
 fetching the other seventy-nine is waste that also rewrites data nobody asked
 to touch. An unmatched name is an error rather than a silent no-op.
 
+`--set-delisted` / `--set-trading` mark the named securities as no longer
+trading (or return them). A delisted security's last price is final: it is not
+fetched, not judged for freshness, and not counted in valuation coverage.
+
+`--normalise-times` restamps every stored price to the book's one convention,
+10:59:00Z of the day it already belongs to — GnuCash's own timezone-neutral
+time (`gnc-date.h`). Only the time within a day moves, never the day, and it is
+idempotent. The reference book had accumulated **twenty-four** clock
+conventions; `--dry-run` lists them without writing.
+
 `--replace` discards the named securities' stored prices and rebuilds them from
 this provider, instead of the default merge that only adds dates the book
 lacks. Use it when a series has accumulated several sources and should come

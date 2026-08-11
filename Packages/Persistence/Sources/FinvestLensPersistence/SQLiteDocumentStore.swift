@@ -567,7 +567,15 @@ public final class SQLiteDocumentStore {
                     date: row["date"],
                     value: Serialize.parseDecimal(row["value"]),
                     source: row["source"],
-                    type: row["type"]
+                    type: row["type"],
+                    // Loading is not creating. Without this the memberwise
+                    // initialiser's day-neutral normalisation would restamp
+                    // every price on every read — the stored timestamps would
+                    // silently change on the next save, with no migration ever
+                    // run and nothing to show what moved. It also defeated the
+                    // GnuCash importer's own `preservingTime`, since a book
+                    // survives only as long as it stays in memory.
+                    preservingTime: true
                 ))
                 builtPrices += 1
                 reporter?.builtPrices(builtPrices)

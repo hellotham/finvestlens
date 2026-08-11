@@ -93,6 +93,30 @@ enum PricesCommand {
             log(Fmt.row("save", Fmt.time(saveSeconds)))
             return
         }
+        // Restamp stored prices to the one convention. A price is a fact about
+        // a day, and storing it as an instant let five clock conventions
+        // accumulate in one book — after which two readers disagreed about
+        // which day a price belonged to.
+        if options.flag("normalise-times") {
+            let survey = model.priceTimeConventions()
+            log("  \(Fmt.count(survey.total)) prices, \(survey.conventions.count) clock "
+                + "convention(s) [\(survey.conventions.joined(separator: " "))], "
+                + "\(Fmt.count(survey.stale)) to restamp")
+            guard !options.flag("dry-run") else {
+                log("  --dry-run: nothing written."); return
+            }
+            guard survey.stale > 0 else { log("  already on one convention."); return }
+
+            // Day-neutral is idempotent, so re-running is a no-op, and the
+            // *day* each price belongs to is unchanged — only the time within
+            // it moves.
+            var moved = 0
+            model.normalisePriceTimes { moved += 1 }
+            log("  restamped \(Fmt.count(moved)) prices to 10:59:00Z of their day")
+            let (_, saveSeconds) = try Stopwatch.measure { try model.save() }
+            log(Fmt.row("save", Fmt.time(saveSeconds)))
+            return
+        }
         if options.flag("replace") { log("  mode: REPLACE — existing prices for these securities are discarded") }
         if options.flag("dry-run") {
             log("  --dry-run: would fetch " + securities.map(\.mnemonic).sorted().joined(separator: ", "))

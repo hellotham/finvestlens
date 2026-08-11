@@ -669,7 +669,11 @@ private final class Delegate: NSObject, XMLParserDelegate {
             date: builder.date ?? Date(timeIntervalSince1970: 0),
             value: value,
             source: builder.source,
-            type: builder.type
+            type: builder.type,
+            // The file's timestamps are data. Normalising here would rewrite
+            // what GnuCash wrote and break fidelity to the source; the book's
+            // own convention is applied to prices the app *creates*.
+            preservingTime: true
         ))
     }
 
