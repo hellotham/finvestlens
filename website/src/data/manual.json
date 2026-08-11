@@ -617,34 +617,72 @@
       "topics": [
         {
           "id": "investments",
-          "title": "Investments and prices",
-          "summary": "Holdings, price updates, cost basis and targets.",
+          "title": "Investments",
+          "summary": "Holdings, how current their prices are, and what to fix.",
           "symbol": "chart.line.uptrend.xyaxis",
-          "keywords": "investment security share stock price quote portfolio dividend capital gain cost basis ticker",
+          "keywords": "investment security share stock price quote portfolio dividend capital gain cost basis ticker holding stale coverage watch list target",
           "blocks": [
             {
               "type": "text",
-              "value": "A security account holds units — shares, units in a fund, or a currency. Buys, sells, dividends and returns of capital are recorded through the Stock Transaction sheet, which works out the cost basis and any gain for you."
+              "value": "**Investments** shows what you hold, what it is worth, and — first of all — whether those figures can be trusted. A security account holds units: shares, units in a fund, or a currency. Buys, sells, dividends and returns of capital are recorded through the Stock Transaction sheet, which works out the cost basis and any gain for you."
             },
             {
               "type": "heading",
-              "value": "Prices"
+              "value": "Can I trust today's figures?"
+            },
+            {
+              "type": "text",
+              "value": "The band at the top answers that in one number: the share of your holdings' **value** that is priced as of the market's most recent trading day. Value, not count — one large holding left behind matters more than several small ones."
             },
             {
               "type": "bullets",
               "items": [
-                "**Update Prices** (⇧⌘U) fetches the latest quotes for everything you hold.",
+                "A holding is **current** when it is priced on the latest day its market traded, so a Friday close still counts as current on a Monday.",
+                "**Needs attention** lists only what a person has to act on, with the fix beside it. On a healthy book it is not there at all.",
+                "Missing days *inside a period you held something* are called out separately: those are the ones that make past valuations wrong."
+              ]
+            },
+            {
+              "type": "heading",
+              "value": "Holdings"
+            },
+            {
+              "type": "bullets",
+              "items": [
+                "Each row shows units, value, return since you bought, and how old the price is.",
+                "The small chart is the last three months. **A break in the line means missing prices** — it is never drawn through days that have none.",
+                "**Valued by hand** collects securities no price service covers, such as super funds. They are not failures; enter their prices from **More ▸ Enter a Price…**",
+                "**Closed positions** are hidden. Show them from **More ▸ Show Closed Positions**; their history is always kept for capital gains."
+              ]
+            },
+            {
+              "type": "heading",
+              "value": "Updating prices"
+            },
+            {
+              "type": "bullets",
+              "items": [
+                "**Update Prices** (⇧⌘U) fills in everything missing, including gaps in the middle of a history.",
+                "The arrow beside it chooses a different provider for one run.",
                 "Yahoo and Stooq need no key; EODHD, Alpha Vantage, Finnhub and Twelve Data take a free API key, set in Settings ▸ Pricing.",
                 "Keys are kept in your keychain on this device — never in the book file."
               ]
             },
             {
               "type": "heading",
-              "value": "Price targets"
+              "value": "Exchange rates"
             },
             {
               "type": "text",
-              "value": "Set a target on a security and the dashboard tells you when the latest quote crosses it."
+              "value": "A holding priced in another currency needs a rate before it can be valued in yours. The rates line says whether every currency you use has one, and **Add Rate…** fills a gap."
+            },
+            {
+              "type": "heading",
+              "value": "Watching and targets"
+            },
+            {
+              "type": "text",
+              "value": "**More ▸ Watch Security…** follows something you do not own. Right-click any row to set a price target, and the dashboard tells you when the latest quote crosses it."
             },
             {
               "type": "heading",
@@ -653,6 +691,10 @@
             {
               "type": "text",
               "value": "Record Dividend… books the cash and, where it applies, the franking credits — so the tax reports have what they need at the end of the year."
+            },
+            {
+              "type": "tip",
+              "value": "Prices are never listed as one long table. To work with a security's own history, open that security — everything about it is in one place."
             }
           ]
         },

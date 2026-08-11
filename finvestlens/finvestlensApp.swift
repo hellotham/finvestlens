@@ -261,7 +261,7 @@ struct finvestlensApp: App {
                     .disabled(!model.isOpen)
                 Button("Scheduled Transactions…") { model.show(.scheduled) }
                     .disabled(!model.isOpen)
-                Button("Prices & Securities…") { model.show(.prices) }
+                Button("Investments…") { model.show(.investments) }
                     .disabled(!model.isOpen)
                 Button("Update Prices") { Task { await model.updateAllPrices() } }
                     .keyboardShortcut("u", modifiers: [.command, .shift])

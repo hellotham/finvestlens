@@ -20,6 +20,62 @@ Companions: [PRD](prd.md) · [Architecture](architecture.md) · [Plan](plan.md) 
 
 ---
 
+## P11 · I2 — the Investments destination (11 Aug 2026)
+
+The hub itself (`FR-INV-08`). *Prices & Securities* is gone: its sidebar row, its
+segmented tab picker, its list of every price row in the book, and its list of
+exchange rates. `InvestmentsView.swift` replaces them; `PricesView.swift` and
+`SecuritiesView.swift` are reduced to the per-security sheets they also held and
+renamed `PriceEntrySheets.swift` / `SecurityEditSheets.swift`.
+
+- **Sidebar.** *Investments* now sits with Dashboard and Reports rather than in
+  *Records* between Rules and Emergency Records. The old placement was the
+  diagnosis: it filed investments as a cabinet to maintain rather than something
+  you read to decide. `SidebarSelection.prices` became `.investments`; session
+  restore still accepts the old spelling, so a saved session does not silently
+  drop to the dashboard.
+- **Confidence band** (`FR-INV-09`): value-weighted coverage as a ring plus a
+  headline, what needs a price, and the run state. The ring is
+  `accessibilityHidden` and every figure it shows is repeated in the band's
+  spoken label — a decorative gauge must not be the only carrier of a number.
+- **Worklist** (`FR-INV-13`): classes of problem with counts, the affected
+  symbols, and the fix as a button. Absent entirely on a healthy book.
+- **Holdings** (`FR-INV-11`, `FR-INV-14`): freshness mark, symbol, name,
+  sparkline, market value, return since holding, age. Sorted by value within
+  each group, because the position that most affects whether the total is right
+  belongs at the top. Grouped **Holdings / Valued by hand / Watching / Closed**
+  (`FR-INV-24`, `FR-INV-30`), with closed hidden behind a book preference.
+- **Sparklines** (`FR-INV-12`) are drawn in a `Canvas`, one path per contiguous
+  run, so a gap is a **break**. Swift Charts would have joined across it unless
+  each run were a distinct series, and declaring that series needs a
+  `PlottableValue` label — which the string extractor then demands translated in
+  eight languages, for text that is never displayed.
+- **Exchange rates** (`FR-INV-33`) get one line rather than a list: the same
+  trust question, since a holding in a currency with no rate is silently
+  unvalued.
+- **Provider choice** (`FR-INV-22`) moved from the Quotes sheet into the Update
+  Prices control-group menu; ⌘⇧U is unchanged.
+
+`AppModel+Investments.swift` joins I1's price health to the lot engine's return
+figures. `canFetchQuotes(for:)` is what the Reports layer's `quotable` parameter
+was for: a ticker override set in this app makes a security quotable even though
+GnuCash never marked it, and that mapping cannot live in the Engine. Health is
+memoised on the book revision keyed to `endOfToday()` — the scan costs ~1.1s on
+the reference book, which is fine once per change and ruinous once per redraw.
+
+**Documentation shipped with the surface, not after it.** `HelpContent.swift` ▸
+*Investments* was rewritten and `website/src/data/manual.json` regenerated in the
+same commit; the help book had described the destination this replaces, and it is
+published. The string catalog gained 67 keys in eight languages (with plural
+variations) and lost 31 orphans; `scripts/check-localization.py --build` reports
+the catalogs match the compiler.
+
+**Verified.** 7 new tests (`InvestmentRowsTests`) over grouping, the closed-
+position preference, quotability via override, sparkline segmentation, the
+worklist, value ordering and rate health; 1,319 tests across eleven packages;
+both platform builds. **Not verified: on screen.** The layout, the ring and the
+sparklines have not been looked at.
+
 ## P11 · I1 — the price-health models (11 Aug 2026)
 
 First phase of the Investments hub ([investments-design.md](investments-design.md)).

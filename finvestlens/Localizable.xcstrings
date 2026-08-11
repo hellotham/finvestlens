@@ -1983,6 +1983,143 @@
         }
       }
     },
+    "%lld currencies have no exchange rate": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Währung hat keinen Wechselkurs"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Währungen haben keinen Wechselkurs"
+                }
+              }
+            }
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld currency has no exchange rate"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld currencies have no exchange rate"
+                }
+              }
+            }
+          }
+        },
+        "es": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld moneda no tiene tipo de cambio"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld monedas no tienen tipo de cambio"
+                }
+              }
+            }
+          }
+        },
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld devise n’a pas de taux de change"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld devises n’ont pas de taux de change"
+                }
+              }
+            }
+          }
+        },
+        "it": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld valuta non ha un tasso di cambio"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld valute non hanno un tasso di cambio"
+                }
+              }
+            }
+          }
+        },
+        "ja": {
+          "variations": {
+            "plural": {
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld 件の通貨に為替レートがありません"
+                }
+              }
+            }
+          }
+        },
+        "pt-BR": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld moeda não tem taxa de câmbio"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld moedas não têm taxa de câmbio"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hans": {
+          "variations": {
+            "plural": {
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld 种货币没有汇率"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld detail records": {
       "extractionState": "manual",
       "localizations": {
@@ -2250,6 +2387,691 @@
                 "stringUnit": {
                   "state": "translated",
                   "value": "%lld 个文件"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld hand-valued holdings are out of date": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld manuell bewertete Position ist veraltet"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld manuell bewertete Positionen sind veraltet"
+                }
+              }
+            }
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld hand-valued holding is out of date"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld hand-valued holdings are out of date"
+                }
+              }
+            }
+          }
+        },
+        "es": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld posición valorada a mano está desactualizada"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld posiciones valoradas a mano están desactualizadas"
+                }
+              }
+            }
+          }
+        },
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld position valorisée à la main est obsolète"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld positions valorisées à la main sont obsolètes"
+                }
+              }
+            }
+          }
+        },
+        "it": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld posizione valutata a mano non è aggiornata"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld posizioni valutate a mano non sono aggiornate"
+                }
+              }
+            }
+          }
+        },
+        "ja": {
+          "variations": {
+            "plural": {
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "手入力評価の保有 %lld 件が古くなっています"
+                }
+              }
+            }
+          }
+        },
+        "pt-BR": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld posição avaliada à mão está desatualizada"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld posições avaliadas à mão estão desatualizadas"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hans": {
+          "variations": {
+            "plural": {
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld 项手工估值的持仓已过期"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld holdings are more than a trading week behind": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Position ist mehr als eine Handelswoche im Rückstand"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Positionen sind mehr als eine Handelswoche im Rückstand"
+                }
+              }
+            }
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld holding is more than a trading week behind"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld holdings are more than a trading week behind"
+                }
+              }
+            }
+          }
+        },
+        "es": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld posición lleva más de una semana bursátil de retraso"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld posiciones llevan más de una semana bursátil de retraso"
+                }
+              }
+            }
+          }
+        },
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld position a plus d’une semaine de bourse de retard"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld positions ont plus d’une semaine de bourse de retard"
+                }
+              }
+            }
+          }
+        },
+        "it": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld posizione è indietro di più di una settimana di borsa"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld posizioni sono indietro di più di una settimana di borsa"
+                }
+              }
+            }
+          }
+        },
+        "ja": {
+          "variations": {
+            "plural": {
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "保有 %lld 件が取引一週間以上遅れています"
+                }
+              }
+            }
+          }
+        },
+        "pt-BR": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld posição está mais de uma semana de pregão atrasada"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld posições estão mais de uma semana de pregão atrasadas"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hans": {
+          "variations": {
+            "plural": {
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld 项持仓已落后超过一个交易周"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld holdings have gaps while they were held": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Position hat Lücken aus der Haltedauer"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Positionen haben Lücken aus der Haltedauer"
+                }
+              }
+            }
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld holding has gaps while it was held"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld holdings have gaps while they were held"
+                }
+              }
+            }
+          }
+        },
+        "es": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld posición tiene huecos mientras se mantuvo"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld posiciones tienen huecos mientras se mantuvieron"
+                }
+              }
+            }
+          }
+        },
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld position présente des trous pendant sa détention"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld positions présentent des trous pendant leur détention"
+                }
+              }
+            }
+          }
+        },
+        "it": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld posizione presenta lacune nel periodo di possesso"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld posizioni presentano lacune nel periodo di possesso"
+                }
+              }
+            }
+          }
+        },
+        "ja": {
+          "variations": {
+            "plural": {
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "保有期間中に欠落がある保有が %lld 件あります"
+                }
+              }
+            }
+          }
+        },
+        "pt-BR": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld posição tem lacunas no período em que foi mantida"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld posições têm lacunas no período em que foram mantidas"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hans": {
+          "variations": {
+            "plural": {
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld 项持仓在持有期间存在缺口"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld holdings have never been priced": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Position wurde nie bewertet"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Positionen wurden nie bewertet"
+                }
+              }
+            }
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld holding has never been priced"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld holdings have never been priced"
+                }
+              }
+            }
+          }
+        },
+        "es": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld posición nunca se ha valorado"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld posiciones nunca se han valorado"
+                }
+              }
+            }
+          }
+        },
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld position n’a jamais été valorisée"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld positions n’ont jamais été valorisées"
+                }
+              }
+            }
+          }
+        },
+        "it": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld posizione non è mai stata valutata"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld posizioni non sono mai state valutate"
+                }
+              }
+            }
+          }
+        },
+        "ja": {
+          "variations": {
+            "plural": {
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "一度も価格が付いていない保有が %lld 件あります"
+                }
+              }
+            }
+          }
+        },
+        "pt-BR": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld posição nunca foi avaliada"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld posições nunca foram avaliadas"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hans": {
+          "variations": {
+            "plural": {
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld 项持仓从未有过价格"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld holdings, all current": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Position, aktuell"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Positionen, alle aktuell"
+                }
+              }
+            }
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld holding, current"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld holdings, all current"
+                }
+              }
+            }
+          }
+        },
+        "es": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld posición, al día"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld posiciones, todas al día"
+                }
+              }
+            }
+          }
+        },
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld position, à jour"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld positions, toutes à jour"
+                }
+              }
+            }
+          }
+        },
+        "it": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld posizione, aggiornata"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld posizioni, tutte aggiornate"
+                }
+              }
+            }
+          }
+        },
+        "ja": {
+          "variations": {
+            "plural": {
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "保有 %lld 件、すべて最新"
+                }
+              }
+            }
+          }
+        },
+        "pt-BR": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld posição, em dia"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld posições, todas em dia"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hans": {
+          "variations": {
+            "plural": {
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld 项持仓，全部为最新"
                 }
               }
             }
@@ -2578,6 +3400,280 @@
         }
       }
     },
+    "%lld missing days while held": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld fehlender Tag während der Haltedauer"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld fehlende Tage während der Haltedauer"
+                }
+              }
+            }
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld missing day while held"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld missing days while held"
+                }
+              }
+            }
+          }
+        },
+        "es": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld día ausente mientras se mantuvo"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld días ausentes mientras se mantuvo"
+                }
+              }
+            }
+          }
+        },
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld jour manquant pendant la détention"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld jours manquants pendant la détention"
+                }
+              }
+            }
+          }
+        },
+        "it": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld giorno mancante nel periodo di possesso"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld giorni mancanti nel periodo di possesso"
+                }
+              }
+            }
+          }
+        },
+        "ja": {
+          "variations": {
+            "plural": {
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "保有期間中の欠落 %lld 日"
+                }
+              }
+            }
+          }
+        },
+        "pt-BR": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld dia ausente no período mantido"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld dias ausentes no período mantido"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hans": {
+          "variations": {
+            "plural": {
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "持有期间缺失 %lld 天"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld need a price": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld benötigt einen Kurs"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld benötigen einen Kurs"
+                }
+              }
+            }
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld needs a price"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld need a price"
+                }
+              }
+            }
+          }
+        },
+        "es": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld necesita precio"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld necesitan precio"
+                }
+              }
+            }
+          }
+        },
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld a besoin d’un cours"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld ont besoin d’un cours"
+                }
+              }
+            }
+          }
+        },
+        "it": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld richiede un prezzo"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld richiedono un prezzo"
+                }
+              }
+            }
+          }
+        },
+        "ja": {
+          "variations": {
+            "plural": {
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld 件に価格が必要"
+                }
+              }
+            }
+          }
+        },
+        "pt-BR": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld precisa de preço"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld precisam de preço"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hans": {
+          "variations": {
+            "plural": {
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld 项需要价格"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld of %lld": {
       "extractionState": "manual",
       "localizations": {
@@ -2621,6 +3717,59 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld / %lld"
+          }
+        }
+      }
+    },
+    "%lld of %lld currencies have a rate.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld von %2$lld Währungen haben einen Kurs."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld of %2$lld currencies have a rate."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld de %2$lld monedas tienen tipo de cambio."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld devises sur %2$lld ont un taux."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld valute su %2$lld hanno un tasso."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%2$lld 件中 %1$lld 件の通貨にレートがあります。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld de %2$lld moedas têm taxa."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%2$lld 种货币中有 %1$lld 种有汇率。"
           }
         }
       }
@@ -3543,6 +4692,143 @@
         }
       }
     },
+    "%lld trading days behind": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Handelstag im Rückstand"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Handelstage im Rückstand"
+                }
+              }
+            }
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld trading day behind"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld trading days behind"
+                }
+              }
+            }
+          }
+        },
+        "es": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld día bursátil de retraso"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld días bursátiles de retraso"
+                }
+              }
+            }
+          }
+        },
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld jour de bourse de retard"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld jours de bourse de retard"
+                }
+              }
+            }
+          }
+        },
+        "it": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld giorno di borsa di ritardo"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld giorni di borsa di ritardo"
+                }
+              }
+            }
+          }
+        },
+        "ja": {
+          "variations": {
+            "plural": {
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "取引 %lld 日遅れ"
+                }
+              }
+            }
+          }
+        },
+        "pt-BR": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld dia de pregão atrasado"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld dias de pregão atrasados"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hans": {
+          "variations": {
+            "plural": {
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "落后 %lld 个交易日"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld transactions": {
       "extractionState": "manual",
       "localizations": {
@@ -3911,6 +5197,196 @@
         }
       }
     },
+    "%lld with gaps while held": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld mit Lücken aus der Haltedauer"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld mit Lücken aus der Haltedauer"
+                }
+              }
+            }
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld with gaps while held"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld with gaps while held"
+                }
+              }
+            }
+          }
+        },
+        "es": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld con huecos mientras se mantuvo"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld con huecos mientras se mantuvieron"
+                }
+              }
+            }
+          }
+        },
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld avec des trous pendant la détention"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld avec des trous pendant la détention"
+                }
+              }
+            }
+          }
+        },
+        "it": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld con lacune nel periodo di possesso"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld con lacune nel periodo di possesso"
+                }
+              }
+            }
+          }
+        },
+        "ja": {
+          "variations": {
+            "plural": {
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "保有期間中の欠落あり %lld 件"
+                }
+              }
+            }
+          }
+        },
+        "pt-BR": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld com lacunas no período mantido"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld com lacunas no período mantido"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hans": {
+          "variations": {
+            "plural": {
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld 项在持有期间存在缺口"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld%% of portfolio value priced": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld%% des Portfoliowerts bewertet"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld%% of portfolio value priced"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld%% del valor de la cartera valorado"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld%% de la valeur du portefeuille valorisée"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld%% del valore del portafoglio valutato"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ポートフォリオ価値の %lld%% に価格あり"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld%% do valor da carteira avaliado"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已为 %lld%% 的投资组合价值定价"
+          }
+        }
+      }
+    },
     "%lld. %@": {
       "extractionState": "manual",
       "localizations": {
@@ -3954,6 +5430,59 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld. %@"
+          }
+        }
+      }
+    },
+    "%lldd": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lldT"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lldd"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lldd"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lldj"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lldg"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld日"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lldd"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld天"
           }
         }
       }
@@ -4095,6 +5624,59 @@
           "stringUnit": {
             "state": "translated",
             "value": "**账簿 ▸ 修复账簿** 执行与 GnuCash「检查并修复」相同的检查，在你选择「清理」前不会做任何更改。"
+          }
+        }
+      }
+    },
+    "**Closed positions** are hidden. Show them from **More ▸ Show Closed Positions**; their history is always kept for capital gains.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Geschlossene Positionen** sind ausgeblendet. Über **Mehr ▸ Geschlossene Positionen anzeigen** einblenden; ihre Historie bleibt für die Gewinnermittlung stets erhalten."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Closed positions** are hidden. Show them from **More ▸ Show Closed Positions**; their history is always kept for capital gains."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Las **posiciones cerradas** están ocultas. Muéstralas desde **Más ▸ Mostrar posiciones cerradas**; su historial se conserva siempre para las plusvalías."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les **positions clôturées** sont masquées. Affichez-les via **Plus ▸ Afficher les positions clôturées** ; leur historique est toujours conservé pour les plus-values."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le **posizioni chiuse** sono nascoste. Mostrale da **Altro ▸ Mostra posizioni chiuse**; la loro storia è sempre conservata per le plusvalenze."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**クローズ済みポジション**は非表示です。**その他 ▸ クローズ済みポジションを表示** で表示できます。譲渡損益のため履歴は常に保持されます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Posições encerradas** ficam ocultas. Mostre-as em **Mais ▸ Mostrar posições encerradas**; o histórico é sempre mantido para ganhos de capital."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**已平仓头寸**默认隐藏。可从**更多 ▸ 显示已平仓头寸**打开；其历史始终保留以供资本利得使用。"
           }
         }
       }
@@ -4334,6 +5916,59 @@
         }
       }
     },
+    "**Investments** shows what you hold, what it is worth, and — first of all — whether those figures can be trusted. A security account holds units: shares, units in a fund, or a currency. Buys, sells, dividends and returns of capital are recorded through the Stock Transaction sheet, which works out the cost basis and any gain for you.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Anlagen** zeigt, was Sie halten, was es wert ist und – vor allem – ob diesen Zahlen zu trauen ist. Ein Wertpapierkonto hält Einheiten: Aktien, Fondsanteile oder eine Währung. Käufe, Verkäufe, Dividenden und Kapitalrückzahlungen werden über das Wertpapier-Formular erfasst, das Anschaffungskosten und Gewinn für Sie berechnet."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Investments** shows what you hold, what it is worth, and — first of all — whether those figures can be trusted. A security account holds units: shares, units in a fund, or a currency. Buys, sells, dividends and returns of capital are recorded through the Stock Transaction sheet, which works out the cost basis and any gain for you."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Inversiones** muestra lo que tienes, cuánto vale y, ante todo, si esas cifras son fiables. Una cuenta de valores contiene unidades: acciones, participaciones de un fondo o una moneda. Compras, ventas, dividendos y devoluciones de capital se registran con la hoja de operación bursátil, que calcula el coste y la plusvalía por ti."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Investissements** montre ce que vous détenez, ce que cela vaut et, avant tout, si ces chiffres sont fiables. Un compte-titres contient des unités : actions, parts de fonds ou devise. Achats, ventes, dividendes et remboursements de capital se saisissent via la feuille d’opération, qui calcule le prix de revient et la plus-value."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Investimenti** mostra cosa possiedi, quanto vale e, prima di tutto, se questi dati sono affidabili. Un conto titoli contiene unità: azioni, quote di un fondo o una valuta. Acquisti, vendite, dividendi e rimborsi di capitale si registrano dal foglio operazioni, che calcola il costo e la plusvalenza."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**投資**では、保有内容、その価値、そして何よりその数字が信頼できるかどうかを確認できます。証券口座は株式・ファンドの口数・通貨といった単位を保有します。売買・配当・資本の払戻しは株式取引シートで記録し、取得原価と損益が自動計算されます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Investimentos** mostra o que você tem, quanto vale e, antes de tudo, se esses números são confiáveis. Uma conta de títulos guarda unidades: ações, cotas de um fundo ou uma moeda. Compras, vendas, dividendos e devoluções de capital são lançados pela folha de operação, que calcula o custo e o ganho."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**投资**显示你持有什么、价值多少，以及最重要的——这些数字是否可信。证券账户持有单位：股票、基金份额或货币。买入、卖出、股息和资本返还通过证券交易表单记录，成本基础与盈亏会自动算好。"
+          }
+        }
+      }
+    },
     "**Link File…** points at a file where it already is.": {
       "extractionState": "manual",
       "localizations": {
@@ -4424,6 +6059,112 @@
           "stringUnit": {
             "state": "translated",
             "value": "**匹配附件…**(⇧⌘M) 对你手头已有的收据做同样的事——PDF 或照片皆可：选好文件，每一份都会与其交易配对并归档。"
+          }
+        }
+      }
+    },
+    "**More ▸ Watch Security…** follows something you do not own. Right-click any row to set a price target, and the dashboard tells you when the latest quote crosses it.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Mehr ▸ Wertpapier beobachten…** verfolgt etwas, das Sie nicht besitzen. Mit Rechtsklick auf eine Zeile setzen Sie ein Kursziel; das Dashboard meldet, wenn der letzte Kurs es überschreitet."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**More ▸ Watch Security…** follows something you do not own. Right-click any row to set a price target, and the dashboard tells you when the latest quote crosses it."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Más ▸ Seguir un valor…** sigue algo que no posees. Haz clic derecho en cualquier fila para fijar un precio objetivo; el panel te avisa cuando la última cotización lo cruza."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Plus ▸ Suivre un titre…** suit un titre que vous ne détenez pas. Clic droit sur une ligne pour définir un cours cible ; le tableau de bord vous prévient lorsqu’il est franchi."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Altro ▸ Segui un titolo…** segue qualcosa che non possiedi. Fai clic destro su una riga per impostare un prezzo obiettivo: la dashboard avvisa quando l’ultima quotazione lo supera."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**その他 ▸ 証券をウォッチ…** で、保有していない銘柄を追えます。行を右クリックして目標価格を設定すると、最新の相場が到達したときにダッシュボードが知らせます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Mais ▸ Acompanhar título…** segue algo que você não possui. Clique com o botão direito em qualquer linha para definir um preço-alvo; o painel avisa quando a última cotação o cruza."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**更多 ▸ 关注证券…**可跟踪你并未持有的标的。右键点击任意行设置目标价，最新报价触及时仪表板会提醒你。"
+          }
+        }
+      }
+    },
+    "**Needs attention** lists only what a person has to act on, with the fix beside it. On a healthy book it is not there at all.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Erfordert Aufmerksamkeit** listet nur, was wirklich zu tun ist – mit der Lösung daneben. Bei einem gesunden Buch erscheint der Abschnitt gar nicht."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Needs attention** lists only what a person has to act on, with the fix beside it. On a healthy book it is not there at all."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Requiere atención** solo enumera lo que hay que resolver, con la solución al lado. En un libro sano no aparece."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**À traiter** ne liste que ce qui demande une action, avec le correctif à côté. Sur un livre sain, la section n’apparaît pas."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Richiede attenzione** elenca solo ciò su cui intervenire, con il rimedio accanto. Su un libro sano non compare affatto."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**要対応**には対処が必要なものだけが、直し方とともに並びます。健全な帳簿では表示されません。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Requer atenção** lista só o que precisa de ação, com a correção ao lado. Num livro saudável ela nem aparece."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**需要处理**只列出确实要动手的事项，并附上修复方式。账簿状况良好时根本不会出现。"
           }
         }
       }
@@ -4710,49 +6451,108 @@
         }
       }
     },
-    "**Update Prices** (⇧⌘U) fetches the latest quotes for everything you hold.": {
+    "**Update Prices** (⇧⌘U) fills in everything missing, including gaps in the middle of a history.": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "**Kurse aktualisieren** (⇧⌘U) ruft die aktuellen Kurse für alle Ihre Bestände ab."
+            "value": "**Kurse aktualisieren** (⇧⌘U) füllt alles Fehlende auf, auch Lücken mitten in einer Historie."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Update Prices** (⇧⌘U) fills in everything missing, including gaps in the middle of a history."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "**Actualizar cotizaciones** (⇧⌘U) descarga las últimas cotizaciones de todo lo que tienes."
+            "value": "**Actualizar precios** (⇧⌘U) rellena todo lo que falte, incluidos los huecos en medio de un historial."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "**Mettre à jour les cours** (⇧⌘U) récupère les derniers cours de toutes vos positions."
+            "value": "**Mettre à jour les cours** (⇧⌘U) comble tout ce qui manque, y compris les trous au milieu d’un historique."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "**Aggiorna quotazioni** (⇧⌘U) scarica le ultime quotazioni di tutto ciò che possiedi."
+            "value": "**Aggiorna prezzi** (⇧⌘U) colma tutto ciò che manca, comprese le lacune in mezzo a uno storico."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "**価格を更新** (⇧⌘U) は、保有しているすべての銘柄の最新価格を取得します。"
+            "value": "**価格を更新**（⇧⌘U）は、履歴の途中の欠落も含めて不足分をすべて埋めます。"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "**Atualizar cotações** (⇧⌘U) busca as cotações mais recentes de tudo o que você possui."
+            "value": "**Atualizar preços** (⇧⌘U) preenche tudo o que falta, inclusive lacunas no meio de um histórico."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "**更新价格**（⇧⌘U）会获取你所有持仓的最新报价。"
+            "value": "**更新价格**（⇧⌘U）会补齐所有缺失，包括历史中间的缺口。"
+          }
+        }
+      }
+    },
+    "**Valued by hand** collects securities no price service covers, such as super funds. They are not failures; enter their prices from **More ▸ Enter a Price…**": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Manuell bewertet** sammelt Wertpapiere, die kein Kursdienst abdeckt, etwa Pensionsfonds. Das sind keine Fehler; Kurse geben Sie über **Mehr ▸ Kurs eingeben…** ein."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Valued by hand** collects securities no price service covers, such as super funds. They are not failures; enter their prices from **More ▸ Enter a Price…**"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Valorados a mano** reúne los valores que ningún servicio de precios cubre, como los fondos de pensiones. No son errores: introduce sus precios desde **Más ▸ Introducir un precio…**"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Valorisés à la main** regroupe les titres qu’aucun service de cours ne couvre, comme les fonds de retraite. Ce ne sont pas des erreurs : saisissez leurs cours via **Plus ▸ Saisir un cours…**"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Valutati a mano** raccoglie i titoli che nessun servizio di quotazione copre, come i fondi pensione. Non sono errori: inserisci i prezzi da **Altro ▸ Inserisci un prezzo…**"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**手入力評価**には、価格サービスが対応しない証券（年金基金など）がまとまります。これは不具合ではありません。**その他 ▸ 価格を入力…** から入力してください。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Avaliados à mão** reúne títulos que nenhum serviço de preços cobre, como fundos de previdência. Não são falhas: informe os preços em **Mais ▸ Inserir um preço…**"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**手工估值**汇集了没有报价服务覆盖的证券，例如养老金基金。它们并非故障；请从**更多 ▸ 输入价格…**录入价格。"
           }
         }
       }
@@ -5337,6 +7137,112 @@
           "stringUnit": {
             "state": "translated",
             "value": "目标会从某个科目中划出一部分用于特定用途 — 度假、应急金、首付。资金位置不变，目标只是记录其中有多少已被占用。"
+          }
+        }
+      }
+    },
+    "A holding is **current** when it is priced on the latest day its market traded, so a Friday close still counts as current on a Monday.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine Position ist **aktuell**, wenn sie zum letzten Handelstag ihres Marktes bewertet ist – ein Freitagsschluss gilt montags also weiterhin als aktuell."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A holding is **current** when it is priced on the latest day its market traded, so a Friday close still counts as current on a Monday."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una posición está **al día** cuando tiene precio del último día en que operó su mercado, así que un cierre del viernes sigue estando al día el lunes."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Une position est **à jour** lorsqu’elle est valorisée au dernier jour de cotation de son marché : un cours de clôture du vendredi reste donc à jour le lundi."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una posizione è **aggiornata** quando ha un prezzo dell’ultimo giorno in cui il suo mercato ha negoziato: una chiusura di venerdì resta quindi aggiornata il lunedì."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保有は、その市場が最後に取引した日に価格が付いていれば**最新**です。したがって金曜日の終値は月曜日でも最新として扱われます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uma posição está **em dia** quando tem preço do último dia em que seu mercado negociou; assim, um fechamento de sexta continua em dia na segunda."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当持仓在其市场最近一个交易日有价格时即为**最新**，因此周五收盘价在周一仍算最新。"
+          }
+        }
+      }
+    },
+    "A holding priced in another currency needs a rate before it can be valued in yours. The rates line says whether every currency you use has one, and **Add Rate…** fills a gap.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine in anderer Währung notierte Position braucht einen Kurs, bevor sie in Ihrer Währung bewertet werden kann. Die Kurszeile zeigt, ob jede genutzte Währung einen hat; **Kurs hinzufügen…** schließt die Lücke."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A holding priced in another currency needs a rate before it can be valued in yours. The rates line says whether every currency you use has one, and **Add Rate…** fills a gap."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una posición cotizada en otra moneda necesita un tipo de cambio antes de poder valorarse en la tuya. La línea de tipos indica si cada moneda que usas lo tiene, y **Añadir tipo…** cubre el hueco."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Une position cotée dans une autre devise a besoin d’un taux avant d’être valorisée dans la vôtre. La ligne des taux indique si chaque devise utilisée en a un, et **Ajouter un taux…** comble le manque."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una posizione quotata in un’altra valuta richiede un tasso prima di poter essere valutata nella tua. La riga dei tassi dice se ogni valuta usata ne ha uno e **Aggiungi tasso…** colma la lacuna."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "他通貨建ての保有は、自国通貨で評価する前にレートが必要です。レートの行は使用中の各通貨にレートがあるかを示し、**レートを追加…** で補えます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uma posição cotada em outra moeda precisa de uma taxa antes de ser avaliada na sua. A linha de taxas diz se cada moeda usada tem uma, e **Adicionar taxa…** preenche a falta."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "以其他货币计价的持仓需要汇率才能折算为你的货币。汇率行会说明你使用的每种货币是否都有汇率，**添加汇率…**可补足缺口。"
           }
         }
       }
@@ -5947,53 +7853,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "预定交易会按你选择的规律重复 — 每周、每月、每月某日，或任意间隔。到期时 FinvestLens 会提示，经你确认后录入。"
-          }
-        }
-      }
-    },
-    "A security account holds units — shares, units in a fund, or a currency. Buys, sells, dividends and returns of capital are recorded through the Stock Transaction sheet, which works out the cost basis and any gain for you.": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ein Wertpapierkonto hält Einheiten — Aktien, Fondsanteile oder eine Währung. Käufe, Verkäufe, Dividenden und Kapitalrückzahlungen erfassen Sie über das Blatt „Wertpapierbuchung“, das Anschaffungskosten und Gewinn für Sie ermittelt."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Una cuenta de valores contiene unidades: acciones, participaciones de un fondo o una divisa. Compras, ventas, dividendos y devoluciones de capital se registran en la hoja de operación de valores, que calcula el coste y la plusvalía por ti."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Un compte de titres détient des unités — actions, parts de fonds ou une devise. Achats, ventes, dividendes et remboursements de capital se saisissent dans la feuille Opération sur titres, qui calcule le prix de revient et la plus-value."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Un conto titoli detiene unità: azioni, quote di un fondo o una valuta. Acquisti, vendite, dividendi e rimborsi di capitale si registrano dal foglio Operazione su titoli, che calcola per te il costo e l’eventuale plusvalenza."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "証券勘定は単位（株式、ファンドの口数、通貨）を保有します。購入・売却・配当・資本の払い戻しは「証券取引」シートで記録し、取得原価と損益は自動で計算されます。"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Uma conta de títulos guarda unidades — ações, cotas de um fundo ou uma moeda. Compras, vendas, dividendos e devoluções de capital são registrados pela folha de Operação com títulos, que calcula o custo e o ganho para você."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "证券科目持有的是单位 — 股票、基金份额或某种货币。买入、卖出、股息与资本返还通过「证券交易」面板记录，成本与收益会自动算好。"
           }
         }
       }
@@ -7501,6 +9360,59 @@
         }
       }
     },
+    "Add Exchange Rate…": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wechselkurs hinzufügen…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add Exchange Rate…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Añadir tipo de cambio…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajouter un taux de change…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi tasso di cambio…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "為替レートを追加…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adicionar taxa de câmbio…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加汇率…"
+          }
+        }
+      }
+    },
     "Add Group": {
       "extractionState": "manual",
       "localizations": {
@@ -7642,49 +9554,55 @@
         }
       }
     },
-    "Add Rate": {
+    "Add Rate…": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Kurs hinzufügen"
+            "value": "Kurs hinzufügen…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add Rate…"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Añadir tasa"
+            "value": "Añadir tipo…"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ajouter un taux"
+            "value": "Ajouter un taux…"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Aggiungi tasso"
+            "value": "Aggiungi tasso…"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "レートを追加"
+            "value": "レートを追加…"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Adicionar taxa"
+            "value": "Adicionar taxa…"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "添加汇率"
+            "value": "添加汇率…"
           }
         }
       }
@@ -8390,53 +10308,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "添加预定交易或假设事件以预测现金流。"
-          }
-        }
-      }
-    },
-    "Add security prices or exchange rates to value the portfolio.": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fügen Sie Wertpapierkurse oder Wechselkurse hinzu, um das Portfolio zu bewerten."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Añade cotizaciones o tipos de cambio para valorar la cartera."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ajoutez des cours de titres ou des taux de change pour valoriser le portefeuille."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aggiungi quotazioni o tassi di cambio per valutare il portafoglio."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "証券価格や為替レートを追加してポートフォリオを評価します。"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Adicione cotações ou taxas de câmbio para avaliar a carteira."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "添加证券价格或汇率以对投资组合估值。"
           }
         }
       }
@@ -9279,53 +11150,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "领先 %@"
-          }
-        }
-      }
-    },
-    "Alert %@ %@": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Warnung %@ %@"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aviso %@ %@"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Alerte %@ %@"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Avviso %@ %@"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "通知 %@ %@"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Alerta %@ %@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "提醒 %@ %@"
           }
         }
       }
@@ -15246,6 +17070,59 @@
         }
       }
     },
+    "Can I trust today's figures?": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kann ich den heutigen Zahlen trauen?"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can I trust today's figures?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Puedo fiarme de las cifras de hoy?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Puis-je me fier aux chiffres du jour ?"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Posso fidarmi dei dati di oggi?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "今日の数字は信頼できますか？"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Posso confiar nos números de hoje?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "今天的数字可信吗？"
+          }
+        }
+      }
+    },
     "Cancel": {
       "extractionState": "manual",
       "localizations": {
@@ -16746,53 +18623,6 @@
         }
       }
     },
-    "Choose a provider, refetch history, or fetch latest quotes": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Anbieter wählen, Verlauf neu laden oder aktuelle Kurse abrufen"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Elige un proveedor, vuelve a descargar el histórico u obtén las últimas cotizaciones"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Choisissez un fournisseur, rechargez l’historique ou récupérez les derniers cours"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Scegli un fornitore, riscarica lo storico o recupera le ultime quotazioni"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "プロバイダの選択、履歴の再取得、最新価格の取得ができます"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Escolha um provedor, recarregue o histórico ou busque as cotações mais recentes"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "选择数据源、重新获取历史数据，或获取最新报价"
-          }
-        }
-      }
-    },
     "Choose a starter chart of accounts, or start empty and add your own.": {
       "extractionState": "manual",
       "localizations": {
@@ -18264,6 +20094,59 @@
         }
       }
     },
+    "Closed positions": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geschlossene Positionen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Closed positions"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Posiciones cerradas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Positions clôturées"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Posizioni chiuse"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "クローズ済みポジション"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Posições encerradas"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已平仓头寸"
+          }
+        }
+      }
+    },
     "Closing the year": {
       "extractionState": "manual",
       "localizations": {
@@ -18354,6 +20237,143 @@
           "stringUnit": {
             "state": "translated",
             "value": "代码"
+          }
+        }
+      }
+    },
+    "Collapse %@, %lld securities": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$@ einklappen, %2$lld Wertpapier"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$@ einklappen, %2$lld Wertpapiere"
+                }
+              }
+            }
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Collapse %1$@, %2$lld security"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Collapse %1$@, %2$lld securities"
+                }
+              }
+            }
+          }
+        },
+        "es": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Contraer %1$@, %2$lld valor"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Contraer %1$@, %2$lld valores"
+                }
+              }
+            }
+          }
+        },
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Réduire %1$@, %2$lld titre"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Réduire %1$@, %2$lld titres"
+                }
+              }
+            }
+          }
+        },
+        "it": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Comprimi %1$@, %2$lld titolo"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Comprimi %1$@, %2$lld titoli"
+                }
+              }
+            }
+          }
+        },
+        "ja": {
+          "variations": {
+            "plural": {
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$@ を折りたたむ、証券 %2$lld 件"
+                }
+              }
+            }
+          }
+        },
+        "pt-BR": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Recolher %1$@, %2$lld título"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Recolher %1$@, %2$lld títulos"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hans": {
+          "variations": {
+            "plural": {
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "收起 %1$@，%2$lld 只证券"
+                }
+              }
+            }
           }
         }
       }
@@ -19852,53 +21872,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "无法更改账簿文件"
-          }
-        }
-      }
-    },
-    "Couldn't find Date / Commodity / Price columns in the CSV header.": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "In der CSV-Kopfzeile wurden keine Spalten für Datum / Wertpapier / Kurs gefunden."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se encontraron las columnas Fecha / Valor / Cotización en la cabecera del CSV."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Colonnes Date / Titre / Cours introuvables dans l’en-tête du CSV."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nell’intestazione del CSV non sono state trovate le colonne Data / Titolo / Quotazione."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "CSV のヘッダーに 日付／銘柄／価格 の列が見つかりませんでした。"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Não foi possível encontrar as colunas Data / Título / Cotação no cabeçalho do CSV."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "未能在 CSV 表头中找到“日期／证券／价格”列。"
           }
         }
       }
@@ -24644,6 +26617,59 @@
         }
       }
     },
+    "Each row shows units, value, return since you bought, and how old the price is.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jede Zeile zeigt Einheiten, Wert, Rendite seit dem Kauf und das Alter des Kurses."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Each row shows units, value, return since you bought, and how old the price is."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cada fila muestra unidades, valor, rentabilidad desde la compra y la antigüedad del precio."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chaque ligne indique les unités, la valeur, le rendement depuis l’achat et l’ancienneté du cours."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ogni riga mostra unità, valore, rendimento dall’acquisto e quanto è vecchio il prezzo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "各行に口数、評価額、購入以来のリターン、価格の古さが表示されます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cada linha mostra unidades, valor, retorno desde a compra e a idade do preço."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每一行显示份额、价值、买入以来的回报，以及价格的新旧程度。"
+          }
+        }
+      }
+    },
     "Edit": {
       "extractionState": "manual",
       "localizations": {
@@ -26380,6 +28406,59 @@
         }
       }
     },
+    "Enter a Price…": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kurs eingeben…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter a Price…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Introducir un precio…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saisir un cours…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inserisci un prezzo…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "価格を入力…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inserir um preço…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "输入价格…"
+          }
+        }
+      }
+    },
     "Enter both amounts: what was taken out, and what was received.": {
       "extractionState": "manual",
       "localizations": {
@@ -26658,6 +28737,59 @@
           "stringUnit": {
             "state": "translated",
             "value": "录入一笔交易"
+          }
+        }
+      }
+    },
+    "Enter…": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eingeben…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Introducir…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saisir…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inserisci…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "入力…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inserir…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "输入…"
           }
         }
       }
@@ -27273,6 +29405,59 @@
         }
       }
     },
+    "Every holding is priced": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Positionen sind bewertet"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Every holding is priced"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todas las posiciones están valoradas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toutes les positions sont valorisées"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tutte le posizioni sono valutate"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべての保有に価格があります"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todas as posições estão avaliadas"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "所有持仓均已定价"
+          }
+        }
+      }
+    },
     "Every minute": {
       "extractionState": "manual",
       "localizations": {
@@ -27837,13 +30022,19 @@
         }
       }
     },
-    "Exchange Rates": {
+    "Exchange rates": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Wechselkurse"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exchange rates"
           }
         },
         "es": {
@@ -27974,6 +30165,143 @@
           "stringUnit": {
             "state": "translated",
             "value": "所选证券的现有价格将被新获取的序列替换。若获取失败，该证券保留当前价格。"
+          }
+        }
+      }
+    },
+    "Expand %@, %lld securities": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$@ ausklappen, %2$lld Wertpapier"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$@ ausklappen, %2$lld Wertpapiere"
+                }
+              }
+            }
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Expand %1$@, %2$lld security"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Expand %1$@, %2$lld securities"
+                }
+              }
+            }
+          }
+        },
+        "es": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Expandir %1$@, %2$lld valor"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Expandir %1$@, %2$lld valores"
+                }
+              }
+            }
+          }
+        },
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Développer %1$@, %2$lld titre"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Développer %1$@, %2$lld titres"
+                }
+              }
+            }
+          }
+        },
+        "it": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Espandi %1$@, %2$lld titolo"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Espandi %1$@, %2$lld titoli"
+                }
+              }
+            }
+          }
+        },
+        "ja": {
+          "variations": {
+            "plural": {
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$@ を展開、証券 %2$lld 件"
+                }
+              }
+            }
+          }
+        },
+        "pt-BR": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Expandir %1$@, %2$lld título"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Expandir %1$@, %2$lld títulos"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hans": {
+          "variations": {
+            "plural": {
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "展开 %1$@，%2$lld 只证券"
+                }
+              }
+            }
           }
         }
       }
@@ -28683,6 +31011,59 @@
         }
       }
     },
+    "Fetch": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abrufen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fetch"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obtener"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Récupérer"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recupera"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取得"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buscar"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "获取"
+          }
+        }
+      }
+    },
     "Fetch Prices": {
       "extractionState": "manual",
       "localizations": {
@@ -28726,53 +31107,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "获取价格"
-          }
-        }
-      }
-    },
-    "Fetch every security's missing prices — progress and result show at the bottom": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fehlende Kurse aller Wertpapiere abrufen — Fortschritt und Ergebnis unten"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Descargar las cotizaciones que falten de cada valor: el progreso y el resultado se muestran abajo"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Récupérer les cours manquants de chaque titre — progression et résultat en bas"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Scarica le quotazioni mancanti di ogni titolo: avanzamento e risultato in basso"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "各証券の欠けている価格を取得します。進捗と結果は下部に表示されます"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Buscar as cotações que faltam de cada título — progresso e resultado aparecem abaixo"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "获取每只证券缺失的价格 — 进度与结果显示在底部"
           }
         }
       }
@@ -28867,6 +31201,59 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在获取 %@…"
+          }
+        }
+      }
+    },
+    "Fetching prices": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kurse werden abgerufen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fetching prices"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obteniendo precios"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Récupération des cours"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recupero dei prezzi"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "価格を取得中"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buscando preços"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在获取价格"
           }
         }
       }
@@ -31883,53 +34270,6 @@
         }
       }
     },
-    "Get Quotes": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kurse abrufen"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Obtener cotizaciones"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Obtenir les cours"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ottieni quotazioni"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "価格を取得"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Obter cotações"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "获取报价"
-          }
-        }
-      }
-    },
     "Get key": {
       "extractionState": "manual",
       "localizations": {
@@ -33011,49 +35351,108 @@
         }
       }
     },
-    "Holdings, price updates, cost basis and targets.": {
+    "Holdings": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bestände, Kursaktualisierungen, Anschaffungskosten und Kursziele."
+            "value": "Positionen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Holdings"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Posiciones, actualización de cotizaciones, coste de adquisición y objetivos."
+            "value": "Posiciones"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Positions, mise à jour des cours, prix de revient et objectifs."
+            "value": "Positions"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Posizioni, aggiornamento quotazioni, costo di acquisto e obiettivi."
+            "value": "Posizioni"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "保有、価格の更新、取得原価、目標価格。"
+            "value": "保有"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Posições, atualização de cotações, custo de aquisição e alvos."
+            "value": "Posições"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "持仓、价格更新、成本基础与目标价。"
+            "value": "持仓"
+          }
+        }
+      }
+    },
+    "Holdings, how current their prices are, and what to fix.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Positionen, wie aktuell ihre Kurse sind und was zu tun ist."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Holdings, how current their prices are, and what to fix."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Posiciones, cómo de actuales son sus precios y qué corregir."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Positions, actualité de leurs cours et ce qu’il faut corriger."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Posizioni, quanto sono aggiornati i prezzi e cosa correggere."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保有、価格の新しさ、そして直すべきこと。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Posições, quão atuais são seus preços e o que corrigir."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "持仓、价格的时效性，以及需要修正的内容。"
           }
         }
       }
@@ -33577,53 +35976,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "导入银行文件…"
-          }
-        }
-      }
-    },
-    "Import CSV": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "CSV importieren"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importar CSV"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importer un CSV"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importa CSV"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "CSV を読み込む"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importar CSV"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "导入 CSV"
           }
         }
       }
@@ -34167,143 +36519,6 @@
                       "value": "已从“%3$@”导入 %arg 个科目和 %2$lld 笔交易。"
                     }
                   }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "Imported %lld prices.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Imported %lld price."
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Imported %lld prices."
-                }
-              }
-            }
-          }
-        },
-        "de": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld Kurs importiert."
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld Kurse importiert."
-                }
-              }
-            }
-          }
-        },
-        "es": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Se importó %lld cotización."
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Se importaron %lld cotizaciones."
-                }
-              }
-            }
-          }
-        },
-        "fr": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld cours importé."
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld cours importés."
-                }
-              }
-            }
-          }
-        },
-        "it": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Importata %lld quotazione."
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Importate %lld quotazioni."
-                }
-              }
-            }
-          }
-        },
-        "ja": {
-          "variations": {
-            "plural": {
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "価格を %lld 件読み込みました。"
-                }
-              }
-            }
-          }
-        },
-        "pt-BR": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld cotação importada."
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld cotações importadas."
-                }
-              }
-            }
-          }
-        },
-        "zh-Hans": {
-          "variations": {
-            "plural": {
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "已导入 %lld 条价格。"
                 }
               }
             }
@@ -35315,7 +37530,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Placements"
+            "value": "Investissements"
           }
         },
         "it": {
@@ -35340,6 +37555,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "投资"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Investments"
           }
         }
       }
@@ -35391,49 +37612,55 @@
         }
       }
     },
-    "Investments and prices": {
+    "Investments…": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Anlagen und Kurse"
+            "value": "Anlagen…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Investments…"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Inversiones y cotizaciones"
+            "value": "Inversiones…"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Placements et cours"
+            "value": "Investissements…"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Investimenti e quotazioni"
+            "value": "Investimenti…"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "投資と価格"
+            "value": "投資…"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Investimentos e cotações"
+            "value": "Investimentos…"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "投资与价格"
+            "value": "投资…"
           }
         }
       }
@@ -36237,49 +38464,55 @@
         }
       }
     },
-    "Last updated %@": {
+    "Last price %@": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Zuletzt aktualisiert %@"
+            "value": "Letzter Kurs %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last price %@"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Última actualización %@"
+            "value": "Último precio %@"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Dernière mise à jour %@"
+            "value": "Dernier cours %@"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ultimo aggiornamento %@"
+            "value": "Ultimo prezzo %@"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "最終更新 %@"
+            "value": "最終価格 %@"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Última atualização %@"
+            "value": "Último preço %@"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "最后更新 %@"
+            "value": "最新价格 %@"
           }
         }
       }
@@ -39508,6 +41741,59 @@
         }
       }
     },
+    "Missing days *inside a period you held something* are called out separately: those are the ones that make past valuations wrong.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fehlende Tage *innerhalb einer Haltedauer* werden gesondert genannt: Genau sie machen frühere Bewertungen falsch."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Missing days *inside a period you held something* are called out separately: those are the ones that make past valuations wrong."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los días ausentes *dentro de un periodo en que tenías algo* se señalan aparte: son los que falsean las valoraciones pasadas."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les jours manquants *à l’intérieur d’une période de détention* sont signalés à part : ce sont eux qui faussent les valorisations passées."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I giorni mancanti *all’interno di un periodo di possesso* sono segnalati a parte: sono quelli che falsano le valutazioni passate."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "*保有していた期間の中にある*欠落日は別に示されます。過去の評価額を誤らせるのはこれらだからです。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dias ausentes *dentro de um período em que você tinha algo* são destacados à parte: são eles que tornam erradas as avaliações passadas."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "*持有期间内*的缺失日会单独指出：正是这些让过去的估值出错。"
+          }
+        }
+      }
+    },
     "Money": {
       "extractionState": "manual",
       "localizations": {
@@ -40456,6 +42742,59 @@
           "stringUnit": {
             "state": "translated",
             "value": "把账簿调窄时，年份会缩短——24/12/2026 变为 24/12/26——这样日期仍然完整，而不会被截断。两种写法都可以输入单元格；两位数的年份始终表示本世纪。"
+          }
+        }
+      }
+    },
+    "Needs attention": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erfordert Aufmerksamkeit"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Needs attention"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Requiere atención"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "À traiter"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Richiede attenzione"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要対応"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Requer atenção"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "需要处理"
           }
         }
       }
@@ -43515,6 +45854,59 @@
         }
       }
     },
+    "No investments yet": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine Anlagen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No investments yet"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aún no hay inversiones"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun investissement"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessun investimento"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "投資はまだありません"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ainda sem investimentos"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "尚无投资"
+          }
+        }
+      }
+    },
     "No key required": {
       "extractionState": "manual",
       "localizations": {
@@ -43793,6 +46185,112 @@
           "stringUnit": {
             "state": "translated",
             "value": "无价格"
+          }
+        }
+      }
+    },
+    "No prices fetched yet": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine Kurse abgerufen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No prices fetched yet"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aún no se han obtenido precios"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun cours récupéré"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessun prezzo recuperato"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "価格は未取得です"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nenhum preço buscado ainda"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "尚未获取价格"
+          }
+        }
+      }
+    },
+    "No rate for %@ — holdings in it cannot be valued.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kein Kurs für %@ – Positionen darin lassen sich nicht bewerten."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No rate for %@ — holdings in it cannot be valued."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sin tipo para %@: las posiciones en esa moneda no pueden valorarse."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun taux pour %@ — les positions dans cette devise ne peuvent être valorisées."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessun tasso per %@: le posizioni in questa valuta non possono essere valutate."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ のレートがありません — この通貨の保有は評価できません。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sem taxa para %@ — posições nessa moeda não podem ser avaliadas."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有 %@ 的汇率 — 该货币的持仓无法估值。"
           }
         }
       }
@@ -44169,100 +46667,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "尚未持有证券。"
-          }
-        }
-      }
-    },
-    "No securities yet.": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noch keine Wertpapiere."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Todavía no hay valores."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aucun titre pour l’instant."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nessun titolo per ora."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "証券はまだありません。"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ainda não há títulos."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "尚无证券。"
-          }
-        }
-      }
-    },
-    "No security prices yet": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noch keine Wertpapierkurse"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Todavía no hay cotizaciones"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aucun cours de titre pour l’instant"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nessuna quotazione per ora"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "証券価格はまだありません"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ainda não há cotações"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "尚无证券价格"
           }
         }
       }
@@ -45347,6 +47751,59 @@
         }
       }
     },
+    "Nothing held can be valued yet": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch lässt sich keine Position bewerten"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing held can be valued yet"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todavía no puede valorarse ninguna posición"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucune position ne peut encore être valorisée"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessuna posizione può ancora essere valutata"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "まだ評価できる保有がありません"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ainda não há posição que possa ser avaliada"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "目前尚无持仓可估值"
+          }
+        }
+      }
+    },
     "Nothing is written until you say so. Each row shows what FinvestLens intends to do, and you can change the account, the category or the date before importing.": {
       "extractionState": "manual",
       "localizations": {
@@ -46283,6 +48740,59 @@
           "stringUnit": {
             "state": "translated",
             "value": "一份 PDF，按阅读顺序编排 — 利润表、财务状况表、净资产变动、已实现收益，以及含税收抵免的股息。"
+          }
+        }
+      }
+    },
+    "Only %@ is in use.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Es wird nur %@ verwendet."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Only %@ is in use."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Solo se usa %@."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seul %@ est utilisé."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "È in uso solo %@."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ のみを使用しています。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Somente %@ está em uso."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仅使用 %@。"
           }
         }
       }
@@ -50056,53 +52566,6 @@
         }
       }
     },
-    "Price Import": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kursimport"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importar cotizaciones"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Import de cours"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importa quotazioni"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "価格の読み込み"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Importação de cotações"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "价格导入"
-          }
-        }
-      }
-    },
     "Price Target": {
       "extractionState": "manual",
       "localizations": {
@@ -50244,53 +52707,6 @@
         }
       }
     },
-    "Price targets": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kursziele"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Precios objetivo"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cours cibles"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Prezzi obiettivo"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "目標価格"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Preços-alvo"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "目标价"
-          }
-        }
-      }
-    },
     "Price update: added %lld, %lld failed — see Prices for details.": {
       "extractionState": "manual",
       "localizations": {
@@ -50385,147 +52801,6 @@
         }
       }
     },
-    "Prices": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kurse"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cotizaciones"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cours"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Quotazioni"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "価格"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cotações"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "价格"
-          }
-        }
-      }
-    },
-    "Prices & Securities": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kurse & Wertpapiere"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cotizaciones y valores"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cours et titres"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Quotazioni e titoli"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "価格と証券"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cotações e títulos"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "价格与证券"
-          }
-        }
-      }
-    },
-    "Prices & Securities…": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kurse & Wertpapiere …"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cotizaciones y valores…"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cours et titres…"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Quotazioni e titoli…"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "価格と証券…"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cotações e títulos…"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "价格与证券…"
-          }
-        }
-      }
-    },
     "Prices are already up to date.": {
       "extractionState": "manual",
       "localizations": {
@@ -50569,6 +52844,59 @@
           "stringUnit": {
             "state": "translated",
             "value": "价格已是最新。"
+          }
+        }
+      }
+    },
+    "Prices are never listed as one long table. To work with a security's own history, open that security — everything about it is in one place.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kurse werden nie als eine lange Tabelle aufgelistet. Um mit der Historie eines Wertpapiers zu arbeiten, öffnen Sie dieses Wertpapier – dort steht alles an einem Ort."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prices are never listed as one long table. To work with a security's own history, open that security — everything about it is in one place."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los precios nunca se listan como una tabla larga. Para trabajar con el historial de un valor, ábrelo: todo lo suyo está en un solo sitio."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les cours ne sont jamais présentés en un long tableau. Pour travailler sur l’historique d’un titre, ouvrez ce titre — tout y est réuni."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I prezzi non vengono mai elencati in un’unica lunga tabella. Per lavorare sullo storico di un titolo, apri quel titolo: lì c’è tutto."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "価格が一枚の長い表になることはありません。銘柄の履歴を扱うときはその銘柄を開いてください — 関することはすべて一か所にあります。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Os preços nunca aparecem como uma tabela longa. Para trabalhar com o histórico de um título, abra esse título — tudo sobre ele fica num só lugar."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "价格绝不会以一张长表列出。要处理某只证券的历史，请打开该证券——与它有关的一切都在一处。"
           }
         }
       }
@@ -51971,6 +54299,59 @@
           "stringUnit": {
             "state": "translated",
             "value": "快速查看"
+          }
+        }
+      }
+    },
+    "Quote Settings…": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kurseinstellungen…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quote Settings…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajustes de cotizaciones…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réglages des cours…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impostazioni quotazioni…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "相場の設定…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajustes de cotações…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "报价设置…"
           }
         }
       }
@@ -55342,53 +57723,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "移除 %@"
-          }
-        }
-      }
-    },
-    "Remove %@ from watch list": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ von der Beobachtungsliste entfernen"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Quitar %@ de la lista de seguimiento"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Retirer %@ de la liste de suivi"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rimuovi %@ dalla lista di osservazione"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ をウォッチリストから削除"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Remover %@ da lista de acompanhamento"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "将 %@ 从关注列表移除"
           }
         }
       }
@@ -60757,96 +63091,55 @@
         }
       }
     },
-    "Section": {
+    "Securities appear here once you hold one, or add one to watch.": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Abschnitt"
+            "value": "Wertpapiere erscheinen hier, sobald Sie eines halten oder beobachten."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Securities appear here once you hold one, or add one to watch."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sección"
+            "value": "Los valores aparecen aquí en cuanto tengas uno o añadas uno a seguir."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Section"
+            "value": "Les titres apparaissent ici dès que vous en détenez un ou en suivez un."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sezione"
+            "value": "I titoli compaiono qui quando ne possiedi uno o ne segui uno."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "セクション"
+            "value": "証券を保有するか、ウォッチに追加するとここに表示されます。"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Seção"
+            "value": "Os títulos aparecem aqui quando você tiver um ou acompanhar um."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "分区"
-          }
-        }
-      }
-    },
-    "Securities": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wertpapiere"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Valores"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Titres"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Titoli"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "証券"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Títulos"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "证券"
+            "value": "当你持有证券或添加关注后，会显示在这里。"
           }
         }
       }
@@ -60894,53 +63187,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "证券"
-          }
-        }
-      }
-    },
-    "Security Prices": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wertpapierkurse"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cotizaciones de valores"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cours des titres"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Quotazioni dei titoli"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "証券価格"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cotações dos títulos"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "证券价格"
           }
         }
       }
@@ -61462,6 +63708,59 @@
         }
       }
     },
+    "Set Price Target…": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kursziel festlegen…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Set Price Target…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fijar precio objetivo…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Définir un cours cible…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Imposta prezzo obiettivo…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "目標価格を設定…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Definir preço-alvo…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "设置目标价…"
+          }
+        }
+      }
+    },
     "Set Reconcile State": {
       "extractionState": "manual",
       "localizations": {
@@ -61646,53 +63945,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "若你想提前知晓，可将计划设为提前几天创建。"
-          }
-        }
-      }
-    },
-    "Set a target on a security and the dashboard tells you when the latest quote crosses it.": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Setzen Sie ein Kursziel für ein Wertpapier, und die Übersicht meldet, wenn der aktuelle Kurs es überschreitet."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fija un objetivo para un valor y el panel te avisará cuando la última cotización lo cruce."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fixez un objectif sur un titre : le tableau de bord vous prévient dès que le dernier cours le franchit."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Imposta un obiettivo su un titolo e la dashboard ti avvisa quando l’ultima quotazione lo supera."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "証券に目標価格を設定すると、最新価格がそれを超えたときにダッシュボードが知らせます。"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Defina um alvo para um título e o painel avisa quando a última cotação o cruzar."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "为证券设定目标价后，当最新报价越过该价位时，仪表板会提示你。"
           }
         }
       }
@@ -62022,53 +64274,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "设定备注"
-          }
-        }
-      }
-    },
-    "Set price target for %@": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kursziel für %@ festlegen"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Definir el precio objetivo de %@"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Définir un cours cible pour %@"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Imposta il prezzo obiettivo per %@"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ の目標価格を設定"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Definir preço-alvo para %@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "为 %@ 设定目标价"
           }
         }
       }
@@ -62632,6 +64837,59 @@
           "stringUnit": {
             "state": "translated",
             "value": "显示全部"
+          }
+        }
+      }
+    },
+    "Show Closed Positions": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geschlossene Positionen anzeigen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show Closed Positions"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrar posiciones cerradas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Afficher les positions clôturées"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostra posizioni chiuse"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "クローズ済みポジションを表示"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrar posições encerradas"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "显示已平仓头寸"
           }
         }
       }
@@ -63202,53 +65460,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "跳过重复项"
-          }
-        }
-      }
-    },
-    "Skipped unknown symbols: %@.": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Unbekannte Symbole übersprungen: %@."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Se omitieron símbolos desconocidos: %@."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Symboles inconnus ignorés : %@."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Simboli sconosciuti ignorati: %@."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "不明なシンボルをスキップしました: %@。"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Símbolos desconhecidos ignorados: %@."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已跳过未知代码：%@。"
           }
         }
       }
@@ -64810,6 +67021,59 @@
         }
       }
     },
+    "Stop Watching": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht mehr beobachten"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop Watching"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dejar de seguir"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ne plus suivre"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Smetti di seguire"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ウォッチをやめる"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parar de acompanhar"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取消关注"
+          }
+        }
+      }
+    },
     "Stop processing further rules": {
       "extractionState": "manual",
       "localizations": {
@@ -65746,53 +68010,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "目标价格"
-          }
-        }
-      }
-    },
-    "Target…": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ziel …"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Objetivo…"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Objectif…"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Obiettivo…"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "目標…"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Meta…"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "目标…"
           }
         }
       }
@@ -66878,6 +69095,112 @@
         }
       }
     },
+    "The arrow beside it chooses a different provider for one run.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Pfeil daneben wählt für einen Durchlauf einen anderen Anbieter."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The arrow beside it chooses a different provider for one run."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La flecha contigua elige otro proveedor para una sola ejecución."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La flèche à côté choisit un autre fournisseur pour une exécution."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La freccia accanto sceglie un altro fornitore per una singola esecuzione."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "隣の矢印から、その回だけ別のプロバイダを選べます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A seta ao lado escolhe outro provedor para uma execução."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "旁边的箭头可为单次运行选择其他数据源。"
+          }
+        }
+      }
+    },
+    "The band at the top answers that in one number: the share of your holdings' **value** that is priced as of the market's most recent trading day. Value, not count — one large holding left behind matters more than several small ones.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Feld oben beantwortet das mit einer Zahl: dem Anteil am **Wert** Ihrer Positionen, der zum letzten Handelstag bewertet ist. Wert, nicht Anzahl – eine große zurückgebliebene Position wiegt schwerer als mehrere kleine."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The band at the top answers that in one number: the share of your holdings' **value** that is priced as of the market's most recent trading day. Value, not count — one large holding left behind matters more than several small ones."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La franja superior lo responde con una cifra: la parte del **valor** de tus posiciones que está valorada al último día de mercado. Valor, no número: una posición grande rezagada pesa más que varias pequeñas."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le bandeau du haut y répond en un chiffre : la part de la **valeur** de vos positions valorisée au dernier jour de bourse. La valeur, pas le nombre — une grosse position en retard compte plus que plusieurs petites."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La fascia in alto risponde con un numero: la quota del **valore** delle tue posizioni valutata all’ultimo giorno di borsa. Il valore, non il conteggio: una posizione grande rimasta indietro pesa più di tante piccole."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上部の帯が一つの数字で答えます。直近の取引日時点で価格が付いている保有**価値**の割合です。件数ではなく価値です — 大きな保有が一つ取り残される方が、小さなもの複数より重大です。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A faixa no topo responde com um número: a fatia do **valor** das suas posições avaliada no último dia de pregão. Valor, não contagem — uma posição grande atrasada pesa mais que várias pequenas."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "顶部的横幅用一个数字回答：按市场最近交易日计价的持仓**价值**占比。看价值而非数量——一项大额持仓被落下，比几项小额更要紧。"
+          }
+        }
+      }
+    },
     "The board you land on: what matters today, at a glance.": {
       "extractionState": "manual",
       "localizations": {
@@ -67955,6 +70278,59 @@
           "stringUnit": {
             "state": "translated",
             "value": "面板会显示这两个金额所隐含的汇率（`1 AUD = 0.92 NZD`），便于你一眼看出输入方向是否正确。该汇率会作为价格保存，之后报表即可对任一币种进行估值。"
+          }
+        }
+      }
+    },
+    "The small chart is the last three months. **A break in the line means missing prices** — it is never drawn through days that have none.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das kleine Diagramm zeigt die letzten drei Monate. **Eine Lücke in der Linie bedeutet fehlende Kurse** – sie wird nie über Tage ohne Kurs hinweggezeichnet."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The small chart is the last three months. **A break in the line means missing prices** — it is never drawn through days that have none."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El gráfico pequeño abarca los últimos tres meses. **Un corte en la línea significa precios ausentes**: nunca se traza sobre días que no los tienen."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le petit graphique couvre les trois derniers mois. **Une rupture dans la ligne signale des cours manquants** — elle n’est jamais tracée par-dessus des jours sans cours."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il grafico piccolo copre gli ultimi tre mesi. **Un’interruzione nella linea indica prezzi mancanti**: non viene mai tracciata sui giorni che non ne hanno."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "小さなチャートは直近3か月です。**線の途切れは価格の欠落**を意味し、価格のない日をまたいで線を引くことはありません。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O gráfico pequeno cobre os últimos três meses. **Uma quebra na linha indica preços ausentes** — ela nunca é traçada sobre dias sem preço."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "小图表显示最近三个月。**线条的断口表示价格缺失**——绝不会跨越没有价格的日子连线。"
           }
         }
       }
@@ -71448,6 +73824,59 @@
         }
       }
     },
+    "Update Options": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktualisierungsoptionen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Update Options"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opciones de actualización"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Options de mise à jour"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opzioni di aggiornamento"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更新オプション"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opções de atualização"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更新选项"
+          }
+        }
+      }
+    },
     "Update Prices": {
       "extractionState": "manual",
       "localizations": {
@@ -71579,6 +74008,112 @@
           "stringUnit": {
             "state": "translated",
             "value": "Atualizar cotações"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更新价格"
+          }
+        }
+      }
+    },
+    "Update using %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mit %@ aktualisieren"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Update using %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Actualizar con %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mettre à jour avec %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiorna con %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ で更新"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Atualizar com %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用 %@ 更新"
+          }
+        }
+      }
+    },
+    "Updating prices": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kurse aktualisieren"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Updating prices"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Actualizar precios"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mise à jour des cours"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiornare i prezzi"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "価格の更新"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Atualizando preços"
           }
         },
         "zh-Hans": {
@@ -71820,6 +74355,59 @@
           "stringUnit": {
             "state": "translated",
             "value": "价值"
+          }
+        }
+      }
+    },
+    "Valued by hand": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manuell bewertet"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Valued by hand"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Valorados a mano"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Valorisés à la main"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Valutati a mano"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "手入力評価"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avaliados à mão"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "手工估值"
           }
         }
       }
@@ -72243,6 +74831,165 @@
           "stringUnit": {
             "state": "translated",
             "value": "关注证券"
+          }
+        }
+      }
+    },
+    "Watch Security…": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wertpapier beobachten…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Watch Security…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seguir un valor…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suivre un titre…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Segui un titolo…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "証券をウォッチ…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Acompanhar título…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关注证券…"
+          }
+        }
+      }
+    },
+    "Watching": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beobachtet"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Watching"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En seguimiento"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suivis"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Osservati"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ウォッチ中"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Acompanhando"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关注中"
+          }
+        }
+      }
+    },
+    "Watching and targets": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beobachten und Kursziele"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Watching and targets"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seguimiento y objetivos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suivi et cours cibles"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Osservazione e obiettivi"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ウォッチと目標価格"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Acompanhamento e alvos"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关注与目标价"
           }
         }
       }
@@ -74562,6 +77309,112 @@
         }
       }
     },
+    "never": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "nie"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "never"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "nunca"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "jamais"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "mai"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "なし"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "nunca"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从未"
+          }
+        }
+      }
+    },
+    "never priced": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "nie bewertet"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "never priced"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "nunca valorado"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "jamais valorisé"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "mai valutato"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "価格なし"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "nunca avaliado"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从未定价"
+          }
+        }
+      }
+    },
     "paused": {
       "extractionState": "manual",
       "localizations": {
@@ -74605,6 +77458,112 @@
           "stringUnit": {
             "state": "translated",
             "value": "已暂停"
+          }
+        }
+      }
+    },
+    "priced today": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "heute bewertet"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "priced today"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "valorado hoy"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "valorisé aujourd’hui"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "valutato oggi"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "本日価格あり"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "avaliado hoje"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "今日已定价"
+          }
+        }
+      }
+    },
+    "return %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rendite %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "return %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "rentabilidad %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "rendement %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "rendimento %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リターン %@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "retorno %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "回报 %@"
           }
         }
       }
@@ -74750,6 +77709,59 @@
         }
       }
     },
+    "today": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "heute"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "today"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "hoy"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "aujourd’hui"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "oggi"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "今日"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "hoje"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "今天"
+          }
+        }
+      }
+    },
     "transaction posts to all of": {
       "extractionState": "manual",
       "localizations": {
@@ -74840,53 +77852,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "转账"
-          }
-        }
-      }
-    },
-    "watch": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "beobachten"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "seguimiento"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "suivi"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "osservato"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ウォッチ"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "acompanhar"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "关注"
           }
         }
       }

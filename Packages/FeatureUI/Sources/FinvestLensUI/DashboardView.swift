@@ -1121,13 +1121,12 @@ struct DashboardView: View {
     private var alertsCard: some View {
         let alerts = model.alerts()
         return Card("Alerts", systemImage: "bell.badge") {
-            // Price targets fire here but are *set* in Securities — link the
+            // Price targets fire here but are *set* on a holding — link the
             // two so the card is a door, not just a lamp (6.5).
             HStack {
                 Spacer()
                 Button("Price Targets…") {
-                    model.pricesTab = .securities
-                    model.show(.prices)
+                    model.show(.investments)
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(.tint)

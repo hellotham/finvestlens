@@ -331,9 +331,10 @@ security's whole story. Prices stop being a subject and become a precondition.
 - ✅ **I1** — the models: trading-calendar freshness, holding-aware gaps,
   value-weighted coverage, provenance. Pure `Reports` additions, no UI.
   *(FR-INV-09, 10, 26, 27)*
-- **I2** — the overview: destination, confidence band, worklist, holdings table
-  with sparklines, grouping, FX line; old destination removed.
-  *(FR-INV-08, 11, 12, 13, 14, 24, 33)*
+- ✅ **I2** — the overview: destination, confidence band, worklist, holdings
+  table with sparklines, grouping, FX line; old destination removed, help book
+  and website manual rewritten with it.
+  *(FR-INV-08, 11, 12, 13, 14, 22, 24, 33)*
 - **I3** — the security detail page, price chart with transaction overlay,
   per-security price table, CSV export, per-security settings incl. ISIN.
   *(FR-INV-15, 16, 29, 32)*

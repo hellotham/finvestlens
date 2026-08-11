@@ -161,7 +161,10 @@ public enum SidebarSelection: Hashable, Sendable {
     case goals
     case planner
     case emergencyRecords
-    case prices
+    /// The Investments hub (`FR-INV-08`) — holdings, price health, per-security
+    /// detail. Replaced `case prices`, which named a database rather than a
+    /// subject; session restore still accepts the old spelling.
+    case investments
     case business
     case timeMileage
 }
@@ -389,11 +392,6 @@ public final class AppModel {
         get { Self.accountID(of: sidebarSelection) }
         set { sidebarSelection = newValue.map(SidebarSelection.account) ?? .dashboard }
     }
-
-    /// Which tab the Prices & Securities destination shows. Model state so
-    /// the dashboard's Alerts card can deep-link to Securities (6.5).
-    public enum PricesTab: String, CaseIterable, Sendable { case prices = "Prices", securities = "Securities" }
-    public var pricesTab: PricesTab = .prices
 
     /// Bumped by New Transaction (⌘N) while a register is showing; the entry
     /// bar focuses its description field in response (RD4: entry without

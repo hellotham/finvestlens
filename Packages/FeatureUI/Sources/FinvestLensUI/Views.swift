@@ -423,7 +423,7 @@ public struct FinvestLensRootView: View {
         case .scheduled: ScheduledView(model: model)
         case .rules: RulesView(model: model)
         case .goals: GoalsView(model: model)
-        case .prices: PricesView(model: model)
+        case .investments: InvestmentsView(model: model)
         case .business: BusinessHub(model: model)
         case .timeMileage: TimeMileageView(model: model)
         case .planner: PlanningView(model: model)
@@ -994,6 +994,10 @@ struct AccountsSidebar: View {
                     Label("Dashboard", systemImage: "square.grid.2x2").tag(SidebarSelection.dashboard)
                     Label("Reports", systemImage: "chart.pie").tag(SidebarSelection.reports)
                     Label("All Transactions", systemImage: "text.book.closed").tag(SidebarSelection.generalLedger)
+                    // Investments sits with Dashboard and Reports, not under
+                    // Records: it is something you read to decide, not a
+                    // filing cabinet you maintain (docs/investments-design.md §1).
+                    Label("Investments", systemImage: "chart.line.uptrend.xyaxis").tag(SidebarSelection.investments)
                 }
                 Section("Planning") {
                     Label("Planner", systemImage: "chart.xyaxis.line").tag(SidebarSelection.planner)
@@ -1003,7 +1007,6 @@ struct AccountsSidebar: View {
                 }
                 Section("Records") {
                     Label("Business", systemImage: "building.2").tag(SidebarSelection.business)
-                    Label("Prices & Securities", systemImage: "tag").tag(SidebarSelection.prices)
                     Label("Time & Mileage", systemImage: "clock.badge.checkmark").tag(SidebarSelection.timeMileage)
                     Label("Rules", systemImage: "wand.and.stars").tag(SidebarSelection.rules)
                     Label("Emergency Records", systemImage: "cross.case").tag(SidebarSelection.emergencyRecords)

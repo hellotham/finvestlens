@@ -499,7 +499,30 @@ Each phase is independently shippable and leaves the app working.
 | **I4** FIIG | Batch provider protocol, FIIG provider, ISIN matching, `÷100` conversion, URLSession TLS check | 11 bonds priced from market instead of par |
 | **I5** Fundamentals | Sidecar cache, Yahoo `quoteSummary`, keyed-provider preference, profile + statements + dividends | Profile renders or degrades cleanly; nothing fetched enters the book |
 | **I6** Reconciliation | Dividend reconciliation, corporate-action detection, outlier check | Discrepancies found on the real book and explainable |
-| **I7** Polish | Manual-valuation cadence, run preview, iOS parity, localization, help | Both platforms build; catalog complete; help written |
+| **I7** Polish | Manual-valuation cadence, run preview, iOS parity | Both platforms build; compact width verified |
+
+**Help and localization are not a phase.** Documentation here is four things,
+not one, and a surface change owes all of them in the same commit:
+
+| Where | What it is |
+| --- | --- |
+| `docs/` spine | prd (intent) · architecture (decisions) · plan (phases) · implemented (built) · deferred (consciously not) |
+| `HelpContent.swift` | the in-app help book — user-facing, localized |
+| `website/src/data/manual.json` | the published manual, **generated** from the help book; CI fails on drift |
+| `Localizable.xcstrings` | every new string, in eight languages |
+
+A help book describing the previous design is worse than no help book — it is
+confidently wrong, and it is *published*. `HelpContent.swift` ▸ *Investments and
+prices* already documents the destination this work replaces, so I2 rewrites it
+and regenerates the manual in the same commit. (I7 originally collected all of
+this; that was a scheduling error — it would have shipped five phases of new
+surfaces documented as the thing they replaced, on the website as well as in
+the app.)
+
+**Requirements precede code.** `FR-INV-08`…`FR-INV-35` are in the PRD before
+their phase is built, so each phase implements a written requirement rather than
+the document rationalising what was written. I1 committed its rows alongside its
+code, which is the wrong order and is not repeated.
 
 **Verification throughout:** the real book is the acceptance harness
 (`FL_PERF_FILE`), because 148,458 prices and 87 securities is the case that

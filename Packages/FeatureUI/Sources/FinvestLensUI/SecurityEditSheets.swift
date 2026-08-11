@@ -1,6 +1,11 @@
 //
-//  SecuritiesView.swift
+//  SecurityEditSheets.swift (was SecuritiesView.swift)
 //  FinvestLens — FeatureUI
+//
+//  The securities list lived here until P11/I2 and is superseded by the
+//  Investments holdings table, which can say what this list never could:
+//  freshness, history, value and return. These per-security editors survive
+//  and are presented from the hub.
 //
 //  Copyright (C) 2026 Christine Tham
 //  SPDX-License-Identifier: GPL-3.0-or-later
@@ -10,98 +15,8 @@ import SwiftUI
 import FinvestLensEngine
 import FinvestLensReports
 
-/// Lists securities (held + watched), edits their display name, and manages the
-/// watch list (`FR-INV-07`, `FR-PLAN-07`).
-struct SecuritiesView: View {
-    @Bindable var model: AppModel
-    @Environment(\.dismiss) private var dismiss
-    @State private var editing: EditTarget?
-    @State private var settingTarget: EditTarget?
-    @State private var showingAddWatch = false
-
-    private struct EditTarget: Identifiable {
-        let commodity: Commodity
-        var id: String { "\(commodity.namespace)|\(commodity.mnemonic)" }
-    }
-
-    var body: some View {
-        // Embedded as the Securities tab of Prices & Securities (6.5) — the
-        // enclosing destination provides the navigation chrome.
-        List {
-            Section("Securities") {
-                if model.pricableSecurities.isEmpty {
-                    Text("No securities yet.").foregroundStyle(.secondary)
-                }
-                ForEach(model.pricableSecurities, id: \.self) { commodity in
-                    SecurityRow(model: model, commodity: commodity,
-                                onTarget: { settingTarget = EditTarget(commodity: commodity) },
-                                onEdit: { editing = EditTarget(commodity: commodity) })
-                }
-            }
-        }
-        .toolbar {
-            ToolbarItem {
-                Button("Watch Security", systemImage: "eye") { showingAddWatch = true }
-            }
-        }
-        .sheet(item: $editing) { target in
-            EditSecuritySheet(model: model, commodity: target.commodity)
-        }
-        .sheet(item: $settingTarget) { target in
-            PriceTargetSheet(model: model, commodity: target.commodity)
-        }
-        .sheet(isPresented: $showingAddWatch) { AddWatchSheet(model: model) }
-    }
-}
-
-/// One row of the securities list: identity, latest price, target/edit actions.
-private struct SecurityRow: View {
-    @Bindable var model: AppModel
-    let commodity: Commodity
-    let onTarget: () -> Void
-    let onEdit: () -> Void
-
-    private var code: String { model.reportCurrency.mnemonic }
-
-    var body: some View {
-        HStack {
-            VStack(alignment: .leading) {
-                HStack {
-                    Text(commodity.mnemonic).fontWeight(.medium)
-                    if model.isWatchOnly(commodity) {
-                        Text("watch").scaledFont(.caption2)
-                            .padding(.horizontal, 4).background(.blue.opacity(0.2)).clipShape(Capsule())
-                    }
-                }
-                Text(commodity.fullName).scaledFont(.caption).foregroundStyle(.secondary)
-                if let target = model.priceTarget(for: commodity) {
-                    let word = target.direction == .atOrAbove ? "above" : "below"
-                    Text("Alert \(word) \(AmountFormat.string(target.target, code: code))")
-                        .scaledFont(.caption2).foregroundStyle(.orange)
-                }
-            }
-            Spacer()
-            if let price = model.book?.latestPrice(of: commodity, in: model.reportCurrency)?.value {
-                Text(AmountFormat.string(price, code: code))
-                    .monospacedDigit().foregroundStyle(.secondary)
-            }
-            Button("Target…", action: onTarget)
-                .buttonStyle(.borderless)
-                .accessibilityLabel("Set price target for \(commodity.mnemonic)")
-            Button("Edit", action: onEdit).buttonStyle(.borderless)
-            if model.isWatchOnly(commodity) {
-                Button(role: .destructive) { model.removeWatchSecurity(commodity) } label: {
-                    Image(systemName: "trash")
-                }
-                .buttonStyle(.borderless)
-                .accessibilityLabel("Remove \(commodity.mnemonic) from watch list")
-            }
-        }
-    }
-}
-
 /// Edits a security's display name and fraction across all holdings.
-private struct EditSecuritySheet: View {
+struct EditSecuritySheet: View {
     @Bindable var model: AppModel
     let commodity: Commodity
     @Environment(\.dismiss) private var dismiss
@@ -136,7 +51,7 @@ private struct EditSecuritySheet: View {
 
 /// Sets (or clears) a price target that raises a dashboard alert when the
 /// latest quote crosses it (`FR-PLAN-05`).
-private struct PriceTargetSheet: View {
+struct PriceTargetSheet: View {
     @Bindable var model: AppModel
     let commodity: Commodity
     @Environment(\.dismiss) private var dismiss
@@ -197,7 +112,7 @@ private struct PriceTargetSheet: View {
 }
 
 /// Adds a security to the watch list (no holding).
-private struct AddWatchSheet: View {
+struct AddWatchSheet: View {
     @Bindable var model: AppModel
     @Environment(\.dismiss) private var dismiss
     @State private var exchange = ""

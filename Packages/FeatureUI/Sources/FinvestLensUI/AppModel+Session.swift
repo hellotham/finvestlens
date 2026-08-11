@@ -51,7 +51,7 @@ extension AppModel {
         case .scheduled: "scheduled"
         case .rules: "rules"
         case .goals: "goals"
-        case .prices: "prices"
+        case .investments: "investments"
         case .business: "business"
         case .timeMileage: "timeMileage"
         case .planner: "planner"
@@ -73,7 +73,9 @@ extension AppModel {
         case "planner": return .planner
         case "emergencyRecords": return .emergencyRecords
         case "goals": return .goals
-        case "prices": return .prices
+        // "prices" is the pre-P11 spelling: a saved session must still
+        // restore rather than silently dropping the user back to the dashboard.
+        case "investments", "prices": return .investments
         case "business": return .business
         case "timeMileage": return .timeMileage
         default: return nil
