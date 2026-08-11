@@ -69,12 +69,45 @@ Two changes were needed to make that scope survivable:
   ascending digits from 1 is recognised as invented, rather than demanding a
   waiver on the one figure that is self-evidently not real.
 
-What the gate still does not catch is stated in its own docstring rather than
-left implied: those figures sit beneath any threshold that would not also flag
-every share price in the suite. Magnitude is what a regex can judge;
-provenance — *where did this number come from* — stays the maintainer's, which
-is what CLAUDE.md ▸ Review gates already assigns to a person. Verified in both
-directions with 13 cases over `offending()`, and clean on the tree.
+### A second rule, because "a regex cannot judge this" was untested
+
+The first version of this entry said magnitude is all a gate can judge and
+provenance stays a person's. Half of that was an assertion nobody had measured,
+and measuring it proved it wrong.
+
+These fixtures did not leak through *size*. They leaked through a **shape**: a
+per-unit rate printed beside the amount it produced, so the unit count — the
+holding — falls out by division. That is mechanical, and `recoverableHolding`
+now checks it over a 14-line sliding window, gated on statement vocabulary
+(`Net Payment`, `per note`, `Franking`, …).
+
+The discriminator is that the division comes out **exact**. Allowing a
+near-integer quotient was tried and abandoned on the numbers: it took the clean
+tree from 2 hits to 16, matching an FX rate against a converted amount and, at
+its worst, the string `2025 notes` — a year. A gate that fires on a clean tree
+is one people learn to skip, so it stays strict and misses the rounded case.
+
+Measured against the two fixtures **as they were published**: it catches the
+reconciler one, where rate × units is exact. It does not catch the classifier
+one — and that is the right answer, not a miss. That fixture's amount is
+rounded, so no whole unit count exists and nothing is recoverable. What leaked
+there was the rate *being a real security's*, which no structure reveals.
+
+The waiver had to become a **span** rather than a window: a `// synthetic`
+comment covers 14 lines either side, so it can sit in the doc comment
+introducing a fixture instead of inside the string literal, where it would
+become part of the text under test. Anchoring it to the window alone was the
+first attempt and failed — the comment sits just outside the window that fires.
+A reconciliation fixture must have the flagged shape to exercise the
+arithmetic, so it carries the waiver and says why.
+
+So the standing limit is narrower than first written: the gate covers magnitude
+**and recoverability**. Provenance — a real rate that happens to look ordinary —
+is what remains a person's, as CLAUDE.md ▸ Review gates assigns it.
+
+Verified in both directions: 13 cases over `offending()`, 4 over
+`recoverableHolding()`, the two published leaks re-caught from `git show`, and
+clean on the tree.
 
 Also genericised: `NABPF` as the worked example in `finlab prices --symbol`
 ([lab.md](lab.md), `PricesCommand.swift`) and in this file's own P11 heading.

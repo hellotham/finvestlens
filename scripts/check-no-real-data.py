@@ -27,16 +27,24 @@ Waive with a trailing `<!-- synthetic -->` comment when a large figure really is
 made up (the Acme/Globex business fixtures, a loan-calculator illustration).
 
 The magnitude rule has a known floor, and it is not an oversight to fix by
-lowering `THRESHOLD`. A real dividend payment and its franking credits were
-sitting in a reconciler fixture on 12 Aug 2026 — three figures under a hundred
-dollars each, and between them enough to recover the size of the holding, since
-the printed per-note rate divides into the payment. No size rule reaches that:
-small amounts are exactly what a legitimate example looks like, and dropping
-the threshold far enough to catch them would flag every share price in the
-suite, which is how a gate gets ignored. What catches that class is a person
-reading the fixture and asking where the number came from — the judgement
-CLAUDE.md deliberately leaves with the maintainer. This gate covers magnitude;
-it does not claim to cover provenance.
+lowering `THRESHOLD`. Real dividend figures were sitting in two reconciler
+fixtures on 12 Aug 2026 — each under a hundred dollars, and dropping the
+threshold far enough to catch them would flag every share price in the suite,
+which is how a gate gets ignored.
+
+So the second rule, `recoverableHolding`, does not look at size at all. It
+looks for the *shape* a statement fixture leaks through: a per-unit rate
+printed beside the amount it produced, from which the unit count — a holding —
+falls out by division. Measured against the two fixtures as they were
+published, it catches the one where the division is exact.
+
+It does not catch the other, and that is the correct answer rather than a miss:
+that fixture's amount was rounded, so no whole unit count exists and nothing is
+recoverable from it. What leaked there was the *rate itself* being a real
+security's, which no structure reveals — only a person who knows where the
+number came from. That judgement stays with the maintainer, as CLAUDE.md ▸
+Review gates assigns it. This gate covers magnitude and recoverability; it
+still does not claim to cover provenance.
 """
 
 from __future__ import annotations
@@ -44,6 +52,7 @@ from __future__ import annotations
 import pathlib
 import re
 import sys
+from decimal import Decimal, InvalidOperation
 
 REPO = pathlib.Path(__file__).resolve().parent.parent
 
@@ -104,6 +113,52 @@ def offending(line: str) -> list[str]:
     return out
 
 
+# --- Holding recovery -------------------------------------------------------
+#
+# The magnitude rule is blind to a small figure, and a statement fixture leaks
+# through a structure rather than a size: print a per-unit rate beside the
+# amount it produced and the unit count falls out of the division — which is a
+# holding. Both fixtures found on 12 Aug 2026 had exactly that shape, and one
+# printed the unit count outright.
+#
+# The discriminator is that the division comes out *exact*. Allowing a
+# near-integer quotient instead was measured and abandoned: it took the clean
+# tree from 2 hits to 16, matching an FX rate against a converted amount and
+# the string "2025 notes" — a year. A gate that fires on a clean tree is one
+# people learn to skip, so this stays strict and misses the rounded case.
+WINDOW = 14
+DECIMAL = re.compile(r"(?<![\w.])(\d{1,3}(?:,\d{3})*|\d+)\.(\d{2,4})(?![\d])")
+STATEMENT = re.compile(
+    r"payment date|record date|net payment|franking|franked|per share|per note|"
+    r"per unit|distribution rate|shares|units|payment advice|dividend statement",
+    re.I)
+
+
+def recoverableHolding(block: str) -> list[str]:
+    """Rate × whole number = amount, all printed together on a statement."""
+    if not STATEMENT.search(block):
+        return []
+    figures = []
+    for whole, frac in DECIMAL.findall(block):
+        try:
+            figures.append(Decimal(whole.replace(",", "") + "." + frac))
+        except InvalidOperation:
+            continue
+    out = []
+    for rate in figures:
+        # A per-unit rate: under ten, and printed to more than one decimal —
+        # `5.00` is a dollar amount, `0.9338` is a rate.
+        if not (Decimal("0.0001") <= rate < 10) or rate == rate.quantize(Decimal("0.1")):
+            continue
+        for amount in figures:
+            if amount < 50:
+                continue
+            units = amount / rate
+            if units >= 20 and units == units.to_integral_value():
+                out.append(f"{rate} × {int(units)} units = {amount}")
+    return out
+
+
 def main() -> int:
     files: list[pathlib.Path] = [REPO / name for name in EXTRA_FILES]
     for root, glob in ROOTS:
@@ -120,9 +175,29 @@ def main() -> int:
             text = path.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError):
             continue
-        for number, line in enumerate(text.splitlines(), 1):
+        lines = text.splitlines()
+        for number, line in enumerate(lines, 1):
             for figure in offending(line):
                 problems.append(f"{rel}:{number}: {figure} — {line.strip()[:90]}")
+
+        # A holding is recovered from figures on *different* lines, so this one
+        # reads a sliding window rather than a line. The waiver is therefore
+        # checked against a *span* rather than the window: a `// synthetic`
+        # comment covers the WINDOW lines on either side of itself, so it can
+        # be written in the doc comment introducing a fixture instead of inside
+        # the string literal, where it would become part of the text under
+        # test. Anchoring it to the window alone was tried first and does not
+        # work — the comment sits just outside the window that fires.
+        waived = [n for n, line in enumerate(lines) if WAIVER.search(line)]
+        seen: set[str] = set()
+        for index in range(len(lines)):
+            if any(index - WINDOW <= w <= index + WINDOW for w in waived):
+                continue
+            for hit in recoverableHolding("\n".join(lines[index:index + WINDOW])):
+                if hit in seen:
+                    continue
+                seen.add(hit)
+                problems.append(f"{rel}:{index + 1}: holding recoverable — {hit}")
 
     for problem in problems:
         print(problem)

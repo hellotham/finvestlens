@@ -5,12 +5,15 @@
 //  Copyright (C) 2026 Christine Tham
 //  SPDX-License-Identifier: GPL-3.0-or-later
 //
-//  The statement text below is the real Automic/Computershare layout, with the
-//  figures changed; the model answers are the ones the on-device model actually
-//  produced for it.
+//  The statement text below reproduces the registry layout only. Every figure
+//  is synthetic and internally consistent — rate × units = the franked amount,
+//  and the credit is three sevenths of it — so the reconciliation arithmetic is
+//  exercised without a real statement's numbers. The model answers are the ones
+//  the on-device model actually produced. This file previously carried a real
+//  statement's figures, including a unit count, which is a holding.
 //
 //  Decimal expectations are written `Decimal(string:)`, never as literals: a
-//  bare 252.86 is a Double first and reaches Decimal as 252.8600000000000512,
+//  bare 456.78 is a Double first and reaches Decimal as 456.7799999999998976,
 //  which does not equal the exact value parsed from the page.
 //
 
@@ -23,42 +26,47 @@ struct DividendReconcilerTests {
 
     /// A registry statement: the five-column row, plus the prose restatement
     /// of the arithmetic that the model keeps reading instead of the row.
+    ///
+    /// The rate divides evenly into the amount here, which is the shape
+    /// `check-no-real-data.py` flags as a recoverable holding — deliberately,
+    /// because that is what a reconciliation fixture has to look like to
+    /// exercise the arithmetic. These figures are invented. // synthetic
     private let page = """
-        PLATO INCOME MAXIMISER LIMITED (ASX: PL8)
+        EXAMPLE INCOME FUND LIMITED (ASX: XYZ)
         Payment Date:   30 April 2025
-        This statement represents your dividend of 0.55 cents per share
-        $0.0055 x 107,272 Shares
-        = 590.00
-        Ordinary   Dividend Rate   Unfranked   Franked   Franking   Gross Payment:   $590.00
+        This statement represents your dividend of 0.70 cents per share
+        $0.0070 x 100,000 Shares
+        = 700.00
+        Ordinary   Dividend Rate   Unfranked   Franked   Franking   Gross Payment:   $700.00
         Shares   per Share   Amount   Amount   Credit
-        107,272   $0.0055   $0.00   $590.00   $252.86   Net Payment:   $590.00
+        100,000   $0.0070   $0.00   $700.00   $300.00   Net Payment:   $700.00
         """
 
     @Test("A franked amount read off the calculation line is replaced by the printed one")
     func recoversFrankedFromPrintedPayment() {
-        // "$0.0055 x 107,272" parses to 55107.272 — a number that appears
+        // "$0.0070 x 100,000" parses to 70100.000 — a number that appears
         // nowhere on the page. The payment and the unfranked amount do, so the
         // franked amount is their difference.
         let details = DividendReconciler.details(
-            from: RawDividendFigures(franked: "55107.272", unfranked: "0.00", net: "590.00"),
+            from: RawDividendFigures(franked: "70100.000", unfranked: "0.00", net: "700.00"),
             printedIn: page)
-        #expect(details.frankedAmount == 590)
+        #expect(details.frankedAmount == 700)
         #expect(details.unfrankedAmount == 0)
-        #expect(details.netPayment == 590)
+        #expect(details.netPayment == 700)
         #expect(details.componentsMatchPayment)
     }
 
     @Test("A payment the model computed is replaced by the components")
     func recoversPaymentFromComponents() {
         // Told about franking credits, the model nets them off the payment:
-        // it reported a $590.00 dividend as $337.14. That figure is not on the
+        // it reported a $700.00 dividend as $400.00. That figure is not on the
         // page; the components are.
         let details = DividendReconciler.details(
-            from: RawDividendFigures(franked: "590.00", unfranked: "0.00",
-                                     credits: "252.86", net: "337.14"),
+            from: RawDividendFigures(franked: "700.00", unfranked: "0.00",
+                                     credits: "300.00", net: "400.00"),
             printedIn: page)
-        #expect(details.netPayment == 590)
-        #expect(details.frankingCredits == Decimal(string: "252.86"))
+        #expect(details.netPayment == 700)
+        #expect(details.frankingCredits == Decimal(string: "300.00"))
         #expect(details.componentsMatchPayment)
     }
 
@@ -66,14 +74,14 @@ struct DividendReconcilerTests {
     func creditRecoveredByGrossUp() {
         // The model reports "0.00" for a column it failed to read. A fully
         // franked dividend implies its credit exactly, so the figure is
-        // computed and then looked for: 590 × 30/70 = 252.86, which this page
+        // computed and then looked for: 700 × 30/70 = 300.00, which this page
         // does print.
         for reported in ["", "0.00", "0"] {
             let details = DividendReconciler.details(
-                from: RawDividendFigures(franked: "590.00", unfranked: "0.00",
-                                         credits: reported, net: "590.00"),
+                from: RawDividendFigures(franked: "700.00", unfranked: "0.00",
+                                         credits: reported, net: "700.00"),
                 printedIn: page)
-            #expect(details.frankingCredits == Decimal(string: "252.86"),
+            #expect(details.frankingCredits == Decimal(string: "300.00"),
                     "credit not recovered when the model reported \"\(reported)\"")
         }
     }
@@ -85,14 +93,14 @@ struct DividendReconcilerTests {
         // distinction — the arithmetic says where to look, never what is true.
         let partly = """
             Unfranked   Franked   Franking Credit
-            300.00   290.00   62.14   Net Payment:   590.00
+            300.00   400.00   55.00   Net Payment:   700.00
             """
         let details = DividendReconciler.details(
-            from: RawDividendFigures(franked: "290.00", unfranked: "300.00",
-                                     credits: "0.00", net: "590.00"),
+            from: RawDividendFigures(franked: "400.00", unfranked: "300.00",
+                                     credits: "0.00", net: "700.00"),
             printedIn: partly)
-        // 290 × 30/70 = 124.29, which is not on this page — the real credit is
-        // 62.14, and guessing it would have been wrong.
+        // 400 × 30/70 = 171.43, which is not on this page — the real credit is
+        // 55.00, and guessing it would have been wrong.
         #expect(details.frankingCredits == 0)
         #expect(details.componentsMatchPayment)
     }
@@ -139,8 +147,8 @@ struct DividendReconcilerTests {
     @Test("An unfranked distribution grosses up to nothing")
     func noCreditWithoutFranking() {
         let details = DividendReconciler.details(
-            from: RawDividendFigures(franked: "0.00", unfranked: "590.00",
-                                     credits: "0.00", net: "590.00"),
+            from: RawDividendFigures(franked: "0.00", unfranked: "700.00",
+                                     credits: "0.00", net: "700.00"),
             printedIn: page)
         #expect(details.frankingCredits == 0)
     }
@@ -149,9 +157,10 @@ struct DividendReconcilerTests {
     func derivationMustAlsoBePrinted() {
         // The guard against manufacturing agreement: asked in the wrong field
         // order the model returned the rate in both columns, and their sum was
-        // recorded as a payment of $0.011 — self-consistent and nonsense.
+        // recorded as a payment of $0.014 — self-consistent and nonsense.
+        // Figures invented, same as the fixture they exercise. // synthetic
         let details = DividendReconciler.details(
-            from: RawDividendFigures(franked: "0.0055", unfranked: "0.0055", net: ""),
+            from: RawDividendFigures(franked: "0.0070", unfranked: "0.0070", net: ""),
             printedIn: page)
         #expect(details.netPayment == 0)
     }
@@ -163,10 +172,10 @@ struct DividendReconcilerTests {
         // the mismatch is what the reviewer needs to see.
         let odd = """
             Unfranked   Franked   Franking Credit
-            200.00   300.00   128.57   Net Payment:   590.00
+            200.00   300.00   128.57   Net Payment:   700.00
             """
         let details = DividendReconciler.details(
-            from: RawDividendFigures(franked: "300.00", unfranked: "200.00", net: "590.00"),
+            from: RawDividendFigures(franked: "300.00", unfranked: "200.00", net: "700.00"),
             printedIn: odd)
         #expect(details.frankedAmount == 300)
         #expect(details.unfrankedAmount == 200)
@@ -191,12 +200,12 @@ struct DividendReconcilerTests {
     @Test("The ticker is upper-cased and the date parsed")
     func passthroughFields() {
         let details = DividendReconciler.details(
-            from: RawDividendFigures(security: "Plato Income Maximiser", ticker: "pl8",
-                                     paymentDate: "2025-04-30", franked: "590.00",
-                                     unfranked: "0.00", net: "590.00"),
+            from: RawDividendFigures(security: "Example Income Fund", ticker: "xyz",
+                                     paymentDate: "2025-04-30", franked: "700.00",
+                                     unfranked: "0.00", net: "700.00"),
             printedIn: page)
-        #expect(details.ticker == "PL8")
-        #expect(details.securityName == "Plato Income Maximiser")
+        #expect(details.ticker == "XYZ")
+        #expect(details.securityName == "Example Income Fund")
         #expect(details.paymentDate != nil)
     }
 }
