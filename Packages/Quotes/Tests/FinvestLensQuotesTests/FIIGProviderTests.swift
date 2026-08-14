@@ -1,0 +1,267 @@
+//
+//  FIIGProviderTests.swift
+//  FinvestLens — Quotes
+//
+//  Copyright (C) 2026 Christine Tham
+//  SPDX-License-Identifier: GPL-3.0-or-later
+//
+//  The fixture reproduces the live response's shape and field types, measured
+//  against the API on 15 Aug 2026. The ISINs and issuer names are invented —
+//  a real one here would say which bonds someone holds. // synthetic
+//
+
+import Foundation
+import Testing
+import FinvestLensEngine
+@testable import FinvestLensQuotes
+
+private func dec(_ s: String) -> Decimal { Decimal(string: s)! }
+
+/// Two bonds in the response's real shape: `price` as a percentage of par,
+/// `couponDetail` as a **string**, `callDate` and `bondHistory` null,
+/// `marketRegion` carrying the denomination currency.
+private let indexJSON = """
+{"data":[
+ {"isin":"AU0EXAMPLE01","georgiaId":1,"companyName":"Example Issuer Ltd",
+  "companyDescription":"An invented issuer.","securityDescription":"EXAMPLE-5.00%-01Jan30",
+  "coupon":"Fixed Coupon Bond","yield":0.05,"price":98.5,"maturityDate":"2030-01-01",
+  "maturityYear":2030,"sector":"Utilities","url":"","couponDetail":"0.05",
+  "minimumInvestment":500000,"couponFrequency":"Semi-Annually","callDate":null,
+  "liquidity":"LEVEL2B","availableTo":"Wholesale Only","available":true,
+  "marketRegion":"AUD","factsheetPublished":false,"bondHistory":null},
+ {"isin":"US0EXAMPLE02","georgiaId":2,"companyName":"Second Example Inc",
+  "companyDescription":"Also invented.","securityDescription":"EXAMPLE2-3.00%-01Jul28",
+  "coupon":"Fixed Coupon Bond","yield":0.03,"price":101.25,"maturityDate":"2028-07-01",
+  "maturityYear":2028,"sector":"Financials","url":"","couponDetail":"0.03",
+  "minimumInvestment":200000,"couponFrequency":"Quarterly","callDate":null,
+  "liquidity":"LEVEL2B","availableTo":"Wholesale Only","available":true,
+  "marketRegion":"USD","factsheetPublished":false,"bondHistory":null}],
+ "pagination":{"pageNo":1,"pageSize":2000,"pageCount":1,"pageRemainCount":0},
+ "stats":{},"links":[]}
+"""
+
+private func bond(_ isin: String, code: String?) -> Commodity {
+    Commodity(namespace: .security("BOND"), mnemonic: isin, fullName: "A bond",
+              smallestFraction: 100, exchangeCode: code)
+}
+
+@Suite("FIIG provider")
+struct FIIGProviderTests {
+
+    // MARK: The conversion that makes a bond price mean anything
+
+    @Test("A percentage of par becomes a par-relative price")
+    func percentOfParIsDividedByOneHundred() async throws {
+        // The whole point of the provider. The book stores bond prices
+        // par-relative — every bond row in the reference book was exactly 1.0 —
+        // and FIIG publishes 98.5 meaning 98.5% of face. Shipping 98.5 into the
+        // book would value an $100,000 holding at $9.85 million.
+        let http = StubHTTPClient(); http.on("/api/instruments/bonds", body: indexJSON)
+        let quote = try await FIIGQuoteProvider(http: http).latestQuote(symbol: "AU0EXAMPLE01")
+        #expect(quote.price == dec("0.985"))
+    }
+
+    @Test("The denomination currency is carried through")
+    func currencyIsReported() async throws {
+        let http = StubHTTPClient(); http.on("/api/instruments/bonds", body: indexJSON)
+        let provider = FIIGQuoteProvider(http: http)
+        #expect(try await provider.latestQuote(symbol: "AU0EXAMPLE01").currencyCode == "AUD")
+        // `marketRegion` is the currency despite its name — 38 of the live
+        // index's 702 bonds are USD and 3 GBP, so this is not hypothetical.
+        #expect(try await provider.latestQuote(symbol: "US0EXAMPLE02").currencyCode == "USD")
+    }
+
+    // MARK: Batch — one request for the whole market
+
+    @Test("Several bonds cost one request, not one each")
+    func batchIsOneRequest() async throws {
+        let http = StubHTTPClient(); http.on("/api/instruments/bonds", body: indexJSON)
+        let quotes = try await FIIGQuoteProvider(http: http)
+            .latestQuotes(symbols: ["AU0EXAMPLE01", "US0EXAMPLE02"])
+        #expect(quotes.count == 2)
+        #expect(http.requestedURLs.count == 1,
+                "the index is fetched once however many bonds are asked about")
+        #expect(http.requestedURLs[0].absoluteString.contains("pageSize=2000"))
+    }
+
+    @Test("An unknown ISIN is absent from a batch, not an error")
+    func unknownBondDoesNotFailTheBatch() async throws {
+        // A batch that threw on the first bond FIIG has never heard of would
+        // lose every bond it did find.
+        let http = StubHTTPClient(); http.on("/api/instruments/bonds", body: indexJSON)
+        let quotes = try await FIIGQuoteProvider(http: http)
+            .latestQuotes(symbols: ["AU0EXAMPLE01", "AU0NOTLIST99"])
+        #expect(quotes.keys.sorted() == ["AU0EXAMPLE01"])
+    }
+
+    @Test("An unknown ISIN asked for on its own reports no data")
+    func unknownBondSingly() async throws {
+        let http = StubHTTPClient(); http.on("/api/instruments/bonds", body: indexJSON)
+        await #expect(throws: QuoteError.noData) {
+            try await FIIGQuoteProvider(http: http).latestQuote(symbol: "AU0NOTLIST99")
+        }
+    }
+
+    @Test("An ISIN pasted with a trailing space or in lower case still matches")
+    func isinIsNormalised() async throws {
+        // Exactly how an ISIN arrives from a statement or a broker email.
+        let http = StubHTTPClient(); http.on("/api/instruments/bonds", body: indexJSON)
+        let quotes = try await FIIGQuoteProvider(http: http)
+            .latestQuotes(symbols: [" au0example01 "])
+        #expect(quotes[" au0example01 "]?.price == dec("0.985"),
+                "the result is keyed on what the caller asked for, matched loosely")
+    }
+
+    // MARK: What this provider cannot do, said plainly
+
+    @Test("History is refused rather than faked as an empty series")
+    func historyIsUnsupported() async throws {
+        // `bondHistory` is null on all 702 live records. Returning [] would be
+        // indistinguishable from "this bond did not trade in that window", and
+        // the caller would record a gap that is really a missing capability.
+        let http = StubHTTPClient(); http.on("/api/instruments/bonds", body: indexJSON)
+        await #expect(throws: QuoteError.self) {
+            try await FIIGQuoteProvider(http: http)
+                .history(symbol: "AU0EXAMPLE01", from: .distantPast, to: .distantFuture)
+        }
+        #expect(!QuoteProviderKind.fiig.supportsHistory)
+    }
+
+    @Test("The provider is keyless, batch, and matched by identifier")
+    func kindDeclaresItsShape() {
+        #expect(!QuoteProviderKind.fiig.requiresAPIKey)
+        #expect(QuoteProviderKind.fiig.isBatch)
+        #expect(QuoteProviderKind.fiig.matchesByIdentifier)
+        // Every other provider takes a ticker; claiming otherwise would route
+        // an ISIN to Yahoo.
+        #expect(QuoteProviderKind.allCases.filter(\.matchesByIdentifier) == [.fiig])
+    }
+
+    @Test("An ISIN is passed through whole, never split on its dots")
+    func providerSymbolDoesNotRewriteAnISIN() {
+        // The suffix rewriting every other provider needs would corrupt an
+        // identifier: `providerSymbol` splits on "." for exchange codes.
+        #expect(QuoteProviderKind.fiig.providerSymbol(for: "au0example01") == "AU0EXAMPLE01")
+        #expect(QuoteProviderKind.fiig.providerSymbol(for: "XS1234567890") == "XS1234567890")
+    }
+
+    // MARK: Malformed and empty responses
+
+    @Test("A response that is not the bond index is reported as malformed")
+    func malformedResponse() async throws {
+        let http = StubHTTPClient(); http.on("/api/instruments/bonds", body: "<html>blocked</html>")
+        await #expect(throws: QuoteError.malformedResponse("not the FIIG bond index")) {
+            try await FIIGQuoteProvider(http: http).latestQuote(symbol: "AU0EXAMPLE01")
+        }
+    }
+
+    @Test("An empty index reports no data rather than an empty success")
+    func emptyIndex() async throws {
+        let http = StubHTTPClient()
+        http.on("/api/instruments/bonds", body: #"{"data":[],"pagination":{}}"#)
+        await #expect(throws: QuoteError.noData) {
+            try await FIIGQuoteProvider(http: http).latestQuotes(symbols: ["AU0EXAMPLE01"])
+        }
+    }
+
+    @Test("A bond with no price is skipped, not decoded as zero")
+    func nullPriceIsSkipped() async throws {
+        let json = """
+        {"data":[{"isin":"AU0EXAMPLE01","price":null,"marketRegion":"AUD"},
+                 {"isin":"AU0EXAMPLE03","price":50.0,"marketRegion":"AUD"}],
+         "pagination":{}}
+        """
+        let http = StubHTTPClient(); http.on("/api/instruments/bonds", body: json)
+        let quotes = try await FIIGQuoteProvider(http: http)
+            .latestQuotes(symbols: ["AU0EXAMPLE01", "AU0EXAMPLE03"])
+        #expect(quotes["AU0EXAMPLE01"] == nil, "a bond with no price is unpriced, not free")
+        #expect(quotes["AU0EXAMPLE03"]?.price == dec("0.5"))
+    }
+}
+
+// MARK: - Routing a commodity to the right lookup key
+
+@Suite("Identifier routing")
+struct IdentifierRoutingTests {
+
+    @Test("A provider keyed by identifier is asked with the ISIN, not the ticker")
+    func fiigGetsTheExchangeCode() {
+        let held = bond("MYBOND", code: "AU0EXAMPLE01")
+        #expect(QuoteService.lookupKey(for: held, kind: .fiig) == "AU0EXAMPLE01")
+        // …and every other provider still gets the ticker, or it would ask
+        // Yahoo about an ISIN.
+        #expect(QuoteService.lookupKey(for: held, kind: .yahoo) == "MYBOND")
+    }
+
+    @Test("An explicit override wins over the identifier")
+    func overrideWins() {
+        // The user saying what to send outranks anything derived; second-
+        // guessing it is how a per-security fix stops working.
+        let held = bond("MYBOND", code: "AU0EXAMPLE01")
+        #expect(QuoteService.lookupKey(for: held, override: "XS9999999999", kind: .fiig)
+                == "XS9999999999")
+    }
+
+    @Test("A bond with no identifier falls back to its ticker and simply misses")
+    func noIdentifierFallsBack() {
+        // Honest rather than clever: FIIG will not know the mnemonic, the batch
+        // omits it, and the security shows as unpriced — which is true, and is
+        // fixed by typing the ISIN on its page.
+        let held = bond("MYBOND", code: nil)
+        #expect(QuoteService.lookupKey(for: held, kind: .fiig) == "MYBOND")
+        #expect(QuoteService.lookupKey(for: bond("MYBOND", code: "   "), kind: .fiig) == "MYBOND")
+    }
+}
+
+// MARK: - The service's batch path
+
+@Suite("Batch quote service")
+struct BatchQuoteServiceTests {
+
+    @Test("Bonds are priced from one request and mapped back to their commodities")
+    func batchThroughTheService() async throws {
+        let http = StubHTTPClient(); http.on("/api/instruments/bonds", body: indexJSON)
+        let service = QuoteService(keys: StubKeyStore(), http: http)
+        let first = bond("BOND1", code: "AU0EXAMPLE01")
+        let second = bond("BOND2", code: "US0EXAMPLE02")
+        let missing = bond("BOND3", code: "AU0NOTLIST99")
+
+        let prices = try await service.latestPrices(
+            for: [first, second, missing], in: .aud, using: .fiig)
+
+        #expect(prices.count == 2)
+        #expect(prices[first]?.value == dec("0.985"))
+        #expect(prices[first]?.currency == .aud)
+        #expect(prices[missing] == nil)
+        #expect(http.requestedURLs.count == 1)
+        // A USD bond in an AUD book leaves a visible trace instead of being
+        // silently relabelled — the same convention the single-quote path uses.
+        #expect(prices[second]?.source == "Finance::Quote:fiig (USD)")
+    }
+
+    @Test("A provider with no batch path is looped, and one failure loses only itself")
+    func nonBatchProviderIsLooped() async throws {
+        let http = StubHTTPClient()
+        http.on("/v8/finance/chart/GOOD", body: """
+            {"chart":{"result":[{"meta":{"symbol":"GOOD","currency":"AUD",
+            "regularMarketPrice":12.5,"regularMarketTime":1700000000},
+            "timestamp":[],"indicators":{"quote":[{"close":[]}]}}]}}
+            """)
+        // BAD matches no route, so the stub throws for it.
+        let service = QuoteService(keys: StubKeyStore(), http: http)
+        let good = Commodity(namespace: .security("ASX"), mnemonic: "GOOD",
+                             fullName: "Good", smallestFraction: 10000)
+        let bad = Commodity(namespace: .security("ASX"), mnemonic: "BAD",
+                            fullName: "Bad", smallestFraction: 10000)
+
+        let prices = try await service.latestPrices(for: [good, bad], in: .aud, using: .yahoo)
+        #expect(prices[good]?.value == dec("12.5"))
+        #expect(prices[bad] == nil)
+    }
+}
+
+/// A key store for the keyless providers under test.
+private struct StubKeyStore: APIKeyStoring {
+    func key(for kind: QuoteProviderKind) -> String? { nil }
+    func setKey(_ key: String?, for kind: QuoteProviderKind) {}
+}

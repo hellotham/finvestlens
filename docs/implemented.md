@@ -20,6 +20,204 @@ Companions: [PRD](prd.md) · [Architecture](architecture.md) · [Plan](plan.md) 
 
 ---
 
+## P11 · I5–I7 — the market's side of the book (15 Aug 2026)
+
+The last three phases, and the point they were building to: the app now holds
+both halves of an investment — what the ledger records and what the market
+says — and can tell you where they disagree.
+
+### I5 · Company data, cached beside the book and never in it
+
+`FundamentalsCache` writes to `~/Library/Application Support/…/Fundamentals/`,
+keyed by commodity identity. **Prices stay the only fetched thing that enters a
+document**, which is what keeps the two invariants — splits balance to zero,
+GnuCash XML round-trips byte-identically — entirely out of this feature's
+reach. A test asserts exactly that: after a fetch, the book's price, transaction
+and slot counts are unmoved.
+
+TTLs are per section (`Stamped<T>`), because the facts age differently: a
+profile monthly, statements quarterly, dividends weekly. One timestamp for the
+record would either refetch a company description every week or show a stale
+dividend list as current.
+
+**Yahoo's two endpoints, measured rather than assumed:**
+
+- `v10/finance/quoteSummary` needs a **cookie-plus-crumb handshake** — a bare
+  request answers `401 Invalid Crumb`. `fc.yahoo.com` returns 404 and sets the
+  `A3` cookie anyway; `getcrumb` then returns a token; the summary then answers.
+  Verified end to end through the production `URLSessionHTTPClient`. The
+  handshake is shared across a run by an actor, not repeated per security.
+- `v8/finance/chart?events=div|split` needs **no handshake at all** and returns
+  dividends and splits — 20 over ten years for an ASX issuer. So a refused
+  crumb loses the profile and keeps the dividends, which is how the provider is
+  written.
+
+That second endpoint also settles **`FR-INV-36`**: `FR-INV-03a` claimed the
+Yahoo provider fetched "dividends, and splits" and it did not — across the
+whole package the only matches for either word were `String.split`. Now
+something does, and it is the fundamentals provider, not the price provider.
+
+**Yahoo rate-limits the handshake hard**, per address: the same sequence
+returned 9 KB of company data and then started answering 429 minutes later.
+That is an environmental condition, so the live harness reports and skips it
+rather than going red, and the user-facing message says prices are unaffected
+and to try again shortly — waiting is the useful advice, not checking a setting.
+
+Two traps worth keeping. Yahoo's statement rows are **not uniform**: most values
+are `{"raw": …}` but `maxAge` is a bare integer in the same dictionary, so a
+decoder that assumes the wrapper throws on the first row and loses the whole
+statement. And an **empty** `{}` must decode to *absent*, never zero — "this
+bank does not report a gross profit" and "this bank's gross profit was nothing"
+are different claims.
+
+**A negative answer is cached too**, and that was a real defect before it was
+fixed: a provider with no statements for a security left the section empty, so
+it stayed "never fetched", so it was fetched again on every single page visit,
+forever. Recording an empty stamped section makes the TTL apply to the absence.
+Only in the success path — a request that *failed* records nothing, so a network
+blip does not suppress retries for a quarter.
+
+### I6 · Where the ledger and the market disagree
+
+The reconciliation is the strongest argument for the hub existing: it needs both
+halves at once, so no portfolio tracker and no accounting package can do it
+alone. Nothing is ever corrected — every finding is a discrepancy to look at.
+
+- **Dividends**: declared against recorded, in the four classes. Matching is
+  **amount first, then date**, and that was found by a test rather than
+  designed: matching purely on nearness lets a $120 special dividend two weeks
+  out beat the $500 payment three weeks out, and then reports both as wrong —
+  two false findings from one clean quarter.
+- **Corporate actions**: a provider split with no matching unit movement. The
+  quiet one — every price before that date disagrees with the units held, so
+  past valuations and the whole chart are wrong, and nothing else would notice.
+  Tested by ratio with a tolerance, because a book that recorded the split *and*
+  traded around it will not land on the arithmetic exactly.
+- **Outliers**: a stored price judged against the **median** of its neighbours,
+  not the mean — one bad price drags a mean far enough to hide itself and to
+  implicate the rows either side. The factor is deliberately loose at 4: a
+  security really can move 50% in a week, and a check that fires on real
+  volatility is one people switch off.
+
+### I7 · Scope, preview, and a cadence that is not a deadline
+
+- **Fetch scope** (`FR-INV-25`): all holdings, only what is behind, or holdings
+  plus **closed positions whose held period has a hole**. D4 in one sentence — a
+  closed position is not worth today's price, but a gap inside the period it
+  *was* held corrupts historical net worth, so it is worth fetching once and not
+  daily.
+- **Run preview** (`FR-INV-34`) counts **requests, not securities**. A batch
+  provider's whole group is one request, so eleven bonds and one share is two
+  requests; showing securities alone would make the cheapest scope look like the
+  dearest.
+- **Manual-valuation cadence** (`FR-INV-30`): hand-valued holdings are judged
+  against their own expected cadence — quarterly by default, what an Australian
+  super fund publishes — instead of the trading calendar. A fund is no longer
+  called stale every Tuesday the ASX happens to trade, which is how a worklist
+  stops being read.
+
+## P11 · I4 — bonds priced by their ISIN (15 Aug 2026)
+
+Every bond price row in the reference book was exactly `1.0`. A bond worth 72%
+of face was valued at 100% of it, and had been for years, because no provider
+here could find a corporate bond: they all take a ticker and a bond has none.
+
+**FIIG** (`FIIGQuoteProvider`) closes it, and needed a provider shape the
+protocol did not have. Measured against the live API on 15 Aug 2026, not
+assumed:
+
+- **One request is the whole market.** `pageSize=2000` returns all **702**
+  bonds with `pageCount: 1` (~510 KB, 5.6s). So `BatchQuoteProvider` was added
+  alongside `QuoteProvider`: fetch once, look up locally. Eleven bonds cost one
+  request rather than eleven downloads of the same payload — and the new
+  `QuoteService.latestPrices(for:…)` serves non-batch providers by looping, so
+  a call site never has to know which shape it holds.
+- **Keyed by ISIN**, via `QuoteProviderKind.matchesByIdentifier` and
+  `QuoteService.lookupKey`, which reads GnuCash's `cmdty:xcode`. Without that
+  the run would send eleven mnemonics FIIG has never heard of, forever.
+- **`price` is a percentage of par** (live range 13.500 … 177.182), so the
+  conversion is `÷ 100` and it happens at the parse boundary — a `Quote` from
+  FIIG then means what a `Quote` means everywhere else. Shipping the raw figure
+  would have valued a $100,000 holding at $9.85 million.
+- **No history.** `bondHistory` is `null` on all 702 records, so
+  `supportsHistory` is `false` and `history(symbol:…)` throws rather than
+  returning `[]` — an empty series is indistinguishable from "did not trade",
+  and the caller would record a gap that is really a missing capability.
+
+**The TLS workaround was not needed, and the reason matters.** The reference
+implementation (`investalens`, `lib/providers/fiig-bond-rates.ts`) disables
+certificate verification because the server omits an intermediate CA and Node
+does not chase AIA to fetch it. That is a Node limitation, not a server one:
+`curl` reported `ssl_verify_result=0` and the live harness
+(`LiveFIIGTests`, `FL_LIVE_FIIG=1`) goes through the production
+`URLSessionHTTPClient` and passes. Verification is never disabled here.
+
+**Per-security providers**, because one provider per run stopped being enough
+the moment a book held both shares and bonds (`FR-INV-22`). `quoteProviders` is
+a new kvp map; `effectiveProvider(for:in:)` lets a security's own choice outrank
+the run's, and falls back when the chosen provider has no key rather than
+failing that security every run. `fetchLatestQuotes` now groups by effective
+provider, so batch providers cost one request per group. A batch reports
+absences by omission, so securities it did not cover are *named* — being absent
+from an index is the one failure a person can fix.
+
+**Nothing is inferred.** An ISIN's shape does not prove a bond is listed at
+FIIG, so `fiigCandidates` only *offers*: the worklist raises "N holdings have an
+ISIN and could be priced by FIIG" with a one-click fix, and until it is taken
+an ISIN is never sent there.
+
+**On the reference book** (`LiveBondPricingTests`, on a copy): 11 bonds carry an
+ISIN, **10 are in FIIG's index**, and after one run all ten hold real market
+prices — spread across roughly 70–100% of face — where 10 rows had been exactly
+`1.0`. The eleventh is held and not listed; it is reported by name rather than
+silently skipped. The design's "11 bonds" was optimistic; 10 of 11 is the
+measured answer.
+
+The exact figures are deliberately **not** recorded here, and the harness no
+longer prints them either. FIIG publishes its whole index publicly, so a bond
+price quoted to five decimals is close to unique in that list — writing one down
+beside "this is the reference book" would say which bond is held. The
+magnitude gate cannot see that (the figures are small and form no recoverable
+holding); it is the provenance judgement its docstring assigns to a person.
+
+## P11 · I3 — one security's whole story (15 Aug 2026)
+
+The overview (I2) answers "can I trust these numbers". The detail page answers
+everything the answer raises. `FinancialReports.securityDetail` assembles it in
+one pass — the price series feeds both the chart and the price table, the
+movements feed both the chart's markers and the activity list, the holding
+periods feed the shading — because computing them per section would walk the
+price database eight times for one page.
+
+- **The chart is the thing no competitor can draw**: the provider's line, *your*
+  buys and sells placed at what you actually paid, your average cost as a
+  dashed rule, and the periods you held it shaded. A marker above the line is a
+  purchase above that day's market. The line breaks at gaps rather than being
+  drawn through days nobody has a price for.
+- **While held** is a range option, and the only one that judges your own
+  decisions; everything before you bought is somebody else's story.
+- **Prices is the only price table in the app** (`FR-INV-29`), one security at a
+  time, with the **source column visible** — 68% of the reference book's rows
+  were hand-entered and nothing on screen had ever said so. Editing a fetched
+  figure re-stamps it `user:price-editor`, because a number a person typed over
+  a provider's is no longer the provider's.
+- **ISIN is editable** (`FR-INV-32`): `Book.updateCommodityMetadata` gained an
+  `exchangeCode` parameter where empty clears and `nil` leaves alone — "no ISIN"
+  has to be a thing a person can say, and the field is how I4 finds a bond at
+  all.
+- **CSV export** re-imports: the columns are the ones `CSVPriceImporter` reads,
+  with source as a trailing column it ignores, and dates as ISO day strings —
+  exporting the stored 10:59Z instant would make a Sydney reader think every
+  close happened at nine in the evening.
+
+Two traps worth keeping. The header's "previous price" is the previous *priced
+day*, not the previous row: a re-fetch landing on a hand-priced day leaves two
+rows for one observation, and comparing the day against itself reports no change
+while the real prior close sits one further back. And adding a file to a
+dependency package needs that package's dependents' `.build` cleared — SPM
+caches the target's source list, and the symptom is `cannot find 'X' in scope`
+for a file that is plainly there.
+
 ## The real-data gate never looked at fixtures (12 Aug 2026)
 
 `check-no-real-data.py` opens by naming the rule it enforces — the reference

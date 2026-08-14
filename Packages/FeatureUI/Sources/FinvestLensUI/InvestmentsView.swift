@@ -26,35 +26,49 @@ struct InvestmentsView: View {
     @State private var showingAddRate = false
     @State private var showingAddWatch = false
     @State private var showingAddPrice = false
+    @State private var showingPreview = false
     @State private var targeting: CommodityTarget?
+    @State private var cadenceFor: CommodityTarget?
 
     private var rows: [InvestmentRow] { model.investmentRows() }
     private var issues: [InvestmentIssue] { model.investmentIssues() }
 
     var body: some View {
-        Group {
-            if model.securityCommodities.isEmpty && model.watchlist.isEmpty {
-                ContentUnavailableView(
-                    "No investments yet", systemImage: "chart.line.uptrend.xyaxis",
-                    description: Text("Securities appear here once you hold one, or add one to watch."))
-            } else {
-                List {
-                    Section { ConfidenceBand(model: model) }
-                        .listRowInsets(EdgeInsets(top: 8, leading: 8, bottom: 8, trailing: 8))
-                    if !issues.isEmpty { worklist }
-                    holdings
-                    ratesRow
+        // A stack, so a holding can open its own page (`FR-INV-15`). One level
+        // deep and no further: the design's L1 → L2 → sheets, with no tab bar
+        // anywhere.
+        NavigationStack {
+            Group {
+                if model.securityCommodities.isEmpty && model.watchlist.isEmpty {
+                    ContentUnavailableView(
+                        "No investments yet", systemImage: "chart.line.uptrend.xyaxis",
+                        description: Text("Securities appear here once you hold one, or add one to watch."))
+                } else {
+                    List {
+                        Section { ConfidenceBand(model: model) }
+                            .listRowInsets(EdgeInsets(top: 8, leading: 8, bottom: 8, trailing: 8))
+                        if !issues.isEmpty { worklist }
+                        holdings
+                        ratesRow
+                    }
                 }
             }
+            .navigationTitle("Investments")
+            .navigationDestination(for: Commodity.self) { commodity in
+                SecurityDetailView(model: model, commodity: commodity)
+            }
+            .toolbar { toolbar }
         }
-        .navigationTitle("Investments")
-        .toolbar { toolbar }
         .sheet(isPresented: $showingQuotes) { QuotesView(model: model) }
         .sheet(isPresented: $showingAddRate) { AddRateSheet(model: model) }
         .sheet(isPresented: $showingAddWatch) { AddWatchSheet(model: model) }
         .sheet(isPresented: $showingAddPrice) { AddPriceSheet(model: model) }
+        .sheet(isPresented: $showingPreview) { FetchPreviewSheet(model: model) }
         .sheet(item: $targeting) { target in
             PriceTargetSheet(model: model, commodity: target.commodity)
+        }
+        .sheet(item: $cadenceFor) { target in
+            ValuationCadenceSheet(model: model, commodity: target.commodity)
         }
     }
 
@@ -68,13 +82,27 @@ struct InvestmentsView: View {
             // the uncommon case needs no separate destination (`FR-INV-22`).
             ControlGroup {
                 Button("Update Prices", systemImage: "arrow.triangle.2.circlepath") {
-                    Task { await model.updateAllPrices() }
+                    Task { await model.updatePrices() }
                 }
                 .disabled(model.pricableSecurities.isEmpty || model.quoteProgress != nil)
                 Menu("Update Options", systemImage: "chevron.down") {
+                    // Scope, remembered per book (`FR-INV-25`). The default run
+                    // used to ask about every security the book had ever held —
+                    // 87 on the reference book, 48 of them closed.
+                    Picker("Scope", selection: Binding(
+                        get: { model.fetchScope }, set: { model.fetchScope = $0 })) {
+                        ForEach(FetchScope.allCases) { scope in
+                            Text(scope.label).tag(scope)
+                        }
+                    }
+                    Divider()
+                    Button("Preview This Run…", systemImage: "list.bullet.rectangle") {
+                        showingPreview = true
+                    }
+                    Divider()
                     ForEach(model.availableProviders) { provider in
                         Button("Update using \(provider.displayName)") {
-                            Task { await model.updatePriceHistory(using: provider) }
+                            Task { await model.updatePrices(using: provider) }
                         }
                     }
                     Divider()
@@ -140,6 +168,9 @@ struct InvestmentsView: View {
                         Button("Enter…") { showingAddPrice = true }.buttonStyle(.borderless)
                     } else if issue.kind == .missingRate {
                         Button("Add Rate…") { showingAddRate = true }.buttonStyle(.borderless)
+                    } else if issue.kind == .bondProvider {
+                        Button("Use FIIG") { model.routeCandidatesToFIIG() }
+                            .buttonStyle(.borderless)
                     }
                 }
                 .accessibilityElement(children: .combine)
@@ -169,8 +200,16 @@ struct InvestmentsView: View {
                 Section {
                     if expanded.contains(group) {
                         ForEach(members) { row in
-                            InvestmentRowView(row: row, model: model, sparkWindow: sparkWindow,
-                                              onTarget: { targeting = CommodityTarget(commodity: row.commodity) })
+                            // The whole row is the link. A holding's own page is
+                            // where every question this table raises gets
+                            // answered, so reaching it should not require
+                            // finding a disclosure chevron.
+                            NavigationLink(value: row.commodity) {
+                                InvestmentRowView(
+                                    row: row, model: model, sparkWindow: sparkWindow,
+                                    onTarget: { targeting = CommodityTarget(commodity: row.commodity) },
+                                    onCadence: { cadenceFor = CommodityTarget(commodity: row.commodity) })
+                            }
                         }
                     }
                 } header: {
@@ -329,6 +368,7 @@ private struct InvestmentRowView: View {
     /// one time axis and one clock reading.
     let sparkWindow: ClosedRange<Date>
     let onTarget: () -> Void
+    let onCadence: () -> Void
     @Environment(\.appDateFormat) private var dateFormat
 
     var body: some View {
@@ -377,6 +417,11 @@ private struct InvestmentRowView: View {
         .accessibilityLabel(voiceOver)
         .contextMenu {
             Button("Set Price Target…", action: onTarget)
+            // Only where it means something: a security a provider prices is
+            // never waiting on a person to value it (`FR-INV-30`).
+            if row.group == .manual {
+                Button("Valuation Cadence…", action: onCadence)
+            }
             // A held security can stop trading without being disposed of — a
             // note is redeemed, a company delists. Its last price is then final
             // rather than late, and nothing should chase it or count it against
@@ -548,6 +593,7 @@ private extension InvestmentIssue.Kind {
         case .gaps: "chart.line.downtrend.xyaxis"
         case .manualOverdue: "square.and.pencil"
         case .missingRate: "dollarsign.arrow.circlepath"
+        case .bondProvider: "arrow.triangle.branch"
         }
     }
 
@@ -564,6 +610,7 @@ private extension InvestmentIssue.Kind {
         case .gaps: String(localized: "\(count) holdings have gaps while they were held")
         case .manualOverdue: String(localized: "\(count) hand-valued holdings are out of date")
         case .missingRate: String(localized: "\(count) currencies have no exchange rate")
+        case .bondProvider: String(localized: "\(count) holdings have an ISIN and could be priced by FIIG")
         }
     }
 }

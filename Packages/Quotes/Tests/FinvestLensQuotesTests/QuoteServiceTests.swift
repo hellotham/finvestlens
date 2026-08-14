@@ -90,7 +90,22 @@ struct APIKeyStoreTests {
         #expect(QuoteProviderKind.finnhub.supportsHistory == false)
         #expect(QuoteProviderKind.stooq.requiresAPIKey == false)
         #expect(QuoteProviderKind.twelveData.supportsHistory)
-        #expect(QuoteProviderKind.allCases.count == 6)
+        #expect(QuoteProviderKind.fiig.requiresAPIKey == false)
+        #expect(QuoteProviderKind.fiig.supportsHistory == false)
+        #expect(QuoteProviderKind.allCases.count == 7)
+    }
+
+    @Test("Only a batch provider claims to be one, and it really implements it")
+    func batchClaimsAreHonest() {
+        // A kind that says `isBatch` but whose provider is not a
+        // `BatchQuoteProvider` would send `latestPrices` down the loop path
+        // silently — one request per bond, which is the cost this exists to
+        // avoid, and nothing would report the regression.
+        for kind in QuoteProviderKind.allCases {
+            let provider = QuoteProviderFactory.make(kind, apiKey: "k")
+            #expect((provider is BatchQuoteProvider) == kind.isBatch,
+                    "\(kind.rawValue): isBatch and the provider disagree")
+        }
     }
 
     @Test("Every kind has a display name, an id, and a signup URL iff keyed")

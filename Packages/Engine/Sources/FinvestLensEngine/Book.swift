@@ -126,13 +126,21 @@ public final class Book {
 
     // MARK: Prices
 
-    /// Updates a commodity's display metadata (name / fraction) across every
-    /// account, price and the commodity table. Identity (namespace + mnemonic)
-    /// is unchanged, so prices and quotes stay linked (`FR-INV-07`).
-    public func updateCommodityMetadata(_ commodity: Commodity, fullName: String?, smallestFraction: Int?) {
+    /// Updates a commodity's display metadata (name / fraction / exchange code)
+    /// across every account, price and the commodity table. Identity (namespace
+    /// + mnemonic) is unchanged, so prices and quotes stay linked (`FR-INV-07`).
+    ///
+    /// - Parameter exchangeCode: GnuCash's `cmdty:xcode` — an ISIN for a bond,
+    ///   an exchange ticker for a share (`FR-INV-32`). Passing an empty string
+    ///   clears it; passing `nil` leaves it alone. Those have to differ, because
+    ///   "no ISIN" is a thing a person needs to be able to say and the field is
+    ///   how the FIIG provider finds a bond at all.
+    public func updateCommodityMetadata(_ commodity: Commodity, fullName: String?,
+                                        smallestFraction: Int?, exchangeCode: String? = nil) {
         func apply(_ c: inout Commodity) {
             if let fullName, !fullName.isEmpty { c.fullName = fullName }
             if let smallestFraction, smallestFraction >= 1 { c.smallestFraction = smallestFraction }
+            if let exchangeCode { c.exchangeCode = exchangeCode.isEmpty ? nil : exchangeCode }
         }
         for account in accounts where account.commodity == commodity { apply(&account.commodity) }
         for index in prices.indices where prices[index].commodity == commodity { apply(&prices[index].commodity) }

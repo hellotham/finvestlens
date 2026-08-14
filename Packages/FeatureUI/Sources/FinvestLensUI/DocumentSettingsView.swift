@@ -162,6 +162,10 @@ public struct PricingSettingsView: View {
     /// Whether a key is currently saved, cached so the Keychain isn't read on
     /// every redraw.
     @State private var present: [QuoteProviderKind: Bool] = [:]
+    /// What the company-data cache holds, measured on appear rather than on
+    /// every redraw — it is a directory listing, not a value.
+    @State private var cachedSecurities = 0
+    @State private var cachedBytes = 0
 
     public init() {}
 
@@ -182,10 +186,45 @@ public struct PricingSettingsView: View {
                     }
                 }
             }
+            companyDataSection
         }
         .formStyle(.grouped)
         .frame(minWidth: 440, minHeight: 340)
-        .onAppear(perform: reload)
+        .onAppear { reload(); measureCache() }
+    }
+
+    // MARK: The fundamentals sidecar (`FR-INV-35`)
+
+    /// Company data is cached on disk beside the app, never in the book. It is
+    /// third-party licensed content, so it must be clearable — a cache the user
+    /// cannot empty is one they cannot decline to keep.
+    @ViewBuilder
+    private var companyDataSection: some View {
+        Section("Company data") {
+            Text("Profiles, financial statements and declared dividends are cached on this device, never in your book. Clearing them loses nothing — they are fetched again when needed.")
+                .font(.caption).foregroundStyle(.secondary)
+            LabeledContent("Cached") {
+                Text(cachedSecurities == 0
+                     ? String(localized: "Nothing cached")
+                     : String(localized: "\(cachedSecurities) securities · \(byteText)"))
+                    .foregroundStyle(.secondary)
+            }
+            Button("Clear Company Data", role: .destructive) {
+                FundamentalsCache.standard().removeAll()
+                measureCache()
+            }
+            .disabled(cachedSecurities == 0)
+        }
+    }
+
+    private var byteText: String {
+        ByteCountFormatter.string(fromByteCount: Int64(cachedBytes), countStyle: .file)
+    }
+
+    private func measureCache() {
+        let cache = FundamentalsCache.standard()
+        cachedSecurities = cache.count()
+        cachedBytes = cache.sizeOnDisk()
     }
 
     private func keyRow(_ kind: QuoteProviderKind) -> some View {

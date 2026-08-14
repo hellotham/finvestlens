@@ -18,6 +18,10 @@ import FinvestLensEngine
 /// Adds a single price for a security.
 struct AddPriceSheet: View {
     @Bindable var model: AppModel
+    /// Preselected when the sheet is raised from a security's own page — being
+    /// asked which security you meant, on the page about that security, is the
+    /// kind of question a hub exists to stop asking.
+    var commodity: Commodity?
     @Environment(\.dismiss) private var dismiss
 
     @State private var commodityKey: String = ""
@@ -30,9 +34,13 @@ struct AddPriceSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Picker("Security", selection: $commodityKey) {
-                    Text("—").tag("")
-                    ForEach(commodities, id: \.self) { Text($0.mnemonic).tag(key($0)) }
+                if let commodity {
+                    LabeledContent("Security", value: commodity.mnemonic)
+                } else {
+                    Picker("Security", selection: $commodityKey) {
+                        Text("—").tag("")
+                        ForEach(commodities, id: \.self) { Text($0.mnemonic).tag(key($0)) }
+                    }
                 }
                 DatePicker("Date", selection: $date, displayedComponents: .date)
                 TextField("Price (\(model.reportCurrency.mnemonic))", text: $valueText)
@@ -40,6 +48,7 @@ struct AddPriceSheet: View {
             }
             .navigationTitle("Add Price")
             .onEscapeCommand { dismiss() }
+            .onAppear { if let commodity { commodityKey = key(commodity) } }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction)
@@ -53,6 +62,9 @@ struct AddPriceSheet: View {
     }
 
     private func add() {
+        // Resolved from the key rather than from the parameter, so a security
+        // that is watched but not held — and so absent from `pricableSecurities`
+        // in some books — still cannot be priced into existence by accident.
         guard let commodity = commodities.first(where: { key($0) == commodityKey }),
               let value = EditableSplit.strictDecimal(valueText.trimmingCharacters(in: .whitespaces))
         else { return }

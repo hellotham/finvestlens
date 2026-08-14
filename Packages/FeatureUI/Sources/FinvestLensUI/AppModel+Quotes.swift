@@ -55,6 +55,65 @@ extension AppModel {
         commitKvpCollections(named: "Set Quote Symbol")
     }
 
+    // MARK: Per-security provider (`FR-INV-22`)
+
+    /// The provider chosen for this security, if any.
+    public func quoteProvider(for commodity: Commodity) -> QuoteProviderKind? {
+        quoteProviders[symbolKey(commodity)].flatMap(QuoteProviderKind.init(rawValue:))
+    }
+
+    /// Chooses a provider for one security, or clears the choice so the run's
+    /// provider is used.
+    public func setQuoteProvider(_ kind: QuoteProviderKind?, for commodity: Commodity) {
+        quoteProviders[symbolKey(commodity)] = kind?.rawValue
+        commitKvpCollections(named: "Set Quote Provider")
+    }
+
+    /// The provider a fetch should actually ask about `commodity` in a run
+    /// nominally using `kind`: the security's own choice when it has one.
+    ///
+    /// A per-security choice outranks the run because it encodes something the
+    /// run cannot know — that this particular security is a bond only FIIG
+    /// prices. Without it, "Update Prices" would send eleven ISINs to Yahoo and
+    /// report eleven failures, every time, forever.
+    func effectiveProvider(for commodity: Commodity, in kind: QuoteProviderKind) -> QuoteProviderKind {
+        guard let chosen = quoteProvider(for: commodity) else { return kind }
+        // …unless the user has not configured it. A keyed provider with no key
+        // cannot serve anything, and silently falling back beats failing the
+        // security outright with an error about a key it does not have to have.
+        return availableProviders.contains(chosen) ? chosen : kind
+    }
+
+    /// Securities FIIG could price but has not been asked to: they carry an
+    /// ISIN-shaped identifier and no provider choice (`FR-INV-31`).
+    ///
+    /// Offered, never applied silently. An identifier that *looks* like an ISIN
+    /// is not proof the bond is in FIIG's index, and quietly re-pointing a
+    /// security's provider is the kind of change that is invisible until a
+    /// price goes wrong.
+    public var fiigCandidates: [Commodity] {
+        pricableSecurities.filter { commodity in
+            guard quoteProvider(for: commodity) == nil else { return false }
+            return Self.looksLikeISIN(commodity.exchangeCode)
+        }
+    }
+
+    /// Whether a code has an ISIN's shape: two country letters, nine
+    /// alphanumeric characters of national number, and a check digit
+    /// (ISO 6166).
+    ///
+    /// Shape only — the check digit is not verified, because the answer is used
+    /// to *offer* FIIG rather than to assert the security is listed there. The
+    /// index itself is the authority on that, and it is one request away.
+    static func looksLikeISIN(_ code: String?) -> Bool {
+        let trimmed = (code ?? "").trimmingCharacters(in: .whitespaces).uppercased()
+        guard trimmed.count == 12 else { return false }
+        let characters = Array(trimmed)
+        return characters[0...1].allSatisfy(\.isLetter)
+            && characters[2...10].allSatisfy { $0.isLetter || $0.isNumber }
+            && characters[11].isNumber
+    }
+
     // MARK: Auto-refresh (`FR-INV-03`)
 
     /// Whether quotes refresh on open and periodically (book preference).
@@ -104,6 +163,18 @@ extension AppModel {
         QuoteService(keys: apiKeys, http: quoteHTTP)
     }
 
+    /// The ticker overrides for `commodities`, in the shape the batch path
+    /// wants.
+    private func overrides(for commodities: [Commodity]) -> [Commodity: String] {
+        var out: [Commodity: String] = [:]
+        for commodity in commodities {
+            if let symbol = quoteSymbol(for: commodity), !symbol.isEmpty {
+                out[commodity] = symbol
+            }
+        }
+        return out
+    }
+
     /// Fetches the latest quote for every held security using `kind` and adds a
     /// price for each success. Failures for individual symbols are collected but
     /// do not abort the run (`FR-INV-03`).
@@ -120,15 +191,50 @@ extension AppModel {
         let service = service()
         var fetched: [Price] = []
         var failures: [String] = []
-        for (index, commodity) in commodities.enumerated() {
-            do {
-                fetched.append(try await service.latestPrice(
-                    for: commodity, in: reportCurrency, using: kind,
-                    symbolOverride: quoteSymbol(for: commodity)))
-            } catch {
-                failures.append("\(commodity.mnemonic): \(Self.describe(error))")
+
+        // Grouped by the provider each security actually goes to, so a book
+        // holding both shares and bonds serves each from the service that can
+        // price it (`FR-INV-22`, `FR-INV-31`). Batch providers then cost one
+        // request for their whole group instead of one per security.
+        var byProvider: [QuoteProviderKind: [Commodity]] = [:]
+        for commodity in commodities {
+            byProvider[effectiveProvider(for: commodity, in: kind), default: []].append(commodity)
+        }
+        var done = 0
+        for (provider, group) in byProvider.sorted(by: { $0.key.rawValue < $1.key.rawValue }) {
+            if provider.isBatch {
+                quoteStatus = .fetching("\(provider.displayName) (\(group.count))")
+                do {
+                    let prices = try await service.latestPrices(
+                        for: group, in: reportCurrency, using: provider,
+                        symbolOverrides: overrides(for: group))
+                    fetched.append(contentsOf: prices.values)
+                    // A batch reports absences by omission, so the securities
+                    // it did not cover are named here rather than lost — being
+                    // absent from an index is the one thing a person can fix,
+                    // by correcting the identifier.
+                    for commodity in group where prices[commodity] == nil {
+                        failures.append("\(commodity.mnemonic): not in \(provider.displayName)")
+                    }
+                } catch {
+                    // One failed request is the whole group; say which.
+                    failures.append("\(provider.displayName): \(Self.describe(error))")
+                }
+                done += group.count
+                quoteProgress = Double(done) / Double(commodities.count)
+                continue
             }
-            quoteProgress = Double(index + 1) / Double(commodities.count)
+            for commodity in group {
+                do {
+                    fetched.append(try await service.latestPrice(
+                        for: commodity, in: reportCurrency, using: provider,
+                        symbolOverride: quoteSymbol(for: commodity)))
+                } catch {
+                    failures.append("\(commodity.mnemonic): \(Self.describe(error))")
+                }
+                done += 1
+                quoteProgress = Double(done) / Double(commodities.count)
+            }
         }
         // Collected first, then applied in one go: the fetches await, and an
         // edit has to snapshot and mutate without suspending in between.
@@ -269,20 +375,30 @@ extension AppModel {
             let start = anchors.min()
                 ?? calendar.date(byAdding: .year, value: -5, to: today) ?? today
 
+            // The security's own provider when it has one (`FR-INV-22`): a
+            // bond's history request must reach FIIG, not the run's Yahoo.
+            let provider = effectiveProvider(for: commodity, in: kind)
+
             do {
                 let fetched: [Price]
-                if kind.supportsHistory {
+                if provider.supportsHistory {
                     fetched = try await service.historicalPrices(
-                        for: commodity, in: reportCurrency, from: start, to: today, using: kind,
+                        for: commodity, in: reportCurrency, from: start, to: today, using: provider,
                         symbolOverride: quoteSymbol(for: commodity))
                 } else {
                     // No history endpoint: at least bring the latest price current.
                     fetched = [try await service.latestPrice(
-                        for: commodity, in: reportCurrency, using: kind,
+                        for: commodity, in: reportCurrency, using: provider,
                         symbolOverride: quoteSymbol(for: commodity))]
                 }
                 // Refetch only overwrites when the fetch actually returned data.
-                if replacing && !fetched.isEmpty { toReplace.insert(commodity) }
+                // Never in the no-history case: replacing a series with the one
+                // price a latest-only provider can give would delete a whole
+                // history to install a single point, which is what "rebuild"
+                // must never mean.
+                if replacing && !fetched.isEmpty && provider.supportsHistory {
+                    toReplace.insert(commodity)
+                }
                 let novel = fetched.filter { !have.contains(calendar.startOfDay(for: $0.date)) }
                 toAdd.append(contentsOf: novel)
             } catch {

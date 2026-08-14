@@ -316,8 +316,8 @@ journals, and GnuCash files.
 
 ## 13c. Phase P11 — The Investments hub
 
-**Status.** 🔄 **In progress (from 11 Aug 2026)** — I1 delivered. Design, decisions
-and the full requirement list live in
+**Status.** ✅ **Complete (11–15 Aug 2026)** — I1–I7 delivered. Design,
+decisions and the full requirement list live in
 [investments-design.md](investments-design.md); requirements are `FR-INV-08`
 … `FR-INV-35`.
 
@@ -335,17 +335,28 @@ security's whole story. Prices stop being a subject and become a precondition.
   table with sparklines, grouping, FX line; old destination removed, help book
   and website manual rewritten with it.
   *(FR-INV-08, 11, 12, 13, 14, 22, 24, 33)*
-- **I3** — the security detail page, price chart with transaction overlay,
-  per-security price table, CSV export, per-security settings incl. ISIN.
-  *(FR-INV-15, 16, 29, 32)*
-- **I4** — the FIIG bond provider: batch protocol, ISIN matching, percent-of-par
-  conversion. *(FR-INV-31)*
-- **I5** — fundamentals: sidecar cache, Yahoo `quoteSummary`, keyed-provider
-  preference, profile + statements + dividends. *(FR-INV-17, 18, 19, 35)*
-- **I6** — reconciliation: dividends declared vs recorded, corporate actions,
-  outlier prices. *(FR-INV-20, 21, 28)*
-- **I7** — polish: manual-valuation cadence, run preview, iOS parity,
-  localization, help. *(FR-INV-22, 23, 25, 30, 34)*
+- ✅ **I3** — the security detail page: price chart with buy/sell/average-cost/
+  held-period overlay, performance, activity, lots, the app's only price table
+  (with provenance and inline editing), CSV export, and per-security settings
+  including an editable ISIN. *(FR-INV-15, 16, 27, 29, 32)*
+- ✅ **I4** — the FIIG bond provider: `BatchQuoteProvider` (one request for the
+  whole 702-bond market), ISIN matching via `cmdty:xcode`, percent-of-par ÷100,
+  per-security provider routing. URLSession trusts the chain — no TLS
+  workaround. 10 of the reference book's 11 bonds now priced from market
+  instead of held at par. *(FR-INV-22, 23, 31)*
+- ✅ **I5** — fundamentals: the sidecar cache (never the book), Yahoo's
+  cookie-plus-crumb `quoteSummary` handshake for profile and statements, the
+  chart endpoint's `events=div|split` for dividends and splits (no handshake),
+  and FIIG's own record as a bond's profile. Degrades to "unavailable" without
+  looking broken. *(FR-INV-17, 18, 19, 35, 36)*
+- ✅ **I6** — reconciliation: declared dividends against recorded income with
+  the four discrepancy classes, unrecorded corporate actions, and a
+  median-based price-outlier check. Every finding is a discrepancy to look at,
+  never a correction applied. *(FR-INV-20, 21, 28)*
+- ✅ **I7** — polish: fetch scope (holdings / behind / closed-with-gaps), the
+  run preview that counts **requests** rather than securities, manual-valuation
+  cadence so a super fund is not stale every trading Tuesday, plus help,
+  localization and both platform builds. *(FR-INV-25, 30, 34)*
 
 **Dependencies.** P5 (price DB, providers), P6 (dashboard/alerts patterns),
 the lot engine behind `FR-RPT-02a` (return since holding is already computed

@@ -650,6 +650,20 @@ public final class AppModel {
     /// `"namespace|mnemonic"` (e.g. maps `CBA` → `CBA.AX` for Yahoo).
     public internal(set) var quoteSymbols: [String: String] = [:]
 
+    /// Per-security expected revaluation cadence for hand-valued securities,
+    /// keyed by `"namespace|mnemonic"` (`FR-INV-30`). Without one, every
+    /// hand-valued holding reads as permanently overdue.
+    public internal(set) var valuationCadences: [String: String] = [:]
+
+    /// Per-security provider choice, keyed by `"namespace|mnemonic"` and
+    /// holding a ``QuoteProviderKind`` raw value (`FR-INV-22`).
+    ///
+    /// One provider for the whole book stopped being enough when bonds
+    /// arrived: a corporate bond is priced by FIIG against its ISIN and by
+    /// nobody else, while every share in the same book wants Yahoo. Sending
+    /// one run to one provider would fail whichever half it was not for.
+    public internal(set) var quoteProviders: [String: String] = [:]
+
     /// Securities that have stopped trading, keyed by `"namespace|mnemonic"`
     /// (`FR-INV-37`). Their last price is final, so they are not fetched and
     /// never appear on the worklist — see ``isDelisted(_:)``.
@@ -841,6 +855,24 @@ public final class AppModel {
     /// Device authentication for the book lock (injectable for tests).
     let authenticator: Authenticating
 
+    /// The sidecar for fetched company data (`FR-INV-35`). **Never the book** —
+    /// prices stay the only fetched thing stored there, so the double-entry and
+    /// round-trip invariants are untouched by the whole fundamentals feature.
+    let fundamentalsCache: FundamentalsCache
+
+    /// The Yahoo session token, shared across a run: `quoteSummary` needs a
+    /// cookie-plus-crumb handshake, and doing it per security would be two
+    /// pointless round trips per holding.
+    @ObservationIgnored let yahooCrumbs = YahooCrumbStore()
+
+    /// Per-security fetch state for the detail page's company sections.
+    var fundamentalsStatus: [String: FundamentalsStatus] = [:]
+
+    /// Bumped when the sidecar changes. The cache is a file, not an observed
+    /// object, so without this a freshly fetched profile would sit on disk
+    /// while the page kept drawing the absence of one.
+    public internal(set) var fundamentalsRevision: UInt64 = 0
+
     /// The running periodic quote-refresh loop, if any.
     /// Journal transactions, sorted, keyed by focus account (`nil` = general
     /// ledger). Deriving this per body pass meant sorting and filtering the
@@ -883,10 +915,12 @@ public final class AppModel {
     var book: Book? { document?.book }
 
     public init(apiKeys: APIKeyStoring? = nil, quoteHTTP: HTTPFetching? = nil,
-                authenticator: Authenticating? = nil) {
+                authenticator: Authenticating? = nil,
+                fundamentalsCache: FundamentalsCache? = nil) {
         self.apiKeys = apiKeys ?? KeychainAPIKeyStore()
         self.quoteHTTP = quoteHTTP ?? URLSessionHTTPClient()
         self.authenticator = authenticator ?? BiometricAuthenticator()
+        self.fundamentalsCache = fundamentalsCache ?? .standard()
     }
 
     // MARK: KVP-backed collections
@@ -896,6 +930,8 @@ public final class AppModel {
         static let scheduled = BookKvpKeys.scheduledTransactions
         static let budgets = BookKvpKeys.budgets
         static let quoteSymbols = "finvestlens/quoteSymbols"
+        static let quoteProviders = "finvestlens/quoteProviders"
+        static let valuationCadences = "finvestlens/valuationCadences"
         static let savedSearches = "finvestlens/savedSearches"
         static let savedFindQueries = "finvestlens/savedFindQueries"
         static let savedReports = "finvestlens/savedReports"
@@ -918,6 +954,7 @@ public final class AppModel {
     func reloadKvpCollections() {
         guard let book else {
             ruleGroups = []; scheduledTransactions = []; budgets = []; quoteSymbols = [:]
+            quoteProviders = [:]; valuationCadences = [:]
             savingsGoals = []; billableEntries = []; favouriteAccountIDs = []
             debtPlanSettings = DebtPlanSettings(); lifetimePlan = StoredLifetimePlan()
             taxSettings = nil; savingsChallenges = []; emergencyRecords = []
@@ -927,6 +964,8 @@ public final class AppModel {
         scheduledTransactions = Self.decodeSlot([ScheduledTransaction].self, book.kvp[KvpKey.scheduled]) ?? []
         budgets = Self.decodeSlot([Budget].self, book.kvp[KvpKey.budgets]) ?? []
         quoteSymbols = Self.decodeSlot([String: String].self, book.kvp[KvpKey.quoteSymbols]) ?? [:]
+        quoteProviders = Self.decodeSlot([String: String].self, book.kvp[KvpKey.quoteProviders]) ?? [:]
+        valuationCadences = Self.decodeSlot([String: String].self, book.kvp[KvpKey.valuationCadences]) ?? [:]
         savedSearches = Self.decodeSlot([SavedSearch].self, book.kvp[KvpKey.savedSearches]) ?? []
         savedFindQueries = Self.decodeSlot([SavedFindQuery].self, book.kvp[KvpKey.savedFindQueries]) ?? []
         savedReports = Self.decodeSlot([SavedReport].self, book.kvp[KvpKey.savedReports]) ?? []
@@ -952,6 +991,8 @@ public final class AppModel {
         book.kvp[KvpKey.scheduled] = Self.encodeSlot(scheduledTransactions)
         book.kvp[KvpKey.budgets] = Self.encodeSlot(budgets)
         book.kvp[KvpKey.quoteSymbols] = Self.encodeMap(quoteSymbols)
+        book.kvp[KvpKey.quoteProviders] = Self.encodeMap(quoteProviders)
+        book.kvp[KvpKey.valuationCadences] = Self.encodeMap(valuationCadences)
         book.kvp[KvpKey.savedSearches] = Self.encodeSlot(savedSearches)
         book.kvp[KvpKey.savedFindQueries] = Self.encodeSlot(savedFindQueries)
         book.kvp[KvpKey.savedReports] = Self.encodeSlot(savedReports)
@@ -1730,6 +1771,8 @@ public final class AppModel {
         delistedSecurities = []
         priceTargets = []
         quoteSymbols = [:]
+        quoteProviders = [:]
+        valuationCadences = [:]
         quoteStatus = .idle
         whatIfEvents = []
         resetUndoStack()

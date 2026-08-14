@@ -8,6 +8,7 @@
 
 import Foundation
 import FinvestLensEngine
+import FinvestLensQuotes
 import FinvestLensReports
 
 // Phase I2 of the Investments hub (docs/investments-design.md §6): the rows and
@@ -83,6 +84,7 @@ public struct InvestmentIssue: Identifiable, Sendable {
         case gaps           // holes inside a holding period
         case manualOverdue  // hand-valued and long past due
         case missingRate    // a holding's currency has no rate
+        case bondProvider   // carries an ISIN and no provider that reads one
     }
     public var id: String { kind.rawValue }
     public var kind: Kind
@@ -338,7 +340,13 @@ extension AppModel {
 
         add(.unpriced) { $0.freshness == .missing }
         add(.stale) { $0.freshness == .old && $0.isQuotable }
-        add(.manualOverdue) { $0.freshness == .old && !$0.isQuotable }
+        // Hand-valued holdings are judged against **their own cadence**
+        // (`FR-INV-30`), not the trading calendar: a super fund posting a unit
+        // price quarterly is not stale on a Tuesday because the ASX traded, and
+        // telling the user off for that is how a worklist stops being read.
+        add(.manualOverdue) { [self] in
+            !$0.isQuotable && isValuationOverdue($0.commodity)
+        }
         add(.gaps) { $0.missingWhileHeld > 0 }
 
         let rates = rateHealth()
@@ -346,7 +354,34 @@ extension AppModel {
             issues.append(InvestmentIssue(kind: .missingRate, count: rates.missing.count,
                                           symbols: rates.missing.sorted()))
         }
+
+        // Bonds that carry an ISIN and no provider that reads one (`FR-INV-31`).
+        // An offer, not a diagnosis: the identifier's *shape* is all that is
+        // known here, and whether the bond is actually in FIIG's index is one
+        // request away. Only raised for securities that are actually held —
+        // pointing at a bond redeemed years ago is noise.
+        let held = Set(health.securities.filter(\.isHeld).map(\.commodity))
+        let candidates = fiigCandidates.filter { held.contains($0) }
+        if !candidates.isEmpty {
+            issues.append(InvestmentIssue(kind: .bondProvider, count: candidates.count,
+                                          symbols: candidates.map(\.mnemonic).sorted()))
+        }
         return issues
+    }
+
+    /// Points every ISIN-carrying holding at FIIG, in one edit (`FR-INV-31`).
+    ///
+    /// The worklist's fix. Reversible from any security's own page, and it
+    /// changes nothing but which service is asked — no price moves until the
+    /// next fetch, which is what makes it safe to offer as one click.
+    public func routeCandidatesToFIIG() {
+        let candidates = fiigCandidates
+        guard !candidates.isEmpty else { return }
+        for commodity in candidates {
+            quoteProviders["\(commodity.namespace)|\(commodity.mnemonic)"] =
+                QuoteProviderKind.fiig.rawValue
+        }
+        commitKvpCollections(named: "Use FIIG for Bonds")
     }
 
     /// Whether the book's non-base currencies have a usable rate (`FR-INV-33`).

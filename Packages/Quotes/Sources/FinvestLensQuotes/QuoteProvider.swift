@@ -22,6 +22,8 @@ public enum QuoteProviderKind: String, CaseIterable, Codable, Sendable, Identifi
     case twelveData
     /// Stooq — keyless CSV end-of-day fallback.
     case stooq
+    /// FIIG — Australian corporate bonds, matched by ISIN (`FR-INV-31`).
+    case fiig
 
     public var id: String { rawValue }
 
@@ -34,13 +36,14 @@ public enum QuoteProviderKind: String, CaseIterable, Codable, Sendable, Identifi
         case .finnhub: return "Finnhub"
         case .twelveData: return "Twelve Data"
         case .stooq: return "Stooq"
+        case .fiig: return "FIIG"
         }
     }
 
     /// Whether the provider needs a user-supplied API key.
     public var requiresAPIKey: Bool {
         switch self {
-        case .yahoo, .stooq: return false
+        case .yahoo, .stooq, .fiig: return false
         case .eodhd, .alphaVantage, .finnhub, .twelveData: return true
         }
     }
@@ -49,14 +52,38 @@ public enum QuoteProviderKind: String, CaseIterable, Codable, Sendable, Identifi
     public var supportsHistory: Bool {
         switch self {
         case .yahoo, .eodhd, .alphaVantage, .twelveData, .stooq: return true
-        case .finnhub: return false
+        // FIIG's list endpoint returns `bondHistory: null` on every one of the
+        // 702 bonds it serves (measured 15 Aug 2026), so there is no series to
+        // ask for. History accrues from daily fetches going forward.
+        case .finnhub, .fiig: return false
         }
     }
+
+    /// Whether this provider identifies a security by its **identifier** — an
+    /// ISIN in GnuCash's `cmdty:xcode` — rather than by a ticker.
+    ///
+    /// A bond has no ticker to send. FIIG's whole index is keyed by ISIN, which
+    /// is also why this needs saying at all: every other provider in the list
+    /// takes a symbol, so a caller that assumed one would silently ask FIIG
+    /// about a mnemonic it has never heard of and report "not found" forever.
+    public var matchesByIdentifier: Bool { self == .fiig }
+
+    /// Whether one request serves the whole market rather than one security.
+    ///
+    /// FIIG returns its entire index — 702 bonds, ~510 KB — in a single
+    /// response, so fetching eleven bonds means one request and eleven local
+    /// lookups. Asking per security would be eleven full downloads of the same
+    /// payload.
+    public var isBatch: Bool { self == .fiig }
 
     /// Where the user can obtain an API key.
     public var signupURL: URL? {
         switch self {
-        case .yahoo, .stooq: return nil
+        // Keyless. This URL is specifically where a key is *obtained*, and the
+        // settings row renders it as "Get key" — pointing a keyless provider at
+        // an information page would offer the user a key they neither need nor
+        // can get.
+        case .yahoo, .stooq, .fiig: return nil
         case .eodhd: return URL(string: "https://eodhd.com/register")
         case .alphaVantage: return URL(string: "https://www.alphavantage.co/support/#api-key")
         case .finnhub: return URL(string: "https://finnhub.io/register")
@@ -82,6 +109,11 @@ public enum QuoteProviderKind: String, CaseIterable, Codable, Sendable, Identifi
             // Canonical is Yahoo-style; these accept it (Alpha Vantage/Finnhub/
             // Twelve Data are US-centric — use an override for odd exchanges).
             return trimmed
+        case .fiig:
+            // An ISIN, not a ticker: no exchange suffix to rewrite, and
+            // splitting on "." would corrupt one. Upper-cased because ISINs are
+            // defined upper-case and the index is matched exactly.
+            return trimmed.uppercased()
         case .eodhd:
             // EODHD always exchange-qualifies, incl. US: AAPL.US, CBA.AU.
             let exchange = suffix.map { Self.eodhdExchange[$0] ?? $0 } ?? "US"
@@ -122,6 +154,24 @@ public protocol QuoteProvider: Sendable {
     func history(symbol: String, from: Date, to: Date) async throws -> [Quote]
 }
 
+/// A provider whose natural unit of work is **the whole market**, not one
+/// security (`FR-INV-31`).
+///
+/// FIIG returns its entire bond index in one response and is then a local
+/// lookup. Expressing that as `latestQuote(symbol:)` in a loop would download
+/// half a megabyte once per holding; expressing it as a batch lets the caller
+/// pay for one request no matter how many bonds it holds — and suits any future
+/// provider with the same shape.
+public protocol BatchQuoteProvider: QuoteProvider {
+    /// Latest quotes for as many of `symbols` as the provider knows, keyed by
+    /// the symbol asked for.
+    ///
+    /// Symbols the provider does not cover are **absent from the result**
+    /// rather than an error: a batch that threw on the first unknown bond would
+    /// lose the ten it did find.
+    func latestQuotes(symbols: [String]) async throws -> [String: Quote]
+}
+
 /// Builds the shipped provider for a given kind, wiring in an API key and
 /// transport. Returns `nil` when a keyed provider has no key configured.
 public enum QuoteProviderFactory {
@@ -147,6 +197,8 @@ public enum QuoteProviderFactory {
             return TwelveDataQuoteProvider(apiKey: apiKey, http: http)
         case .stooq:
             return StooqQuoteProvider(http: http)
+        case .fiig:
+            return FIIGQuoteProvider(http: http)
         }
     }
 }

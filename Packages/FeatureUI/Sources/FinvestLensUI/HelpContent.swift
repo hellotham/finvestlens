@@ -513,7 +513,7 @@ public enum HelpBook {
         title: "Investments",
         summary: "Holdings, how current their prices are, and what to fix.",
         symbol: "chart.line.uptrend.xyaxis",
-        keywords: "investment security share stock price quote portfolio dividend capital gain cost basis ticker holding stale coverage watch list target",
+        keywords: "investment security share stock price quote portfolio dividend capital gain cost basis ticker holding stale coverage watch list target isin identifier chart export csv lot average cost provenance source",
         blocks: [
             .text("""
                 **Investments** shows what you hold, what it is worth, and — first of \
@@ -541,15 +541,81 @@ public enum HelpBook {
                 "Every chart uses **the same time axis**, so the same position means the same date on every row: a line that stops short of the right-hand edge is one whose prices stop there.",
                 "**A break in the line means missing prices** — it is never drawn through days that have none. What counts as a break scales with the period, so a week's absence shows over a month and not over five years.",
                 "Heights are *not* comparable between rows. Each chart uses its own scale, because two securities' prices have no common measure.",
-                "**Valued by hand** collects securities no price service covers, such as super funds. They are not failures; enter their prices from **More ▸ Enter a Price…**",
+                "**Valued by hand** collects securities no price service covers, such as super funds. They are not failures; enter their prices from **More ▸ Enter a Price…**, and set how often you expect a new figure with **Valuation Cadence…** on the row — quarterly by default, so a fund is not called stale every Tuesday the market trades.",
                 "**Closed positions** are hidden. Show them from **More ▸ Show Closed Positions**; their history is always kept for capital gains.",
             ]),
+            .heading("One security's page"),
+            .text("""
+                Click any holding to open everything about it on one page: what it \
+                is worth now and what it cost, how it has performed, its whole price \
+                history as a chart, your own transactions, your open tax lots, every \
+                recorded price, and its settings.
+                """),
+            .bullets([
+                "**The chart draws your book on the market.** The line is the price; green triangles are your buys and red diamonds your sells, each placed at what you actually paid or received; the dashed line is your average cost; the shaded band is the period you held it.",
+                "A marker **above** the line is a purchase made above the market of the day, and one below it a bargain — which is what the chart is for.",
+                "**While held** is the period that judges your own decisions. Everything before you bought is somebody else's story.",
+                "**Prices** is the only price table in the app, and it shows **where each price came from** — a quote provider, or typed by hand. Click any figure to correct it; a corrected price is recorded as typed, because it is.",
+                "**Export…** writes this security's prices as a CSV you can open in a spreadsheet and import back.",
+                "**Update** in the toolbar fetches only this security. **Rebuild History from Scratch** replaces its prices — but only if the fetch returns data, so a failed run can never wipe good history.",
+            ]),
+            .heading("Company data"),
+            .text("""
+                A security's page can also show who and what the company is, its \
+                financial statements, and the dividends the issuer declared. \
+                This is **fetched and cached on your device, never stored in \
+                your book** — clearing it from Settings ▸ Pricing loses nothing.
+                """),
+            .bullets([
+                "Every section says **where it came from and when**, and offers **Refetch** — a figure you doubt should never need waiting out.",
+                "A section that cannot be filled says so plainly. Company data is a bonus, not a requirement: prices come from a different service and are unaffected.",
+                "A **bond** shows its coupon, frequency, maturity, call date and yield instead — a better profile than any share service could give.",
+                "Declared dividends are what the **issuer** paid per unit. What your book recorded is under *Your transactions*, and the difference is the next section.",
+            ]),
+            .heading("Checks"),
+            .text("""
+                **Checks** compares what the issuer declared against what your \
+                book records — a job that needs both the ledger and the market, \
+                so no portfolio tracker and no accounting package can do it \
+                alone. Nothing is ever changed for you.
+                """),
+            .bullets([
+                "**A declared dividend that is not in your book** means income — and tax — is understated.",
+                "**Income with no matching declaration** is usually a special dividend, sometimes a wrong date or the wrong security.",
+                "**An amount that differs** points at withholding, franking, or a reinvestment recorded at the wrong price.",
+                "**A split that was never recorded** is the quiet one: every price before that date disagrees with the units you held, so past valuations and the whole chart are wrong.",
+                "**A price far from the ones around it** catches a decimal slip or a figure typed in cents — the errors most likely to hide in hand-entered prices.",
+            ]),
+            .heading("Identifiers"),
+            .text("""
+                Settings on a security's page hold two identifiers, and they do \
+                different jobs. **Quote symbol** overrides the ticker sent to a price \
+                provider — set it when a security trades under a different code than \
+                its name here. **ISIN or exchange code** identifies the security \
+                itself; providers that key by identifier rather than ticker, as bond \
+                services do, need it to find your holding at all.
+                """),
             .heading("Updating prices"),
             .bullets([
                 "**Update Prices** (⇧⌘U) fills in everything missing, including gaps in the middle of a history.",
-                "The arrow beside it chooses a different provider for one run.",
+                "The arrow beside it sets **what a run covers** — all holdings, only what is behind, or holdings plus closed positions with gaps. A closed position is not worth today's price, but a hole inside the period you *did* hold it makes every past valuation wrong, so it is worth fetching once.",
+                "**Preview This Run…** shows what will happen before it happens: which securities, which providers, and how many requests. Some providers answer for a whole group in one request, so the count of securities is not the cost.",
+                "The same menu chooses a different provider for one run.",
                 "Yahoo and Stooq need no key; EODHD, Alpha Vantage, Finnhub and Twelve Data take a free API key, set in Settings ▸ Pricing.",
                 "Keys are kept in your keychain on this device — never in the book file.",
+            ]),
+            .heading("Bonds"),
+            .text("""
+                A corporate bond has no ticker, so no share-price service can \
+                find it. **FIIG** prices Australian corporate bonds by **ISIN** \
+                instead, needs no key, and is chosen per security — so one \
+                update run can serve your shares and your bonds at once.
+                """),
+            .bullets([
+                "When a holding carries an ISIN, **Needs attention** offers to point it at FIIG. Choosing it changes nothing but which service is asked; no price moves until the next update.",
+                "Bond prices are recorded **relative to face value** — 0.985 means the bond is worth 98.5% of its face, which is how the market quotes it and how the book has always stored it.",
+                "FIIG publishes today's price and no past series, so a bond's history builds up from each day's update rather than arriving all at once.",
+                "A bond FIIG does not list is reported by name after an update, rather than silently skipped. Usually the ISIN needs correcting on that security's page.",
             ]),
             .heading("Exchange rates"),
             .text("""
