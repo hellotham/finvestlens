@@ -138,7 +138,8 @@ struct SmartImportSheet: View {
     private func reviewStatement(_ document: SmartDocument) {
         guard case .statement(let staged) = document.phase else { return }
         activeDocumentID = document.id
-        importPayload = ImportPayload(data: document.data, format: .pdf, prestaged: staged)
+        importPayload = ImportPayload(data: document.data, format: .pdf, prestaged: staged,
+                                      fileName: document.name)
     }
 
     private func recordDividend(_ document: SmartDocument) {

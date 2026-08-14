@@ -47,8 +47,107 @@ public enum BankFileFormat: String, Sendable, CaseIterable, Identifiable {
     }
 }
 
+/// Where the import sheet's pre-filled account came from, so the sheet can say
+/// so. A silently-guessed target posts a statement into the wrong account, and
+/// the user has no way to tell a guess from their own earlier choice.
+public enum ImportTargetSource: Sendable, Equatable {
+    case fileName
+    case currentRegister
+}
+
+/// Matches a downloaded statement's file name to one account.
+///
+/// Banks name exports after the account ("ANZ VISA.ofx") often enough to be
+/// worth reading, and around it they put words that mean nothing — the format,
+/// the word "statement", the date, the export sequence number. Those are
+/// stripped; what remains is compared to account names in three tiers of
+/// decreasing confidence.
+///
+/// **It abstains on a tie.** Two accounts matching equally well means the file
+/// name did not identify one, and offering either would be a coin toss with
+/// someone's ledger — the same rule the smart categoriser follows when two
+/// payees fit.
+enum ImportFileNameMatch {
+
+    /// Words that appear in export file names and never identify an account.
+    private static let noise: Set<String> = [
+        "statement", "statements", "transaction", "transactions", "export",
+        "exports", "download", "downloads", "data", "history", "account",
+        "accounts", "activity", "copy", "final", "new", "csv", "ofx", "qfx",
+        "qif", "pdf", "xls", "xlsx", "txt", "sta", "camt", "mt940",
+    ]
+
+    static func tokens(_ text: String) -> [String] {
+        // Reassembled into a String before splitting: mapping over a String
+        // yields [Character], whose split gives ArraySlice<Character>, and
+        // String.init has no unambiguous overload for that.
+        let cleaned = String(text.lowercased().map { $0.isLetter || $0.isNumber ? $0 : " " })
+        return cleaned.split(separator: " ").map(String.init)
+    }
+
+    /// The file name's identifying words: no extension, no noise, no bare
+    /// numbers (dates, sequence numbers, masked account digits).
+    static func significantTokens(inFileNamed fileName: String) -> Set<String> {
+        let base = (fileName as NSString).deletingPathExtension
+        return Set(tokens(base).filter { token in
+            token.count >= 2 && !noise.contains(token)
+                && !token.allSatisfy(\.isNumber)
+        })
+    }
+
+    /// The single account this file name identifies, or `nil` if none or more
+    /// than one does.
+    static func account(forFileNamed fileName: String,
+                        in candidates: [(id: GncGUID, name: String)]) -> GncGUID? {
+        let file = significantTokens(inFileNamed: fileName)
+        guard !file.isEmpty else { return nil }
+
+        // Tier 1 the account's name *is* the file name; tier 2 the file names
+        // part of one account ("ANZ" when only one ANZ account exists); tier 3
+        // the file name carries the whole account name plus extra words.
+        var tiers: [Int: [GncGUID]] = [:]
+        for candidate in candidates {
+            let name = Set(tokens(candidate.name).filter { $0.count >= 2 })
+            guard !name.isEmpty else { continue }
+            let tier: Int?
+            if name == file { tier = 1 }
+            else if file.isSubset(of: name) { tier = 2 }
+            else if name.isSubset(of: file) { tier = 3 }
+            else { tier = nil }
+            if let tier { tiers[tier, default: []].append(candidate.id) }
+        }
+        guard let best = tiers.keys.min(), let hits = tiers[best] else { return nil }
+        return hits.count == 1 ? hits[0] : nil
+    }
+}
+
 @MainActor
 extension AppModel {
+
+    /// Accounts a bank statement can post to. Excludes income/expense/equity:
+    /// a statement imported into an Expense account is never what was meant,
+    /// and suggesting one would be worse than suggesting nothing.
+    public var statementTargetAccounts: [AccountNode] {
+        postableAccounts.filter { $0.isType(.bank, .credit, .cash, .asset, .liability) }
+    }
+
+    /// The account an import should open on, and why — the file's own name
+    /// first, since it names the account the user downloaded, and otherwise
+    /// the register they were looking at.
+    public func suggestedImportTarget(forFileNamed fileName: String?)
+        -> (id: GncGUID, source: ImportTargetSource)? {
+        let candidates = statementTargetAccounts
+        if let fileName,
+           let matched = ImportFileNameMatch.account(
+               forFileNamed: fileName,
+               in: candidates.map { (id: $0.id, name: $0.name) }) {
+            return (matched, .fileName)
+        }
+        if let current = selectedAccountID, candidates.contains(where: { $0.id == current }) {
+            return (current, .currentRegister)
+        }
+        return nil
+    }
 
     /// Parses a bank file into staged transactions (`FR-XIO-01/02/03`).
     public func parseBankFile(_ data: Data, format: BankFileFormat,

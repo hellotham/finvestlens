@@ -71,6 +71,40 @@ billing" and "Leave account alone" translated; the dead `Destination` and
 Verified: 1,471 tests across eleven packages, both platform builds, catalogs
 matching the compiler, manual in sync, SPDX clean.
 
+### The import target now has a default (FR-XIO-11)
+
+Raised in the same session: the sheet asked which account to import into and
+offered nothing, on every import. It now pre-fills, in confidence order.
+
+**The file name first.** Banks name exports after the account, so
+`ANZ VISA.ofx` is the strongest available signal — stronger than whichever
+register happened to be open. `ImportFileNameMatch` strips the extension, the
+noise words export names carry ("statement", "transactions", the format), and
+bare numbers (dates, sequence numbers, masked digits); what remains is compared
+to account names in three tiers — the account name *is* the file name; the file
+names part of one account; the file carries a whole account name plus extra
+words. **It abstains on a tie**, the same rule the smart categoriser follows:
+two accounts fitting equally well means the name did not identify one, and
+guessing would post a whole statement into the wrong account.
+
+Checked against the reference book (81 accounts a statement can post to):
+`ANZ VISA.ofx` resolves to exactly one account at the exact tier, while
+`ANZ.ofx` correctly suggests nothing — four accounts share that prefix.
+(Institution names in docs and fixtures are formats, not holdings — the
+deliberate call recorded above under the source-grounding pass.)
+
+**Then the open register**, if a statement can post to it. Income, expense and
+equity accounts are excluded from both routes: a statement imported into an
+Expense account is never what was meant, so suggesting one is worse than
+suggesting nothing.
+
+The note under the field says which route was used ("Matched from the file
+name." / "The account you were viewing.") and disappears as soon as the user
+picks something else. A pre-filled field the user cannot distinguish from their
+own earlier choice is the failure mode this avoids — the sheet posts real money.
+The suggestion only ever fills an empty field, so re-entering never overrides a
+choice already made.
+
 ---
 
 ## P11 · I5–I7 — the market's side of the book (15 Aug 2026)

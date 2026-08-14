@@ -636,9 +636,10 @@ public struct FinvestLensRootView: View {
               let format = BankFileFormat.detect(data, extension: url.pathExtension)
         else { return }
         if format == .pdf {
-            extractStatement(data)
+            extractStatement(data, fileName: url.lastPathComponent)
         } else {
-            importPayload = ImportPayload(data: data, format: format)
+            importPayload = ImportPayload(data: data, format: format,
+                                          fileName: url.lastPathComponent)
         }
     }
 
@@ -650,7 +651,7 @@ public struct FinvestLensRootView: View {
 
     /// Reads a PDF statement with the on-device model (`FR-AI-01`), showing
     /// page progress, then hands the rows to the normal import review sheet.
-    private func extractStatement(_ data: Data) {
+    private func extractStatement(_ data: Data, fileName: String? = nil) {
         statementProgress = (0, 1)
         Task {
             do {
@@ -661,7 +662,8 @@ public struct FinvestLensRootView: View {
                 if staged.isEmpty {
                     statementError = "No transactions were found in this PDF."
                 } else {
-                    importPayload = ImportPayload(data: data, format: .pdf, prestaged: staged)
+                    importPayload = ImportPayload(data: data, format: .pdf, prestaged: staged,
+                                                  fileName: fileName)
                 }
             } catch {
                 statementProgress = nil

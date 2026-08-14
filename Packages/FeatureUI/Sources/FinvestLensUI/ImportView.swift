@@ -17,11 +17,16 @@ struct ImportPayload: Identifiable {
     let data: Data
     let format: BankFileFormat
     var prestaged: [StagedTransaction]?
+    /// The name the file was downloaded under — banks name exports after the
+    /// account, so it is the sheet's best guess at where the rows belong.
+    var fileName: String?
 
-    init(data: Data, format: BankFileFormat, prestaged: [StagedTransaction]? = nil) {
+    init(data: Data, format: BankFileFormat, prestaged: [StagedTransaction]? = nil,
+         fileName: String? = nil) {
         self.data = data
         self.format = format
         self.prestaged = prestaged
+        self.fileName = fileName
     }
 }
 
@@ -37,6 +42,10 @@ struct ImportView: View {
     private var dateWidth: CGFloat { 96 * appFontScale }
 
     @State private var targetID: GncGUID?
+    /// The account the sheet pre-filled and why, kept so the note under the
+    /// field disappears the moment the user picks something else.
+    @State private var suggestedID: GncGUID?
+    @State private var suggestedSource: ImportTargetSource?
     @State private var results: [MatchResult] = []
     @State private var assignments: [UUID: GncGUID] = [:]
     /// Rows the user cleared, to leave out of the import. A separate set
@@ -97,8 +106,23 @@ struct ImportView: View {
             // a 550-account book, where a real card statement runs to 220. The
             // sibling Categorise sheet hit this first and is built the same way.
             List {
-                Section("Import into") {
+                Section {
                     AccountField(nodes: accounts, selection: $targetID)
+                    // Say where a pre-filled account came from. The sheet posts
+                    // real money, and a guess the user cannot distinguish from
+                    // their own earlier choice is worse than no guess at all.
+                    if let suggestedSource, targetID == suggestedID {
+                        switch suggestedSource {
+                        case .fileName:
+                            Label("Matched from the file name.", systemImage: "doc.text.magnifyingglass")
+                                .scaledFont(.caption).foregroundStyle(.secondary)
+                        case .currentRegister:
+                            Label("The account you were viewing.", systemImage: "list.bullet.rectangle")
+                                .scaledFont(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                } header: {
+                    Text("Import into")
                 }
 
                 if payload.format == .csv {
@@ -174,6 +198,16 @@ struct ImportView: View {
                 }
             }
             .navigationTitle("Import \(payload.format.rawValue.uppercased())")
+            .onAppear {
+                // Only ever fills an empty field, so re-entering the sheet
+                // never overrides a choice the user already made.
+                guard targetID == nil,
+                      let suggestion = model.suggestedImportTarget(forFileNamed: payload.fileName)
+                else { return }
+                targetID = suggestion.id
+                suggestedID = suggestion.id
+                suggestedSource = suggestion.source
+            }
             .onEscapeCommand { dismiss() }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

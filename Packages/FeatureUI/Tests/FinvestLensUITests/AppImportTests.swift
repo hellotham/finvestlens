@@ -343,3 +343,81 @@ struct AppImportTests {
         #expect(keptAmounts.contains(dropped))
     }
 }
+
+@Suite("Import target from the file name")
+struct ImportFileNameMatchTests {
+
+    private func candidates(_ names: [String]) -> [(id: GncGUID, name: String)] {
+        names.map { (id: GncGUID.random(), name: $0) }
+    }
+
+    @Test("The bank's own export name picks the account")
+    func matchesExportName() {
+        let list = candidates(["Everyday", "Visa", "Savings"])
+        let visa = list[1].id
+        #expect(ImportFileNameMatch.account(forFileNamed: "Visa.ofx", in: list) == visa)
+        // Noise words, the format and the date are stripped before matching.
+        #expect(ImportFileNameMatch.account(
+            forFileNamed: "Visa Statement 2026-05-01.ofx", in: list) == visa)
+        #expect(ImportFileNameMatch.account(
+            forFileNamed: "transactions_visa_20260501.csv", in: list) == visa)
+    }
+
+    @Test("Two accounts matching equally well means no suggestion")
+    func abstainsOnATie() {
+        // "Visa" alone cannot choose between these, so it must not try: the
+        // wrong answer posts a statement into the wrong account.
+        let ambiguous = candidates(["Visa Personal", "Visa Business"])
+        #expect(ImportFileNameMatch.account(forFileNamed: "Visa.ofx", in: ambiguous) == nil)
+        // An exact name outranks the two partial matches.
+        let withExact = ambiguous + candidates(["Visa"])
+        #expect(ImportFileNameMatch.account(forFileNamed: "Visa.ofx", in: withExact)
+                == withExact.last?.id)
+    }
+
+    @Test("A file name carrying nothing identifying suggests nothing")
+    func abstainsOnNoiseOnly() {
+        let list = candidates(["Everyday", "Visa"])
+        #expect(ImportFileNameMatch.account(forFileNamed: "statement.ofx", in: list) == nil)
+        #expect(ImportFileNameMatch.account(forFileNamed: "20260501.csv", in: list) == nil)
+        #expect(ImportFileNameMatch.account(forFileNamed: "export (1).qif", in: list) == nil)
+        // A real name that matches no account is also no suggestion.
+        #expect(ImportFileNameMatch.account(forFileNamed: "Mortgage.ofx", in: list) == nil)
+    }
+}
+
+@MainActor
+@Suite("Import target default")
+struct ImportTargetDefaultTests {
+
+    @Test("Falls back to the open register, and never to an income account")
+    func fallsBackToCurrentRegister() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
+        let model = AppModel()
+        try model.newDocument(at: url)
+        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+
+        let everyday = try #require(model.addAccount(name: "Everyday", type: .bank))
+        let salary = try #require(model.addAccount(name: "Salary", type: .income))
+
+        // Nothing selected, nothing in the name: no guess.
+        #expect(model.suggestedImportTarget(forFileNamed: "statement.ofx") == nil)
+
+        // Sitting on a register the statement could post to.
+        model.selectedAccountID = everyday
+        let fromRegister = try #require(model.suggestedImportTarget(forFileNamed: "statement.ofx"))
+        #expect(fromRegister.id == everyday)
+        #expect(fromRegister.source == .currentRegister)
+
+        // The file name outranks the register when it identifies an account.
+        model.selectedAccountID = salary
+        _ = try #require(model.addAccount(name: "Mortgage", type: .liability))
+        let byName = try #require(model.suggestedImportTarget(forFileNamed: "Mortgage.ofx"))
+        #expect(byName.source == .fileName)
+
+        // An income register is not a place a statement can land, so even
+        // selected it is never suggested.
+        #expect(model.suggestedImportTarget(forFileNamed: "statement.ofx") == nil)
+    }
+}
