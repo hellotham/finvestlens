@@ -386,9 +386,90 @@ struct ImportFileNameMatchTests {
     }
 }
 
+@Suite("Remembered account identifier")
+struct OnlineIDMatchTests {
+
+    private func stored(_ ids: [String]) -> [(id: GncGUID, onlineID: String)] {
+        ids.map { (id: GncGUID.random(), onlineID: $0) }
+    }
+
+    @Test("An exact identifier picks its account")
+    func exactMatch() {
+        let list = stored(["062000/12345678", "062000/99999999"])
+        #expect(OnlineIDMatch.account(forIdentifier: "062000/12345678", in: list) == list[0].id)
+        #expect(OnlineIDMatch.account(forIdentifier: "062000/00000000", in: list) == nil)
+    }
+
+    @Test("A stored identifier matches a longer incoming one, longest wins")
+    func prefixMatch() {
+        // GnuCash's rule: banks are inconsistent about how much of the id they
+        // put in a file, so a stored prefix still identifies the account.
+        let list = stored(["062000", "062000/12345678"])
+        #expect(OnlineIDMatch.account(forIdentifier: "062000/12345678/AUD", in: list) == list[1].id)
+        // With only the short one stored, it still matches.
+        let shortOnly = stored(["062000"])
+        #expect(OnlineIDMatch.account(forIdentifier: "062000/12345678", in: shortOnly) == shortOnly[0].id)
+    }
+
+    @Test("Two accounts with the same identifier are refused")
+    func ambiguousIsRefused() {
+        let list = stored(["062000", "062000"])
+        #expect(OnlineIDMatch.account(forIdentifier: "062000/12345678", in: list) == nil)
+        // An exact match still wins over two ambiguous prefixes.
+        let withExact = list + stored(["062000/12345678"])
+        #expect(OnlineIDMatch.account(forIdentifier: "062000/12345678", in: withExact)
+                == withExact.last?.id)
+    }
+
+    @Test("Padding and empty identifiers do not match")
+    func paddingAndEmpties() {
+        let list = stored(["062000/12345678 "])   // exporters pad the field
+        #expect(OnlineIDMatch.account(forIdentifier: "062000/12345678", in: list) == list[0].id)
+        #expect(OnlineIDMatch.account(forIdentifier: "", in: list) == nil)
+        #expect(OnlineIDMatch.account(forIdentifier: "062000/12345678", in: stored([""])) == nil)
+    }
+}
+
 @MainActor
 @Suite("Import target default")
 struct ImportTargetDefaultTests {
+
+    @Test("A remembered identifier outranks the file name and the register")
+    func rememberedIdentifierWins() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
+        let model = AppModel()
+        try model.newDocument(at: url)
+        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+
+        let everyday = try #require(model.addAccount(name: "Everyday", type: .bank))
+        let card = try #require(model.addAccount(name: "Card", type: .credit))
+
+        // Nothing remembered yet: the file name is what decides.
+        model.selectedAccountID = everyday
+        let byName = try #require(model.suggestedImportTarget(
+            forFileNamed: "Card.ofx", accountIdentifier: "062000/12345678"))
+        #expect(byName.id == card)
+        #expect(byName.source == .fileName)
+
+        // Remember the statement's own id against Everyday — deliberately the
+        // account the file name does *not* point at, so the ranking is visible.
+        model.rememberImportAccount("062000/12345678", for: everyday)
+        let remembered = try #require(model.suggestedImportTarget(
+            forFileNamed: "Card.ofx", accountIdentifier: "062000/12345678"))
+        #expect(remembered.id == everyday)
+        #expect(remembered.source == .rememberedIdentifier)
+
+        // It survives the file being renamed to something meaningless.
+        let renamed = try #require(model.suggestedImportTarget(
+            forFileNamed: "download (3).ofx", accountIdentifier: "062000/12345678"))
+        #expect(renamed.id == everyday)
+
+        // Remembering never overwrites an established mapping.
+        model.rememberImportAccount("999999/00000000", for: everyday)
+        let book = try #require(model.book)
+        #expect(book.account(with: everyday)?.onlineID == "062000/12345678")
+    }
 
     @Test("Falls back to the open register, and never to an income account")
     func fallsBackToCurrentRegister() throws {

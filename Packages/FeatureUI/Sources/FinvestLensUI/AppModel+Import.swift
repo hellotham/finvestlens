@@ -51,8 +51,57 @@ public enum BankFileFormat: String, Sendable, CaseIterable, Identifiable {
 /// so. A silently-guessed target posts a statement into the wrong account, and
 /// the user has no way to tell a guess from their own earlier choice.
 public enum ImportTargetSource: Sendable, Equatable {
+    /// The statement carries an account id this book has seen before.
+    case rememberedIdentifier
     case fileName
     case currentRegister
+}
+
+/// Matches a statement's own account identifier against the `online_id` a
+/// previous import stamped on an account.
+///
+/// Ported from GnuCash's `test_acct_online_id_match`
+/// (`gnucash/import-export/import-account-matcher.cpp`), including the part
+/// that matters: the comparison is by **prefix**, not equality. Banks are not
+/// consistent about how much of the identifier they put in a file — a card
+/// statement may carry only the account number where a bank statement prefixes
+/// the routing number — so a stored id that is a prefix of the incoming one
+/// still identifies the account. Where several accounts match, the **longest**
+/// stored id wins, and two equally-long matches are ambiguous and refused.
+enum OnlineIDMatch {
+
+    /// GnuCash trims one trailing space from either side before comparing;
+    /// some exporters pad the field.
+    private static func normalised(_ id: String) -> String {
+        var text = id.trimmingCharacters(in: .whitespacesAndNewlines)
+        if text.hasSuffix(" ") { text.removeLast() }
+        return text
+    }
+
+    static func account(forIdentifier identifier: String,
+                        in candidates: [(id: GncGUID, onlineID: String)]) -> GncGUID? {
+        let incoming = normalised(identifier)
+        guard !incoming.isEmpty else { return nil }
+
+        var best: (id: GncGUID, length: Int)?
+        var ambiguous = false
+        for candidate in candidates {
+            let stored = normalised(candidate.onlineID)
+            guard !stored.isEmpty, incoming.hasPrefix(stored) else { continue }
+            if stored == incoming { return candidate.id }   // exact wins outright
+            if let current = best {
+                if stored.count > current.length {
+                    best = (candidate.id, stored.count)
+                    ambiguous = false                        // a longer prefix settles it
+                } else if stored.count == current.length {
+                    ambiguous = true
+                }
+            } else {
+                best = (candidate.id, stored.count)
+            }
+        }
+        return ambiguous ? nil : best?.id
+    }
 }
 
 /// Matches a downloaded statement's file name to one account.
@@ -131,12 +180,36 @@ extension AppModel {
         postableAccounts.filter { $0.isType(.bank, .credit, .cash, .asset, .liability) }
     }
 
-    /// The account an import should open on, and why — the file's own name
-    /// first, since it names the account the user downloaded, and otherwise
-    /// the register they were looking at.
-    public func suggestedImportTarget(forFileNamed fileName: String?)
+    /// The account identifier a statement file carries, where its format has
+    /// one. QIF, CSV and extracted PDFs do not.
+    public func bankFileAccountID(_ data: Data, format: BankFileFormat) -> String? {
+        switch format {
+        case .ofx: return OFXImporter.accountIdentifier(data)
+        case .camt: return CAMTImporter.accountIdentifier(data)
+        case .mt940: return MT940Importer.accountIdentifier(data)
+        case .csv, .qif, .pdf: return nil
+        }
+    }
+
+    /// The account an import should open on, and why.
+    ///
+    /// The statement's own account identifier comes first where the book has
+    /// seen it before: it is the bank's name for the account rather than a
+    /// guess, so it survives the file being renamed and does not care which
+    /// register was open. Then the file name, then that register.
+    public func suggestedImportTarget(forFileNamed fileName: String?,
+                                      accountIdentifier: String? = nil)
         -> (id: GncGUID, source: ImportTargetSource)? {
         let candidates = statementTargetAccounts
+        if let accountIdentifier, let book {
+            let known = candidates.compactMap { node -> (id: GncGUID, onlineID: String)? in
+                guard let stored = book.account(with: node.id)?.onlineID else { return nil }
+                return (id: node.id, onlineID: stored)
+            }
+            if let matched = OnlineIDMatch.account(forIdentifier: accountIdentifier, in: known) {
+                return (matched, .rememberedIdentifier)
+            }
+        }
         if let fileName,
            let matched = ImportFileNameMatch.account(
                forFileNamed: fileName,
@@ -147,6 +220,23 @@ extension AppModel {
             return (current, .currentRegister)
         }
         return nil
+    }
+
+    /// Remembers that this statement's account is that book account, so the
+    /// next file from the same bank account needs no choosing.
+    ///
+    /// Only ever *adds* an identifier: an account that already carries one
+    /// keeps it, because overwriting would silently re-point a mapping the
+    /// user established, and a longer stored id is the one the prefix matcher
+    /// relies on to break ties.
+    public func rememberImportAccount(_ identifier: String, for accountID: GncGUID) {
+        let trimmed = identifier.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, let book, let account = book.account(with: accountID),
+              account.onlineID == nil
+        else { return }
+        editingAccounts([accountID], named: "Remember Import Account") {
+            account.onlineID = trimmed
+        }
     }
 
     /// Parses a bank file into staged transactions (`FR-XIO-01/02/03`).

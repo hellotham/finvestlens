@@ -50,6 +50,25 @@ public final class Account {
     }
     private static let colorKey = "color"
 
+    /// The bank's own identifier for this account, as carried by its statement
+    /// files — GnuCash's `online_id` slot, so a book shared with GnuCash keeps
+    /// working in both and the slot round-trips untouched.
+    ///
+    /// Written once, when a statement is imported here; matched against on
+    /// every later import so the same account is chosen without asking
+    /// (`xaccAccountSetOnlineID`, `gnucash/import-export/import-account-matcher.cpp`).
+    public var onlineID: String? {
+        get {
+            guard case let .string(text)? = kvp[Self.onlineIDKey], !text.isEmpty else { return nil }
+            return text
+        }
+        set {
+            let cleaned = newValue?.trimmingCharacters(in: .whitespaces)
+            kvp[Self.onlineIDKey] = (cleaned?.isEmpty ?? true) ? nil : .string(cleaned!)
+        }
+    }
+    private static let onlineIDKey = "online_id"
+
     /// Whether this account is flagged for tax reporting (GnuCash's `tax-related`
     /// slot, stored as an integer 1/0 so it round-trips untouched). Setting it
     /// `false` clears the slot rather than writing a 0, matching GnuCash.

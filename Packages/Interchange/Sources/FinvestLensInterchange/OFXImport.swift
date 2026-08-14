@@ -51,6 +51,27 @@ public enum OFXImporter {
         return result
     }
 
+    /// The bank's identifier for the account this statement belongs to, for
+    /// matching against an account's stored `online_id` on later imports.
+    ///
+    /// Composed routing-then-account (`BANKID/ACCTID`) when the statement
+    /// carries a routing number, which bank statements do and card statements
+    /// (`CCACCTFROM`) do not. The two are kept in that order deliberately: the
+    /// matcher compares by prefix, so an id recorded from a card statement
+    /// still matches a later bank statement for the same account number.
+    public static func accountIdentifier(_ data: Data) -> String? {
+        accountIdentifier(ImportParsing.decode(data))
+    }
+
+    public static func accountIdentifier(_ text: String) -> String? {
+        // Read from the statement's own account block, not the whole file: a
+        // response can carry more than one, and the first is the one whose
+        // transactions follow.
+        guard let account = value("ACCTID", in: text) else { return nil }
+        if let bank = value("BANKID", in: text) { return "\(bank)/\(account)" }
+        return account
+    }
+
     /// OFX investment wrappers and the action each denotes.
     private static let investmentWrappers: [(tag: String, action: InvestmentDetail.Action)] = [
         ("BUYSTOCK", .buy), ("BUYMF", .buy), ("BUYOTHER", .buy), ("BUYDEBT", .buy),

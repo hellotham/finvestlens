@@ -47,10 +47,29 @@ public enum CAMTImporter {
     public static func parse(_ text: String) -> [StagedTransaction] {
         parse(Data(text.utf8))
     }
+
+    /// The statement's own `<Acct>` identification — IBAN where the file
+    /// carries one, else the `<Othr><Id>` proprietary number — for matching
+    /// against an account's stored `online_id` on later imports.
+    public static func accountIdentifier(_ data: Data) -> String? {
+        let delegate = Delegate()
+        let parser = XMLParser(data: data)
+        parser.delegate = delegate
+        parser.parse()
+        return delegate.accountID
+    }
+
+    public static func accountIdentifier(_ text: String) -> String? {
+        accountIdentifier(Data(text.utf8))
+    }
 }
 
 private final class Delegate: NSObject, XMLParserDelegate {
     var rows: [StagedTransaction] = []
+    /// The statement's account, taken from the first `<Acct>` outside any
+    /// entry. A document can carry several statements; the first is the one
+    /// whose entries follow.
+    var accountID: String?
 
     private var path: [String] = []
     private var text = ""
@@ -105,6 +124,19 @@ private final class Delegate: NSObject, XMLParserDelegate {
                 namespaceURI: String?, qualifiedName: String?) {
         let name = Self.local(name)
         defer { path.removeLast(); text = "" }
+        // The statement's own account sits outside <Ntry>, so it has to be read
+        // before the entry guard. Party accounts (CdtrAcct/DbtrAcct) are inside
+        // an entry and so can never be mistaken for it.
+        if !inEntry, accountID == nil, path.contains("Acct") {
+            let value = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !value.isEmpty {
+                if name == "IBAN" {
+                    accountID = value
+                } else if name == "Id", path.dropLast().last == "Othr" {
+                    accountID = value
+                }
+            }
+        }
         guard inEntry else { return }
         let value = text.trimmingCharacters(in: .whitespacesAndNewlines)
 

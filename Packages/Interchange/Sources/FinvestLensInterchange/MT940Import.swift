@@ -36,8 +36,8 @@ public enum MT940Importer {
         parse(ImportParsing.decode(data))
     }
 
-    public static func parse(_ text: String) -> [StagedTransaction] {
-        // Fold continuation lines into their field, producing (tag, value).
+    /// Folds continuation lines into their field, producing (tag, value).
+    private static func fields(_ text: String) -> [(tag: String, value: String)] {
         var fields: [(tag: String, value: String)] = []
         for rawLine in text.split(whereSeparator: \.isNewline) {
             let line = String(rawLine).trimmingCharacters(in: .whitespaces)
@@ -52,7 +52,23 @@ public enum MT940Importer {
                 fields[fields.count - 1].value += "\n" + line
             }
         }
+        return fields
+    }
 
+    /// The statement's `:25:` account identification — the bank's own name for
+    /// the account, matched against a stored `online_id` on later imports.
+    public static func accountIdentifier(_ data: Data) -> String? {
+        accountIdentifier(ImportParsing.decode(data))
+    }
+
+    public static func accountIdentifier(_ text: String) -> String? {
+        guard let value = fields(text).first(where: { $0.tag == "25" })?.value else { return nil }
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    public static func parse(_ text: String) -> [StagedTransaction] {
+        let fields = fields(text)
         var result: [StagedTransaction] = []
         var index = 0
         while index < fields.count {

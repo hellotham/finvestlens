@@ -262,3 +262,92 @@ struct ExtendedImportMatcherTests {
         #expect(camtResults[1].suggestedAccountID == groceries.guid)
     }
 }
+
+/// The account identifier each statement format carries, matched against an
+/// account's stored `online_id` so a repeat import needs no choosing.
+@Suite("Statement account identifiers")
+struct StatementAccountIdentifierTests {
+
+    @Test("MT940 reads the :25: account identification")
+    func mt940Identifier() {
+        let mt940 = """
+        {1:F01AAAABB99BSMK3513951576}{4:
+        :20:0574908765432101
+        :25:AU012345/678901234
+        :28C:00035/001
+        :61:2605020502D200,00NCHKNONREF//B4E07XM00J000023
+        :86:CHEQUE 123
+        -}
+        """
+        #expect(MT940Importer.accountIdentifier(mt940) == "AU012345/678901234")
+        // A statement without :25: yields nothing rather than a wrong guess.
+        #expect(MT940Importer.accountIdentifier(":20:X\n:61:2605020502D200,00NCHKNONREF//A") == nil)
+    }
+
+    @Test("CAMT reads the statement's own account, not a counterparty's")
+    func camtIdentifier() {
+        let iban = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <Document><BkToCstmrStmt><Stmt>
+          <Acct><Id><IBAN>DE89370400440532013000</IBAN></Id></Acct>
+          <Ntry><Amt Ccy="EUR">10.00</Amt><CdtDbtInd>DBIT</CdtDbtInd>
+            <BookgDt><Dt>2026-05-02</Dt></BookgDt>
+            <NtryDtls><TxDtls><RltdPties>
+              <CdtrAcct><Id><IBAN>FR7630006000011234567890189</IBAN></Id></CdtrAcct>
+            </RltdPties></TxDtls></NtryDtls>
+          </Ntry>
+        </Stmt></BkToCstmrStmt></Document>
+        """
+        // The creditor's IBAN sits inside the entry and must not be taken.
+        #expect(CAMTImporter.accountIdentifier(iban) == "DE89370400440532013000")
+
+        let other = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <Document><BkToCstmrStmt><Stmt>
+          <Acct><Id><Othr><Id>678901234</Id></Othr></Id></Acct>
+        </Stmt></BkToCstmrStmt></Document>
+        """
+        #expect(CAMTImporter.accountIdentifier(other) == "678901234")
+    }
+
+    @Test("OFX composes routing and account, and handles a card statement")
+    func ofxIdentifier() {
+        let bank = """
+        <OFX><BANKMSGSRSV1><STMTTRNRS><STMTRS><CURDEF>AUD</CURDEF>
+        <BANKACCTFROM><BANKID>062000</BANKID><ACCTID>12345678</ACCTID></BANKACCTFROM>
+        </STMTRS></STMTTRNRS></BANKMSGSRSV1></OFX>
+        """
+        #expect(OFXImporter.accountIdentifier(bank) == "062000/12345678")
+
+        // Card statements carry no routing number — the id is the account
+        // alone, which the prefix matcher still resolves.
+        let card = """
+        <OFX><CREDITCARDMSGSRSV1><CCSTMTTRNRS><CCSTMTRS><CURDEF>AUD</CURDEF>
+        <CCACCTFROM><ACCTID>4111111111111111</ACCTID></CCACCTFROM>
+        </CCSTMTRS></CCSTMTTRNRS></CREDITCARDMSGSRSV1></OFX>
+        """
+        #expect(OFXImporter.accountIdentifier(card) == "4111111111111111")
+        #expect(OFXImporter.accountIdentifier("<OFX></OFX>") == nil)
+    }
+
+    /// The remembered mapping lives in GnuCash's own `online_id` account slot,
+    /// so it has to survive the round-trip that never moves — and a book shared
+    /// with GnuCash has to keep working there.
+    @Test("A remembered account identifier survives export → import")
+    func onlineIDRoundTrips() throws {
+        let book = Book(baseCurrency: .aud)
+        // Under the exported ROOT, not the implicit one: a child of the
+        // implicit root has no parent in the XML and is dropped on re-import.
+        let root = book.addAccount(Account(name: "Root Account", type: .root, commodity: .aud))
+        let account = Account(name: "Everyday", type: .bank, commodity: .aud)
+        account.onlineID = "062000/12345678"
+        book.addAccount(account, under: root)
+
+        let xml = GnuCashXMLExporter.export(book)
+        #expect(String(decoding: xml, as: UTF8.self).contains("online_id"))
+
+        let reimported = try GnuCashXMLImporter.importBook(from: xml)
+        let restored = try #require(reimported.book.accounts.first { $0.name == "Everyday" })
+        #expect(restored.onlineID == "062000/12345678")
+    }
+}

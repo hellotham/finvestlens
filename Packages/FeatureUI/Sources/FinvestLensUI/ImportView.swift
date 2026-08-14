@@ -46,6 +46,10 @@ struct ImportView: View {
     /// field disappears the moment the user picks something else.
     @State private var suggestedID: GncGUID?
     @State private var suggestedSource: ImportTargetSource?
+    /// The bank's own id for the account this file came from, where the format
+    /// carries one — stamped on the chosen account after a successful import so
+    /// the next statement from the same account needs no choosing.
+    @State private var fileAccountID: String?
     @State private var results: [MatchResult] = []
     @State private var assignments: [UUID: GncGUID] = [:]
     /// Rows the user cleared, to leave out of the import. A separate set
@@ -113,6 +117,9 @@ struct ImportView: View {
                     // their own earlier choice is worse than no guess at all.
                     if let suggestedSource, targetID == suggestedID {
                         switch suggestedSource {
+                        case .rememberedIdentifier:
+                            Label("Remembered from a previous import.", systemImage: "checkmark.seal")
+                                .scaledFont(.caption).foregroundStyle(.secondary)
                         case .fileName:
                             Label("Matched from the file name.", systemImage: "doc.text.magnifyingglass")
                                 .scaledFont(.caption).foregroundStyle(.secondary)
@@ -199,10 +206,15 @@ struct ImportView: View {
             }
             .navigationTitle("Import \(payload.format.rawValue.uppercased())")
             .onAppear {
+                // Read the statement's account id whatever happens — it is
+                // needed after the import too, to remember the mapping.
+                let identifier = model.bankFileAccountID(payload.data, format: payload.format)
+                fileAccountID = identifier
                 // Only ever fills an empty field, so re-entering the sheet
                 // never overrides a choice the user already made.
                 guard targetID == nil,
-                      let suggestion = model.suggestedImportTarget(forFileNamed: payload.fileName)
+                      let suggestion = model.suggestedImportTarget(
+                        forFileNamed: payload.fileName, accountIdentifier: identifier)
                 else { return }
                 targetID = suggestion.id
                 suggestedID = suggestion.id
@@ -223,6 +235,12 @@ struct ImportView: View {
                                                     fallbackToImbalance: fallbackToImbalance)
                             if markMatchedCleared {
                                 model.reconcileMatchedDuplicates(posting)
+                            }
+                            // Learn the mapping from what the user actually
+                            // chose, not from what was suggested — a corrected
+                            // suggestion is exactly the case worth remembering.
+                            if let fileAccountID {
+                                model.rememberImportAccount(fileAccountID, for: targetID)
                             }
                         }
                         dismiss()

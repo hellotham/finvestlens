@@ -93,6 +93,42 @@ Checked against the reference book (81 accounts a statement can post to):
 (Institution names in docs and fixtures are formats, not holdings — the
 deliberate call recorded above under the source-grounding pass.)
 
+### The bank's own account id, remembered (FR-XIO-12)
+
+Raised immediately after, and the better mechanism: a file name is a guess,
+while the identifier inside the statement is the bank's own name for the
+account. GnuCash has done this for years — `xaccAccountSetOnlineID` stamps the
+chosen account in `import-account-matcher.cpp:462`, and `test_acct_online_id_match`
+matches later files against it.
+
+Ported, including the part that is easy to miss: the comparison is **by
+prefix**, not equality. Banks are inconsistent about how much of the identifier
+they put in a file — a card statement carries the account number alone where a
+bank statement prefixes the routing number — so a stored id that is a prefix of
+the incoming one still identifies the account. The **longest** stored prefix
+wins; two equally long matches are ambiguous and refused (GnuCash logs a `PERR`
+at the same point). One trailing space is trimmed from either side, which is
+GnuCash's own tolerance for padded exports.
+
+The identifier is read per format: OFX `BANKID`/`ACCTID` (composed
+routing-then-account so a card statement's shorter id still prefix-matches a
+later bank statement), CAMT's statement-level `<Acct>` IBAN or `<Othr><Id>`
+— explicitly not a counterparty's `CdtrAcct`, which sits inside an entry — and
+MT940's `:25:`. QIF, CSV and extracted PDFs carry none.
+
+It is stored in the account's **`online_id`** slot, GnuCash's own key, so it
+round-trips (asserted by a test: export → import preserves it) and a book shared
+with GnuCash keeps working in both. It is learned from the account the user
+actually confirmed, not the one suggested — a corrected suggestion is exactly
+the case worth remembering — and an account that already carries an id keeps it,
+since overwriting would silently re-point a mapping the user established.
+
+**It already works on the reference book with no setup.** That book carries four
+accounts with `online_id` values GnuCash wrote during years of OFX imports and
+our importer preserved; the statement that prompted this work matches one of
+them exactly — a single hit on the credit-card account — so the sheet opens on
+the right account the first time it is used.
+
 **Then the open register**, if a statement can post to it. Income, expense and
 equity accounts are excluded from both routes: a statement imported into an
 Expense account is never what was meant, so suggesting one is worse than
