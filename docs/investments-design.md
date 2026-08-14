@@ -1,9 +1,11 @@
 # The Investments hub — design
 
-Status: **design agreed, not yet built** (11 Aug 2026). Supersedes the
-"Prices & Securities" destination. Requirement IDs proposed here (`FR-INV-08`
-onwards) become PRD rows as each phase lands; nothing below is implemented
-until [implemented.md](implemented.md) says so.
+Status: **built — I1 through I7 complete** (11–15 Aug 2026). Supersedes the
+"Prices & Securities" destination. What was actually delivered, and what was
+measured rather than assumed, is in [implemented.md](implemented.md); the one
+conscious omission is in [deferred.md](deferred.md). This document remains the
+*design*: where it and the implementation differ, implemented.md is the record
+of fact.
 
 ---
 
