@@ -109,9 +109,13 @@ struct AccountField: View {
                     .lineLimit(1)
                     .truncationMode(.middle)
                 Spacer(minLength: 4)
+                // Ornament: the Button is already named by the text beside it,
+                // so an unhidden glyph only adds "chevron up chevron down" to
+                // what VoiceOver reads out.
                 Image(systemName: "chevron.up.chevron.down")
                     .imageScale(.small)
                     .foregroundStyle(.tertiary)
+                    .accessibilityHidden(true)
             }
             .padding(.horizontal, 6)
             .padding(.vertical, 3)
@@ -130,9 +134,11 @@ struct AccountField: View {
 
     private var searchField: some View {
         HStack(spacing: 4) {
+            // Ornament beside a field that already announces itself.
             Image(systemName: "magnifyingglass")
                 .imageScale(.small)
                 .foregroundStyle(.tertiary)
+                .accessibilityHidden(true)
             TextField("Type to search", text: $query)
                 .textFieldStyle(.plain)
                 .focused($focused)

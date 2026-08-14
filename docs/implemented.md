@@ -20,6 +20,59 @@ Companions: [PRD](prd.md) · [Architecture](architecture.md) · [Plan](plan.md) 
 
 ---
 
+## Import review sheet — the crash on a real statement (15 Aug 2026)
+
+Reported from daily use: the app aborted when importing a two-month credit-card
+OFX. Three defects, one visible.
+
+**The crash — SwiftUI's attribute graph, not our logic.** Both `.ips` reports
+end `abort → AG::precondition_failure → AG::data::table::grow_region()`, 123
+frames with **no frame of ours**, because the abort happens while the graph is
+being allocated rather than inside any `body`. `ImportView` was a `Form`, which
+materialises every row at once, and each row carried a `Picker` enumerating
+every postable account — so the graph had to hold one node per account per row.
+
+Reproduced before it was fixed, in a standalone `swiftc` harness on synthetic
+data at the reference book's scale (550 postable accounts), confirming the same
+top eight frames as the app:
+
+| shape | scales with | result |
+|---|---|---|
+| `Form` + `Picker` (shipped) | total rows — non-lazy | ok at 150 rows, **abort at 175** |
+| `List` + `Picker` | *visible* rows × accounts | ok to 2000 rows; abort at 5000 accounts |
+| `List` + `AccountField` | neither | ok at 5000 rows and 5000 accounts |
+
+The failing statement has 220 rows, so the sheet had been failing on anything
+past roughly 175 lines. The fix is both halves — a lazy `List`, and
+`AccountField` (one button until clicked) for the destination *and* the
+investment rows' security chooser. `List` alone only moves the ceiling. The
+Categorise sheet had met this first and already carried the fix; the rule is now
+in [architecture.md](architecture.md) §10.1 rather than a third code comment.
+
+**Clearing a row never worked.** The `Picker` offered "— none —" and choosing it
+did nothing: `assignments[id] = nil` *removes* the dictionary key, so
+`destination(for:)` fell straight back to the matcher's suggestion — and with
+`fallbackToImbalance` on by default the row imported to Imbalance regardless.
+Exclusions now live in their own `Set` and those rows leave the results array
+entirely. `AccountField` gained an opt-in `clearable` ✕ (off by default: most
+call sites require an account). The test asserts the **counterfactual** — that a
+row left in the array *is* imported — since filtering is the only thing that
+excludes it.
+
+**Four prompts were shipping untranslated.** `AccountField.prompt` was typed
+`String`, which selects `Text`'s verbatim initializer, emits no catalog key, and
+so renders its English literal in all eight languages — invisible to the CI gate,
+which can only compare against keys the compiler emits. Now a
+`LocalizedStringKey`, with "Choose an account", "Search category…", "Choose at
+billing" and "Leave account alone" translated; the dead `Destination` and
+`— none —` keys were removed. Decorative glyphs in the field are now
+`accessibilityHidden`.
+
+Verified: 1,471 tests across eleven packages, both platform builds, catalogs
+matching the compiler, manual in sync, SPDX clean.
+
+---
+
 ## P11 · I5–I7 — the market's side of the book (15 Aug 2026)
 
 The last three phases, and the point they were building to: the app now holds

@@ -381,13 +381,16 @@ struct ImportView: View {
                     .scaledFont(.caption).foregroundStyle(.secondary)
             }
             if inv?.action != .dividend {
-                Picker("Security", selection: Binding(
-                    get: { invSecurity[row.id] },
-                    set: { invSecurity[row.id] = $0 })) {
-                    Text("Choose security…").tag(GncGUID?.none)
-                    ForEach(securityAccounts) { Text($0.fullName).tag(GncGUID?.some($0.id)) }
-                }
-                .scaledFont(.caption)
+                // Same reason as the cash rows above: one field, not one menu
+                // item per security per row. Smaller fan-out — securities are a
+                // fraction of the account tree — but the shape is what fails,
+                // not the number, and a broker file can carry hundreds of rows.
+                AccountField(prompt: "Choose security…",
+                             nodes: securityAccounts,
+                             selection: Binding(get: { invSecurity[row.id] },
+                                                set: { invSecurity[row.id] = $0 }),
+                             clearable: true)
+                    .scaledFont(.caption)
             }
         }
     }
