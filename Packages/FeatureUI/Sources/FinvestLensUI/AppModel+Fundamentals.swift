@@ -54,17 +54,7 @@ extension AppModel {
         let wanted = Set(FundamentalsKind.allCases.filter { force || cached.needsFetch($0) })
         guard !wanted.isEmpty else { return }
 
-        // The security's own provider first (`FR-INV-22`) — a bond's profile
-        // comes from the bond service, and asking Yahoo about an ISIN returns
-        // nothing. Then the run's default, but only if it serves fundamentals
-        // at all: offering a Refetch that can only fail is worse than saying
-        // the section is unavailable.
-        let chosen = quoteProvider(for: commodity)
-        let provider = (chosen?.servesFundamentals == true ? chosen : nil)
-            ?? (preferredProvider.servesFundamentals ? preferredProvider : .yahoo)
-        guard provider.servesFundamentals,
-              let source = FundamentalsProviderFactory.make(provider, http: quoteHTTP,
-                                                            crumbs: yahooCrumbs) else {
+        guard let (kind, source) = fundamentalsSource(for: commodity) else {
             fundamentalsStatus[key(commodity)] = .unavailable(
                 String(localized: "No configured provider supplies company data."))
             return
@@ -75,9 +65,9 @@ extension AppModel {
             fundamentalsStatus[key(commodity)] = .idle
         } }
 
-        let symbol = provider.providerSymbol(
+        let symbol = kind.providerSymbol(
             for: QuoteService.lookupKey(for: commodity,
-                                        override: quoteSymbol(for: commodity), kind: provider))
+                                        override: quoteSymbol(for: commodity), kind: kind))
         do {
             var fetched = try await source.fundamentals(symbol: symbol, kinds: wanted)
 
@@ -89,15 +79,18 @@ extension AppModel {
             // absence too. Only in the success path: a request that *failed*
             // records nothing, so a network blip does not suppress retries for
             // a quarter.
-            let source = provider.displayName
+            // Named, not shadowed: `source` above is the provider itself and
+            // this is its display name, and conflating the two is one edit away
+            // from a bug.
+            let sourceName = kind.displayName
             if wanted.contains(.profile), fetched.profile == nil {
-                fetched.profile = Stamped(SecurityProfile(), source: source)
+                fetched.profile = Stamped(SecurityProfile(), source: sourceName)
             }
             if wanted.contains(.statements), fetched.statements == nil {
-                fetched.statements = Stamped([], source: source)
+                fetched.statements = Stamped([], source: sourceName)
             }
             if wanted.contains(.dividends), fetched.dividends == nil {
-                fetched.dividends = Stamped([], source: source)
+                fetched.dividends = Stamped([], source: sourceName)
             }
 
             // Merged, never replaced: a provider that serves a profile but no
@@ -112,10 +105,48 @@ extension AppModel {
                 || fetched.statements?.value.isEmpty == false
                 || fetched.dividends?.value.isEmpty == false
             fundamentalsStatus[key(commodity)] = gotSomething ? .idle : .unavailable(
-                String(localized: "\(source) has no company data for this security."))
+                String(localized: "\(sourceName) has no company data for this security."))
         } catch {
             fundamentalsStatus[key(commodity)] = .unavailable(Self.describeFundamentals(error))
         }
+    }
+
+    /// Which provider should answer for this security's company data, and the
+    /// client that will ask it.
+    ///
+    /// The order is decision **D5** made concrete:
+    ///
+    /// 1. **The security's own choice** (`FR-INV-22`), when it serves company
+    ///    data — a bond's profile comes from the bond service, and asking Yahoo
+    ///    about an ISIN returns nothing.
+    /// 2. **A configured keyed provider**, preferred over the keyless default
+    ///    because it is a documented API the user signed up to, rather than an
+    ///    unofficial endpoint behind a rate-limited handshake.
+    /// 3. **Yahoo**, which needs no key and covers equities.
+    ///
+    /// Returns `nil` only when nothing at all can answer, which on a default
+    /// install cannot happen — Yahoo is always available.
+    func fundamentalsSource(for commodity: Commodity)
+        -> (kind: QuoteProviderKind, provider: FundamentalsProvider)? {
+
+        func build(_ kind: QuoteProviderKind) -> (QuoteProviderKind, FundamentalsProvider)? {
+            guard kind.servesFundamentals,
+                  let provider = FundamentalsProviderFactory.make(
+                    kind, apiKey: kind.requiresAPIKey ? apiKeys.key(for: kind) : nil,
+                    http: quoteHTTP, crumbs: yahooCrumbs)
+            else { return nil }
+            return (kind, provider)
+        }
+
+        if let chosen = quoteProvider(for: commodity), let made = build(chosen) { return made }
+
+        // Deterministic order, so the same book asks the same service every
+        // time rather than whichever the key store happened to list first.
+        for kind in QuoteProviderKind.allCases.sorted(by: { $0.rawValue < $1.rawValue })
+        where kind.preferredForFundamentals {
+            if let made = build(kind) { return made }
+        }
+        return build(.yahoo)
     }
 
     /// Forgets one security's cached data, so the next fetch starts clean.

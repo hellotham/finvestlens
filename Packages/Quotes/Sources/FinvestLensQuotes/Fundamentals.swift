@@ -247,28 +247,48 @@ public protocol FundamentalsProvider: Sendable {
 public extension QuoteProviderKind {
     /// Whether this provider can serve anything beyond a price.
     ///
-    /// Stooq is a CSV of closes and nothing else; EODHD, Finnhub, Alpha Vantage
-    /// and Twelve Data do publish fundamentals, but through endpoints this app
-    /// does not implement — and claiming otherwise would offer the user a
-    /// Refetch that can only fail.
+    /// Stooq is a CSV of closes and nothing else, and Finnhub's free tier does
+    /// not include company fundamentals — claiming otherwise would offer the
+    /// user a Refetch that can only fail.
     var servesFundamentals: Bool {
         switch self {
-        case .yahoo, .fiig: true
-        case .eodhd, .alphaVantage, .finnhub, .twelveData, .stooq: false
+        case .yahoo, .fiig, .eodhd, .alphaVantage, .twelveData: true
+        case .finnhub, .stooq: false
         }
+    }
+
+    /// Whether this provider should be **preferred** for company data over the
+    /// keyless default when the user has configured it (decision **D5**).
+    ///
+    /// The keyed services are documented APIs the user signed up to. Yahoo's
+    /// `quoteSummary` is an unofficial endpoint behind a cookie-and-crumb
+    /// handshake that is hard rate-limited — fine as a default, wrong as a
+    /// first choice when something better is configured.
+    var preferredForFundamentals: Bool {
+        servesFundamentals && requiresAPIKey
     }
 }
 
 /// Builds the fundamentals provider for a kind, or `nil` when that kind serves
-/// only prices.
+/// only prices — or is keyed and has no key.
 public enum FundamentalsProviderFactory {
     public static func make(_ kind: QuoteProviderKind,
+                            apiKey: String? = nil,
                             http: HTTPFetching = URLSessionHTTPClient(),
                             crumbs: YahooCrumbStore) -> FundamentalsProvider? {
+        // A keyed provider with no key cannot serve anything, and returning one
+        // anyway would put a Refetch on screen that fails every time.
+        func keyed(_ build: (String) -> FundamentalsProvider) -> FundamentalsProvider? {
+            guard let apiKey, !apiKey.isEmpty else { return nil }
+            return build(apiKey)
+        }
         switch kind {
-        case .yahoo: YahooFundamentalsProvider(http: http, crumbs: crumbs)
-        case .fiig: FIIGQuoteProvider(http: http)
-        case .eodhd, .alphaVantage, .finnhub, .twelveData, .stooq: nil
+        case .yahoo: return YahooFundamentalsProvider(http: http, crumbs: crumbs)
+        case .fiig: return FIIGQuoteProvider(http: http)
+        case .eodhd: return keyed { EODHDFundamentalsProvider(apiKey: $0, http: http) }
+        case .alphaVantage: return keyed { AlphaVantageFundamentalsProvider(apiKey: $0, http: http) }
+        case .twelveData: return keyed { TwelveDataFundamentalsProvider(apiKey: $0, http: http) }
+        case .finnhub, .stooq: return nil
         }
     }
 }

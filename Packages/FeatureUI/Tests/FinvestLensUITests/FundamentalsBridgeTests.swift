@@ -42,6 +42,11 @@ private let bondIndexJSON = """
   "yield":0.0512,"sector":"Utilities","bondHistory":null}],"pagination":{}}
 """
 
+private let eodhdJSON = """
+{"General":{"Name":"Example","Sector":"Mining","CurrencyCode":"AUD"},
+ "Highlights":{"MarketCapitalization":"2000"},"SharesStats":{},"Financials":{}}
+"""
+
 /// Serves each endpoint the fundamentals path touches, and counts requests.
 private final class FundamentalsHTTP: HTTPFetching, @unchecked Sendable {
     private let hits = Mutex<[String: Int]>([:])
@@ -55,6 +60,10 @@ private final class FundamentalsHTTP: HTTPFetching, @unchecked Sendable {
         if url.contains("quoteSummary") { record("summary"); return Data(summaryJSON.utf8) }
         if url.contains("/v8/finance/chart/") { record("chart"); return Data(eventsJSON.utf8) }
         if url.contains("instruments/bonds") { record("fiig"); return Data(bondIndexJSON.utf8) }
+        if url.contains("eodhd.com/api/fundamentals") {
+            record("eodhd"); return Data(eodhdJSON.utf8)
+        }
+        if url.contains("eodhd.com/api/div") { record("eodhd-div"); return Data("[]".utf8) }
         throw QuoteError.noData
     }
 
@@ -260,6 +269,86 @@ struct FundamentalsBridgeTests {
         // retries for a quarter — the negative is only cached when the provider
         // actually answered.
         #expect(cached.profile?.value.sector == "Utilities")
+    }
+
+    // MARK: Decision D5 — a configured keyed provider outranks the default
+
+    @Test("A configured keyed provider is asked before Yahoo")
+    func keyedProviderIsPreferred() async throws {
+        // D5's actual rule, not just its sentiment: Yahoo's `quoteSummary` is
+        // an unofficial endpoint behind a rate-limited handshake, so it is the
+        // right default and the wrong first choice when the user has signed up
+        // to a documented API.
+        let http = FundamentalsHTTP()
+        let keys = InMemoryAPIKeyStore()
+        try keys.setKey("a-key", for: .eodhd)
+        let bookURL = tempURL()
+        let cacheDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("fbridge-\(UUID().uuidString)", isDirectory: true)
+        let model = AppModel(apiKeys: keys, quoteHTTP: http,
+                             fundamentalsCache: FundamentalsCache(directory: cacheDirectory))
+        defer {
+            model.close()
+            try? FileManager.default.removeItem(at: bookURL)
+            try? FileManager.default.removeItem(at: cacheDirectory)
+        }
+        try model.newDocument(at: bookURL)
+        let commodity = share(model)
+
+        await model.fetchFundamentals(for: commodity)
+
+        #expect(http.count("eodhd") == 1)
+        #expect(http.count("summary") == 0, "Yahoo was not asked")
+        #expect(model.fundamentals(for: commodity)?.profile?.value.sector == "Mining")
+        #expect(model.fundamentals(for: commodity)?.profile?.source == "EODHD")
+    }
+
+    @Test("Without a key, the keyed provider is skipped and Yahoo answers")
+    func noKeyFallsBackToYahoo() async throws {
+        // The same book with no key must not offer a Refetch that can only
+        // fail — it quietly uses the keyless default instead.
+        let http = FundamentalsHTTP()
+        let (model, bookURL, cacheDirectory) = try model(http)
+        defer {
+            model.close()
+            try? FileManager.default.removeItem(at: bookURL)
+            try? FileManager.default.removeItem(at: cacheDirectory)
+        }
+        let commodity = share(model)
+
+        await model.fetchFundamentals(for: commodity)
+        #expect(http.count("eodhd") == 0)
+        #expect(http.count("summary") == 1)
+    }
+
+    @Test("A security's own provider still outranks the keyed preference")
+    func perSecurityChoiceWinsOverPreference() async throws {
+        // FR-INV-22 sits above D5: a bond's profile comes from the bond
+        // service whatever else is configured, because asking EODHD about an
+        // ISIN-keyed corporate bond returns nothing.
+        let http = FundamentalsHTTP()
+        let keys = InMemoryAPIKeyStore()
+        try keys.setKey("a-key", for: .eodhd)
+        let bookURL = tempURL()
+        let cacheDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("fbridge-\(UUID().uuidString)", isDirectory: true)
+        let model = AppModel(apiKeys: keys, quoteHTTP: http,
+                             fundamentalsCache: FundamentalsCache(directory: cacheDirectory))
+        defer {
+            model.close()
+            try? FileManager.default.removeItem(at: bookURL)
+            try? FileManager.default.removeItem(at: cacheDirectory)
+        }
+        try model.newDocument(at: bookURL)
+        let bond = Commodity(namespace: .security("Bond"), mnemonic: "BOND1",
+                             fullName: "A bond", smallestFraction: 100,
+                             exchangeCode: "AU0EXAMPLE01")
+        _ = model.addAccount(name: "BOND1", type: .stock, commodity: bond)
+        model.setQuoteProvider(.fiig, for: bond)
+
+        await model.fetchFundamentals(for: bond)
+        #expect(http.count("fiig") == 1)
+        #expect(http.count("eodhd") == 0)
     }
 
     @Test("A revision counter changes so a fetched profile actually redraws")

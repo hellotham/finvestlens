@@ -40,6 +40,31 @@ profile monthly, statements quarterly, dividends weekly. One timestamp for the
 record would either refetch a company description every week or show a stale
 dividend list as current.
 
+**Five providers serve company data**, and decision **D5**'s preference is
+real rather than sentimental: a configured **keyed** provider is asked *before*
+the keyless default, because Yahoo's `quoteSummary` is an unofficial endpoint
+behind a rate-limited handshake while EODHD, Alpha Vantage and Twelve Data are
+documented APIs the user signed up to. The order is: the security's own choice
+(`FR-INV-22`, so a bond still goes to FIIG whatever else is configured), then a
+configured keyed provider, then Yahoo. Stooq and Finnhub say plainly that they
+serve none — a `servesFundamentals` that lied would put a Refetch on screen
+with nothing behind it, and a test asserts the factory and the claim never
+disagree.
+
+All three keyed providers share one trap, which is why they share a file:
+**their numbers arrive as text**, and each spells "nothing" differently — Alpha
+Vantage writes the literal `"None"`, EODHD sends `null` or `"-"`, Twelve Data
+omits the key. Parsing any of them as zero states a fact nobody has. Two more
+worth keeping: Alpha Vantage answers a **spent quota with HTTP 200** and a
+`Note` field, so reporting it as "no data" would send someone hunting for a
+missing company instead of waiting out their daily limit; and Twelve Data nests
+some statement lines one level down, which are flattened rather than dropped.
+
+Their costs differ enough to matter. EODHD returns the profile *and* all three
+statements in **one** request (two including dividends); Alpha Vantage needs
+**five**, which on its free tier's 25-a-day is five securities — so the
+per-section TTLs earn their keep there more than anywhere.
+
 **Yahoo's two endpoints, measured rather than assumed:**
 
 - `v10/finance/quoteSummary` needs a **cookie-plus-crumb handshake** — a bare

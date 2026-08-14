@@ -143,6 +143,46 @@ struct LiveYahooFundamentalsTests {
         #expect(periods.allSatisfy { !$0.lines.isEmpty })
     }
 
+    @Test("The keyed providers' shapes still match the fixtures, on their demo keys")
+    func liveKeyedProviders() async throws {
+        guard enabled else { return }
+        // Each publishes a **public demo key** against a fixed documentation
+        // symbol, so this needs no key of the user's and touches no holding of
+        // theirs. It exists to catch the thing a captured fixture never can: a
+        // provider quietly changing a field's type or name.
+        let http = URLSessionHTTPClient()
+
+        do {
+            let result = try await EODHDFundamentalsProvider(apiKey: "demo", http: http)
+                .fundamentals(symbol: "AAPL.US", kinds: [.profile, .statements])
+            let profile = try #require(result.profile?.value)
+            print("EODHD live: sector=\(profile.sector ?? "—") periods=\(result.statements?.value.count ?? 0)")
+            #expect(profile.sector != nil)
+            #expect(profile.marketCap != nil)
+            #expect((result.statements?.value.count ?? 0) > 0)
+        } catch { Issue.record("EODHD demo failed: \(error)") }
+
+        do {
+            let result = try await AlphaVantageFundamentalsProvider(apiKey: "demo", http: http)
+                .fundamentals(symbol: "IBM", kinds: [.profile])
+            let profile = try #require(result.profile?.value)
+            print("Alpha Vantage live: sector=\(profile.sector ?? "—") cap=\(profile.marketCap != nil)")
+            #expect(profile.name != nil)
+        } catch {
+            // Its demo key is quota-limited and answers 200 with a Note; that
+            // is the provider talking, not a defect here.
+            print("Alpha Vantage live: SKIPPED — \(error)")
+        }
+
+        do {
+            let result = try await TwelveDataFundamentalsProvider(apiKey: "demo", http: http)
+                .fundamentals(symbol: "AAPL", kinds: [.profile])
+            let profile = try #require(result.profile?.value)
+            print("Twelve Data live: sector=\(profile.sector ?? "—") employees=\(profile.employees.map(String.init) ?? "—")")
+            #expect(profile.name != nil)
+        } catch { print("Twelve Data live: SKIPPED — \(error)") }
+    }
+
     @Test("Dividends come from the chart endpoint with no handshake at all")
     func liveDividends() async throws {
         guard enabled else { return }

@@ -569,6 +569,7 @@ public enum HelpBook {
             .bullets([
                 "Every section says **where it came from and when**, and offers **Refetch** — a figure you doubt should never need waiting out.",
                 "A section that cannot be filled says so plainly. Company data is a bonus, not a requirement: prices come from a different service and are unaffected.",
+                "**If you have set an API key**, that service is asked before the keyless default — it is a documented service you signed up to. Yahoo covers everything without a key, so nothing is required of you.",
                 "A **bond** shows its coupon, frequency, maturity, call date and yield instead — a better profile than any share service could give.",
                 "Declared dividends are what the **issuer** paid per unit. What your book recorded is under *Your transactions*, and the difference is the next section.",
             ]),

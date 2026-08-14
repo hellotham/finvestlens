@@ -346,16 +346,9 @@ struct FIIGProfileTests {
         #expect(http.requestedURLs.isEmpty, "and nothing is fetched to find that out")
     }
 
-    @Test("Only Yahoo and FIIG claim to serve company data")
-    func whichProvidersServeFundamentals() {
-        #expect(QuoteProviderKind.allCases.filter(\.servesFundamentals).sorted { $0.rawValue < $1.rawValue }
-                == [QuoteProviderKind.fiig, .yahoo].sorted { $0.rawValue < $1.rawValue })
-        // …and the factory agrees, or a Refetch button would be offered that
-        // can only fail.
-        for kind in QuoteProviderKind.allCases {
-            let made = FundamentalsProviderFactory.make(kind, http: StubHTTPClient(),
-                                                        crumbs: YahooCrumbStore())
-            #expect((made != nil) == kind.servesFundamentals, "\(kind.rawValue)")
-        }
-    }
 }
+
+// Which providers serve company data — and which are *preferred* — moved to
+// `FundamentalsSelectionTests` in KeyedFundamentalsTests.swift when the three
+// keyed providers were implemented. The assertion here said "only Yahoo and
+// FIIG", which was true of the code and false of decision D5.

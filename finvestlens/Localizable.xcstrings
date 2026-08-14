@@ -7355,6 +7355,53 @@
         }
       }
     },
+    "**If you have set an API key**, that service is asked before the keyless default — it is a documented service you signed up to. Yahoo covers everything without a key, so nothing is required of you.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Wenn Sie einen API-Schlüssel hinterlegt haben**, wird dieser Dienst vor dem schlüssellosen Standard gefragt – er ist ein dokumentierter Dienst, bei dem Sie sich angemeldet haben. Yahoo deckt alles ohne Schlüssel ab, Sie müssen also nichts tun."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Si has configurado una clave de API**, se consulta ese servicio antes que el predeterminado sin clave: es un servicio documentado en el que te diste de alta. Yahoo lo cubre todo sin clave, así que no se te exige nada."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Si vous avez renseigné une clé d’API**, ce service est interrogé avant le service par défaut sans clé — c’est un service documenté auquel vous vous êtes inscrit. Yahoo couvre tout sans clé : rien ne vous est demandé."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Se hai impostato una chiave API**, quel servizio viene interrogato prima di quello predefinito senza chiave: è un servizio documentato a cui ti sei iscritto. Yahoo copre tutto senza chiave, quindi non ti è richiesto nulla."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**API キーを設定していれば**、キー不要の既定サービスより先にそちらへ問い合わせます — あなたが自ら登録した、仕様が公開されたサービスだからです。Yahoo はキーなしで全体をカバーするため、何も必須ではありません。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Se você definiu uma chave de API**, esse serviço é consultado antes do padrão sem chave — é um serviço documentado no qual você se cadastrou. O Yahoo cobre tudo sem chave, então nada é exigido de você."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**如果你设置了 API 密钥**，会优先询问该服务，而不是无需密钥的默认服务——那是你主动注册、有正式文档的服务。Yahoo 无需密钥即可覆盖全部内容，因此你无需做任何事。"
+          }
+        }
+      }
+    },
     "**Income with no matching declaration** is usually a special dividend, sometimes a wrong date or the wrong security.": {
       "extractionState": "manual",
       "localizations": {
