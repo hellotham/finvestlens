@@ -39,6 +39,11 @@ struct ImportView: View {
     @State private var targetID: GncGUID?
     @State private var results: [MatchResult] = []
     @State private var assignments: [UUID: GncGUID] = [:]
+    /// Rows the user cleared, to leave out of the import. A separate set
+    /// because `assignments[id] = nil` *removes* the key rather than storing an
+    /// empty choice, so the row would fall straight back to its suggestion —
+    /// which is exactly what the old "— none —" menu item silently did.
+    @State private var excluded: Set<UUID> = []
     @State private var skipDuplicates = true
     @State private var markMatchedCleared = true
     @State private var fallbackToImbalance = true
@@ -71,8 +76,13 @@ struct ImportView: View {
         guard let targetID, let account = model.book?.account(with: targetID) else { return false }
         return model.imbalanceFallback(for: account) != nil
     }
+    /// Every row still in the import — a cleared row leaves entirely, so the
+    /// imbalance fallback cannot sweep it back in.
+    private var includedResults: [MatchResult] {
+        excluded.isEmpty ? results : results.filter { !excluded.contains($0.staged.id) }
+    }
     private var importCount: Int {
-        results.filter {
+        includedResults.filter {
             !(skipDuplicates && $0.isDuplicate)
                 && (destination(for: $0) != nil || (fallbackToImbalance && hasImbalanceFallback))
         }.count
@@ -80,7 +90,13 @@ struct ImportView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
+            // A lazy List, not a Form. A Form materialises every row at once,
+            // and a statement of a couple of hundred rows against a book of a
+            // few hundred accounts overflows SwiftUI's attribute graph and
+            // aborts the process — measured to fail between 150 and 175 rows on
+            // a 550-account book, where a real card statement runs to 220. The
+            // sibling Categorise sheet hit this first and is built the same way.
+            List {
                 Section("Import into") {
                     AccountField(nodes: accounts, selection: $targetID)
                 }
@@ -120,7 +136,7 @@ struct ImportView: View {
                         Toggle("Mark matched transactions as cleared", isOn: $markMatchedCleared)
                             .help("Reconcile register entries that this statement confirms")
                     }
-                    if hasImbalanceFallback, results.contains(where: { destination(for: $0) == nil }) {
+                    if hasImbalanceFallback, includedResults.contains(where: { destination(for: $0) == nil }) {
                         Toggle("Post unmatched rows to the imbalance account", isOn: $fallbackToImbalance)
                             .help("Rows nothing categorised still import, parked in Imbalance for the Uncategorised review to sweep")
                     }
@@ -139,10 +155,17 @@ struct ImportView: View {
                             }
                         }
                     }
-                    Section("\(results.count) transactions") {
+                    Section {
+                        // Built once per pass, not once per row: the filter is
+                        // O(accounts) and there is one row per statement line.
+                        let destinations = accounts.filter { $0.id != targetID }
                         ForEach(results) { result in
-                            row(result)
+                            row(result, destinations: destinations)
                         }
+                    } header: {
+                        Text("\(results.count) transactions")
+                    } footer: {
+                        Text("Clear a row's account to leave that row out of the import.")
                     }
                 }
 
@@ -159,17 +182,19 @@ struct ImportView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Import \(importCount)") {
                         if let targetID {
-                            _ = model.importMatched(results, intoAccountID: targetID,
+                            let posting = includedResults
+                            _ = model.importMatched(posting, intoAccountID: targetID,
                                                     assignments: assignments,
                                                     skipDuplicates: skipDuplicates,
                                                     fallbackToImbalance: fallbackToImbalance)
                             if markMatchedCleared {
-                                model.reconcileMatchedDuplicates(results)
+                                model.reconcileMatchedDuplicates(posting)
                             }
                         }
                         dismiss()
                     }
-                    .disabled(importCount == 0 && !(markMatchedCleared && results.contains(where: \.isDuplicate)))
+                    .disabled(importCount == 0
+                              && !(markMatchedCleared && includedResults.contains(where: \.isDuplicate)))
                 }
             }
         }
@@ -200,7 +225,7 @@ struct ImportView: View {
     // MARK: Row
 
     @ViewBuilder
-    private func row(_ result: MatchResult) -> some View {
+    private func row(_ result: MatchResult, destinations: [AccountNode]) -> some View {
         let staged = result.staged
         VStack(alignment: .leading, spacing: 4) {
             HStack {
@@ -222,14 +247,13 @@ struct ImportView: View {
                     .monospacedDigit()
                     .foregroundStyle(staged.amount < 0 ? .red : .primary)
             }
-            Picker("Destination", selection: destinationBinding(for: result)) {
-                Text("— none —").tag(GncGUID?.none)
-                ForEach(accounts.filter { $0.id != targetID }) {
-                    Text($0.fullName).tag(GncGUID?.some($0.id))
-                }
-            }
-            .labelsHidden()
-            .disabled(skipDuplicates && result.isDuplicate)
+            // A searchable field, not a Picker: a Picker builds one menu item
+            // per account per row, which is the fan-out that overflowed the
+            // attribute graph. This builds one button until it is clicked.
+            AccountField(nodes: destinations,
+                         selection: destinationBinding(for: result),
+                         clearable: true)
+                .disabled(skipDuplicates && result.isDuplicate)
         }
     }
 
@@ -238,13 +262,25 @@ struct ImportView: View {
     }
 
     private func destination(for result: MatchResult) -> GncGUID? {
-        assignments[result.staged.id] ?? result.suggestedAccountID
+        if excluded.contains(result.staged.id) { return nil }
+        return assignments[result.staged.id] ?? result.suggestedAccountID
     }
 
     private func destinationBinding(for result: MatchResult) -> Binding<GncGUID?> {
         Binding(
             get: { destination(for: result) },
-            set: { assignments[result.staged.id] = $0 }
+            set: { chosen in
+                let id = result.staged.id
+                // Clearing has to be recorded, not merely un-assigned: dropping
+                // the key restores the matcher's suggestion.
+                if let chosen {
+                    assignments[id] = chosen
+                    excluded.remove(id)
+                } else {
+                    assignments[id] = nil
+                    excluded.insert(id)
+                }
+            }
         )
     }
 
@@ -256,6 +292,7 @@ struct ImportView: View {
             ?? model.parseBankFile(payload.data, format: payload.format, csvMapping: mapping)
         results = model.matchStaged(staged, intoAccountID: targetID)
         assignments = [:]
+        excluded = []
 
         // Security rows take the Stock-Assistant path, pre-matching each to a
         // security account by name/ticker where one exists. Rows whose broker

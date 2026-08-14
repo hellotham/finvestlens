@@ -287,4 +287,59 @@ struct AppImportTests {
         let book = try #require(model.book)
         #expect(book.splits(for: book.account(with: imbalance)!).first?.value == Decimal(42))
     }
+
+    /// A row the user cleared must leave the import entirely — the review sheet
+    /// drops it from the array rather than merely un-assigning it.
+    ///
+    /// Two ways to get this wrong, both of which shipped:
+    /// `assignments[id] = nil` *removes* the key, so the row falls back to the
+    /// matcher's suggestion; and a row with no destination is swept into
+    /// Imbalance by `fallbackToImbalance`, which is on by default. Excluding by
+    /// destination alone therefore imports the row twice over.
+    @Test("A cleared row stays out, even with the imbalance fallback on")
+    func clearedRowIsExcluded() throws {
+        let dropped = Decimal(string: "-99.00")!
+        let kept = Decimal(string: "-10.00")!
+
+        /// Runs one import and returns (rows imported, every split value).
+        /// `exclude` is what the review sheet does when a row is cleared.
+        func importRun(excludingDropped exclude: Bool) throws -> (Int, [Decimal]) {
+            let url = tempURL()
+            let model = AppModel()
+            try model.newDocument(at: url)
+            defer { model.close(); try? FileManager.default.removeItem(at: url) }
+
+            let bank = try #require(model.addAccount(name: "Bank", type: .bank))
+            let groceries = try #require(model.addAccount(name: "Groceries", type: .expense))
+            _ = try #require(model.addAccount(name: "Imbalance-AUD", type: .bank))
+
+            let day = Date(timeIntervalSince1970: 1_700_000_000)
+            let results = model.matchStaged([
+                StagedTransaction(date: day, amount: kept, payee: "Keep This"),
+                StagedTransaction(date: day, amount: dropped, payee: "Drop This"),
+            ], intoAccountID: bank)
+            let keep = try #require(results.first { $0.staged.payee == "Keep This" })
+            let drop = try #require(results.first { $0.staged.payee == "Drop This" })
+
+            let posting = exclude ? results.filter { $0.staged.id != drop.staged.id } : results
+            let count = model.importMatched(posting, intoAccountID: bank,
+                                            assignments: [keep.staged.id: groceries],
+                                            fallbackToImbalance: true)
+            let book = try #require(model.book)
+            return (count, book.transactions.flatMap(\.splits).map(\.value))
+        }
+
+        // Dropping the row from the array is what leaves it out.
+        let (excludedCount, excludedAmounts) = try importRun(excludingDropped: true)
+        #expect(excludedCount == 1)
+        #expect(excludedAmounts.contains(kept))
+        #expect(!excludedAmounts.contains(dropped))
+
+        // The counterfactual, and the reason the sheet cannot merely un-assign
+        // the row: left in the array with no destination, `fallbackToImbalance`
+        // — on by default — sweeps it into Imbalance and imports it anyway.
+        let (keptCount, keptAmounts) = try importRun(excludingDropped: false)
+        #expect(keptCount == 2)
+        #expect(keptAmounts.contains(dropped))
+    }
 }

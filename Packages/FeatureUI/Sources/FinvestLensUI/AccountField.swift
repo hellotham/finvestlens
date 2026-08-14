@@ -35,11 +35,22 @@ enum AccountSearch {
 }
 
 struct AccountField: View {
-    var prompt: String = "Account"
+    /// `LocalizedStringKey`, not `String`: a `String` parameter picks `Text`'s
+    /// verbatim initializer, emits no catalog key, and ships the English
+    /// literal in all eight languages — silently, because the localization gate
+    /// can only compare against keys the compiler emits. Four prompts had gone
+    /// out that way. ``AccountComboCell/placeholder`` below was already typed
+    /// this way; this is the same field agreeing with it.
+    var prompt: LocalizedStringKey = "Account"
     let nodes: [AccountNode]
     @Binding var selection: GncGUID?
     /// Rows shown in the dropdown at once.
     var limit: Int = 8
+    /// Offers an ✕ that puts the selection back to `nil`. Off by default: most
+    /// call sites require an account, and a clear button that leaves a required
+    /// field empty is a trap. On where "no account" is a real choice — an
+    /// import row to leave out, a rule that leaves the account alone.
+    var clearable: Bool = false
 
     @State private var searching = false
     @State private var query = ""
@@ -53,10 +64,35 @@ struct AccountField: View {
             if searching {
                 searchField
                 dropdown
+            } else if clearable, selection != nil {
+                HStack(spacing: 4) {
+                    displayButton
+                    clearButton
+                }
             } else {
                 displayButton
             }
         }
+    }
+
+    /// Only shown when there is something to clear, so it never reads as a
+    /// disabled control.
+    private var clearButton: some View {
+        Button {
+            selection = nil
+        } label: {
+            Image(systemName: "xmark.circle.fill")
+                .imageScale(.medium)
+                .foregroundStyle(.tertiary)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        // A bare glyph carries no VoiceOver name of its own. "Clear account"
+        // was the first wording and is a trap: in German, Spanish and French it
+        // reads as *delete the account*, and so does the English to anyone
+        // hearing it cold. Name what it clears.
+        .accessibilityLabel("Clear selected account")
+        .help("Clear selected account")
     }
 
     // MARK: Display mode — a pure function of the selection
@@ -66,7 +102,9 @@ struct AccountField: View {
             beginSearch()
         } label: {
             HStack(spacing: 4) {
-                Text(selectedName.isEmpty ? prompt : selectedName)
+                // Branch rather than a ternary: the prompt is a catalog key and
+                // the account name is data. One `Text(_:)` cannot be both.
+                (selectedName.isEmpty ? Text(prompt) : Text(selectedName))
                     .foregroundStyle(selectedName.isEmpty ? .tertiary : .primary)
                     .lineLimit(1)
                     .truncationMode(.middle)
@@ -84,7 +122,8 @@ struct AccountField: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help(selectedName.isEmpty ? "Choose an account" : selectedName)
+        // Same split as the label: a key when empty, the account name when not.
+        .help(selectedName.isEmpty ? Text("Choose an account") : Text(selectedName))
     }
 
     // MARK: Search mode
