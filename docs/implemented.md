@@ -2786,8 +2786,21 @@ custom-view decode are memoised on the book revision: the tree was pruned and
 re-sorted on every keystroke, and the custom-view JSON was re-decoded inside a
 `GeometryReader`, once per resize frame.
 
-**Between-siblings reorder now exists**, through `.onMove` on a recursive
-`AccountBranch` — `OutlineGroup` has no move affordance, which is why the half
-the design asked for had no drop target. `.onMove` draws the system insertion
-line, which is the "insertion line versus highlighted row" distinction §4.6
-asks for. Re-parenting by drag is not offered; see [deferred.md](deferred.md).
+**Both halves of the sidebar drag are built.** `OutlineGroup` has no move
+affordance, which is why the reorder half had no drop target and the only drag
+that shipped re-parented; the tree is a recursive `AccountBranch` now. The two
+operations are told apart by a `DropDelegate`, which reports the pointer's
+position *during* the hover — `.dropDestination` hands over a location only once
+the drop has happened, which is too late to draw anything. The top and bottom
+quarters of a row reorder and the middle half re-parents, drawn as an insertion
+line and a filled row, and the boundaries fall on the safe side: a quarter of
+the way in is still the re-parent zone, so a reorder takes deliberate aim.
+
+`reorderAccount` was measuring positions in `parent.children` order while
+writing `sidebarOrder` and leaving `parent.children` untouched — right exactly
+once, and wrong for every reorder after the first. It works in display order
+now, which is what both the drag and the menu mean.
+
+**Move Up and Move Down** are in the row's menu whenever manual order is on.
+Dragging is the pointer's way to reorder; under VoiceOver a drag is not a
+gesture at all, and `.onMove`'s edit mode was never a route either.

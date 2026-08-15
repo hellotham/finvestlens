@@ -165,3 +165,96 @@ struct SidebarSortStorageTests {
         #expect(SidebarSort.storageKey(for: .accounts) == "sidebar.sort.accounts")
     }
 }
+
+/// The sidebar drag, and its keyboard equivalent.
+///
+/// The drag shipped once with only its re-parent half wired, so a gesture that
+/// looked like sorting was editing the chart of accounts. Both halves exist
+/// now, they are drawn differently, and the rule that tells them apart is a
+/// pure function so it can be checked without a pointer.
+@MainActor
+@Suite("Sidebar reordering")
+struct SidebarReorderTests {
+
+    private struct Fixture {
+        let model: AppModel
+        let url: URL
+        let a: GncGUID
+        let b: GncGUID
+        let c: GncGUID
+        let parent: GncGUID
+    }
+
+    private func makeFixture() throws -> Fixture {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
+        let model = AppModel()
+        try model.newDocument(at: url)
+        let parent = try #require(model.addAccount(name: "Assets", type: .asset))
+        let a = try #require(model.addAccount(name: "A", type: .bank, parentID: parent))
+        let b = try #require(model.addAccount(name: "B", type: .bank, parentID: parent))
+        let c = try #require(model.addAccount(name: "C", type: .bank, parentID: parent))
+        return Fixture(model: model, url: url, a: a, b: b, c: c, parent: parent)
+    }
+
+    private func order(_ f: Fixture) -> [String] {
+        (f.model.siblings(of: f.a) ?? []).map(\.name)
+    }
+
+    /// The top and bottom quarters reorder; the middle half re-parents. Aiming
+    /// at "between" is the fiddlier of the two, and it is the harmless one.
+    @Test("The drop zone follows where in the row you let go")
+    func zonesSplitTheRow() {
+        #expect(AccountRowDrop.zone(atY: 1, height: 24) == .before)
+        #expect(AccountRowDrop.zone(atY: 12, height: 24) == .onto)
+        #expect(AccountRowDrop.zone(atY: 23, height: 24) == .after)
+        // The boundaries land on the safe side: exactly a quarter in is still
+        // the re-parent zone, so a reorder needs deliberate aim.
+        #expect(AccountRowDrop.zone(atY: 6, height: 24) == .onto)
+        #expect(AccountRowDrop.zone(atY: 18, height: 24) == .onto)
+    }
+
+    /// A second reorder has to be measured against what the user can see.
+    /// `reorderAccount` writes `sidebarOrder` and leaves `parent.children`
+    /// alone, so working from storage order was right exactly once.
+    @Test("Reordering twice compounds rather than fighting itself")
+    func secondReorderUsesDisplayOrder() throws {
+        let f = try makeFixture()
+        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+
+        #expect(order(f) == ["A", "B", "C"])
+        f.model.reorderAccount(f.c, to: 0)
+        #expect(order(f) == ["C", "A", "B"])
+        // Now move A — which is at display index 1 — to the end.
+        f.model.reorderAccount(f.a, to: 2)
+        #expect(order(f) == ["C", "B", "A"])
+    }
+
+    /// The keyboard's half: dragging is the pointer's way, and under VoiceOver
+    /// a drag is not a gesture at all.
+    @Test("Move Up and Move Down walk the same order")
+    func nudgeWalksDisplayOrder() throws {
+        let f = try makeFixture()
+        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+
+        f.model.nudgeAccount(f.c, by: -1)
+        #expect(order(f) == ["A", "C", "B"])
+        f.model.nudgeAccount(f.c, by: -1)
+        #expect(order(f) == ["C", "A", "B"])
+    }
+
+    /// The ends stop, and the menu items are disabled rather than doing
+    /// nothing — a control that looks live and is not is worse than a dim one.
+    @Test("The first and last rows cannot move past the ends")
+    func nudgeStopsAtTheEnds() throws {
+        let f = try makeFixture()
+        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+
+        #expect(!f.model.canNudgeAccount(f.a, by: -1))
+        #expect(f.model.canNudgeAccount(f.a, by: 1))
+        #expect(!f.model.canNudgeAccount(f.c, by: 1))
+
+        f.model.nudgeAccount(f.a, by: -1)
+        #expect(order(f) == ["A", "B", "C"], "an account moved past the start")
+    }
+}

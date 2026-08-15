@@ -238,15 +238,53 @@ extension AppModel {
         return firstPostingCache[id]
     }
 
+    /// Moves an account one place among its siblings.
+    ///
+    /// The keyboard's half of `FR-NAV-12`: dragging is the pointer's way to
+    /// reorder, and this is the route for everyone else — including anyone
+    /// using VoiceOver, for whom a drag is not a gesture at all.
+    public func nudgeAccount(_ id: GncGUID, by offset: Int) {
+        guard let index = siblingIndex(of: id) else { return }
+        reorderAccount(id, to: index + offset)
+    }
+
+    public func canNudgeAccount(_ id: GncGUID, by offset: Int) -> Bool {
+        guard let index = siblingIndex(of: id),
+              let count = siblingCount(of: id) else { return false }
+        return (0..<count).contains(index + offset)
+    }
+
+    private func siblingIndex(of id: GncGUID) -> Int? {
+        siblings(of: id)?.firstIndex { $0.guid == id }
+    }
+
+    private func siblingCount(of id: GncGUID) -> Int? { siblings(of: id)?.count }
+
+    /// The account's level of the tree, in the order the sidebar shows it —
+    /// so "up" means the row above, not a position in storage order.
+    func siblings(of id: GncGUID) -> [Account]? {
+        guard let book, let account = book.account(with: id) else { return nil }
+        let level = (account.parent ?? book.rootAccount).children
+        return level.sorted { a, b in
+            let x = a.sidebarOrder ?? Int.max
+            let y = b.sidebarOrder ?? Int.max
+            if x != y { return x < y }
+            return (level.firstIndex { $0 === a } ?? 0) < (level.firstIndex { $0 === b } ?? 0)
+        }
+    }
+
     /// Moves `id` to sit at `position` among its siblings, writing the whole
     /// level's order so the result does not depend on what was there before.
     ///
     /// A book edit, and undoable — the order round-trips through GnuCash XML in
     /// the account's kvp, so it is part of the document rather than desk state.
     public func reorderAccount(_ id: GncGUID, to position: Int) {
-        guard let book, let account = book.account(with: id) else { return }
-        let parent = account.parent ?? book.rootAccount
-        var siblings = parent.children
+        guard let book, book.account(with: id) != nil else { return }
+        // In *display* order, not `parent.children` order. A reorder writes
+        // `sidebarOrder` and leaves `parent.children` alone, so after the first
+        // move the two disagree — and a second move computed from storage order
+        // would be measured against a baseline the user cannot see.
+        guard var siblings = siblings(of: id) else { return }
         guard let from = siblings.firstIndex(where: { $0.guid == id }) else { return }
         let clamped = min(max(position, 0), siblings.count - 1)
         guard clamped != from else { return }

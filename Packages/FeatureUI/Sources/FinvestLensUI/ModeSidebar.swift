@@ -23,6 +23,7 @@
 //
 
 import SwiftUI
+import UniformTypeIdentifiers
 import FinvestLensEngine
 
 /// One row: a collection, or an instance inside one.
@@ -111,6 +112,8 @@ struct ModeSidebar: View {
     @Environment(\.openWindow) private var openWindow
     #endif
     @State private var sheet: AccountSheet?
+    /// Live drag state, shared down the tree — a drag crosses levels.
+    @State private var drag = AccountDragState()
     @State private var filter = ""
     /// GnuCash's "show hidden accounts". `isHidden` has been settable, stored
     /// and round-tripped all along, and the tree showed every account anyway —
@@ -401,7 +404,7 @@ struct ModeSidebar: View {
         Section("Accounts") {
             if trimmedFilter.isEmpty {
                 AccountBranch(model: model, nodes: visibleTree,
-                              canReorder: accountSort.allowsDragging)
+                              canReorder: accountSort.allowsDragging, drag: drag)
             } else {
                 // Filtering flattens to matches and shows full names — the same
                 // shape as Find's account picker, and the reason typing
@@ -454,7 +457,16 @@ struct ModeSidebar: View {
                    systemImage: model.isFavouriteAccount(id) ? "star.slash" : "star") {
                 model.toggleFavouriteAccount(id)
             }
-            Divider()
+            if accountSort.allowsDragging {
+                // Everything the mouse can do must be reachable from the
+                // keyboard. Dragging is the pointer's way to reorder; these are
+                // everyone else's, and they are the only route under VoiceOver.
+                Button("Move Up") { model.nudgeAccount(id, by: -1) }
+                    .disabled(!model.canNudgeAccount(id, by: -1))
+                Button("Move Down") { model.nudgeAccount(id, by: 1) }
+                    .disabled(!model.canNudgeAccount(id, by: 1))
+                Divider()
+            }
             Button("Edit…") { sheet = .edit(id) }
             Button("Reconcile…") {
                 #if os(macOS)
@@ -686,17 +698,47 @@ struct AccountSidebarRow: View {
     }
 }
 
+/// Live state for a sidebar drag.
+///
+/// Shared down the tree because a drag crosses levels: the row you picked up
+/// and the row you are hovering are usually in different `AccountBranch`
+/// instances, and each level is its own view.
+@Observable
+@MainActor
+final class AccountDragState {
+    /// Where a drop would land, and what it would mean.
+    enum Zone: Equatable { case before, onto, after }
+
+    var dragging: GncGUID?
+    var target: (id: GncGUID, zone: Zone)?
+
+    func zone(for id: GncGUID) -> Zone? {
+        target?.id == id ? target?.zone : nil
+    }
+
+    func clear() {
+        dragging = nil
+        target = nil
+    }
+}
+
 /// One level of the account tree, recursing into its children.
 ///
 /// A view type rather than a `@ViewBuilder` function because it is recursive,
 /// and an opaque `some View` cannot be defined in terms of itself.
 ///
-/// It exists at all because `OutlineGroup` has no move affordance: the
-/// between-siblings reorder `FR-NAV-12` asks for had no drop target, so the only
-/// drag that existed re-parented — a book edit from a gesture that looked like
-/// sorting. `.onMove` is the system's own reorder, and it draws the insertion
-/// line, which is exactly the "insertion line versus highlighted row" feedback
-/// §4.6 asks for without this code drawing either.
+/// **Two drops, two meanings, drawn differently** (`FR-NAV-12`,
+/// navigation-design §4.6). The top and bottom quarters of a row reorder —
+/// setting the manual order in the account's kvp — and the middle re-parents,
+/// which is a book edit. That distinction only works if it is visible *while*
+/// dragging, which is why this uses a `DropDelegate`: `dropUpdated(info:)`
+/// reports the pointer's position during the hover, where `.dropDestination`
+/// hands over a location only once the drop has already happened.
+///
+/// The first attempt wired only the re-parent half, and the result was a
+/// gesture that looked like sorting and quietly moved accounts to new parents.
+/// A reorder now draws an insertion line and a re-parent fills the row, so the
+/// two can never be confused for one another.
 ///
 /// Offered only under manual order: dropping something "between" a sorted list
 /// is a promise the sort breaks on the next redraw.
@@ -704,33 +746,144 @@ struct AccountBranch: View {
     @Bindable var model: AppModel
     let nodes: [AccountNode]
     let canReorder: Bool
+    let drag: AccountDragState
 
     var body: some View {
         ForEach(nodes) { node in
-            if let children = node.children, !children.isEmpty {
-                DisclosureGroup {
-                    AccountBranch(model: model, nodes: children, canReorder: canReorder)
-                } label: {
-                    AccountSidebarRow(node: node, label: node.name)
+            Group {
+                if let children = node.children, !children.isEmpty {
+                    DisclosureGroup {
+                        AccountBranch(model: model, nodes: children,
+                                      canReorder: canReorder, drag: drag)
+                    } label: {
+                        row(node)
+                    }
+                } else {
+                    row(node)
                 }
-            } else {
-                AccountSidebarRow(node: node, label: node.name)
             }
         }
-        .onMove(perform: moveHandler)
     }
 
-    /// Typed explicitly: a ternary inline in `.onMove` gave the type-checker
-    /// nothing to anchor the optional to.
-    private var moveHandler: ((IndexSet, Int) -> Void)? {
-        guard canReorder else { return nil }
-        return { offsets, destination in move(from: offsets, to: destination) }
+    @ViewBuilder
+    private func row(_ node: AccountNode) -> some View {
+        if canReorder {
+            AccountSidebarRow(node: node, label: node.name)
+                .modifier(AccountDropFeedback(zone: drag.zone(for: node.id)))
+                .onDrag {
+                    drag.dragging = node.id
+                    return NSItemProvider(
+                        item: node.id.hexString.data(using: .utf8) as NSData?,
+                        typeIdentifier: UTType.finvestLensAccountRow.identifier)
+                }
+                .onDrop(of: [UTType.finvestLensAccountRow],
+                        delegate: AccountRowDrop(node: node, siblings: nodes,
+                                                 model: model, drag: drag))
+        } else {
+            AccountSidebarRow(node: node, label: node.name)
+        }
+    }
+}
+
+/// What a drop would do, drawn.
+///
+/// An insertion line for a reorder, a filled row for a re-parent — the two
+/// operations must never look the same, because one of them edits the book.
+private struct AccountDropFeedback: ViewModifier {
+    let zone: AccountDragState.Zone?
+
+    func body(content: Content) -> some View {
+        content
+            .background {
+                if zone == .onto {
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.appAccent.opacity(0.25))
+                }
+            }
+            .overlay(alignment: .top) { line(shown: zone == .before) }
+            .overlay(alignment: .bottom) { line(shown: zone == .after) }
     }
 
-    /// `.onMove` reports the destination *before* the removal, which is one
-    /// more than the final index when moving down.
-    private func move(from offsets: IndexSet, to destination: Int) {
-        guard let source = offsets.first, nodes.indices.contains(source) else { return }
-        model.reorderAccount(nodes[source].id, to: destination > source ? destination - 1 : destination)
+    @ViewBuilder
+    private func line(shown: Bool) -> some View {
+        if shown {
+            Rectangle().fill(.tint).frame(height: 2)
+        }
     }
+}
+
+/// Decides which of the three things a drop means, and says so while hovering.
+struct AccountRowDrop: DropDelegate {
+    let node: AccountNode
+    let siblings: [AccountNode]
+    let model: AppModel
+    let drag: AccountDragState
+
+    /// A row is short, so the re-parent zone gets the middle half and each
+    /// insertion zone a quarter. Aiming at "between" is the fiddlier of the
+    /// two, and it is the harmless one.
+    static func zone(atY y: CGFloat, height: CGFloat) -> AccountDragState.Zone {
+        if y < height * 0.25 { return .before }
+        if y > height * 0.75 { return .after }
+        return .onto
+    }
+
+    func validateDrop(info: DropInfo) -> Bool {
+        guard let dragged = drag.dragging else { return false }
+        // Nothing may be dropped on itself, and an account may not be dropped
+        // into its own subtree — `moveAccount` refuses that too, but refusing
+        // it here means the feedback never promises something impossible.
+        if dragged == node.id { return false }
+        return !isDescendant(node.id, ofOrEqualTo: dragged)
+    }
+
+    func dropEntered(info: DropInfo) { dropUpdated(info: info) }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        // `DropInfo` has no size, so the row height is taken from the metrics
+        // the sidebar draws with rather than measured per row — every account
+        // row is the same height.
+        drag.target = (node.id, Self.zone(atY: info.location.y, height: Self.rowHeight))
+        return DropProposal(operation: .move)
+    }
+
+    func dropExited(info: DropInfo) {
+        if drag.target?.id == node.id { drag.target = nil }
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        defer { drag.clear() }
+        guard let dragged = drag.dragging, dragged != node.id else { return false }
+        switch drag.target?.zone ?? .onto {
+        case .onto:
+            return model.moveAccount(dragged, under: node.id)
+        case .before, .after:
+            // Between siblings only. Dropping between two rows of *another*
+            // parent is a re-parent wearing a reorder's clothes, so it moves
+            // the account there first and then orders it.
+            guard let index = siblings.firstIndex(where: { $0.id == node.id }) else { return false }
+            let target = (drag.target?.zone == .after) ? index + 1 : index
+            if !siblings.contains(where: { $0.id == dragged }) {
+                let parent = model.book?.account(with: node.id)?.parent?.guid
+                guard model.moveAccount(dragged, under: parent) else { return false }
+            }
+            model.reorderAccount(dragged, to: target)
+            return true
+        }
+    }
+
+    /// Whether `candidate` is `ancestor` or sits under it.
+    private func isDescendant(_ candidate: GncGUID, ofOrEqualTo ancestor: GncGUID) -> Bool {
+        guard let account = model.book?.account(with: candidate) else { return false }
+        var walk: Account? = account
+        while let current = walk {
+            if current.guid == ancestor { return true }
+            walk = current.parent
+        }
+        return false
+    }
+
+    /// One sidebar row's height. `List` rows are uniform here, and `DropInfo`
+    /// carries a location but not a size.
+    static let rowHeight: CGFloat = 24
 }

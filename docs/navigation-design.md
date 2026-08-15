@@ -580,14 +580,14 @@ corrected this document, is in [implemented.md](implemented.md).
 Two things this design asks for that the build did not deliver, recorded here
 rather than left to be rediscovered:
 
-- **Re-parenting by drag.** The reorder half of §4.6 is built: `.onMove` on
-  each level of the tree, gated on manual order, with the system's insertion
-  line as the feedback. Dropping *onto* a row to re-parent is not offered.
-  It was briefly shipped as the *only* half, which meant every drag re-parented
-  — a book edit from a gesture that looked like sorting. Bringing it back needs
-  a `DropDelegate` that distinguishes "between" from "onto" during the hover and
-  draws each differently; until then re-parenting is in the account editor,
-  where it is deliberate.
+- *(Both halves of the sidebar drag are built. A `DropDelegate` reports the
+  pointer's position during the hover — which `.dropDestination` cannot, it
+  hands over a location only after the drop — so the top and bottom quarters of
+  a row reorder and the middle half re-parents, drawn as an insertion line and a
+  filled row. The boundaries fall on the safe side: a quarter of the way in is
+  still the re-parent zone, so a reorder takes deliberate aim. Move Up and Move
+  Down in the row's menu are the keyboard's route, since under VoiceOver a drag
+  is not a gesture at all.)*
 - *(Sorting outside Accounts is done: every mode offers Original Order and
   Name; Accounts additionally offers code, balance, type and first
   transaction, which are facts only an account has.)*

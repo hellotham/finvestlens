@@ -131,11 +131,6 @@ one is fixed; nothing from it is outstanding. What the fixes were, and the two
 places the design itself was corrected, is in [implemented.md](implemented.md)
 ▸ P12.
 
-The one item that ends as a *narrower* feature than the design asked for:
-**re-parenting by drag** is not offered. Between-siblings reorder is, through
-`.onMove` with the system's insertion line; dropping *onto* a row to re-parent
-was removed because with only that half wired, every drag re-parented — a book
-edit from a gesture that looked like sorting. Re-parenting stays in the account
-editor, where it is deliberate. Adding the drop-onto half back needs a
-`DropDelegate` that can tell "between" from "onto" during the hover, and
-distinct feedback for each; the reorder half must not be regressed to get it.
+Nothing from the review is outstanding, and nothing from P12 ships narrower than
+the design: both halves of the sidebar drag are built, with the feedback that
+tells them apart.
