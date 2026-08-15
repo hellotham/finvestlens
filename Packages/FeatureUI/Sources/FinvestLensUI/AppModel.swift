@@ -483,6 +483,11 @@ public final class AppModel {
         applyNavigationChange(from: old)
     }
 
+    /// Backs ``period``. `nil` means "the book's default" — so a book whose
+    /// default period is changed in Settings takes effect immediately for
+    /// anyone who has not moved the selector.
+    var windowPeriod: ReportPeriod?
+
     /// Where every mode is, for session persistence — see `AppModel+Session`.
     var navigationSnapshot: (mode: AppMode, selections: [AppMode: SidebarSelection]) {
         (currentMode, selectionByMode)
@@ -1644,6 +1649,7 @@ public final class AppModel {
             try await open(at: url, breakStaleLock: breakStaleLock)
             publishWidgetData()
             restoreSessionSelection()
+            restoreWindowPeriod()
         } catch {
             // A recent whose file has gone is dead weight: drop it now rather
             // than leave the user to hit the same error on every launch.
@@ -1924,6 +1930,7 @@ public final class AppModel {
         registerRows = []
         registerSummary = nil
         resetNavigation()
+        windowPeriod = nil
         resetRegisterView()
         ruleGroups = []
         scheduledTransactions = []

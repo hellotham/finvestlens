@@ -525,6 +525,14 @@ public struct FinvestLensRootView: View {
                 }
                 .help("Create a transaction or account")
             }
+            // One timescale, in every mode (`FR-NAV-11`). In the toolbar rather
+            // than inside a view, because it governs all of them — the board,
+            // the reports, and the default a fresh report opens on. It used to
+            // exist twice, once on the dashboard and once per report, so the
+            // app answered "which period am I looking at?" twice, differently.
+            ToolbarItem {
+                PeriodSelector(model: model, period: $model.period)
+            }
         }
         .sheet(item: $model.presentedPanel) { panel in
             switch panel {

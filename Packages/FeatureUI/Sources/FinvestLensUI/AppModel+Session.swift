@@ -15,6 +15,7 @@
 
 import Foundation
 import FinvestLensEngine
+import FinvestLensReports
 
 @MainActor
 extension AppModel {
@@ -103,6 +104,32 @@ extension AppModel {
               let selection = Self.decodeSelection(raw) else { return nil }
         let mode = AppMode(hosting: selection)
         return (mode, [mode: selection])
+    }
+
+    // MARK: The window's period (`FR-NAV-11`)
+
+    private var periodKey: String? {
+        documentURL.map { "session.period:\($0.standardizedFileURL.path)" }
+    }
+
+    /// The dashboard's old private key. Read once, so someone who had the
+    /// dashboard on "Last 12 months" keeps that timescale when it becomes the
+    /// whole window's — rather than being silently moved to the book default
+    /// the first time they open the new build.
+    private static let legacyDashboardPeriodKey = "session.dashboardPeriod"
+
+    func persistWindowPeriod() {
+        guard isOpen, let key = periodKey else { return }
+        UserDefaults.standard.set(try? JSONEncoder().encode(windowPeriod), forKey: key)
+    }
+
+    func restoreWindowPeriod() {
+        let stored = periodKey.flatMap { UserDefaults.standard.data(forKey: $0) }
+            ?? UserDefaults.standard.data(forKey: Self.legacyDashboardPeriodKey)
+        guard let stored,
+              let period = try? JSONDecoder().decode(ReportPeriod?.self, from: stored)
+        else { return }
+        windowPeriod = period
     }
 
     private static func encode(_ selection: SidebarSelection) -> String {

@@ -86,9 +86,30 @@ extension AppModel {
         reportSettings.financialYearStartMonth ?? (reportCurrency == .aud ? 7 : 1)
     }
 
-    /// The period a freshly opened report starts on (`FR-RPT-04`).
+    /// The period a freshly opened report starts on (`FR-RPT-04`) — the book's
+    /// own setting, and what seeds ``period`` when a book is first opened.
     public var defaultReportPeriod: ReportPeriod {
         reportSettings.defaultPeriod ?? .currentFinancialYear
+    }
+
+    /// **The** period (`FR-NAV-11`): one timescale for every mode.
+    ///
+    /// The dashboard used to keep its own, under its own `UserDefaults` key,
+    /// while reports opened on the book's default and each kept a third — so
+    /// the app answered "which period am I looking at?" twice, differently,
+    /// with no way to tell that it had. Setting this here is what makes the
+    /// selector in the toolbar mean the same thing in Overview, Reports and
+    /// everywhere else.
+    ///
+    /// Desk state: `UserDefaults`, per book. Which months you are looking at is
+    /// not an accounting fact and must not dirty the document — the same
+    /// reasoning as the register's sort and the mode you were in.
+    public var period: ReportPeriod {
+        get { windowPeriod ?? defaultReportPeriod }
+        set {
+            windowPeriod = newValue
+            persistWindowPeriod()
+        }
     }
 
     /// A period as concrete dates, under this book's financial-year convention.

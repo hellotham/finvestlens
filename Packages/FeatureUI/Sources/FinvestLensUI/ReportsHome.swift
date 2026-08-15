@@ -178,8 +178,11 @@ public enum ReportKind: String, CaseIterable, Identifiable, Codable, Sendable {
     /// A fresh configuration for this kind, under the book's defaults.
     @MainActor
     func defaultConfiguration(for model: AppModel) -> ReportConfiguration {
+        // The window's period, not the book's default: one selector governs
+        // every mode, and a report opened from Reports has to agree with the
+        // board you were just looking at (`FR-NAV-11`).
         ReportConfiguration(kind: rawValue,
-                            period: model.defaultReportPeriod,
+                            period: model.period,
                             accountIDs: nil,
                             depth: usesDepth ? 2 : nil,
                             step: usesStep ? .month : nil)

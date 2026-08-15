@@ -120,9 +120,12 @@ struct DashboardView: View {
     @Environment(\.openWindow) private var openWindow
     #endif
 
-    /// The timescale that drives every panel. Survives relaunch (F18):
-    /// stored as JSON so the custom range round-trips too.
-    @State private var period: ReportPeriod = Self.storedPeriod()
+    /// The timescale that drives every panel — the window's, not the board's.
+    ///
+    /// This was `@State` under its own `UserDefaults` key, so Overview and
+    /// Reports could sit on different months with nothing on screen saying so.
+    /// One selector now governs every mode (`FR-NAV-11`); the old key is read
+    /// once on open, so a board left on "Last 12 months" stays there.
     /// Selected sector value for the allocation donut's hover tooltip.
     @State private var allocationValue: Double?
     /// Per-holding value over the timescale, for the performance area.
@@ -239,26 +242,13 @@ struct DashboardView: View {
                 }
                 .help("Choose which panels the dashboard shows")
             }
-            ToolbarItem { PeriodSelector(model: model, period: $period) }
         }
         .task(id: RangeKey(from: range.from, to: range.to)) {
             perfSeries = await computePerformance(range)
         }
-        .onChange(of: period) { Self.storePeriod(period) }
     }
 
-    private static let periodKey = "session.dashboardPeriod"
-
-    private static func storedPeriod() -> ReportPeriod {
-        guard let data = UserDefaults.standard.data(forKey: periodKey),
-              let period = try? JSONDecoder().decode(ReportPeriod.self, from: data)
-        else { return .currentFinancialYear }
-        return period
-    }
-
-    private static func storePeriod(_ period: ReportPeriod) {
-        UserDefaults.standard.set(try? JSONEncoder().encode(period), forKey: periodKey)
-    }
+    private var period: ReportPeriod { model.period }
 
     private func columnCount(for width: CGFloat) -> Int {
         max(1, min(3, Int(width / 380)))
