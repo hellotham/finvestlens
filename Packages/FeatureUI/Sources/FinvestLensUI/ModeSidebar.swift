@@ -104,6 +104,14 @@ struct ModeSidebar: View {
     /// so marking one hidden greyed its name and changed nothing else.
     @AppStorage("showHiddenAccounts") private var showHidden = false
     @Environment(\.appFontScale) private var appFontScale
+    /// Read through `@AppStorage` so choosing a criterion redraws the list —
+    /// the model writes the same key, and the two stay in step by construction
+    /// rather than by remembering to bump a revision.
+    @AppStorage("sidebar.sort.accounts") private var accountSortRaw = SidebarSort.manual.rawValue
+
+    private var accountSort: SidebarSort {
+        SidebarSort(rawValue: accountSortRaw) ?? .manual
+    }
 
     private var trimmedFilter: String { filter.trimmingCharacters(in: .whitespaces) }
 
@@ -150,9 +158,34 @@ struct ModeSidebar: View {
                 }
                 .toggleStyle(.button)
                 .help("Show hidden accounts")
+                sortMenu
             }
         }
         .padding(8)
+    }
+
+    /// How the tree is ordered (`FR-NAV-12`).
+    private var sortMenu: some View {
+        Menu {
+            Picker("Sort By", selection: $accountSortRaw) {
+                ForEach(SidebarSort.accountCases) { candidate in
+                    Text(candidate.title).tag(candidate.rawValue)
+                }
+            }
+            .pickerStyle(.inline)
+            // The book has no opening-date field, so "First Transaction" is
+            // derived — said here rather than implied by the name.
+            if let note = accountSort.note {
+                Divider()
+                Text(note)
+            }
+        } label: {
+            Image(systemName: "arrow.up.arrow.down")
+                .accessibilityLabel("Sort accounts")
+        }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+        .help("Choose how the accounts are ordered")
     }
 
     private var filterPrompt: LocalizedStringKey {
@@ -284,7 +317,8 @@ struct ModeSidebar: View {
     // MARK: Accounts
 
     private var visibleTree: [AccountNode] {
-        showHidden ? model.accountTree : Self.pruningHidden(model.accountTree)
+        let tree = showHidden ? model.accountTree : Self.pruningHidden(model.accountTree)
+        return model.sorted(tree, by: accountSort)
     }
 
     /// Drops hidden accounts and everything under them. Hiding a parent hides
@@ -325,7 +359,7 @@ struct ModeSidebar: View {
         Section("Accounts") {
             if trimmedFilter.isEmpty {
                 OutlineGroup(visibleTree, children: \.children) { node in
-                    accountRow(node, label: node.name)
+                    draggableAccountRow(node)
                 }
             } else {
                 // Filtering flattens to matches and shows full names — the same
@@ -345,6 +379,37 @@ struct ModeSidebar: View {
                 }
             }
         }
+    }
+
+    /// An account row that can be dragged onto another to **re-parent** it.
+    ///
+    /// Two drops, two meanings, and the design must not blur them: between
+    /// siblings reorders (the manual order, in the account's kvp), onto a row
+    /// re-parents — a book edit, undoable, already gated by
+    /// `validParents(forAccount:)`. Dragging is offered only under manual order,
+    /// because dropping something "between" a sorted list is a promise the sort
+    /// breaks on the next redraw.
+    ///
+    /// Written as a method rather than inline modifiers: the closure pair
+    /// type-checked inside `OutlineGroup` at `-Onone` but timed out under the
+    /// Lab package's settings, which is the kind of difference that only shows
+    /// up in one build.
+    @ViewBuilder
+    private func draggableAccountRow(_ node: AccountNode) -> some View {
+        if accountSort.allowsDragging {
+            accountRow(node, label: node.name)
+                .draggable(AccountDragPayload(id: node.id))
+                .dropDestination(for: AccountDragPayload.self) { payload, _ in
+                    reparent(payload, onto: node.id)
+                }
+        } else {
+            accountRow(node, label: node.name)
+        }
+    }
+
+    private func reparent(_ payload: [AccountDragPayload], onto target: GncGUID) -> Bool {
+        guard let dragged = payload.first?.id, dragged != target else { return false }
+        return model.moveAccount(dragged, under: target)
     }
 
     private func accountRow(_ node: AccountNode, label: String) -> some View {

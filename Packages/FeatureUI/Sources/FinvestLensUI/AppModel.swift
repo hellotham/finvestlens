@@ -581,6 +581,16 @@ public final class AppModel {
         navigate(to: storedSelection(in: currentMode), inNewTab: true)
     }
 
+    /// Bumped when a sidebar sort changes — see `SidebarSort.swift`.
+    var sidebarSortRevision = 0
+
+    /// Earliest posting per account, for the sidebar's "First Transaction"
+    /// order. Memoised on ``bookRevision``: the sidebar asks per row on every
+    /// body pass, and one pass over 46k transactions per pass is the shape of
+    /// cost this codebase has paid for before.
+    @ObservationIgnored var firstPostingCache: [GncGUID: Date] = [:]
+    @ObservationIgnored var firstPostingRevision = -1
+
     /// Backs ``period``. `nil` means "the book's default" — so a book whose
     /// default period is changed in Settings takes effect immediately for
     /// anyone who has not moved the selector.

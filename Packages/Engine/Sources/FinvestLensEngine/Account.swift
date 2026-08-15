@@ -69,6 +69,25 @@ public final class Account {
     }
     private static let onlineIDKey = "online_id"
 
+    /// Where this account sits among its siblings when the sidebar is sorted by
+    /// hand (`FR-NAV-12`).
+    ///
+    /// In the account's own kvp so it round-trips like everything else. GnuCash
+    /// has no such slot and will ignore it, which is the right failure mode: a
+    /// book edited there comes back with the order intact and GnuCash never had
+    /// to understand it. `nil` clears the slot rather than writing a sentinel,
+    /// so an account never sorted by hand carries nothing at all.
+    public var sidebarOrder: Int? {
+        get {
+            if case let .int64(n)? = kvp[Self.sidebarOrderKey] { return Int(n) }
+            return nil
+        }
+        set {
+            kvp[Self.sidebarOrderKey] = newValue.map { .int64(Int64($0)) }
+        }
+    }
+    private static let sidebarOrderKey = "finvestlens-sidebar-order"
+
     /// Whether this account is flagged for tax reporting (GnuCash's `tax-related`
     /// slot, stored as an integer 1/0 so it round-trips untouched). Setting it
     /// `false` clears the slot rather than writing a 0, matching GnuCash.
