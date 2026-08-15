@@ -322,6 +322,43 @@ public enum ImportMatcher {
             return !others.isEmpty && others.allSatisfy { $0.account.map(Self.isWash) ?? false }
         }
 
+        /// Whether an amount-equal split's narrative *contradicts* the row's.
+        ///
+        /// Repeating the same amount is ordinary life — a daily coffee, a
+        /// weekly transfer, a subscription — so amount and date alone are weak
+        /// evidence of a duplicate, and acting on them alone hides real
+        /// transactions behind a "duplicate" flag the user has to disprove.
+        /// The transfer matcher has always required narratives to agree; this
+        /// applies the same test to duplicates, which never did.
+        ///
+        /// Framed as *contradiction*, not agreement, because ``narrativesAgree``
+        /// is false when either side is empty: a statement row with no
+        /// description cannot disagree with anything, and vetoing there would
+        /// stop a genuine re-import being recognised. Only two sides that both
+        /// say something, and say different things, veto.
+        func narrativeContradicts(_ split: Split, _ row: StagedTransaction) -> Bool {
+            guard let transaction = split.transaction else { return false }
+            // Only for payee transactions — ones whose other legs are income or
+            // expense. There the payee *is* the transaction's identity, so a
+            // different one means different money. A movement between the
+            // user's own accounts is identified by its amount, date and the two
+            // accounts instead; the wording is whatever each system chose, and
+            // one side of a transfer routinely reads "Card payment" where the
+            // other reads "Direct Debit". Vetoing those would stop a completed
+            // transfer being recognised on re-import.
+            let others = transaction.splits.filter { $0 !== split }
+            guard !others.isEmpty, others.allSatisfy({ other in
+                guard let type = other.account?.type else { return false }
+                return type == .income || type == .expense
+            }) else { return false }
+
+            var bookTokens = narrativeTokens(transaction.transactionDescription)
+            bookTokens.formUnion(narrativeTokens(split.memo))
+            let rowTokens = narrativeTokens(row.payee + " " + row.memo)
+            guard !bookTokens.isEmpty, !rowTokens.isEmpty else { return false }
+            return !Self.narrativesAgree(rowTokens, bookTokens)
+        }
+
         func duplicateMatch(_ row: StagedTransaction, excluding claimed: Set<GncGUID>) -> Split? {
             let amount = target.commodity.round(row.amount)
 
@@ -374,7 +411,8 @@ public enum ImportMatcher {
             // last row into a false "new" transaction.
             for split in targetSplits where !claimed.contains(split.guid) {
                 guard let transaction = split.transaction, amountCandidate(split),
-                      sameDay(transaction, as: row.date) else { continue }
+                      sameDay(transaction, as: row.date),
+                      !narrativeContradicts(split, row) else { continue }
                 return split
             }
 
@@ -388,7 +426,8 @@ public enum ImportMatcher {
             // `statementDate` — a re-imported statement must still recognise it.
             for split in targetSplits where !claimed.contains(split.guid) {
                 guard let transaction = split.transaction, amountCandidate(split),
-                      !counterLegsAllWash(split) else { continue }
+                      !counterLegsAllWash(split),
+                      !narrativeContradicts(split, row) else { continue }
                 let dates = [transaction.datePosted, transaction.statementDate].compactMap { $0 }
                 let withinWindow = dates.contains { date in
                     let days = abs(calendar.dateComponents([.day], from: date,

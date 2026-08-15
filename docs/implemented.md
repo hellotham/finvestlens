@@ -93,6 +93,49 @@ Checked against the reference book (81 accounts a statement can post to):
 (Institution names in docs and fixtures are formats, not holdings — the
 deliberate call recorded above under the source-grounding pass.)
 
+### Duplicate detection was too eager (FR-XIO-14)
+
+Raised from use: a bank export's rows are rarely duplicates of anything, yet
+matching a name and an amount flagged them. Reading the matcher, it was worse
+than reported — passes 2 and 3 matched on **amount and date alone**; the payee
+was never consulted at all. The transfer matcher had required narratives to
+agree since it was written (`narrativesAgree`); duplicate detection never did.
+
+The same test now applies to duplicates, with two qualifications that the code
+itself forced:
+
+**Contradiction, not agreement.** `narrativesAgree` is false when either side is
+empty, so requiring it outright would stop a description-less statement row
+being recognised on re-import. Only two sides that both say something, and say
+different things, veto.
+
+**Payee transactions only.** The first attempt vetoed everything and broke a
+real case: a completed transfer between the user's own accounts, "Card payment"
+in the book against "Direct Debit" on the statement. Two systems naming one
+movement differently is routine, and a transfer's identity is its amount, date
+and the two accounts. So the veto applies only where the other legs are
+income/expense — where the payee *is* the transaction's identity, and a
+different one means different money.
+
+Validated on the real book and the four real statements, both import orders:
+320 rows, 245 duplicate flags, **every one justified** by reference equality or
+a shared narrative token. The review sheet now shows the matched entry's date
+and description in the flag's tooltip, so the claim can be checked rather than
+taken on trust.
+
+**The acceptance harness had stopped running**, which is why this needed
+repairing before it could validate anything. Two stale assumptions: the book's
+`Everyday Card` account is now `CDIA`, and the book has no `Imbalance` account,
+so `fallbackToImbalance` had nothing to fall back to and every uncategorised row
+was skipped — the harness read 0 imported and failed for a reason unrelated to
+matching. It now creates the fallback on its working copy. Its third assumption
+— that none of the statements pre-exist — can no longer be established from this
+book (all four have since been imported, so 39 of 39 CMA rows legitimately are
+duplicates), and restoring it would mean deleting the April history a later
+assertion counts. That assertion is replaced by the property it was really
+guarding, which holds whatever the book contains: no duplicate flag may rest on
+amount and date alone against a contradicting narrative.
+
 ### CSV: the tokenizer bug that made most bank exports unimportable
 
 Raised from a real Wise export that would not import. The mapping was part of

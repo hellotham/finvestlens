@@ -346,6 +346,11 @@ struct ImportView: View {
                 if result.isDuplicate {
                     Text("duplicate").scaledFont(.caption2).padding(.horizontal, 6).padding(.vertical, 1)
                         .background(.yellow.opacity(0.3), in: Capsule())
+                        // Name the entry it matched. A flag the user cannot
+                        // check is one they have to take on trust, and this one
+                        // decides whether a row is imported at all. The text is
+                        // the matched transaction itself, so it needs no key.
+                        .help(Text(matchedSummary(for: result)))
                 }
                 if result.transferSplitID != nil {
                     Text("transfer").scaledFont(.caption2).padding(.horizontal, 6).padding(.vertical, 1)
@@ -366,6 +371,19 @@ struct ImportView: View {
                 .disabled(skipDuplicates && result.isDuplicate)
         }
     }
+
+    /// The existing entry a duplicate flag points at, as its own date and
+    /// description — verbatim book data, not a translatable phrase.
+    private func matchedSummary(for result: MatchResult) -> String {
+        guard let book, let id = result.matchedSplitID,
+              let transaction = book.split(with: id)?.transaction
+        else { return "" }
+        let date = transaction.datePosted.formatted(date: .abbreviated, time: .omitted)
+        let description = transaction.transactionDescription
+        return description.isEmpty ? date : "\(date) · \(description)"
+    }
+
+    private var book: Book? { model.book }
 
     private var targetCode: String {
         accounts.first { $0.id == targetID }?.currencyCode ?? model.reportCurrency.mnemonic

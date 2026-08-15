@@ -200,6 +200,41 @@ struct ImportMatcherTests {
         #expect(results[1].suggestedAccountID == nil)
     }
 
+    /// Repeating an amount is ordinary life. Amount and date alone used to be
+    /// enough to flag a duplicate, so a different payee for the same money on
+    /// the same day was hidden behind a flag the user had to disprove — and a
+    /// statement's rows are rarely duplicates of anything at all.
+    @Test("Same amount and day but a different payee is not a duplicate")
+    func differentPayeeIsNotADuplicate() {
+        let (book, bank, _) = makeBook()
+        let sameMoneySameDay = StagedTransaction(
+            date: day(2026, 1, 15), amount: Decimal(string: "-52.30")!,
+            payee: "Bunnings Warehouse")
+        let results = ImportMatcher.match([sameMoneySameDay], into: bank, book: book)
+        #expect(!results[0].isDuplicate)
+    }
+
+    @Test("The same payee for the same money on the same day still is one")
+    func samePayeeStillDuplicates() {
+        let (book, bank, _) = makeBook()
+        // The statement's raw narrative against the book's tidied description:
+        // the shared "woolworths" token is what carries the match.
+        let raw = StagedTransaction(
+            date: day(2026, 1, 15), amount: Decimal(string: "-52.30")!,
+            payee: "WOOLWORTHS 1234 CHATSWOOD NSW")
+        #expect(ImportMatcher.match([raw], into: bank, book: book)[0].isDuplicate)
+    }
+
+    @Test("A statement row with no narrative can still be recognised on re-import")
+    func silentRowStillDuplicates() {
+        let (book, bank, _) = makeBook()
+        // Nothing to contradict with, so amount and date remain the evidence —
+        // vetoing here would stop a genuine re-import being caught.
+        let silent = StagedTransaction(date: day(2026, 1, 15),
+                                       amount: Decimal(string: "-52.30")!, payee: "")
+        #expect(ImportMatcher.match([silent], into: bank, book: book)[0].isDuplicate)
+    }
+
     @Test("A matching FITID in a split's online_id is a definitive duplicate")
     func onlineIDDedup() {
         let (book, bank, _) = makeBook()
