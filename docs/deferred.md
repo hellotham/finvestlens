@@ -32,9 +32,10 @@ Companions: [Plan](plan.md) · [PRD](prd.md) · [Implemented](implemented.md).
 
 Quality automation and validation that a shippable release needs.
 
-| Item | FR / Phase | Notes |
-|---|---|---|
-| `finlens` reads a NAS book without a working copy | NFR-02 / P10 | **Open, newly found (10 Aug 2026).** ADR-L2 makes the CLI take no lock and no working copy, which is right for safety and expensive over a network: `finlens stats` on the 54 MB book took **40.6 s** (1.96 s of it CPU) where the app's copy-then-read path took 3.5 s. Copying to a local temp before opening read-only would keep every promise ADR-L2 makes — it still never writes to the book — and remove the gap. Not done here because it changes CLI behaviour outside the task that found it. |
+*(Empty. The one entry here — `finlens` reading a NAS book across the wire —
+was built on 15 Aug 2026: `SourceLoader.readBook` takes a local copy first when
+the book is on a network volume, keeping both of ADR-L2's promises. Local books
+read in place, because the hop is 0 ms on APFS where a copy is a clone.)*
 
 ## 2 — User-facing gaps (high value, tractable)
 

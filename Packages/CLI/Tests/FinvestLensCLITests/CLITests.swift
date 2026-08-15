@@ -444,3 +444,64 @@ struct CLIReadOnlyTests {
         #expect(output.errorText.contains("does not balance"))
     }
 }
+
+/// The one place still paying ADR-8's network cost, closed 15 Aug 2026.
+///
+/// ADR-L2 makes the CLI take no lock and no working copy. That is right for
+/// safety and expensive over a network: `finlens stats` on the 54 MB reference
+/// book took 40.6 s across SMB against the app's 3.5 s, and only 2.0 s of that
+/// was CPU — the rest is SQLite's small random reads paying latency one at a
+/// time. `SourceLoader.readBook` now takes a local copy first when the book
+/// lives on a network volume, which keeps both of ADR-L2's promises: no lock,
+/// and the book itself is never written to.
+@Suite("finlens book reading")
+struct CLIBookReadTests {
+
+    /// A local book is read in place — the hop is 0 ms on APFS, where a copy is
+    /// a clone, so there is nothing to win and a scratch directory to lose.
+    @Test("A local book reads in place and reads correctly")
+    func localBookReadsInPlace() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let store = try SQLiteDocumentStore(path: url.path)
+        let book = Book(baseCurrency: .aud)
+        let bank = book.addAccount(Account(name: "Everyday", type: .bank, commodity: .aud))
+        let food = book.addAccount(Account(name: "Groceries", type: .expense, commodity: .aud))
+        let txn = Transaction(currency: .aud, datePosted: day(2026, 1, 5), description: "Shop")
+        txn.addSplit(Split(account: food, value: dec("10.00")))
+        txn.addSplit(Split(account: bank, value: dec("-10.00")))
+        book.addTransaction(txn)
+        try store.write(book)
+
+        let read = try SourceLoader.readBook(at: url.path)
+        #expect(read.accounts.contains { $0.name == "Everyday" })
+        #expect(read.transactions.count == 1)
+
+        // Reading leaves nothing behind — a read-only tool must not strew
+        // copies of someone's book through the temp directory.
+        let strays = (try? FileManager.default.contentsOfDirectory(
+            atPath: FileManager.default.temporaryDirectory.path))?
+            .filter { $0.hasPrefix("finlens-") } ?? []
+        #expect(strays.isEmpty)
+    }
+
+    /// The whole book comes back in memory, so the copy — when one is taken —
+    /// can be removed the moment `readBook` returns.
+    @Test("A read returns the book detached from its file")
+    func readIsDetached() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
+
+        let store = try SQLiteDocumentStore(path: url.path)
+        let book = Book(baseCurrency: .aud)
+        _ = book.addAccount(Account(name: "Everyday", type: .bank, commodity: .aud))
+        try store.write(book)
+
+        let read = try SourceLoader.readBook(at: url.path)
+        try FileManager.default.removeItem(at: url)
+        // Still answerable with the file gone.
+        #expect(read.accounts.contains { $0.name == "Everyday" })
+    }
+}

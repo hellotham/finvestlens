@@ -73,6 +73,52 @@ public enum SourceLoader {
         return .journal
     }
 
+    /// Reads a book, taking a local copy first when it lives on a network share.
+    ///
+    /// ADR-L2 makes the CLI take no lock and no working copy, which is right
+    /// for safety and expensive over a network: `finlens stats` on the 54 MB
+    /// reference book took **40.6 s** across SMB against 3.5 s for the app's
+    /// copy-then-read path, and only 2.0 s of that was CPU. The rest is
+    /// SQLite's small random reads paying network latency one at a time
+    /// (architecture.md §6, ADR-8).
+    ///
+    /// Copying first keeps every promise ADR-L2 makes — no lock is taken, and
+    /// the book itself is still never written to — while removing the gap.
+    /// Local volumes read in place: the hop was measured at 0 ms on APFS
+    /// (a copy there is a clone), so there is nothing to win and a scratch
+    /// directory to lose.
+    static func readBook(at path: String) throws -> Book {
+        let url = URL(fileURLWithPath: path)
+        let isLocal = (try? url.resourceValues(forKeys: [.volumeIsLocalKey]))?
+            .volumeIsLocal ?? true
+        guard !isLocal else {
+            return try SQLiteDocumentStore(readOnlyPath: path).read()
+        }
+
+        let scratch = FileManager.default.temporaryDirectory
+            .appendingPathComponent("finlens-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: scratch, withIntermediateDirectories: true)
+        // Removed however this returns: a read-only tool must not leave copies
+        // of someone's book lying in the temp directory.
+        defer { try? FileManager.default.removeItem(at: scratch) }
+
+        let copy = scratch.appendingPathComponent(url.lastPathComponent)
+        try FileManager.default.copyItem(at: url, to: copy)
+        // The write-ahead log and its shared-memory index, when the book was
+        // last closed mid-transaction. Without the `-wal` the copy reads as the
+        // book was at the last checkpoint, which is a silently older answer
+        // rather than an error.
+        for suffix in ["-wal", "-shm"] {
+            let sidecar = URL(fileURLWithPath: url.path + suffix)
+            guard FileManager.default.fileExists(atPath: sidecar.path) else { continue }
+            try? FileManager.default.copyItem(
+                at: sidecar, to: URL(fileURLWithPath: copy.path + suffix))
+        }
+        // `read()` returns the whole book in memory, so the copy is finished
+        // with by the time this returns and the `defer` can take it away.
+        return try SQLiteDocumentStore(readOnlyPath: copy.path).read()
+    }
+
     /// Loads and merges every source. Journal sources merge into one book;
     /// a book source must stand alone.
     public static func load(paths: [String], today: Date = Date()) throws -> LoadedSource {
@@ -83,8 +129,7 @@ public enum SourceLoader {
             guard paths.count == 1 else { throw SourceLoadError.multipleBooks }
             let path = paths[0]
             do {
-                let store = try SQLiteDocumentStore(readOnlyPath: path)
-                let book = try store.read()
+                let book = try readBook(at: path)
                 return LoadedSource(book: book, extras: SourceExtras(),
                                     descriptions: [(path as NSString).lastPathComponent])
             } catch {
