@@ -312,7 +312,7 @@ struct DashboardView: View {
     /// The window's title: the card if one is zoomed, otherwise the view.
     private var boardTitle: String {
         if let card = model.zoomedOverviewCard { return card.title }
-        return model.currentOverviewView.name
+        return model.currentOverviewView.displayName
     }
 
     private func columnCount(for width: CGFloat) -> Int {

@@ -253,3 +253,129 @@ struct ModeTabTests {
         model.close()
     }
 }
+
+// MARK: - Defects found by review, 15 Aug 2026
+
+@MainActor
+@Suite("Mode tabs — regressions")
+struct ModeTabRegressionTests {
+
+    private func book() throws -> (AppModel, URL) {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
+        let model = AppModel()
+        try model.newDocument(at: url)
+        return (model, url)
+    }
+
+    /// ⌘T and the strip's + button did nothing in every state: they asked for a
+    /// second tab on *what is showing*, and the never-a-duplicate rule fires
+    /// before the new-tab branch.
+    @Test("New Tab opens a tab")
+    func newTabOpensATab() throws {
+        let (model, url) = try book()
+        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+
+        model.showMode(.accounts)
+        #expect(model.openTabs.count == 1)
+        model.openNewTab()
+        #expect(model.openTabs.count == 2)
+        #expect(model.activeTabIndex == 1)
+        model.openNewTab()
+        #expect(model.openTabs.count == 3, "a second New Tab did nothing")
+    }
+
+    /// A stored active index that outruns its tab list used to crash the next
+    /// single-click navigation: the replace branch subscripted `extras` with it.
+    @Test("An out-of-range stored tab index does not crash a navigation")
+    func poisonedIndexIsSurvivable() async throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
+        let key = "session.navigation:\(url.standardizedFileURL.path)"
+        defer {
+            try? FileManager.default.removeItem(at: url)
+            UserDefaults.standard.removeObject(forKey: key)
+        }
+
+        let seed = AppModel()
+        try seed.newDocument(at: url)
+        let bank = try #require(seed.addAccount(name: "Everyday", type: .bank))
+        try seed.save()
+        seed.close()
+
+        // A desk state naming one tab that no longer exists, with the index
+        // still pointing past the end of what survives the filter.
+        let ghost = GncGUID.random().hexString
+        UserDefaults.standard.set(
+            #"{"mode":"accounts","tabs":{"accounts":["account:\#(ghost)"]},"active":{"accounts":1}}"#,
+            forKey: key)
+
+        let model = AppModel()
+        await model.openBook(at: url)
+        #expect(model.activeTabIndex == 0)
+        // The navigation that used to trap.
+        model.navigate(to: .account(bank))
+        #expect(model.openTabs == [.generalLedger, .account(bank)])
+        model.close()
+    }
+
+    /// Dropping a dead tab shifts every index after it. Restoring the stored
+    /// index unchanged landed the user on the tab *next to* the one they left.
+    @Test("A dropped tab does not shift the restored selection")
+    func droppedTabKeepsThePlace() async throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
+        let key = "session.navigation:\(url.standardizedFileURL.path)"
+        defer {
+            try? FileManager.default.removeItem(at: url)
+            UserDefaults.standard.removeObject(forKey: key)
+        }
+
+        let seed = AppModel()
+        try seed.newDocument(at: url)
+        let b = try #require(seed.addAccount(name: "B", type: .bank))
+        let c = try #require(seed.addAccount(name: "C", type: .bank))
+        try seed.save()
+        seed.close()
+
+        // [home, ghost, B, C] with C active; the ghost is filtered out.
+        let ghost = GncGUID.random().hexString
+        let stored = """
+        {"mode":"accounts","tabs":{"accounts":["account:\(ghost)","account:\(b.hexString)",\
+        "account:\(c.hexString)"]},"active":{"accounts":3}}
+        """
+        UserDefaults.standard.set(stored, forKey: key)
+
+        let model = AppModel()
+        await model.openBook(at: url)
+        #expect(model.openTabs == [.generalLedger, .account(b), .account(c)])
+        // Clamped into the list rather than left pointing past its end.
+        #expect(model.openTabs.indices.contains(model.activeTabIndex))
+        model.close()
+    }
+
+    /// `.auditLog` encoded but had no decode arm, so a Records Audit Log tab
+    /// was written on every navigation and dropped on every reopen.
+    @Test("An Audit Log tab survives a reopen")
+    func auditLogTabRoundTrips() async throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
+        let key = "session.navigation:\(url.standardizedFileURL.path)"
+        defer {
+            try? FileManager.default.removeItem(at: url)
+            UserDefaults.standard.removeObject(forKey: key)
+        }
+
+        let first = AppModel()
+        try first.newDocument(at: url)
+        first.navigate(to: .auditLog)
+        try first.save()
+        first.close()
+
+        let second = AppModel()
+        await second.openBook(at: url)
+        #expect(second.mode == .records)
+        #expect(second.openTabs.contains(.auditLog), "the Audit Log tab was dropped")
+        second.close()
+    }
+}

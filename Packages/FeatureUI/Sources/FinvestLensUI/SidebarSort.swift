@@ -47,7 +47,17 @@ public enum SidebarSort: String, CaseIterable, Identifiable, Sendable {
     }
 
     /// Whether rows may be dragged under this order.
+    ///
+    /// Nothing reads this yet: the drag is off until the between-siblings
+    /// reorder exists (see `ModeSidebar.draggableAccountRow`). It stays because
+    /// it is the rule that gates it, not because it is wired.
     public var allowsDragging: Bool { self == .manual }
+
+    /// The one definition of where a mode's sort is stored. The sidebar reads
+    /// the same key through `@AppStorage`, so it must not be spelled twice.
+    public static func storageKey(for mode: AppMode) -> String {
+        "sidebar.sort.\(mode.rawValue)"
+    }
 
     /// The criteria Accounts offers — all of them. Balance, code and the first
     /// transaction are facts about an *account*, so the other modes' lists keep
@@ -63,19 +73,13 @@ extension AppModel {
     /// list is not an accounting fact, and Accounts wanting balance order says
     /// nothing about how Planning should be arranged.
     public func sidebarSort(for mode: AppMode) -> SidebarSort {
-        SidebarSort(rawValue: UserDefaults.standard.string(forKey: Self.sortKey(mode)) ?? "")
+        SidebarSort(rawValue:
+            UserDefaults.standard.string(forKey: SidebarSort.storageKey(for: mode)) ?? "")
             ?? .manual
     }
 
     public func setSidebarSort(_ sort: SidebarSort, for mode: AppMode) {
-        UserDefaults.standard.set(sort.rawValue, forKey: Self.sortKey(mode))
-        // Not observable on its own — `@AppStorage` in the sidebar is what
-        // redraws it; this exists for the model-side callers and the tests.
-        sidebarSortRevision &+= 1
-    }
-
-    private static func sortKey(_ mode: AppMode) -> String {
-        "sidebar.sort.\(mode.rawValue)"
+        UserDefaults.standard.set(sort.rawValue, forKey: SidebarSort.storageKey(for: mode))
     }
 
     /// Orders one level of the account tree.
@@ -174,7 +178,11 @@ extension AppModel {
         guard let from = siblings.firstIndex(where: { $0.guid == id }) else { return }
         let clamped = min(max(position, 0), siblings.count - 1)
         guard clamped != from else { return }
-        editingWholeBook(named: "Reorder Accounts") {
+        // Scoped to the accounts it touches. `editingWholeBook` serialises the
+        // whole book to GnuCash XML for its undo snapshot — 46k transactions for
+        // a change of a dozen integers, and the whole-book snapshot CLAUDE.md
+        // says undo must never take.
+        editingAccounts(siblings.map(\.guid), named: "Reorder Accounts") {
             let moved = siblings.remove(at: from)
             siblings.insert(moved, at: clamped)
             for (index, sibling) in siblings.enumerated() {

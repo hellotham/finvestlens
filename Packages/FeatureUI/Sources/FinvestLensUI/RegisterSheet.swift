@@ -948,12 +948,15 @@ private final class SheetView: NSView, NSTextFieldDelegate {
                 switch column {
                 case .date: return dateText(base.date)
                 case .description: return base.description
-                case .transfer: return base.isHeadingOnly ? "" : base.transferName
+                // Same gate as the draw: a whole-book heading has these facts,
+                // so ⌘C copies them rather than three empty columns.
+                case .transfer: return showsHeadingFacts(rows[index]) ? base.transferName : ""
                 case .reconcile:
-                    return base.isHeadingOnly ? "" : ReconcileBadge.word(base.reconcile)
+                    return showsHeadingFacts(rows[index])
+                        ? ReconcileBadge.word(base.reconcile) : ""
                 case .amount:
-                    return base.isHeadingOnly
-                        ? "" : AmountFormat.string(base.amount, code: currencyCode)
+                    return showsHeadingFacts(rows[index])
+                        ? AmountFormat.string(base.amount, code: currencyCode) : ""
                 case .balance:
                     return base.runningBalance
                         .map { AmountFormat.string($0, code: currencyCode) } ?? ""
@@ -981,12 +984,13 @@ private final class SheetView: NSView, NSTextFieldDelegate {
         switch column {
         case .date: return dateText(base.date)
         case .description: return base.description
-        case .transfer: return base.isHeadingOnly ? "" : base.transferName
+        case .transfer: return showsHeadingFacts(rows[index]) ? base.transferName : ""
         case .reconcile:
-            return base.isHeadingOnly ? "" : ReconcileBadge.word(base.reconcile)
+            return showsHeadingFacts(rows[index])
+                ? ReconcileBadge.word(base.reconcile) : ""
         case .amount:
-            return base.isHeadingOnly
-                ? "" : AmountFormat.spoken(base.amount, code: currencyCode)
+            return showsHeadingFacts(rows[index])
+                ? AmountFormat.spoken(base.amount, code: currencyCode) : ""
         case .balance:
             return base.runningBalance.map {
                 AmountFormat.spoken($0, code: currencyCode)
@@ -1747,7 +1751,13 @@ private final class SheetView: NSView, NSTextFieldDelegate {
                                  drafting: drafting,
                                  in: cell(.description), leadingInset: inset)
             }
-            if !row.base.isHeadingOnly, !skipForCursor(row, .transfer) {
+            // `isHeadingOnly` means "no anchoring split to edit through", not
+            // "nothing to say". A whole-book row has all three of these facts —
+            // taken from the transaction rather than from one split, see
+            // `wholeBookRowSummary` — and gating the draws on `isHeadingOnly`
+            // alone left the Account, R and Amount columns blank in Basic
+            // Ledger, which is the whole of what N6 set out to fill.
+            if showsHeadingFacts(row), !skipForCursor(row, .transfer) {
                 drawText(headingTransferName(row, drafting: drafting),
                          in: cell(.transfer), muted: true, middleTruncate: true)
             }
@@ -1755,11 +1765,11 @@ private final class SheetView: NSView, NSTextFieldDelegate {
             // an unknown state fell through to the dotted "not reconciled"
             // circle on the heading while the leg beneath it drew nothing —
             // the same state, two glyphs, side by side in Transaction Journal.
-            if !row.base.isHeadingOnly, !row.base.reconcile.isEmpty {
+            if showsHeadingFacts(row), !row.base.reconcile.isEmpty {
                 drawSymbol(ReconcileSymbols.image(for: row.base.reconcile, scale: fontScale),
                            centeredIn: cell(.reconcile))
             }
-            if !row.base.isHeadingOnly, !skipForCursor(row, .amount) {
+            if showsHeadingFacts(row), !skipForCursor(row, .amount) {
                 let amount = (drafting ? focusLine()?.amount : nil) ?? row.base.amount
                 drawText(AmountFormat.string(amount, code: code), in: cell(.amount),
                          trailing: true, negative: amount < 0, mono: true)
@@ -1890,6 +1900,16 @@ private final class SheetView: NSView, NSTextFieldDelegate {
         } else if !row.base.isHeadingOnly {
             drawText("—", in: rect, trailing: true, muted: true)
         }
+    }
+
+    /// Whether a heading line carries Account, R and Amount worth drawing.
+    ///
+    /// True for an ordinary row (which has an anchoring split), and true for a
+    /// whole-book row, whose three facts come from the transaction instead. The
+    /// only rows left out are heading-only rows in a register that has nothing
+    /// to put there.
+    private func showsHeadingFacts(_ row: SheetRow) -> Bool {
+        !row.base.isHeadingOnly || wholeBook
     }
 
     private func drawLegBalance(_ row: SheetRow, line: EditableSplit?, in rect: CGRect) {

@@ -153,3 +153,15 @@ struct SidebarSortTests {
         #expect(f.model.sidebarSort(for: .planning) == .manual)
     }
 }
+
+@MainActor
+@Suite("Sidebar sort storage")
+struct SidebarSortStorageTests {
+
+    /// `ModeSidebar` reads the key through `@AppStorage`, which needs a
+    /// literal, so the literal and the model's key generator have to agree.
+    @Test("The sidebar's @AppStorage key is the model's key")
+    func keysAgree() {
+        #expect(SidebarSort.storageKey(for: .accounts) == "sidebar.sort.accounts")
+    }
+}

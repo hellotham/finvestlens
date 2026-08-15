@@ -80,7 +80,11 @@ struct AppModeTests {
     @Test("Accounts lands on All Transactions, not a hub")
     func accountsLandsOnLedger() {
         #expect(AppMode.accounts.defaultSelection == .generalLedger)
-        #expect(AppMode.overview.defaultSelection == .dashboard)
+        // Overview's home is the Mix *view*, which is a row its sidebar
+        // actually carries. `.dashboard` was not, so the sidebar highlighted
+        // nothing at launch and clicking Mix opened a second tab of the same
+        // board.
+        #expect(AppMode.overview.defaultSelection == .overviewView("mix"))
     }
 
     // MARK: Toolbar and shortcuts
@@ -106,6 +110,26 @@ struct AppModeTests {
         #expect(Set(keys.map(\.character)).count == AppMode.allCases.count)
         #expect(AppMode.allCases.first?.shortcut.character == "1")
         #expect(keys.allSatisfy { $0.character.isNumber })
+    }
+
+    /// Every mode's home must be a row its own sidebar carries, or the window
+    /// opens with nothing selected and the row that shows the same content
+    /// opens a duplicate tab. Overview failed this until 15 Aug 2026.
+    @Test("Every mode's home is a row its sidebar carries")
+    func homeIsSelectable() throws {
+        let f = try makeFixture()
+        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+
+        for mode in AppMode.allCases {
+            let home = mode.defaultSelection
+            if mode == .accounts {
+                #expect(home == .generalLedger)   // built in the view, not the row list
+                continue
+            }
+            let rows = ModeSidebarRows.groups(for: mode, model: f.model).flatMap(\.rows)
+            let ids = rows.flatMap { [$0.id] + ($0.children ?? []).map(\.id) }
+            #expect(ids.contains(home), "\(mode.rawValue)'s home is not in its sidebar")
+        }
     }
 
     // MARK: Per-mode state

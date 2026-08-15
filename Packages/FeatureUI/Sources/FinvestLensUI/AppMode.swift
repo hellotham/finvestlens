@@ -91,7 +91,11 @@ public enum AppMode: String, CaseIterable, Identifiable, Hashable, Sendable {
     /// the thing people came for (navigation-design §4.4).
     public var defaultSelection: SidebarSelection {
         switch self {
-        case .overview: .dashboard
+        // The Mix view, which *is* the board — not `.dashboard`, which no
+        // Overview sidebar row carries. With `.dashboard` as the home, the
+        // sidebar highlighted nothing at launch and clicking "Mix" opened a
+        // second tab showing the identical board.
+        case .overview: .overviewView("mix")
         case .accounts: .generalLedger
         case .investments: .investments
         case .reports: .reports

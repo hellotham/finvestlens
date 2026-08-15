@@ -2751,5 +2751,23 @@ says so. Dragging is offered only under manual order.
 **Deviations, recorded rather than hidden.** The sort control ships for Accounts
 only — balance, code and first-transaction are facts about an account. ⌘-click
 is not bound to "open in new tab": in a macOS `List` it is the extend-selection
-modifier. The distinct drag feedback §4.6 asks for (insertion line versus
-highlighted row) is not built, and the drag is unverified on screen.
+modifier. **Sidebar dragging is off**: `reorderAccount` and the kvp slot exist
+and are tested, but with no between-siblings drop target every drag re-parented,
+so a gesture that looked like sorting was quietly editing the chart of accounts.
+
+**What the review caught (15 Aug 2026).** A ten-angle review of the phase found
+fourteen real defects; the ones that mattered are fixed and pinned by test:
+`openTab` crashed on a restored index that outran its tab list; ⌘T and the tab
+strip's + button were no-ops in every state (they asked for a duplicate of what
+was showing, which the never-a-duplicate rule refuses); Overview's home was
+`.dashboard`, a destination its own sidebar carries no row for, so nothing was
+selected at launch and clicking Mix opened a second tab of the same board;
+`.auditLog` encoded but had no decode arm, so that tab vanished on every reopen;
+restoring filtered dead tabs without adjusting the index, landing on the tab next
+to the one the user left; the whole-book Account/R/Amount columns were still
+gated shut by `isHeadingOnly`, so N6's work did not render in Basic Ledger;
+Reports showed two period selectors that disagreed; `close()` from the Reports
+gallery persisted the wrong mode; every rule in a group shared one SwiftUI
+identity; a held-and-watched security produced two rows with one tag; and
+`reorderAccount` took a whole-book undo snapshot. Findings not yet acted on are
+listed in [deferred.md](deferred.md).

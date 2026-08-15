@@ -680,7 +680,12 @@ struct ReportScreen: View {
     private var parameterBar: some View {
         HStack(spacing: 12) {
             if kind?.usesScaffold == true {
-                PeriodSelector(model: model, period: $configuration.period)
+                // The window's period, not a second copy. Two selectors were
+                // on screen at once — the toolbar's and this — showing
+                // different values and not tracking each other, which is
+                // exactly the "which period am I looking at?" the phase set out
+                // to answer once (`FR-NAV-11`).
+                PeriodSelector(model: model, period: $model.period)
             }
             if kind?.usesDepth == true {
                 Stepper("Depth: \(configuration.depth ?? 2)", value: Binding(

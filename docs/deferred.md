@@ -122,3 +122,39 @@ Not open work — recorded so they aren't re-raised as bugs. Detail in
   leading/trailing whitespace in memos/descriptions/notes/names is dropped so XML
   indentation can't leak into values; byte-for-byte text fidelity is sacrificed by
   choice.
+
+## P12 review findings not yet acted on (15 Aug 2026)
+
+From the ten-angle review of the navigation redesign. The defects that mattered
+were fixed in the same session (see [implemented.md](implemented.md) ▸ P12);
+these are the remainder, ranked.
+
+1. **Deleting an object leaves its tab open.** `deleteAccount` clears only the
+   active selection, and nothing prunes `tabsByMode`. A tab for a deleted
+   account survives until relaunch, titled "Account", and selecting it shows an
+   empty register. Same for budgets, goals, rule groups and saved reports. The
+   restore filter heals it on the next open, so it is a session-lived defect.
+2. **Sidebar drag is off** until the between-siblings drop target and the
+   distinct drag feedback exist — see navigation-design §7.
+3. **The desk-state codec is two hand-written switches.** `encode` is
+   compiler-checked, `decodeSelection` is not, so a new `SidebarSelection` case
+   compiles with a silent decode gap. `.auditLog` already drifted this way.
+   `SidebarSelection` is `Hashable`/`Sendable` with `Codable` payloads
+   throughout; a synthesised `Codable` conformance would make the drift
+   impossible.
+4. **Repeated per-body-pass work.** `visibleTree` prunes and re-sorts 565
+   accounts on every sidebar pass; `customOverviewViews` re-reads UserDefaults
+   and re-decodes JSON on every access, several times per `DashboardView` body
+   including inside a `GeometryReader`; `securityCommodity(forKey:)` rebuilds
+   the security list per call, three times per security tab. None is a
+   correctness defect and none was measured; each wants a memo on
+   `derivedRevision`, as `firstPostingCache` already has.
+5. **Sorting outside Accounts** — the control ships for Accounts only.
+6. **The iOS register (`RegisterTable.swift`) did not get N6.** It still forces
+   journal style for the whole book and still writes empty reconcile/transfer/
+   amount, so All Transactions differs between macOS and iPad.
+7. **Naming is duplicated** between `ModeSidebarRows` and `tabTitle(for:)` —
+   fourteen rules in two files, including the invoice and employee fallbacks.
+8. **`saveOverviewView` saves the source view's full card list**, not the cards
+   the board actually dealt, so a saved view is a copy of the one it was saved
+   from until the board's dealt set is threaded through.

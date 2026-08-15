@@ -107,6 +107,9 @@ struct ModeSidebar: View {
     /// Read through `@AppStorage` so choosing a criterion redraws the list —
     /// the model writes the same key, and the two stay in step by construction
     /// rather than by remembering to bump a revision.
+    // The key comes from `SidebarSort.storageKey(for:)`; `@AppStorage` needs a
+    // literal, so it is asserted equal to it in `SidebarSortTests` rather than
+    // spelled twice and hoped about.
     @AppStorage("sidebar.sort.accounts") private var accountSortRaw = SidebarSort.manual.rawValue
 
     private var accountSort: SidebarSort {
@@ -381,35 +384,23 @@ struct ModeSidebar: View {
         }
     }
 
-    /// An account row that can be dragged onto another to **re-parent** it.
+    /// An account row.
     ///
-    /// Two drops, two meanings, and the design must not blur them: between
-    /// siblings reorders (the manual order, in the account's kvp), onto a row
-    /// re-parents — a book edit, undoable, already gated by
-    /// `validParents(forAccount:)`. Dragging is offered only under manual order,
-    /// because dropping something "between" a sorted list is a promise the sort
-    /// breaks on the next redraw.
+    /// **Dragging is off.** The design (navigation-design §4.6) asks for two
+    /// drops with two meanings — between siblings reorders, onto a row
+    /// re-parents — and only the second was wired: there was no between-siblings
+    /// drop target, and no distinct feedback to tell the two apart while
+    /// dragging. So every drag re-parented, which is a *book edit*: someone
+    /// dragging an account up two rows to sort it would have moved it under a
+    /// different parent instead, silently changing the chart of accounts.
     ///
-    /// Written as a method rather than inline modifiers: the closure pair
-    /// type-checked inside `OutlineGroup` at `-Onone` but timed out under the
-    /// Lab package's settings, which is the kind of difference that only shows
-    /// up in one build.
-    @ViewBuilder
+    /// A gesture that does something other than what it looks like is worse
+    /// than one that is absent, so it is absent until the reorder half exists.
+    /// `AppModel.reorderAccount` and `Account.sidebarOrder` are built and
+    /// tested, waiting for it; re-parenting stays available through Edit ▸ the
+    /// account's parent, where it is a deliberate act.
     private func draggableAccountRow(_ node: AccountNode) -> some View {
-        if accountSort.allowsDragging {
-            accountRow(node, label: node.name)
-                .draggable(AccountDragPayload(id: node.id))
-                .dropDestination(for: AccountDragPayload.self) { payload, _ in
-                    reparent(payload, onto: node.id)
-                }
-        } else {
-            accountRow(node, label: node.name)
-        }
-    }
-
-    private func reparent(_ payload: [AccountDragPayload], onto target: GncGUID) -> Bool {
-        guard let dragged = payload.first?.id, dragged != target else { return false }
-        return model.moveAccount(dragged, under: target)
+        accountRow(node, label: node.name)
     }
 
     private func accountRow(_ node: AccountNode, label: String) -> some View {
@@ -530,7 +521,7 @@ enum ModeSidebarRows {
                 return .collection(.overviewView(view.id), key,
                                    symbol: "square.grid.2x2", children: cards)
             }
-            return SidebarRow(id: .overviewView(view.id), key: nil, text: view.name,
+            return SidebarRow(id: .overviewView(view.id), key: nil, text: view.displayName,
                               symbol: "bookmark", detail: nil, children: cards)
         }
         var groups: [SidebarGroup] = [
@@ -559,8 +550,12 @@ enum ModeSidebarRows {
             guard !holdings.isEmpty else { continue }
             groups.append(.named("ns-\(namespace)", namespace, holdings))
         }
-        if !model.watchlist.isEmpty {
-            groups.append(.titled("watchlist", "Watchlist", model.watchlist.map { security($0) }))
+        // Watch-only, or a security held *and* watched appears twice with the
+        // same tag — and two rows carrying one tag makes `List` selection
+        // ambiguous. `InvestmentsView` filters the same way.
+        let watched = model.watchlist.filter { model.isWatchOnly($0) }
+        if !watched.isEmpty {
+            groups.append(.titled("watchlist", "Watchlist", watched.map { security($0) }))
         }
         return groups
     }

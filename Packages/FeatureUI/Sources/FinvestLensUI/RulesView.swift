@@ -81,13 +81,20 @@ struct RulesView: View {
         List {
             ForEach(model.ruleGroups) { group in
                 Section {
+                    // One scroll target per group — the group is what the
+                    // sidebar selects.
+                    Color.clear
+                        .frame(height: 0)
+                        .id(SidebarSelection.ruleGroup(group.id))
                     ForEach(group.rules) { rule in
+                        // The wash goes on every rule in the selected group,
+                        // but *not* a shared identity: `.sidebarInstance` also
+                        // applies `.id()`, and giving every rule in a group one
+                        // id leaves SwiftUI's row diffing, animation and state
+                        // association undefined.
                         row(rule, in: group)
-                            // The sidebar lists *groups*, so every rule in the
-                            // selected group is highlighted — the group is what
-                            // was picked, and pretending one rule was would be
-                            // a different answer to the one the click gave.
-                            .sidebarInstance(.ruleGroup(group.id), in: model)
+                            .listRowBackground(model.sidebarSelection == .ruleGroup(group.id)
+                                               ? Color.appAccent.opacity(0.15) : nil)
                     }
                     .onDelete { offsets in
                         for index in offsets { model.deleteRule(group.rules[index].id) }

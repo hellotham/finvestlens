@@ -35,7 +35,7 @@ struct ModeTabStrip: View {
                     tab(index: index, selection: selection)
                 }
                 Button {
-                    model.duplicateCurrentTab()
+                    model.openNewTab()
                 } label: {
                     Image(systemName: "plus")
                         .scaledFont(.callout)
@@ -125,7 +125,7 @@ extension AppModel {
         case .overviewView(let id):
             // A standard view's name is ours; a custom one is the user's, and
             // `name` already holds the right text for both.
-            overviewView(id: id).name
+            overviewView(id: id).displayName
         case .overviewCard(_, let card):
             OverviewCard(rawValue: card)?.title ?? String(localized: "Card")
         case .generalLedger: String(localized: "All Transactions")

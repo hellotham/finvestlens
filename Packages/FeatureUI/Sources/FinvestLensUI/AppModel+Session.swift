@@ -244,6 +244,7 @@ extension AppModel {
         }
         switch raw {
         case "dashboard": return .dashboard
+        case "auditLog": return .auditLog
         case "reports": return .reports
         case "generalLedger": return .generalLedger
         case "budgets": return .budgets

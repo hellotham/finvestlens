@@ -456,6 +456,71 @@ public struct FinvestLensRootView: View {
         }
     }
 
+    /// Create actions and the period. Lifted out of `body` for the same reason
+    /// as `searchSuggestions`: P12 grew that expression past the type-checker's
+    /// budget, and the fix is fewer things in one builder, not fewer features.
+    @ToolbarContentBuilder
+    private var primaryToolbar: some ToolbarContent {
+        // Primary create actions (the rest live in the menu bar). Areas
+        // (Overview, Reports, Budgets, …) are in the sidebar, so they no longer
+        // need toolbar buttons. Pinned leading (redesign 6.1):
+        // `[+ New ▾] [⬇ Import ▾] … [Search]` — never behind ».
+        ToolbarItemGroup(placement: .navigation) {
+            Menu {
+                Button("New Transaction…", systemImage: "plus.circle") {
+                    model.presentedPanel = .newTransaction
+                }
+                .disabled(model.postableAccounts.count < 2)
+                Button("New Account…", systemImage: "plus.rectangle.on.folder") {
+                    model.presentedPanel = .newAccount
+                }
+                // Stock Transaction and Currency Transfer are guided
+                // *transaction editors*, not top-level app actions: they are
+                // reached from the transaction area (the Transaction menu and
+                // the register's context menu) and from the Book menu, which is
+                // where HIG *Toolbars* (macOS) requires every command to exist
+                // anyway.
+            } label: {
+                Label("New", systemImage: "plus")
+            }
+            .help("Create a transaction or account")
+        }
+        // One timescale, in every mode (`FR-NAV-11`). In the toolbar rather than
+        // inside a view, because it governs all of them — the board, the
+        // reports, and the default a fresh report opens on.
+        ToolbarItem {
+            PeriodSelector(model: model, period: $model.period)
+        }
+    }
+
+    /// Saved searches, or the offer to save this one.
+    ///
+    /// Lifted out of `body` because the type-checker gave up on it: P12 added
+    /// the mode toolbar, the period selector and the tab strip to the same
+    /// expression, and this closure was what tipped it past the solver's
+    /// budget. Nothing about the content changed.
+    @ViewBuilder
+    private var searchSuggestions: some View {
+        let trimmed = model.searchQuery.trimmingCharacters(in: .whitespaces)
+        if trimmed.isEmpty {
+            ForEach(model.savedSearches) { search in
+                Label(search.name, systemImage: "bookmark")
+                    .searchCompletion(search.query)
+                    .contextMenu {
+                        Button("Delete Saved Search", role: .destructive) {
+                            model.deleteSavedSearch(search.id)
+                        }
+                    }
+            }
+        } else {
+            Button {
+                model.presentedPanel = .saveSearch
+            } label: {
+                Label("Save This Search…", systemImage: "bookmark.badge.plus")
+            }
+        }
+    }
+
     public var body: some View {
         NavigationSplitView {
             ModeSidebar(model: model)
@@ -476,26 +541,7 @@ public struct FinvestLensRootView: View {
         }
         .overlay(alignment: .bottom) { StatusOverlay(model: model) }
         .searchable(text: $model.searchQuery, prompt: "Search transactions")
-        .searchSuggestions {
-            let trimmed = model.searchQuery.trimmingCharacters(in: .whitespaces)
-            if trimmed.isEmpty {
-                ForEach(model.savedSearches) { search in
-                    Label(search.name, systemImage: "bookmark")
-                        .searchCompletion(search.query)
-                        .contextMenu {
-                            Button("Delete Saved Search", role: .destructive) {
-                                model.deleteSavedSearch(search.id)
-                            }
-                        }
-                }
-            } else {
-                Button {
-                    model.presentedPanel = .saveSearch
-                } label: {
-                    Label("Save This Search…", systemImage: "bookmark.badge.plus")
-                }
-            }
-        }
+        .searchSuggestions { searchSuggestions }
         .safeAreaInset(edge: .top) {
             if model.externalChangePending {
                 ExternalChangeBanner(model: model)
@@ -508,40 +554,7 @@ public struct FinvestLensRootView: View {
         .toolbar(id: "modes") {
             ModeToolbar(model: model)
         }
-        .toolbar {
-            // Primary create actions (the rest live in the menu bar). Areas
-            // (Dashboard, Reports, Budgets, …) are now in the sidebar, so they
-            // no longer need toolbar buttons. Pinned leading (redesign 6.1):
-            // `[+ New ▾] [⬇ Import ▾] … [Search]` — never behind ».
-            ToolbarItemGroup(placement: .navigation) {
-                Menu {
-                    Button("New Transaction…", systemImage: "plus.circle") {
-                        model.presentedPanel = .newTransaction
-                    }
-                    .disabled(model.postableAccounts.count < 2)
-                    Button("New Account…", systemImage: "plus.rectangle.on.folder") {
-                        model.presentedPanel = .newAccount
-                    }
-                    // Stock Transaction and Currency Transfer are guided
-                    // *transaction editors*, not top-level app actions: they
-                    // are reached from the transaction area (the Transaction
-                    // menu and the register's context menu) and from the Book
-                    // menu, which is where HIG *Toolbars* (macOS) requires
-                    // every command to exist anyway.
-                } label: {
-                    Label("New", systemImage: "plus")
-                }
-                .help("Create a transaction or account")
-            }
-            // One timescale, in every mode (`FR-NAV-11`). In the toolbar rather
-            // than inside a view, because it governs all of them — the board,
-            // the reports, and the default a fresh report opens on. It used to
-            // exist twice, once on the dashboard and once per report, so the
-            // app answered "which period am I looking at?" twice, differently.
-            ToolbarItem {
-                PeriodSelector(model: model, period: $model.period)
-            }
-        }
+        .toolbar { primaryToolbar }
         .sheet(item: $model.presentedPanel) { panel in
             switch panel {
             case .newAccount: NewAccountSheet(model: model)
@@ -561,7 +574,6 @@ public struct FinvestLensRootView: View {
             case .loanCalculator: LoanCalculatorView(model: model)
             case .closeBook: CloseBookView(model: model)
             case .taxOptions: TaxOptionsView(model: model)
-            case .auditLog: AuditLogSheet(model: model)
             case .find: FindSheet(model: model)
             case .findAccount: FindAccountSheet(model: model)
             }
@@ -754,8 +766,13 @@ public struct FinvestLensRootView: View {
 struct ModeToolbar: CustomizableToolbarContent {
     @Bindable var model: AppModel
 
-    /// Every mode this toolbar offers, in order — the list the test checks.
-    static let modes = AppMode.allCases
+    /// Every mode this toolbar offers, in order — written out to mirror `body`,
+    /// **not** derived from `allCases`. It was `AppMode.allCases`, which made
+    /// the test that guards against drift compare `allCases` with itself: an
+    /// eighth mode would have shipped with no button and a green suite.
+    static let modes: [AppMode] = [
+        .overview, .accounts, .investments, .reports, .business, .planning, .records,
+    ]
 
     var body: some CustomizableToolbarContent {
         item(.overview)

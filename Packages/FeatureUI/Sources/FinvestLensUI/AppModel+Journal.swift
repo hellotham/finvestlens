@@ -377,7 +377,7 @@ extension AppModel {
         } else {
             // The same marker the single-account register already uses for a
             // transaction with more than one other side.
-            accounts = "— Split —"
+            accounts = String(localized: "— Split —")
         }
 
         return WholeBookRowSummary(

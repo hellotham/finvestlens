@@ -129,6 +129,25 @@ struct OverviewView: Identifiable, Hashable, Codable, Sendable {
         return AppMode(rawValue: id)
     }
 
+    /// A standard view's *displayed* name, resolved through the catalog.
+    ///
+    /// `name` holds the English source so the id/name pair stays readable in
+    /// storage; everything that shows it to a person goes through here. It went
+    /// straight to `.navigationTitle` and to the tab strip before, so the window
+    /// title read "Accounts" in eight languages while the sidebar row beside it
+    /// read the translation.
+    var displayName: String {
+        guard isStandard else { return name }
+        switch id {
+        case "mix": return String(localized: "Mix")
+        case "accounts": return String(localized: "Accounts")
+        case "investments": return String(localized: "Investments")
+        case "business": return String(localized: "Business")
+        case "planning": return String(localized: "Planning")
+        default: return name
+        }
+    }
+
     static func standard(_ id: String, _ name: String, _ cards: [OverviewCard]) -> OverviewView {
         OverviewView(id: id, name: name, cards: cards.map(\.rawValue), isStandard: true)
     }
@@ -175,7 +194,6 @@ extension AppModel {
         set {
             guard let key = customViewsKey else { return }
             UserDefaults.standard.set(try? JSONEncoder().encode(newValue), forKey: key)
-            overviewViewsRevision &+= 1
         }
     }
 
@@ -190,7 +208,12 @@ extension AppModel {
     /// Saves the cards currently on the board as a view of the user's own.
     func saveOverviewView(named name: String, cards: [OverviewCard]) {
         var views = customOverviewViews
-        let id = "custom-\(name.lowercased())-\(views.count)"
+        // A UUID, not the view count. The count is reused after a delete, so
+        // saving three views and deleting the first minted a duplicate id —
+        // two sidebar rows with one tag, and one delete removing both. It also
+        // keeps the id free of the "/" that separates view from card in the
+        // stored `overviewCard:` form.
+        let id = "custom-\(UUID().uuidString)"
         views.append(OverviewView(id: id, name: name,
                                   cards: cards.map(\.rawValue), isStandard: false))
         customOverviewViews = views

@@ -136,7 +136,6 @@ public enum RootPanel: String, Identifiable, Sendable {
     case matchAttachments
     case linkedDocuments
     case loanCalculator
-    case auditLog
     case closeBook
     case taxOptions
     case find
@@ -497,12 +496,16 @@ public final class AppModel {
         tabsByMode[currentMode] = extras
         // Land on the tab that took its place, or the one before it — never on
         // the home tab merely because the arithmetic was easier.
-        activeTabByMode[currentMode] = min(activeTabIndexAfterClosing(index, of: extras.count + 1),
-                                           extras.count)
+        activeTabByMode[currentMode] = min(activeTabIndexAfterClosing(index), extras.count)
         applyNavigationChange(from: old)
     }
 
-    private func activeTabIndexAfterClosing(_ closed: Int, of previousCount: Int) -> Int {
+    /// Where the selection goes when the tab at `closed` is removed. It needs
+    /// no count: the caller has already shrunk the tab list but has not yet
+    /// written the index, so this reads the pre-close value. (It took one, named
+    /// `previousCount`, that it never read — and the caller passed the count
+    /// *after* removal, so the name was wrong too.)
+    private func activeTabIndexAfterClosing(_ closed: Int) -> Int {
         let active = activeTabByMode[currentMode] ?? 0
         if active == closed { return closed }   // the next tab slides into place
         return active > closed ? active - 1 : active
@@ -537,12 +540,17 @@ public final class AppModel {
             activeTabByMode[mode] = existing + 1
             return
         }
-        let active = activeTabByMode[mode] ?? 0
+        // Clamped, not trusted. A stored index can outrun its list — restore
+        // filters dead tabs out and the index does not follow — and this is the
+        // one place that *subscripts* with it rather than reading through the
+        // clamp, so an unvalidated read here is a crash rather than a wrong tab.
+        let active = min(max(activeTabByMode[mode] ?? 0, 0), extras.count)
         if inNewTab || active == 0 {
             extras.append(selection)
             activeTabByMode[mode] = extras.count
         } else {
             extras[active - 1] = selection
+            activeTabByMode[mode] = active
         }
         tabsByMode[mode] = extras
     }
@@ -586,17 +594,21 @@ public final class AppModel {
         applyNavigationChange(from: old)
     }
 
-    /// Opens whatever is showing in a second tab beside it — View ▸ New Tab.
-    public func duplicateCurrentTab() {
-        navigate(to: storedSelection(in: currentMode), inNewTab: true)
+    /// Opens a new tab on the mode's home — View ▸ New Tab and the strip's +.
+    ///
+    /// It used to ask for a second tab on *what is showing*, which openTab
+    /// refuses by design: the never-a-duplicate rule fires before the
+    /// new-tab branch, so ⌘T and the + button did nothing in every state. A
+    /// new tab has to name something not already open, and the mode's home is
+    /// the one destination that is always meaningful.
+    public func openNewTab() {
+        let old = storedSelection(in: currentMode)
+        var extras = tabsByMode[currentMode] ?? []
+        extras.append(currentMode.defaultSelection)
+        tabsByMode[currentMode] = extras
+        activeTabByMode[currentMode] = extras.count
+        applyNavigationChange(from: old)
     }
-
-    /// Bumped when a custom Overview view is saved or deleted — the views
-    /// live in `UserDefaults`, so this is what tells SwiftUI to redraw.
-    var overviewViewsRevision = 0
-
-    /// Bumped when a sidebar sort changes — see `SidebarSort.swift`.
-    var sidebarSortRevision = 0
 
     /// Earliest posting per account, for the sidebar's "First Transaction"
     /// order. Memoised on ``bookRevision``: the sidebar asks per row on every
@@ -634,7 +646,16 @@ public final class AppModel {
         tabsByMode = tabs.mapValues { list in
             list.filter { $0 != AppMode(hosting: $0).defaultSelection }
         }
-        activeTabByMode = active
+        // Clamped against the list as restored, not as stored. Dropping a dead
+        // tab shifts every index after it, so a desk state that lost one would
+        // otherwise reopen on the tab *next to* the one it was left on — and an
+        // index past the end poisons `openTab` until the next relaunch.
+        // Counted from `tabsByMode`, already filtered above, plus the derived
+        // home tab. (`tabs(in:)` is shadowed here by the `tabs` parameter.)
+        activeTabByMode = active.reduce(into: [:]) { result, entry in
+            let count = (tabsByMode[entry.key]?.count ?? 0) + 1
+            result[entry.key] = min(max(entry.value, 0), count - 1)
+        }
         applyNavigationChange(from: old)
     }
 
@@ -2047,7 +2068,12 @@ public final class AppModel {
         isLocked = false
         externalChangePending = false
         presentedPanel = nil
-        isShowingReports = false
+        // `isShowingReports = false` used to be here. Its setter now navigates,
+        // and `document` is still live at this point — so closing the book from
+        // the Reports gallery switched the mode to Overview and *persisted* it,
+        // and the book reopened somewhere the user never was.
+        // `resetNavigation()` below does the same job after `document` is nil,
+        // where the write is correctly suppressed.
         searchQuery = ""
         clearFind()
         document?.discard()

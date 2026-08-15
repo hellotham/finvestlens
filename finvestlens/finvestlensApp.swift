@@ -158,7 +158,7 @@ struct finvestlensApp: App {
                         .disabled(!model.isOpen)
                 }
                 Divider()
-                Button("New Tab") { model.duplicateCurrentTab() }
+                Button("New Tab") { model.openNewTab() }
                     .keyboardShortcut("t", modifiers: .command)
                     .disabled(!model.isOpen)
                 // ⌥⌘W, not ⌘W. ⌘W closes the window everywhere in macOS and
