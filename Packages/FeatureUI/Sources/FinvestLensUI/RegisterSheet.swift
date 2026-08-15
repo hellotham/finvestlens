@@ -171,6 +171,12 @@ private struct SheetHost: NSViewRepresentable {
     private func push(into view: SheetContainerView) {
         view.sheet.onError = onError
         view.headerView.sortState = sortIndicator
+        view.headerView.onResetWidths = { [weak view] in
+            view?.sheet.resetColumnWidths()
+        }
+        view.headerView.onResizeEnded = { [weak view] in
+            view?.sheet.commitColumnWidths()
+        }
         view.headerView.onResize = { [weak view] column, width in
             view?.sheet.resizeColumn(column, to: width)
         }
@@ -384,6 +390,11 @@ enum SheetMetrics {
     /// side: three was a 6pt-wide sliver that had to be hit exactly, which is
     /// most of why the columns read as fixed rather than merely fiddly.
     static let resizeGrab: CGFloat = 6
+    /// How far the pointer must travel before a press on a ruler counts as a
+    /// resize rather than a click. Without it, a click that wobbled pinned a
+    /// column width permanently — and a pinned width overrides every measured
+    /// one.
+    static let dragSlop: CGFloat = 3
 
     /// The disclosure triangle's gutter at the leading edge of the first
     /// column. HIG *Outline views*: "Expose data hierarchy in the first
@@ -433,6 +444,14 @@ enum SheetMetrics {
             }
             for (column, width) in overrides where fixed[column] != nil {
                 fixed[column] = max(SheetMetrics.minColumnWidth, width)
+            }
+            // A width dragged on a wide display is a preference, not a
+            // guarantee: on a narrow one it has to give like everything else,
+            // or a single stale override starves every other column. The
+            // squeeze below is what does the giving; this only stops one
+            // column claiming the whole pane.
+            for (column, width) in fixed where width > totalWidth * 0.4 {
+                fixed[column] = max(SheetMetrics.minColumnWidth, totalWidth * 0.4)
             }
             // A hidden column is a zero-width one. Everything downstream then
             // falls out for free: `rect` returns an empty box so nothing draws,
@@ -745,6 +764,8 @@ private final class SheetView: NSView, NSTextFieldDelegate {
     private var naturalWidths: [SheetColumn: CGFloat] = [:]
     /// A ruler drag in progress, started on the body rather than the header.
     private var columnDrag: (column: SheetColumn, startX: CGFloat, startWidth: CGFloat)?
+    /// Whether this ruler drag ever passed the slop threshold.
+    private var columnDragMoved = false
     /// How fully this register is currently writing its dates.
     ///
     /// Screen width is the scarce resource here: a register has six columns
@@ -1480,15 +1501,49 @@ private final class SheetView: NSView, NSTextFieldDelegate {
             dateForm = form
             measured = measureNaturalWidths(rows)
             guard frame.width > 0 else { break }
-            if frame.width - measured.values.reduce(0, +) >= floor { break }
+            // Against the widths that will actually be *laid out*, which is not
+            // the same as the widths just measured: a column the user dragged
+            // wins over its natural size (`Frames.init`), and the ladder used
+            // to ignore that. A Date column pinned at 121pt therefore told the
+            // ladder there was room while the layout had none, so the date
+            // stayed long and the column stayed wide with slack to the right of
+            // the text — both of the things reported on 15 Aug 2026.
+            let effective = SheetColumn.allCases.reduce(CGFloat(0)) { total, column in
+                guard let natural = measured[column] else { return total }
+                if hiddenColumns.contains(column) { return total }
+                return total + (columnWidths[column] ?? natural)
+            }
+            if frame.width - effective >= floor { break }
         }
         naturalWidths = measured
     }
 
     /// A column divider was dragged, in the header or on the body's ruler.
+    /// Live width while a ruler is being dragged. **Not** persisted — see
+    /// `commitColumnWidths()`.
     func resizeColumn(_ column: SheetColumn, to width: CGFloat) {
         columnWidths[column] = width
+        rebuildFrames()
+    }
+
+    /// Persists the dragged widths, once, when the drag ends.
+    ///
+    /// This used to write `UserDefaults` on every `mouseDragged` — dozens of
+    /// writes per drag — and, worse, it ran for a drag of *one pixel*. A ruler
+    /// is grabbable within 6pt either side, so a click that wobbled while
+    /// landing near a column boundary pinned that column's width forever, and
+    /// a pinned width beats every computed one: it is how a Date column came to
+    /// sit at 121pt for a 55pt date, with the slack showing to the right of the
+    /// text. Nobody dragged it on purpose.
+    func commitColumnWidths() {
         ColumnWidths.save(columnWidths)
+    }
+
+    /// Forgets every dragged width and goes back to the measured ones.
+    func resetColumnWidths() {
+        columnWidths = [:]
+        ColumnWidths.save([:])
+        relayoutColumns()
         rebuildFrames()
     }
 
@@ -2056,6 +2111,8 @@ private final class SheetView: NSView, NSTextFieldDelegate {
     override func mouseDragged(with event: NSEvent) {
         guard let columnDrag else { return }
         let point = convert(event.locationInWindow, from: nil)
+        guard abs(point.x - columnDrag.startX) >= SheetMetrics.dragSlop else { return }
+        columnDragMoved = true
         let width = max(SheetMetrics.minColumnWidth,
                         columnDrag.startWidth + (point.x - columnDrag.startX))
         resizeColumn(columnDrag.column, to: width)
@@ -2063,6 +2120,8 @@ private final class SheetView: NSView, NSTextFieldDelegate {
 
     override func mouseUp(with event: NSEvent) {
         guard columnDrag != nil else { return }
+        if columnDragMoved { commitColumnWidths() }
+        columnDragMoved = false
         columnDrag = nil
         window?.invalidateCursorRects(for: self)
     }
@@ -3396,6 +3455,13 @@ private final class SheetHeaderView: NSView {
     }
     /// Reports a finished drag: the column and its new width.
     var onResize: ((SheetColumn, CGFloat) -> Void)?
+    /// Called once, when a real drag finishes, so the widths are written to
+    /// `UserDefaults` once rather than on every mouse-moved event.
+    var onResizeEnded: (() -> Void)?
+    /// "Reset Column Widths" from the header's Control-click menu.
+    var onResetWidths: (() -> Void)?
+    /// Whether this drag ever passed the slop threshold.
+    private var moved = false
     private var dragging: (column: SheetColumn, startX: CGFloat, startWidth: CGFloat)?
     var fontScale: CGFloat = 1 {
         didSet { if fontScale != oldValue { needsDisplay = true } }
@@ -3436,7 +3502,20 @@ private final class SheetHeaderView: NSView {
             item.state = hiddenColumns.contains(column) ? .off : .on
             menu.addItem(item)
         }
+        // A way back from a width you did not mean to set. Dragged widths beat
+        // every measured one, and before 15 Aug 2026 a click that wobbled near
+        // a ruler was enough to pin one — with no way to undo it short of
+        // editing defaults.
+        menu.addItem(.separator())
+        let reset = NSMenuItem(title: String(localized: "Reset Column Widths"),
+                               action: #selector(resetWidths(_:)), keyEquivalent: "")
+        reset.target = self
+        menu.addItem(reset)
         return menu
+    }
+
+    @objc private func resetWidths(_ sender: NSMenuItem) {
+        onResetWidths?()
     }
 
     @objc private func toggleColumn(_ sender: NSMenuItem) {
@@ -3551,6 +3630,10 @@ private final class SheetHeaderView: NSView {
     override func mouseDragged(with event: NSEvent) {
         guard let dragging else { return }
         let point = convert(event.locationInWindow, from: nil)
+        // A wobble is not a drag. Below this the pointer has not really moved,
+        // and treating it as a resize is how columns got pinned by accident.
+        guard abs(point.x - dragging.startX) >= SheetMetrics.dragSlop else { return }
+        moved = true
         let width = max(SheetMetrics.minColumnWidth,
                         dragging.startWidth + (point.x - dragging.startX))
         onResize?(dragging.column, width)
@@ -3559,6 +3642,8 @@ private final class SheetHeaderView: NSView {
     override func mouseUp(with event: NSEvent) {
         guard dragging != nil else { return }
         self.dragging = nil
+        if moved { onResizeEnded?() }
+        moved = false
         window?.invalidateCursorRects(for: self)
     }
 }
