@@ -158,11 +158,39 @@ extension AppModel {
         "\(commodity.namespace)|\(commodity.mnemonic)"
     }
 
+    // MARK: Securities no provider prices (`FR-INV-40`)
+
+    /// Whether this security is valued by hand because **no provider publishes
+    /// a price for it** — a retail super or managed-fund unit, a private
+    /// holding.
+    ///
+    /// Distinct from ``isDelisted(_:)``, which says a security has stopped
+    /// trading and its last price is final. These are still trading; their
+    /// price simply arrives on a statement rather than a feed. Conflating the
+    /// two would freeze a live holding's valuation and lie in the reports.
+    public func isUnquoted(_ commodity: Commodity) -> Bool {
+        unquotedSecurities.contains(securityKey(commodity))
+    }
+
+    /// Records that nothing will ever quote this security, or takes it back.
+    public func setUnquoted(_ commodity: Commodity, _ unquoted: Bool) {
+        let key = securityKey(commodity)
+        guard unquoted != unquotedSecurities.contains(key) else { return }
+        if unquoted {
+            unquotedSecurities.append(key)
+        } else {
+            unquotedSecurities.removeAll { $0 == key }
+        }
+        commitKvpCollections(named: unquoted ? "Mark as Valued by Hand" : "Mark as Quoted")
+    }
+
     /// The securities a fetch should actually ask a provider about: everything
     /// pricable, less the ones that have stopped trading. Asking after those
     /// spends a request to be told nothing, every run, forever.
     public var fetchableSecurities: [Commodity] {
-        pricableSecurities.filter { !isDelisted($0) }
+        // Neither the ones whose price is final nor the ones nothing publishes:
+        // both spend a request to be told nothing, every run, forever.
+        pricableSecurities.filter { !isDelisted($0) && !isUnquoted($0) }
     }
 
     /// Commodities the book holds at least one **provider-sourced** price for.

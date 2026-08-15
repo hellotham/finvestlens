@@ -467,3 +467,80 @@ struct ThrottleDetectionTests {
         #expect(!AppModel.looksRateLimited(nil))
     }
 }
+
+/// Securities nobody publishes a price for (`FR-INV-40`).
+///
+/// Asked for on 16 Aug 2026: "these are retail superannuation funds so will
+/// never have live prices — mark them as such so we don't try refetching."
+@MainActor
+@Suite("Unquoted securities")
+struct UnquotedSecurityTests {
+
+    private func book() throws -> (AppModel, URL) {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
+        let model = AppModel()
+        try model.newDocument(at: url)
+        return (model, url)
+    }
+
+    private func fund(_ name: String) -> Commodity {
+        Commodity(namespace: .security("Super"), mnemonic: name,
+                  fullName: name, smallestFraction: 10_000)
+    }
+
+    /// The point of the flag: it stops the asking, for prices *and* for company
+    /// text. A super option has no issuer profile either, and each attempt
+    /// spends a rate-limited request to be told nothing.
+    @Test("A hand-valued security is asked for neither prices nor company data")
+    func excludedFromBothFetches() throws {
+        let (model, url) = try book()
+        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+
+        let option = fund("MLC Growth")
+        _ = try #require(model.addAccount(name: "Super", type: .stock, commodity: option))
+        #expect(model.fetchableSecurities.contains(option))
+
+        model.setUnquoted(option, true)
+        #expect(model.isUnquoted(option))
+        #expect(!model.fetchableSecurities.contains(option))
+        #expect(!model.fundamentalsCoveredSecurities.contains(option))
+    }
+
+    /// And it is **not** delisting. A retail super unit is still trading and
+    /// its price still moves; saying otherwise would freeze its last price as
+    /// final and take it out of the valuation-confidence figures it belongs in.
+    @Test("Hand-valued is not the same as no longer trading")
+    func notTheSameAsDelisted() throws {
+        let (model, url) = try book()
+        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+
+        let option = fund("WSSP-B")
+        _ = try #require(model.addAccount(name: "Super", type: .stock, commodity: option))
+        model.setUnquoted(option, true)
+
+        #expect(model.isUnquoted(option))
+        #expect(!model.isDelisted(option), "still trading — the price just arrives on a statement")
+    }
+
+    @Test("The mark is reversible and survives a save")
+    func reversibleAndPersisted() async throws {
+        let (model, url) = try book()
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let option = fund("HPA Member")
+        _ = try #require(model.addAccount(name: "Super", type: .stock, commodity: option))
+        model.setUnquoted(option, true)
+        try model.save()
+        model.close()
+
+        let reopened = AppModel()
+        try await reopened.open(at: url)
+        defer { reopened.close() }
+        let again = try #require(reopened.pricableSecurities.first { $0.mnemonic == "HPA Member" })
+        #expect(reopened.isUnquoted(again), "the record is in the book, not the desk")
+
+        reopened.setUnquoted(again, false)
+        #expect(!reopened.isUnquoted(again))
+    }
+}

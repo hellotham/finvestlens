@@ -249,7 +249,12 @@ extension AppModel {
     /// configured provider covers. Public so a headless run can report the
     /// scope before spending the requests.
     public var fundamentalsCoveredSecurities: [Commodity] {
-        pricableSecurities.filter { fundamentalsSource(for: $0) != nil }
+        // A security nobody quotes is a security nobody writes about either: a
+        // retail super option has no issuer profile, no statements and no
+        // dividend history to fetch. Asking spends a rate-limited request per
+        // security, every run, to be told nothing — and on this book that was
+        // 22 of 85.
+        pricableSecurities.filter { !isUnquoted($0) && fundamentalsSource(for: $0) != nil }
     }
 
     /// Fetches company profile and financials for **every** security that has a

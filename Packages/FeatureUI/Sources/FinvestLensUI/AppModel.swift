@@ -1046,6 +1046,22 @@ public final class AppModel {
     /// never appear on the worklist — see ``isDelisted(_:)``.
     public internal(set) var delistedSecurities: [String] = []
 
+    /// Securities **nobody publishes a price for**, keyed by
+    /// `"namespace|mnemonic"` (`FR-INV-40`).
+    ///
+    /// Deliberately not ``delistedSecurities``, though both stop the fetching.
+    /// A retail superannuation or managed-fund unit is very much still
+    /// trading and its unit price moves every week — there is simply no public
+    /// feed for it, so it is valued from a statement by hand. Calling that
+    /// "no longer trading" would be false, would freeze its last price as
+    /// final, and would take it out of the valuation-confidence figures it
+    /// belongs in.
+    ///
+    /// Recorded, never inferred, for the same reason delisting is: a fund that
+    /// has not been priced for a month and one that never will be look
+    /// identical from the price data.
+    public internal(set) var unquotedSecurities: [String] = []
+
     /// Progress/result of the most recent quote fetch, for the UI.
     public internal(set) var quoteStatus: QuoteFetchStatus = .idle
 
@@ -1338,6 +1354,7 @@ public final class AppModel {
         static let favouriteAccounts = "finvestlens/favouriteAccounts"
         static let priceTargets = "finvestlens/priceTargets"
         static let delisted = "finvestlens/delistedSecurities"
+        static let unquoted = "finvestlens/unquotedSecurities"
         static let companyInfo = "finvestlens/companyInfo"
         static let savingsGoals = "finvestlens/savingsGoals"
         static let billableEntries = "finvestlens/billableEntries"
@@ -1370,6 +1387,7 @@ public final class AppModel {
         reportSettings = Self.decodeSlot(ReportSettings.self, book.kvp[KvpKey.reportSettings]) ?? ReportSettings()
         watchlist = Self.decodeSlot([Commodity].self, book.kvp[KvpKey.watchlist]) ?? []
         delistedSecurities = Self.decodeSlot([String].self, book.kvp[KvpKey.delisted]) ?? []
+        unquotedSecurities = Self.decodeSlot([String].self, book.kvp[KvpKey.unquoted]) ?? []
         favouriteAccountIDs = Self.decodeSlot([GncGUID].self, book.kvp[KvpKey.favouriteAccounts]) ?? []
         priceTargets = Self.decodeSlot([PriceTarget].self, book.kvp[KvpKey.priceTargets]) ?? []
         companyInfo = Self.decodeSlot(CompanyInfo.self, book.kvp[KvpKey.companyInfo]) ?? CompanyInfo()
@@ -1403,6 +1421,8 @@ public final class AppModel {
         book.kvp[KvpKey.priceTargets] = Self.encodeSlot(priceTargets)
         book.kvp[KvpKey.delisted] = delistedSecurities.isEmpty
             ? nil : Self.encodeSlot(delistedSecurities)
+        book.kvp[KvpKey.unquoted] = unquotedSecurities.isEmpty
+            ? nil : Self.encodeSlot(unquotedSecurities)
         book.kvp[KvpKey.companyInfo] =
             companyInfo == CompanyInfo() ? nil : Self.encodeSingle(companyInfo)
         book.kvp[KvpKey.savingsGoals] = Self.encodeSlot(savingsGoals)
@@ -2174,6 +2194,7 @@ public final class AppModel {
         reportSettings = ReportSettings()
         watchlist = []
         delistedSecurities = []
+        unquotedSecurities = []
         priceTargets = []
         quoteSymbols = [:]
         quoteProviders = [:]

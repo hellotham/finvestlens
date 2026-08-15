@@ -2980,3 +2980,34 @@ defect.
   `alreadyForeign`, and `localAmount` reads the split's **quantity**, because on
   a converted transaction `value` is the foreign figure and reading it made the
   fee's rate a hundredfold out.
+
+## Securities nobody quotes (16 Aug 2026)
+
+`FR-INV-40`. A bulk company-data run over the reference book asked 85
+securities and 22 of them could never answer: retail superannuation and
+managed-fund options — AMP, AT&T, BT, HPA, Heritage, Mercer, MLC, WSSP,
+Westpac — which have no ticker and no public feed. Their unit price arrives on
+a quarterly statement.
+
+**Recorded, not inferred.** `AppModel.unquotedSecurities` is a per-security
+record in the book's KVP, beside `delistedSecurities` and deliberately *not*
+part of it: a super option is still trading and its price still moves, so
+filing it under "no longer trading" would freeze its last price as final and
+take it out of the valuation-confidence figures it belongs in. Both stop the
+fetching; only one of them is true.
+
+`isUnquoted(_:)` / `setUnquoted(_:_:)` drive it, `fetchableSecurities` and
+`fundamentalsCoveredSecurities` both exclude it, the Investments row context
+menu carries **No Public Price** beside No Longer Trading, and
+`finlab prices --set-unquoted` / `--set-quoted` set it in bulk.
+
+Applied to the reference book: the 22 `SECURITY:Super` commodities. A bulk
+company-data run now considers **63 securities instead of 85** and stops
+provoking Yahoo's rate limiter, which is what the 22 hopeless requests per run
+were doing. Coverage after: **57 of 63**, the remainder being five bonds
+outside FIIG'"'"'s index and one unlisted fund (WAMFF — which *is* priced, 369
+Yahoo rows current to 14 Aug, and simply has no company text).
+
+WAMFF is the boundary case worth recording: it failed the profile fetch like
+the super options did, but it has a live price series, so it is **not** marked.
+The evidence that settles it is the price table, not the fund'"'"'s name.

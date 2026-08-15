@@ -93,6 +93,22 @@ enum PricesCommand {
             log(Fmt.row("save", Fmt.time(saveSeconds)))
             return
         }
+        // Same shape, different fact: a security nobody publishes a price for
+        // — a retail super option, a managed-fund unit — is still trading, so
+        // it must not be marked delisted. Both stop the fetching; only one of
+        // them is true.
+        if options.flag("set-unquoted") || options.flag("set-quoted") {
+            guard !wanted.isEmpty else {
+                throw LabError.message("--set-unquoted / --set-quoted need --symbol")
+            }
+            let unquoted = options.flag("set-unquoted")
+            for commodity in securities { model.setUnquoted(commodity, unquoted) }
+            log("  \(securities.map(\.mnemonic).sorted().joined(separator: ", ")) marked "
+                + (unquoted ? "valued by hand — no provider will be asked" : "quoted"))
+            let (_, saveSeconds) = try Stopwatch.measure { try model.save() }
+            log(Fmt.row("save", Fmt.time(saveSeconds)))
+            return
+        }
         // Restamp stored prices to the one convention. A price is a fact about
         // a day, and storing it as an instant let five clock conventions
         // accumulate in one book — after which two readers disagreed about

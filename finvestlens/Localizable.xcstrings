@@ -52376,6 +52376,53 @@
         }
       }
     },
+    "No Public Price": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kein öffentlicher Kurs"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sin precio público"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun cours public"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessun prezzo pubblico"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "公開価格なし"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sem preço público"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无公开价格"
+          }
+        }
+      }
+    },
     "No Results": {
       "extractionState": "manual",
       "localizations": {
@@ -86294,6 +86341,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "手工估值"
+          }
+        }
+      }
+    },
+    "Valued by hand from a statement — never ask a provider for it": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wird von Hand aus einer Abrechnung bewertet – nie bei einem Anbieter abfragen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se valora a mano desde un extracto: nunca se consulta a un proveedor"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Évalué à la main d’après un relevé — ne jamais interroger un fournisseur"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Valutato a mano da un rendiconto — non chiederlo mai a un fornitore"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "明細書から手入力で評価します。プロバイダには問い合わせません"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avaliado à mão a partir de um extrato — nunca consultar um provedor"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "依对账单手动估值 — 绝不向数据提供商查询"
           }
         }
       }

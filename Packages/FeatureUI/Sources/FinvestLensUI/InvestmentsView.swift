@@ -465,6 +465,14 @@ private struct InvestmentRowView: View {
             Toggle("No Longer Trading", isOn: Binding(
                 get: { model.isDelisted(row.commodity) },
                 set: { model.setDelisted(row.commodity, $0) }))
+            // Separate from the above on purpose. A retail super or
+            // managed-fund unit is still trading and its price still moves —
+            // there is just no feed, so it is valued from a statement. Saying
+            // "no longer trading" instead would freeze it and misreport it.
+            Toggle("No Public Price", isOn: Binding(
+                get: { model.isUnquoted(row.commodity) },
+                set: { model.setUnquoted(row.commodity, $0) }))
+                .help("Valued by hand from a statement — never ask a provider for it")
             if model.isWatchOnly(row.commodity) {
                 Button("Stop Watching", role: .destructive) {
                     model.removeWatchSecurity(row.commodity)
