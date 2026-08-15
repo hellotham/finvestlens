@@ -114,6 +114,12 @@ extension AppModel {
     func tabTitle(for selection: SidebarSelection) -> String {
         switch selection {
         case .dashboard: String(localized: "Overview")
+        case .overviewView(let id):
+            // A standard view's name is ours; a custom one is the user's, and
+            // `name` already holds the right text for both.
+            overviewView(id: id).name
+        case .overviewCard(_, let card):
+            OverviewCard(rawValue: card)?.title ?? String(localized: "Card")
         case .generalLedger: String(localized: "All Transactions")
         case .account(let id): accountName(id) ?? String(localized: "Account")
         case .reports: String(localized: "All Reports")

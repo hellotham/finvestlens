@@ -139,60 +139,15 @@ struct DashboardView: View {
     /// the same DST bug and could drift from the model's memo keys).
     private var todayCap: Date { AppModel.endOfToday() }
 
-    private enum Panel: String, Hashable, CaseIterable {
-        case upNext
-        case netWorth, income, expenses, cashflow, savingsRate, allocation, performance
-        case spendingTrend, topMovers, goals, recentActivity, composition
-        case alerts, bills, accounts, wellbeing
-
-        var minColumns: Int {
-            switch self {
-            case .upNext, .netWorth, .income, .expenses, .cashflow, .savingsRate, .alerts, .wellbeing: 1
-            case .allocation, .performance, .spendingTrend, .topMovers, .goals, .recentActivity, .bills: 2
-            case .composition, .accounts: 3
-            }
-        }
-
-        /// How many board rows the tile spans: charts and lists that need
-        /// real space take two, glance figures take one.
-        var units: Int {
-            switch self {
-            case .income, .expenses, .allocation, .performance,
-                 .accounts, .goals, .recentActivity: 2
-            default: 1
-            }
-        }
-
-        var title: String {
-            switch self {
-            case .upNext: "Up Next"
-            case .netWorth: "Net Worth"
-            case .income: "Income"
-            case .expenses: "Expenses"
-            case .cashflow: "Cashflow"
-            case .savingsRate: "Savings Rate"
-            case .allocation: "Allocation"
-            case .performance: "Performance"
-            case .spendingTrend: "Spending Trend"
-            case .topMovers: "Top Movers"
-            case .goals: "Savings Goals"
-            case .recentActivity: "Recent Activity"
-            case .composition: "Net Worth Composition"
-            case .alerts: "Alerts"
-            case .bills: "Upcoming Bills"
-            case .accounts: "Accounts"
-            case .wellbeing: "Wellbeing"
-            }
-        }
-    }
-
     @State private var showingWellbeing = false
+    @State private var savingView = false
+    @State private var newViewName = ""
     /// Panels the user has switched off (F10). Desk state in UserDefaults.
     @AppStorage("dashboard.hiddenPanels") private var hiddenPanelsRaw = ""
     private var hiddenPanels: Set<String> {
         Set(hiddenPanelsRaw.split(separator: "|").map(String.init))
     }
-    private func panelBinding(_ panel: Panel) -> Binding<Bool> {
+    private func panelBinding(_ panel: OverviewCard) -> Binding<Bool> {
         Binding(
             get: { !hiddenPanels.contains(panel.rawValue) },
             set: { shown in
@@ -204,43 +159,64 @@ struct DashboardView: View {
 
     var body: some View {
         let range = model.resolve(period)
-        return GeometryReader { geo in
-            let portfolio = model.portfolio(asOf: min(range.to, todayCap))
-            let plan = layoutPlan(size: geo.size, range: range, portfolio: portfolio)
-            // The dashboard is a board, not a page (F8): tiles pack into the
-            // window that actually exists — columns from the width, rows from
-            // the height, stretched to fill it exactly — and the priority
-            // list decides which cards make the cut. Nothing scrolls;
-            // resizing the window re-deals the board.
-            HStack(alignment: .top, spacing: 16) {
-                ForEach(plan.indices, id: \.self) { columnIndex in
-                    VStack(spacing: 16) {
-                        ForEach(plan[columnIndex]) { tile in
-                            view(for: tile.panel, range: range, portfolio: portfolio)
-                                .frame(maxWidth: .infinity, alignment: .topLeading)
-                                .frame(height: tile.height)
-                                .clipped()
-                        }
-                        Spacer(minLength: 0)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .top)
-                }
+        return Group {
+            if let card = model.zoomedOverviewCard {
+                zoomed(card, range: range)
+            } else {
+                board(range: range)
             }
-            .padding(20)
         }
-        .navigationTitle("Dashboard")
+        .navigationTitle(boardTitle)
+        // A favourite *is* a saved custom view (navigation-design §4.3), which
+        // is why there is one concept here and not two.
+        .alert("Save This View", isPresented: $savingView) {
+            TextField("Name", text: $newViewName)
+            Button("Cancel", role: .cancel) { newViewName = "" }
+            Button("Save") {
+                let name = newViewName.trimmingCharacters(in: .whitespaces)
+                if !name.isEmpty {
+                    model.saveOverviewView(named: name,
+                                           cards: model.currentOverviewView.overviewCards)
+                }
+                newViewName = ""
+            }
+        } message: {
+            Text("The cards on this board become a view you can come back to.")
+        }
         .toolbar {
             ToolbarItem {
                 // Show/hide panels (F10). Width and relevance still gate —
                 // this is "never show me", not layout control.
                 Menu {
-                    ForEach(Panel.allCases, id: \.self) { panel in
-                        Toggle(panel.title, isOn: panelBinding(panel))
+                    // Every card, including those this view does not carry:
+                    // nothing is unreachable merely because it did not fit the
+                    // board (`FR-NAV-09`). Choosing one opens it full-window
+                    // until closed.
+                    Section("Show a Card") {
+                        ForEach(OverviewCard.allCases, id: \.self) { panel in
+                            Button(panel.title) {
+                                model.navigate(to: .overviewCard(
+                                    view: model.currentOverviewView.id,
+                                    card: panel.rawValue))
+                            }
+                        }
+                    }
+                    Section("Never Show") {
+                        ForEach(OverviewCard.allCases, id: \.self) { panel in
+                            Toggle(panel.title, isOn: panelBinding(panel))
+                        }
+                    }
+                    Divider()
+                    Button("Save This View…") { savingView = true }
+                    if !model.currentOverviewView.isStandard {
+                        Button("Delete This View", role: .destructive) {
+                            model.deleteOverviewView(id: model.currentOverviewView.id)
+                        }
                     }
                 } label: {
-                    Label("Customise", systemImage: "rectangle.badge.checkmark")
+                    Label("Cards", systemImage: "rectangle.badge.checkmark")
                 }
-                .help("Choose which panels the dashboard shows")
+                .help("Show a card, hide one, or save this set as a view")
             }
         }
         .task(id: RangeKey(from: range.from, to: range.to)) {
@@ -250,14 +226,108 @@ struct DashboardView: View {
 
     private var period: ReportPeriod { model.period }
 
+    /// The board: cards packed into the window that actually exists (F8).
+    private func board(range: (from: Date, to: Date)) -> some View {
+        GeometryReader { geo in
+            let portfolio = model.portfolio(asOf: min(range.to, todayCap))
+            let plan = layoutPlan(size: geo.size, range: range, portfolio: portfolio)
+            VStack(spacing: 12) {
+                // The explicit door out of Overview (`FR-NAV-10`). Selecting a
+                // view never switches mode — a control that moves because you
+                // clicked something else is worse than one that is hidden — so
+                // the way through is a button that says where it goes.
+                if let mode = model.currentOverviewView.mode {
+                    HStack {
+                        Spacer()
+                        Button { model.showMode(mode) } label: {
+                            Label {
+                                Text("Open \(mode.name)")
+                            } icon: {
+                                Image(systemName: "arrow.forward")
+                            }
+                        }
+                        .buttonStyle(.borderless)
+                    }
+                }
+                if plan.allSatisfy(\.isEmpty) {
+                    // A view whose cards have nothing to report — or, for
+                    // Business, a view whose cards do not exist yet. Said
+                    // rather than shown as an empty board.
+                    ContentUnavailableView(
+                        "Nothing to show on this view", systemImage: "square.grid.2x2",
+                        description: Text("No card on this view has anything to report for this period."))
+                } else {
+                    HStack(alignment: .top, spacing: 16) {
+                        ForEach(plan.indices, id: \.self) { columnIndex in
+                            VStack(spacing: 16) {
+                                ForEach(plan[columnIndex]) { tile in
+                                    view(for: tile.panel, range: range, portfolio: portfolio)
+                                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                                        .frame(height: tile.height)
+                                        .clipped()
+                                        .contextMenu {
+                                            Button("Show Full Window") {
+                                                model.navigate(to: .overviewCard(
+                                                    view: model.currentOverviewView.id,
+                                                    card: tile.panel.rawValue))
+                                            }
+                                        }
+                                }
+                                Spacer(minLength: 0)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .top)
+                        }
+                    }
+                }
+            }
+            .padding(20)
+        }
+    }
+
+    /// One card, full window, with a close button back to the board
+    /// (`FR-NAV-08`).
+    ///
+    /// A state of the board rather than a sheet, so ⌘W does not close the
+    /// window and the mode selector keeps saying Overview.
+    private func zoomed(_ card: OverviewCard, range: (from: Date, to: Date)) -> some View {
+        let portfolio = model.portfolio(asOf: min(range.to, todayCap))
+        return VStack(spacing: 12) {
+            HStack {
+                Spacer()
+                Button {
+                    model.navigate(to: .overviewView(model.currentOverviewView.id))
+                } label: {
+                    Label("Back to the board", systemImage: "xmark.circle.fill")
+                }
+                .buttonStyle(.plain)
+                .keyboardShortcut(.escape, modifiers: [])
+                .help("Close this card and return to the board")
+            }
+            view(for: card, range: range, portfolio: portfolio)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        }
+        .padding(20)
+    }
+
+    /// The window's title: the card if one is zoomed, otherwise the view.
+    private var boardTitle: String {
+        if let card = model.zoomedOverviewCard { return card.title }
+        return model.currentOverviewView.name
+    }
+
     private func columnCount(for width: CGFloat) -> Int {
         max(1, min(3, Int(width / 380)))
     }
 
-    private func panels(columns: Int, range: (from: Date, to: Date), portfolio: Portfolio?) -> [Panel] {
-        let all: [Panel] = [.upNext, .netWorth, .wellbeing, .income, .expenses, .cashflow,
+    private func panels(columns: Int, range: (from: Date, to: Date), portfolio: Portfolio?) -> [OverviewCard] {
+        // Board priority, highest first. A *view* says which of these are
+        // eligible; the packing below still decides placement from the window,
+        // so a view never has to describe a layout (navigation-design §4.3).
+        let priority: [OverviewCard] = [.upNext, .netWorth, .wellbeing, .income, .expenses, .cashflow,
                             .savingsRate, .allocation, .performance, .spendingTrend, .topMovers,
                             .goals, .recentActivity, .composition, .alerts, .bills, .accounts]
+        let eligible = Set(model.currentOverviewView.cards)
+        let all = priority.filter { eligible.contains($0.rawValue) }
         return all.filter { panel in
             guard !hiddenPanels.contains(panel.rawValue) else { return false }
             guard panel.minColumns <= columns else { return false }
@@ -269,7 +339,7 @@ struct DashboardView: View {
     /// card whose whole message is "nothing in this period" gives its tile to
     /// one with information — the prioritising the fixed board exists for.
     /// Every check reads memoised model state.
-    private func hasContent(_ panel: Panel, range: (from: Date, to: Date),
+    private func hasContent(_ panel: OverviewCard, range: (from: Date, to: Date),
                             portfolio: Portfolio?) -> Bool {
         switch panel {
         case .upNext:
@@ -312,9 +382,9 @@ struct DashboardView: View {
     }
 
     private struct Tile: Identifiable {
-        let panel: Panel
+        let panel: OverviewCard
         let height: CGFloat
-        var id: Panel { panel }
+        var id: OverviewCard { panel }
     }
 
     /// Deals the board: rows-per-column from the window height (row height
@@ -377,7 +447,7 @@ struct DashboardView: View {
     }
 
     @ViewBuilder
-    private func view(for panel: Panel, range: (from: Date, to: Date), portfolio: Portfolio?) -> some View {
+    private func view(for panel: OverviewCard, range: (from: Date, to: Date), portfolio: Portfolio?) -> some View {
         switch panel {
         case .upNext: upNextCard
         case .netWorth: netWorthCard(asOf: min(range.to, todayCap))

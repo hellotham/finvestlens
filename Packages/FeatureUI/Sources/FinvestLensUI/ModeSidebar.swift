@@ -509,10 +509,39 @@ enum ModeSidebarRows {
         }
     }
 
-    /// Overview's board. N4 replaces this with views and their cards; until
-    /// then it is the one destination the mode has.
+    /// Views, with their cards nested beneath — section then instances, the
+    /// same two-level shape as every other mode. It doubles as the card index,
+    /// which is why no separate "which cards are on this view?" affordance is
+    /// needed (navigation-design §4.3).
+    ///
+    /// Selecting a view changes the board; selecting a card shows it
+    /// full-window. Neither switches mode: the views are named after modes, and
+    /// if the parent row navigated away while the child row showed content,
+    /// that is one list doing navigation *and* data — the exact conflation this
+    /// redesign deletes from the account sidebar, rebuilt at smaller scale in
+    /// the mode meant to demonstrate the pattern.
     private static func overview(_ model: AppModel) -> [SidebarGroup] {
-        [.untitled([.collection(.dashboard, "Overview", symbol: "square.grid.2x2")])]
+        func row(_ view: OverviewView) -> SidebarRow {
+            let cards = view.overviewCards.map { card in
+                SidebarRow.instance(.overviewCard(view: view.id, card: card.rawValue),
+                                    card.title)
+            }
+            if let key = view.title {
+                return .collection(.overviewView(view.id), key,
+                                   symbol: "square.grid.2x2", children: cards)
+            }
+            return SidebarRow(id: .overviewView(view.id), key: nil, text: view.name,
+                              symbol: "bookmark", detail: nil, children: cards)
+        }
+        var groups: [SidebarGroup] = [
+            .untitled(OverviewView.standards.map(row)),
+        ]
+        // A favourite *is* a saved custom view — there is no second concept.
+        let custom = model.customOverviewViews
+        if !custom.isEmpty {
+            groups.append(.titled("custom", "Custom", custom.map(row)))
+        }
+        return groups
     }
 
     private static func investments(_ model: AppModel) -> [SidebarGroup] {

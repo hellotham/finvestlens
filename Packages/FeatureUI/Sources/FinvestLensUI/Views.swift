@@ -429,7 +429,7 @@ public struct FinvestLensRootView: View {
     @ViewBuilder
     private var destinationView: some View {
         switch model.sidebarSelection ?? .dashboard {
-        case .dashboard: DashboardView(model: model)
+        case .dashboard, .overviewView, .overviewCard: DashboardView(model: model)
         case .account: RegisterView(model: model)
         case .reports, .report, .savedReport: ReportsHome(model: model)
         case .generalLedger: GeneralLedgerView(model: model)

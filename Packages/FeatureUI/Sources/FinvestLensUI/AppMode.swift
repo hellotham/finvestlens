@@ -44,6 +44,23 @@ public enum AppMode: String, CaseIterable, Identifiable, Hashable, Sendable {
         }
     }
 
+    /// The mode's name as text, for a sentence that has to contain it — the
+    /// board's "Open Accounts" button. Spelled out rather than derived from
+    /// ``title``: a `LocalizedStringKey` cannot be interpolated into another
+    /// string, and `String(localized:)` resolves against `Bundle.main`, where
+    /// the app's single catalog lives.
+    public var name: String {
+        switch self {
+        case .overview: String(localized: "Overview")
+        case .accounts: String(localized: "Accounts")
+        case .investments: String(localized: "Investments")
+        case .reports: String(localized: "Reports")
+        case .business: String(localized: "Business")
+        case .planning: String(localized: "Planning")
+        case .records: String(localized: "Records")
+        }
+    }
+
     public var symbol: String {
         switch self {
         case .overview: "square.grid.2x2"
@@ -92,7 +109,9 @@ public enum AppMode: String, CaseIterable, Identifiable, Hashable, Sendable {
     /// destination into whichever mode happened to be showing.
     public init(hosting selection: SidebarSelection) {
         switch selection {
-        case .dashboard: self = .overview
+        // Overview's views and cards stay in Overview. Selecting one changes
+        // what you see; it never changes where you are (navigation-design §4.3).
+        case .dashboard, .overviewView, .overviewCard: self = .overview
         case .account, .generalLedger: self = .accounts
         case .investments, .security: self = .investments
         case .reports, .savedReport, .report: self = .reports

@@ -193,6 +193,8 @@ extension AppModel {
         case .savedReport(let id): "savedReport:\(id.uuidString)"
         case .security(let key): "security:\(key)"
         case .report(let kind): "report:\(kind.rawValue)"
+        case .overviewView(let id): "overviewView:\(id)"
+        case .overviewCard(let view, let card): "overviewCard:\(view)/\(card)"
         }
     }
 
@@ -226,6 +228,15 @@ extension AppModel {
         }
         if raw.hasPrefix("security:") {
             return .security(String(raw.dropFirst("security:".count)))
+        }
+        if raw.hasPrefix("overviewView:") {
+            return .overviewView(String(raw.dropFirst("overviewView:".count)))
+        }
+        if raw.hasPrefix("overviewCard:") {
+            let body = raw.dropFirst("overviewCard:".count)
+            guard let slash = body.firstIndex(of: "/") else { return nil }
+            return .overviewCard(view: String(body[body.startIndex..<slash]),
+                                 card: String(body[body.index(after: slash)...]))
         }
         if raw.hasPrefix("report:") {
             return ReportKind(rawValue: String(raw.dropFirst("report:".count)))

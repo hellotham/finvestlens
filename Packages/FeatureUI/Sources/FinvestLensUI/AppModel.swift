@@ -200,6 +200,16 @@ public enum SidebarSelection: Hashable, Sendable {
     /// kvp — so two values of the *same* security compare unequal, and the
     /// selection would drop the moment a price fetch rewrote one of them.
     case security(String)
+    /// One of Overview's views — a named selection of cards (`FR-NAV-07`).
+    case overviewView(String)
+    /// One card, shown full-window (`FR-NAV-08`), and the view it was picked
+    /// from.
+    ///
+    /// The view is part of the identity because a card belongs to several: Net
+    /// Worth is on Mix *and* on Accounts, and two sidebar rows carrying the same
+    /// tag make `List` selection ambiguous. It is also the answer to "which
+    /// board does closing this card return to?".
+    case overviewCard(view: String, card: String)
     /// The book's own history. A collection, which is why it is a Records
     /// destination now rather than the modal sheet it used to be — everything
     /// else in the Tools menu is a command (navigation-design §4.2).
@@ -580,6 +590,10 @@ public final class AppModel {
     public func duplicateCurrentTab() {
         navigate(to: storedSelection(in: currentMode), inNewTab: true)
     }
+
+    /// Bumped when a custom Overview view is saved or deleted — the views
+    /// live in `UserDefaults`, so this is what tells SwiftUI to redraw.
+    var overviewViewsRevision = 0
 
     /// Bumped when a sidebar sort changes — see `SidebarSort.swift`.
     var sidebarSortRevision = 0
