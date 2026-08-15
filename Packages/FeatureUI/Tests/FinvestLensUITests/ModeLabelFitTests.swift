@@ -1,0 +1,91 @@
+//
+//  ModeLabelFitTests.swift
+//  FinvestLens — FeatureUI
+//
+//  Whether the toolbar's modes can say their names (`FR-NAV-01`).
+//
+//  Reported 16 Aug 2026: the modes are "the most important part of the app" and
+//  shipped as unlabelled icons — "completely opaque for the beginner". The
+//  label was always on the `Label`; macOS draws a bordered toggle icon-only,
+//  and `navigation-design.md` §4.1 had asked for labels while §4.1a's system
+//  toolbar customisation forced one item per mode. Nobody chose the outcome.
+//
+//  Copyright (C) 2026 Christine Tham
+//  SPDX-License-Identifier: GPL-3.0-or-later
+//
+
+import Foundation
+import Testing
+@testable import FinvestLensUI
+
+@MainActor
+@Suite("Mode label fit")
+struct ModeLabelFitTests {
+
+    private var defaults: [AppMode] { AppMode.toolbarDefault }
+
+    /// Measured in the system font on 16 Aug 2026: the five default modes come
+    /// to 488pt labelled, which with the 380pt reserved for the rest of the
+    /// toolbar needs 868pt.
+    ///
+    /// So they do **not** fit the 860pt minimum window — by eight points — and
+    /// this test says so rather than rounding in their favour. They fit from
+    /// there up, including the 986pt window this was reported from and the
+    /// 1280pt default. Someone who squeezes the window to its floor gets
+    /// symbols, which is the documented degradation and not a failure.
+    @Test("The default five fit a real window, but not the minimum one")
+    func defaultsFit() {
+        #expect(!ModeLabelFit.labelsFit(defaults, in: 860), "eight points short")
+        #expect(ModeLabelFit.labelsFit(defaults, in: 986))
+        #expect(ModeLabelFit.labelsFit(defaults, in: 1_280))
+    }
+
+    /// The reason this is a measurement and not a preference: labelling every
+    /// mode is the overflow HIG *Toolbars* tells us to avoid.
+    @Test("All seven do not fit, and are not pretended to")
+    func allSevenDoNot() {
+        #expect(!ModeLabelFit.labelsFit(AppMode.allCases, in: 860))
+    }
+
+    /// Narrow windows drop to symbols rather than overflowing.
+    @Test("A narrow window gives up the labels")
+    func narrowWindowDropsLabels() {
+        #expect(!ModeLabelFit.labelsFit(defaults, in: 700))
+        #expect(!ModeLabelFit.labelsFit(defaults, in: 0), "no measurement yet is not a licence")
+    }
+
+    /// Widths come from the localised text, so a longer language shrinks the
+    /// window at which labels survive rather than overflowing it.
+    @Test("A longer name costs more room")
+    func longerNamesCostMore() {
+        #expect(ModeLabelFit.width(of: "Investments") > ModeLabelFit.width(of: "Reports"))
+        #expect(ModeLabelFit.width(of: "") == ModeLabelFit.symbolAndPadding,
+                "a nameless mode still occupies its symbol and padding")
+    }
+
+    /// The model asks about the modes actually on the toolbar, not all seven —
+    /// so leaving the defaults alone keeps the labels, and adding a sixth is
+    /// the act that spends the room.
+    @Test("The model measures the visible modes at the measured width")
+    func modelUsesVisibleModes() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
+        let model = AppModel()
+        try model.newDocument(at: url)
+        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+
+        #expect(!model.modeLabelsFit, "nothing measured yet")
+        model.windowWidth = 1_280
+        #expect(model.modeLabelsFit)
+        model.windowWidth = 640
+        #expect(!model.modeLabelsFit)
+    }
+
+    /// Every mode on the toolbar by default is one of the five the design
+    /// names, and the measurement is taken over exactly those.
+    @Test("The default set is the five the design names")
+    func defaultSet() {
+        #expect(AppMode.toolbarDefault == [.overview, .accounts, .investments, .reports, .business])
+        #expect(AppMode.allCases.filter(\.isOnToolbarByDefault) == AppMode.toolbarDefault)
+    }
+}

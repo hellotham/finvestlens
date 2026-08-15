@@ -522,6 +522,22 @@ public struct FinvestLensRootView: View {
     }
 
     public var body: some View {
+        splitView
+            // The mode buttons live in the window's toolbar, outside any view's
+            // geometry, so the width they have to fit in is measured here and
+            // handed to them through the model.
+            .background(
+                GeometryReader { geo in
+                    Color.clear
+                        .onAppear { model.windowWidth = geo.size.width }
+                        .onChange(of: geo.size.width) { _, width in
+                            model.windowWidth = width
+                        }
+                }
+            )
+    }
+
+    private var splitView: some View {
         NavigationSplitView {
             ModeSidebar(model: model)
                 // The title names the mode, because the sidebar's contents now
@@ -820,7 +836,26 @@ struct ModeButton: View {
             Label(mode.title, systemImage: mode.symbol)
         }
         .toggleStyle(.button)
+        // Words while they fit, symbols when they do not.
+        //
+        // The label was always here; macOS draws a bordered toggle icon-only,
+        // so what shipped was seven unlabelled glyphs — "completely opaque for
+        // the beginner", and against *Toolbars*: "Don't make people guess or
+        // experiment to figure out what a toolbar item does." Always labelling
+        // is not open either: seven labelled modes measure 669pt against an
+        // 860pt minimum window, and that is the overflow the same page tells us
+        // to avoid. So it is measured per window, in the language on screen.
+        .modeLabelStyle(showing: model.modeLabelsFit)
         .help(mode.title)
+    }
+}
+
+private extension View {
+    /// The two label styles are different *types*, so they cannot meet in a
+    /// ternary — the branch has to be in the view tree.
+    @ViewBuilder
+    func modeLabelStyle(showing labels: Bool) -> some View {
+        if labels { labelStyle(.titleAndIcon) } else { labelStyle(.iconOnly) }
     }
 }
 

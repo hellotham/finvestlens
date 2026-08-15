@@ -437,3 +437,33 @@ struct FundamentalsRoutingTests {
         #expect(model.fundamentalsSource(for: bond)?.kind == .yahoo)
     }
 }
+
+/// Telling "ask again later" apart from "there is nothing here".
+///
+/// A bulk run over 85 securities provoked Yahoo into refusing — `getcrumb`
+/// itself answered "Too Many Requests" — and the securities it refused were
+/// recorded as having no company data. Those are opposite facts: one is a
+/// wall to wait out, the other is a security nobody publishes on.
+@MainActor
+@Suite("Throttle detection")
+struct ThrottleDetectionTests {
+
+    @Test("A refusal is recognised however the provider words it")
+    func recognised() {
+        #expect(AppModel.looksRateLimited(.unavailable("Too Many Requests")))
+        #expect(AppModel.looksRateLimited(.unavailable("HTTP 429")))
+        #expect(AppModel.looksRateLimited(.unavailable("rate limit exceeded")))
+        #expect(AppModel.looksRateLimited(.unavailable("Throttled, retry later")))
+    }
+
+    /// The distinction that matters: a security no provider covers must not be
+    /// retried forever, and a throttled one must not be filed as empty.
+    @Test("A genuine absence is not mistaken for a throttle")
+    func absenceIsNotAThrottle() {
+        #expect(!AppModel.looksRateLimited(.unavailable("Yahoo has no company data for this security.")))
+        #expect(!AppModel.looksRateLimited(.unavailable("No configured provider supplies company data.")))
+        #expect(!AppModel.looksRateLimited(.idle))
+        #expect(!AppModel.looksRateLimited(.fetching))
+        #expect(!AppModel.looksRateLimited(nil))
+    }
+}

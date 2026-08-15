@@ -121,6 +121,24 @@ they stop fitting. Modes must never overflow — so they are one segmented
 control (a single item that cannot be split up), sized for the narrowest window
 the app supports, with labels short enough to survive it.
 
+**Corrected 16 Aug 2026 — this section and §4.1a were in conflict, and the
+build resolved it silently.** §4.1a's system toolbar customisation needs *one
+`ToolbarItem` per mode*, which rules out the single segmented control asked for
+here; the build took the customisation and the labels were the casualty, so
+seven unlabelled glyphs shipped and were reported as "completely opaque for the
+beginner". Against HIG *Toolbars*: "Don't make people guess or experiment to
+figure out what a toolbar item does."
+
+Both are now honoured by **measuring** instead of choosing. Sized in the system
+font: the five default modes labelled are 488pt and all seven 669pt, against an
+860pt minimum window and 380pt of other toolbar. So labels show at 868pt and
+above — the reported 986pt window, the 1280pt default — and drop to symbols
+below, which is the degradation the overflow warning asks for rather than a
+compromise. Localised text is measured, not the English source
+(`ModeLabelFit`). Whichever way it lands, **the sidebar header names the mode in
+words**, so orientation never depends on the toolbar being wide, visible, or
+labelled at all.
+
 ### 4.2 The sidebar shows one mode's instances, two levels deep
 
 **Every mode has real instance collections**, so no mode's sidebar has to be a

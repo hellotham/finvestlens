@@ -2949,7 +2949,25 @@ actually gave.
 
 **Company data in bulk** (`FR-INV-39`). `finlab fundamentals` drives the same
 `fetchAllFundamentals` as Investments ▸ More, so a headless fill and an in-app
-one produce the same book.
+one produce the same book. Running it on the reference book found two things
+reading about it would not have:
+
+- **Bonds were asking the wrong service.** Their identifier is an ISIN, which
+  every ticker provider answers "no data" to, so all fifteen came back empty.
+  `fundamentalsSource(for:)` now routes an ISIN-identified security to FIIG —
+  which is a different act from `fiigCandidates`' refusal to auto-apply a
+  provider: that one *persists* a choice for prices, where being wrong writes a
+  wrong number, while this chooses where to ask for text, once.
+- **Yahoo throttles a bulk run.** The first pass filled 29 of 85 and the rest
+  returned empty, with `getcrumb` itself answering "Too Many Requests" — and
+  those empties were being recorded as "this security has no company data",
+  which is the opposite fact. `looksRateLimited(_:)` tells a wall from an
+  absence, and a refused security is waited out and retried once with a growing
+  pause. Only the securities that hit the wall pay for it.
+
+Unlisted super and managed-fund units (HPA, MLC, WSSP, AT&T, Heritage, BT) have
+no ticker and no provider covers them; they stay hand-valued by nature, not by
+defect.
 
 ### Two lessons the dry runs taught
 

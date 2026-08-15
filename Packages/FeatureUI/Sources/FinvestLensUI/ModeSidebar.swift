@@ -182,6 +182,34 @@ struct ModeSidebar: View {
     /// accessibility label naming what it filters.
     @ViewBuilder
     private var header: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            // The mode, in words, permanently.
+            //
+            // The toolbar's mode buttons drop to symbols when the window cannot
+            // hold their labels (`ModeLabelFit`), and they vanish entirely if
+            // someone hides the toolbar — so orientation cannot rest on them
+            // alone. HIG *Toolbars* counts "the title of the current view"
+            // among a toolbar's three jobs and *Tab bars* warns that when the
+            // selector is hidden "people can forget which area of the app
+            // they're in"; this is the answer that costs no toolbar width.
+            HStack(spacing: 6) {
+                Image(systemName: model.mode.symbol)
+                    .foregroundStyle(.tint)
+                    .accessibilityHidden(true)
+                Text(model.mode.title)
+                    .scaledFont(.headline)
+                Spacer()
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(Text(model.mode.title))
+            .accessibilityAddTraits(.isHeader)
+
+            controls
+        }
+        .padding(8)
+    }
+
+    private var controls: some View {
         HStack(spacing: 6) {
             TextField(filterPrompt, text: $filter)
                 .textFieldStyle(.roundedBorder)

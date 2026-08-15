@@ -230,7 +230,19 @@ extension AppModel {
         public var current: String
         public var filled: Int
         public var failures: [String]
+        /// How many securities have been refused and waited out. Reported, so
+        /// a slow run is legibly slow rather than mysteriously so.
+        public var throttled: Int = 0
         public var fraction: Double { total == 0 ? 0 : Double(done) / Double(total) }
+    }
+
+    /// Whether a failure reads as "ask again later" rather than "there is
+    /// nothing here" — the difference between a throttle and an absence.
+    static func looksRateLimited(_ status: FundamentalsStatus?) -> Bool {
+        guard case let .unavailable(reason) = status else { return false }
+        let text = reason.lowercased()
+        return text.contains("too many") || text.contains("429")
+            || text.contains("rate limit") || text.contains("throttl")
     }
 
     /// The securities a bulk run would actually ask about — everything a
@@ -268,12 +280,30 @@ extension AppModel {
             return
         }
         var run = FundamentalsRun(done: 0, total: securities.count, current: "",
-                                  filled: 0, failures: [])
+                                  filled: 0, failures: [], throttled: 0)
         fundamentalsRun = run
         for commodity in securities {
             run.current = commodity.mnemonic
             fundamentalsRun = run
             await fetchFundamentals(for: commodity, force: force)
+
+            // Yahoo throttles, and a bulk run is exactly what provokes it:
+            // measured 16 Aug 2026 over 85 securities, the first pass filled 29
+            // and the rest came back empty, with `getcrumb` itself answering
+            // "Too Many Requests". A run that quietly stops working half way is
+            // worse than a slow one, because the empties look like "this
+            // security has no data" rather than "ask again later".
+            //
+            // So a refusal is waited out and retried once, and the pause grows
+            // rather than being a fixed sleep nobody tuned. Successes cost
+            // nothing extra — only the securities that actually hit the wall
+            // pay, which keeps a book of already-cached securities fast.
+            if Self.looksRateLimited(fundamentalsStatus[key(commodity)]) {
+                run.throttled += 1
+                fundamentalsRun = run
+                try? await Task.sleep(for: .seconds(min(30, 2 * run.throttled)))
+                await fetchFundamentals(for: commodity, force: force)
+            }
             // What the run achieved, judged by what is now on the security
             // rather than by the call having returned: a provider that answers
             // "no statements for this one" is a completed fetch and an empty

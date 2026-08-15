@@ -1248,6 +1248,24 @@ public final class AppModel {
     /// progress strip the same way `quoteProgress` drives the price one.
     public var fundamentalsRun: FundamentalsRun?
 
+    /// The window's current width, measured by the content view.
+    ///
+    /// Held on the model because the thing that needs it — the mode buttons —
+    /// lives in the window's *toolbar*, which is outside the content view's
+    /// geometry and has no other way to learn how much room it has.
+    public var windowWidth: CGFloat = 0
+
+    /// Whether the mode buttons currently on the toolbar can show their names.
+    ///
+    /// Only the visible ones are measured: someone who has left the default
+    /// five alone keeps their labels, and adding a sixth or seventh is the act
+    /// that spends the room — which is the right way round, because that person
+    /// has already shown they know what the modes are.
+    public var modeLabelsFit: Bool {
+        ModeLabelFit.labelsFit(ModeToolbar.modes.filter(\.isOnToolbarByDefault),
+                               in: windowWidth)
+    }
+
     /// Bumped when the sidecar changes. The cache is a file, not an observed
     /// object, so without this a freshly fetched profile would sit on disk
     /// while the page kept drawing the absence of one.
