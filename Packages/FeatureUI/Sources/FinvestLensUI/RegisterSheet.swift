@@ -78,7 +78,14 @@ struct RegisterSheet: View {
         SheetHost(model: model, wholeBook: wholeBook,
                   rowsKey: rowsKey,
                   accountKey: accountKey,
-                  style: wholeBook ? .journal : style,
+                  // The chosen style, in every register including this one.
+                  // GnuCash's GENERAL_JOURNAL is not a stripped layout: it gets
+                  // nine columns, the same as a bank register, and *every*
+                  // cursor — SINGLE_LEDGER, DOUBLE_LEDGER and SINGLE_JOURNAL
+                  // (split-register-layout.c:584-620). Forcing journal here
+                  // ignored the user's Basic Ledger choice in the one register
+                  // they land in.
+                  style: style,
                   fontScale: fontScale,
                   rowHeight: rowHeight,
                   hiddenColumns: hiddenColumns,
@@ -876,7 +883,11 @@ private final class SheetView: NSView, NSTextFieldDelegate {
     /// The AppKit equivalent of the Table register's `.accessibilityRotor`:
     /// VO-⌘-arrow jumps between transactions that are not yet reconciled.
     override func accessibilityCustomRotors() -> [NSAccessibilityCustomRotor] {
-        guard !wholeBook else { return [] }   // journal rows carry no reconcile
+        // Whole-book heading rows carry no single reconcile state — there is
+        // no anchoring split to take one from (GnuCash says so itself:
+        // gnc-split-reg.c:894, "no anchoring split"). The *legs* each carry
+        // one, and `axRowSummary` reads the heading's aggregate, so the rotor
+        // has something true to jump between either way.
         let rotor = NSAccessibilityCustomRotor(
             label: String(localized: "Unreconciled"),
             itemSearchDelegate: unreconciledRotor)
@@ -1043,7 +1054,10 @@ private final class SheetView: NSView, NSTextFieldDelegate {
     fileprivate func axIsUnreconciled(_ index: Int) -> Bool {
         guard rows.indices.contains(index) else { return false }
         let base = rows[index].base
-        guard !base.isHeadingOnly else { return false }
+        // A whole-book heading's reconcile is its legs' aggregate, and blank
+        // where they disagree — which is exactly the row the rotor should not
+        // claim is unreconciled.
+        guard !base.reconcile.isEmpty else { return false }
         return !["c", "y", "f", "v"].contains(base.reconcile)
     }
 
@@ -1216,6 +1230,12 @@ private final class SheetView: NSView, NSTextFieldDelegate {
         var out: [SheetRow] = []
         if wholeBook {
             for txn in model.journalTransactions(forAccountID: nil) {
+                // The three facts a single-account row takes from its own
+                // split, taken from the transaction instead — see
+                // `wholeBookRowSummary`, which cites where GnuCash does the
+                // same. `isHeadingOnly` stays true: there is still no anchoring
+                // split to edit through, only facts to read.
+                let summary = model.wholeBookRowSummary(ofTransaction: txn.guid)
                 out.append(SheetRow(
                     txn: txn.guid,
                     base: SheetMainBase(anchorSplit: nil, isHeadingOnly: true,
@@ -1224,10 +1244,11 @@ private final class SheetView: NSView, NSTextFieldDelegate {
                                         description: txn.transactionDescription,
                                         notes: txn.notes,
                                         tags: txn.tags.joined(separator: ", "),
-                                        reconcile: "",
+                                        reconcile: summary.reconcile,
                                         hasDocument: txn.documentLink != nil,
-                                        isSimple: false, transferName: "",
-                                        amount: 0, runningBalance: nil),
+                                        isSimple: false,
+                                        transferName: summary.accounts,
+                                        amount: summary.total, runningBalance: nil),
                     legs: model.legRows(ofTransaction: txn.guid)))
             }
             return out
@@ -1264,7 +1285,7 @@ private final class SheetView: NSView, NSTextFieldDelegate {
     /// Mirrors GnuCash's passive/active cursor choice in
     /// `split-register-util.c:435-495`.
     private func isDisclosed(_ row: SheetRow, drafting: Bool) -> Bool {
-        if wholeBook || style == .journal { return true }
+        if style == .journal { return true }
         if drafting, draft?.isExpanded == true { return true }
         guard selectedTxn == row.txn else { return false }
         return style == .autoDetails || currentExpanded
@@ -1916,7 +1937,7 @@ private final class SheetView: NSView, NSTextFieldDelegate {
 
     // MARK: Selection
 
-    private var armsOnSelection: Bool { wholeBook || style == .journal }
+    private var armsOnSelection: Bool { style == .journal }
 
     /// Mirror the sheet's transaction selection into the model's split-based
     /// selection — the toolbar Edit button, attachments panel, and menu
@@ -3272,11 +3293,23 @@ private final class SheetHeaderView: NSView {
         }
     }
     var onSort: ((SheetColumn) -> Void)?
+    /// Whole-book registers name the accounts a transaction touches rather than
+    /// a transfer relative to one account — there is no "one account" — so the
+    /// heading says so.
+    var wholeBook = false {
+        didSet { if wholeBook != oldValue { needsDisplay = true } }
+    }
     /// Reports a finished drag: the column and its new width.
     var onResize: ((SheetColumn, CGFloat) -> Void)?
     private var dragging: (column: SheetColumn, startX: CGFloat, startWidth: CGFloat)?
     var fontScale: CGFloat = 1 {
         didSet { if fontScale != oldValue { needsDisplay = true } }
+    }
+
+    /// The column's heading in this register.
+    func heading(_ column: SheetColumn) -> String {
+        if wholeBook, column == .transfer { return String(localized: "Account") }
+        return column.title
     }
 
     /// The strip grows with Dynamic Type, or large text clips against 26pt.
@@ -3331,7 +3364,7 @@ private final class SheetHeaderView: NSView {
     override func accessibilityChildren() -> [Any]? {
         if let axHeaderCache { return axHeaderCache }
         let built = SheetColumn.allCases
-            .filter { !$0.title.isEmpty && !hiddenColumns.contains($0) }
+            .filter { !heading($0).isEmpty && !hiddenColumns.contains($0) }
             .map { SheetAXColumnHeader(header: self, column: $0) }
         axHeaderCache = built
         return built
@@ -3370,7 +3403,7 @@ private final class SheetHeaderView: NSView {
                 .paragraphStyle: para,
             ]
             let textHeight = ceil(font.ascender - font.descender)
-            let title = column.title as NSString
+            let title = heading(column) as NSString
             let textRect = CGRect(x: rect.minX + SheetMetrics.textInset,
                                   y: rect.minY + (rect.height - textHeight) / 2,
                                   width: rect.width - 2 * SheetMetrics.textInset - 10,
@@ -3446,6 +3479,7 @@ private final class SheetContainerView: NSView {
     init(model: AppModel, wholeBook: Bool) {
         sheet = SheetView(model: model, wholeBook: wholeBook)
         super.init(frame: .zero)
+        headerView.wholeBook = wholeBook
         sheet.header = headerView
         scrollView.documentView = sheet
         scrollView.hasVerticalScroller = true

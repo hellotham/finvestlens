@@ -410,6 +410,26 @@ account** rather than a separate dialect: honour the chosen style, show
 reconcile, keep the editing order, and add an **Account** column — the one
 thing it genuinely needs that a single-account register does not.
 
+#### What the oracle said (built 15 Aug 2026)
+
+The table above was written from this app's code. Checked against GnuCash's own
+source before building it, two rows survive and one does not — recorded here
+because the correction is the more useful half.
+
+| Read from `~/Repositories/gnucash-reference` | Verdict |
+|---|---|
+| `split-register-layout.c:584-620` — `GENERAL_JOURNAL` gets **nine columns**, the same as `BANK_REGISTER`, and every cursor: `SINGLE_LEDGER`, `DOUBLE_LEDGER` **and** `SINGLE_JOURNAL` | Forcing journal style **is** wrong. Fixed |
+| `gnc-split-reg.c:894`, `:1420` — `if (reg->type != GENERAL_JOURNAL) // no anchoring split` | Dropping **Transfer** from the ⇥ order is **right**, and stays. With no anchoring split there is no "other side" for `gnc_split_register_get_mxfrm_entry` to name and nothing for ⇥ to edit |
+| `split-register-model.c:1650-1657` — the general journal's total cell comes from `get_trans_total_value_subaccounts`, not one split's amount | Amount should not be blank. A whole-book row now shows the **transaction total** |
+
+So a whole-book row takes from the *transaction* the three facts a
+single-account row takes from *its split*: reconcile is the flag every leg
+agrees on (nothing where they differ — a state the legs disagree about is not a
+fact), the account column names both ends of a two-legged transaction and falls
+back to the register's existing "— Split —", and the amount is the transaction
+total. `isHeadingOnly` stays: there are facts to read, still no split to edit
+through.
+
 ### 4.5 Tabs are a tabbed interface, not window tabs
 
 Several open items within a mode — registers, reports, portfolios — as document

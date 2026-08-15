@@ -323,3 +323,66 @@ extension AppModel {
     }
 
 }
+
+// MARK: - Whole-book rows (P12/N6)
+
+/// What a whole-book register row can say about a transaction.
+///
+/// The whole book is GnuCash's `GENERAL_JOURNAL`, and GnuCash is explicit that
+/// it has **no anchoring split** — `gnc-split-reg.c:894`, in that comment
+/// exactly. So the three things a single-account row takes from *its* split
+/// have to come from the transaction instead:
+///
+/// - **Reconcile** — the flag every leg agrees on, or nothing where they
+///   differ. A single-account row reads one split's state; here there is no
+///   "one split", and a state the legs disagree about is not a fact.
+/// - **Accounts** — where a single-account row names the *other* side
+///   (`gnc_split_register_get_mxfrm_entry` takes `xaccSplitGetOtherSplit`),
+///   with no anchor there is no other side. It names both, or falls back to the
+///   register's existing "— Split —" for anything wider.
+/// - **Total** — GnuCash fills the general journal's total cell from
+///   `get_trans_total_value_subaccounts` rather than one split's amount
+///   (`split-register-model.c:1650-1657`). The debit total is that number.
+public struct WholeBookRowSummary: Sendable {
+    public let reconcile: String
+    public let accounts: String
+    public let total: Decimal
+}
+
+@MainActor
+extension AppModel {
+
+    public func wholeBookRowSummary(ofTransaction id: GncGUID) -> WholeBookRowSummary {
+        guard let txn = book?.transaction(with: id) else {
+            return WholeBookRowSummary(reconcile: "", accounts: "", total: 0)
+        }
+        let splits = txn.splits
+
+        let states = Set(splits.map(\.reconcileState))
+        let reconcile = states.count == 1 ? (states.first?.rawValue ?? "") : ""
+
+        // Debits first, so a two-legged row reads in the direction the money
+        // moved rather than in storage order.
+        let debits = splits.filter { $0.value > 0 }.compactMap { $0.account?.name }
+        let credits = splits.filter { $0.value < 0 }.compactMap { $0.account?.name }
+        let accounts: String
+        if debits.count == 1, credits.count == 1 {
+            accounts = "\(credits[0]) → \(debits[0])"
+        } else if splits.count == 1 {
+            // Not reachable through the app — `addTransaction` refuses
+            // `.tooFewSplits` — but an imported GnuCash book can carry an
+            // orphan split, and a row for one should name where it posted
+            // rather than claim to be a split transaction.
+            accounts = splits[0].account?.name ?? ""
+        } else {
+            // The same marker the single-account register already uses for a
+            // transaction with more than one other side.
+            accounts = "— Split —"
+        }
+
+        return WholeBookRowSummary(
+            reconcile: reconcile,
+            accounts: accounts,
+            total: splits.filter { $0.value > 0 }.reduce(0) { $0 + $1.value })
+    }
+}
