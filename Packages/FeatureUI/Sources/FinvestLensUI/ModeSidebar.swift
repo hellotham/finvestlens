@@ -46,13 +46,32 @@ struct SidebarRow: Identifiable {
     /// category) it is a ``SidebarGroup`` header instead, because a selectable
     /// row has to lead somewhere.
     var children: [SidebarRow]?
+    /// A collection's name as the *reader* sees it, resolved through the
+    /// catalog. Filtering against a `LocalizedStringKey`'s English source would
+    /// be wrong in seven of the eight languages.
+    var resolvedName: String?
+
+    init(id: SidebarSelection, key: LocalizedStringKey?, text: String?,
+         symbol: String?, detail: String?, resolvedName: String? = nil,
+         children: [SidebarRow]? = nil) {
+        self.id = id
+        self.key = key
+        self.text = text
+        self.symbol = symbol
+        self.detail = detail
+        self.resolvedName = resolvedName
+        self.children = children
+    }
 
     /// A collection, or one of a mode's own destinations.
+    @MainActor
     static func collection(_ id: SidebarSelection, _ key: LocalizedStringKey,
+                           in model: AppModel,
                            symbol: String, detail: String? = nil,
                            children: [SidebarRow]? = nil) -> SidebarRow {
         SidebarRow(id: id, key: key, text: nil, symbol: symbol,
-                   detail: detail, children: children)
+                   detail: detail, resolvedName: model.tabTitle(for: id),
+                   children: children)
     }
 
     /// One thing in a collection, named by the user.
@@ -75,11 +94,8 @@ struct SidebarRow: Identifiable {
                    detail: detail, children: nil)
     }
 
-    /// The plain-text name, for filtering and for VoiceOver on instance rows.
-    /// Collections match on nothing here — their label is a catalog key that
-    /// SwiftUI resolves at render time, so filtering against the English source
-    /// would be wrong in seven of the eight languages.
-    var searchText: String { text ?? "" }
+    /// The plain-text name, for filtering and for VoiceOver.
+    var searchText: String { text ?? resolvedName ?? "" }
 }
 
 /// A titled band of rows. Its header is *not* selectable, which is the point:
@@ -178,6 +194,7 @@ struct ModeSidebar: View {
                 .toggleStyle(.button)
                 .help("Show hidden accounts")
             }
+            addMenu
             // Every mode, not just Accounts: name order means something over a
             // list of budgets or customers too, and a control that appears in
             // one sidebar and not the others is the inconsistency this phase
@@ -185,6 +202,40 @@ struct ModeSidebar: View {
             sortMenu
         }
         .padding(8)
+    }
+
+    /// Adds to this mode's collection.
+    ///
+    /// A sidebar that lists a collection has to be able to add to it. Every one
+    /// of these commands already existed, buried in the detail view that owns
+    /// its editor; this puts it where the list is. Absent, not disabled, in a
+    /// mode with nothing to add — Reports' catalogue is fixed, and a saved
+    /// report is saved *from* a report.
+    @ViewBuilder
+    private var addMenu: some View {
+        let creations = model.mode.creations
+        if creations.count == 1, let only = creations.first {
+            Button {
+                model.requestCreate(only)
+            } label: {
+                Image(systemName: "plus")
+                    .accessibilityLabel(only.title)
+            }
+            .buttonStyle(.borderless)
+            .help(only.title)
+        } else if !creations.isEmpty {
+            Menu {
+                ForEach(creations) { creation in
+                    Button(creation.title) { model.requestCreate(creation) }
+                }
+            } label: {
+                Image(systemName: "plus")
+                    .accessibilityLabel("Add to this list")
+            }
+            .menuStyle(.borderlessButton)
+            .fixedSize()
+            .help("Add to this list")
+        }
     }
 
     /// How this mode's list is ordered (`FR-NAV-12`).
@@ -263,6 +314,11 @@ struct ModeSidebar: View {
                 }
             }
         }
+        // A fresh list per mode. Even with sections namespaced, one mode's
+        // rows and another's are different vocabularies — an account tree
+        // against a list of budgets — and diffing between them is how remnants
+        // appeared. Switching mode is a change of subject, not an animation.
+        .id(model.mode)
         .contextMenu(forSelectionType: SidebarSelection.self) { selection in
             sidebarMenu(for: selection)
         } primaryAction: { selection in
@@ -383,21 +439,27 @@ struct ModeSidebar: View {
     private var accountsSidebar: some View {
         // The mode's home, first — the ledger's inbox, and the tab that cannot
         // be closed.
-        if trimmedFilter.isEmpty {
-            Section {
-                Label("All Transactions", systemImage: "text.book.closed")
-                    .tag(SidebarSelection.generalLedger)
-            }
-            // Pinned accounts, flat, in the order they were favourited — the
-            // shortcut past three disclosure triangles for the handful of
-            // registers someone lives in. Same row (and context menu) as the
-            // tree, so selecting one is selecting the account.
-            let favourites = model.favouriteAccountNodes
-            if !favourites.isEmpty {
-                Section("Favourites") {
-                    ForEach(favourites) { node in
-                        accountRow(node, label: node.name)
-                    }
+        // The mode's home stays put while filtering. Hiding the way back
+        // whenever someone types is the fault the old sidebar earned, in
+        // miniature — and All Transactions is not something a filter over
+        // *accounts* has any business removing.
+        Section {
+            Label("All Transactions", systemImage: "text.book.closed")
+                .tag(SidebarSelection.generalLedger)
+        }
+        // Pinned accounts, flat, in the order they were favourited — the
+        // shortcut past three disclosure triangles for the handful of
+        // registers someone lives in. Same row (and context menu) as the tree,
+        // so selecting one is selecting the account. Filtered like everything
+        // else rather than hidden by the presence of a filter.
+        let favourites = model.favouriteAccountNodes.filter {
+            trimmedFilter.isEmpty
+                || $0.name.localizedCaseInsensitiveContains(trimmedFilter)
+        }
+        if !favourites.isEmpty {
+            Section("Favourites") {
+                ForEach(favourites) { node in
+                    accountRow(node, label: node.name)
                 }
             }
         }
@@ -500,6 +562,18 @@ struct ModeSidebar: View {
 enum ModeSidebarRows {
 
     static func groups(for mode: AppMode, model: AppModel) -> [SidebarGroup] {
+        // Namespaced by mode. Every mode's first band is `.untitled`, whose id
+        // was the empty string — so `ForEach` saw *the same section* in Planning
+        // as in Records and diffed one mode's rows into the other's, leaving
+        // remnants of the sidebar you just left. Ids are identity here, not
+        // decoration: two sections may not share one.
+        build(for: mode, model: model).map {
+            SidebarGroup(id: "\(mode.rawValue)/\($0.id)", key: $0.key,
+                         text: $0.text, rows: $0.rows)
+        }
+    }
+
+    private static func build(for mode: AppMode, model: AppModel) -> [SidebarGroup] {
         switch mode {
         case .overview: overview(model)
         case .accounts: []          // built in the view — a tree, not a list
@@ -528,7 +602,7 @@ enum ModeSidebarRows {
                 SidebarRow.instance(.overviewCard(view: view.id, card: card.rawValue), in: model)
             }
             if let key = view.title {
-                return .collection(.overviewView(view.id), key,
+                return .collection(.overviewView(view.id), key, in: model,
                                    symbol: "square.grid.2x2", children: cards)
             }
             return SidebarRow(id: .overviewView(view.id), key: nil, text: view.displayName,
@@ -547,7 +621,7 @@ enum ModeSidebarRows {
 
     private static func investments(_ model: AppModel) -> [SidebarGroup] {
         var groups: [SidebarGroup] = [
-            .untitled([.collection(.investments, "Portfolio", symbol: "chart.pie")]),
+            .untitled([.collection(.investments, "Portfolio", in: model, symbol: "chart.pie")]),
         ]
         // Securities by type, using the grouping the book already carries:
         // GnuCash's commodity namespace (ASX, NASDAQ, FUND…). The exchange is
@@ -577,7 +651,7 @@ enum ModeSidebarRows {
 
     private static func reports(_ model: AppModel) -> [SidebarGroup] {
         var groups: [SidebarGroup] = [
-            .untitled([.collection(.reports, "All Reports", symbol: "square.grid.2x2")]),
+            .untitled([.collection(.reports, "All Reports", in: model, symbol: "square.grid.2x2")]),
         ]
         // The catalogue's own four groups, which the gallery already uses — so
         // the sidebar and the gallery name the same things the same way. The
@@ -598,12 +672,12 @@ enum ModeSidebarRows {
 
     private static func planning(_ model: AppModel) -> [SidebarGroup] {
         [.untitled([
-            .collection(.planner, "Planner", symbol: "chart.xyaxis.line"),
-            .collection(.budgets, "Budgets", symbol: "chart.bar.doc.horizontal",
+            .collection(.planner, "Planner", in: model, symbol: "chart.xyaxis.line"),
+            .collection(.budgets, "Budgets", in: model, symbol: "chart.bar.doc.horizontal",
                         children: model.budgets.map { .instance(.budget($0.id), in: model) }),
-            .collection(.goals, "Savings Goals", symbol: "target",
+            .collection(.goals, "Savings Goals", in: model, symbol: "target",
                         children: model.savingsGoals.map { .instance(.goal($0.id), in: model) }),
-            .collection(.scheduled, "Scheduled", symbol: "calendar.badge.clock",
+            .collection(.scheduled, "Scheduled", in: model, symbol: "calendar.badge.clock",
                         children: model.scheduledTransactions.map {
                             .instance(.scheduledTransaction($0.id), in: model)
                         }),
@@ -613,8 +687,8 @@ enum ModeSidebarRows {
     private static func business(_ model: AppModel) -> [SidebarGroup] {
         var groups: [SidebarGroup] = [
             .untitled([
-                .collection(.business, "Business", symbol: "building.2"),
-                .collection(.timeMileage, "Time & Mileage", symbol: "clock.badge.checkmark"),
+                .collection(.business, "Business", in: model, symbol: "building.2"),
+                .collection(.timeMileage, "Time & Mileage", in: model, symbol: "clock.badge.checkmark"),
             ]),
         ]
         // Business stays thin until invoices and payees fill it — expected
@@ -653,15 +727,15 @@ enum ModeSidebarRows {
 
     private static func records(_ model: AppModel) -> [SidebarGroup] {
         [.untitled([
-            .collection(.rules, "Rules", symbol: "wand.and.stars",
+            .collection(.rules, "Rules", in: model, symbol: "wand.and.stars",
                         children: model.ruleGroups.map { .instance(.ruleGroup($0.id), in: model) }),
-            .collection(.emergencyRecords, "Emergency Records", symbol: "cross.case",
+            .collection(.emergencyRecords, "Emergency Records", in: model, symbol: "cross.case",
                         children: model.emergencyRecords.map {
                             .instance(.emergencyRecord($0.id), in: model)
                         }),
             // The book's own history: a collection, which is why it is a
             // destination now rather than the modal sheet it used to be.
-            .collection(.auditLog, "Audit Log", symbol: "clock.arrow.circlepath"),
+            .collection(.auditLog, "Audit Log", in: model, symbol: "clock.arrow.circlepath"),
         ])]
     }
 }

@@ -722,6 +722,24 @@ public final class AppModel {
         set { navigate(to: newValue.map(SidebarSelection.account) ?? .generalLedger) }
     }
 
+    /// What the sidebar's `+` asked for, or `nil`. The detail view that owns
+    /// the editor consumes it and clears it — the same pattern as
+    /// ``bankImportRequested``, because the sheet belongs to the view, not to
+    /// the list that asked.
+    public var sidebarCreateRequest: SidebarCreation?
+
+    /// Navigates to where the new thing will appear, then asks for it.
+    public func requestCreate(_ creation: SidebarCreation) {
+        if let destination = creation.destination { navigate(to: destination) }
+        // Accounts has a panel of its own already; everything else is a sheet
+        // owned by the detail view.
+        if creation == .account {
+            presentedPanel = .newAccount
+        } else {
+            sidebarCreateRequest = creation
+        }
+    }
+
     /// Bumped by New Transaction (⌘N) while a register is showing; the entry
     /// bar focuses its description field in response (RD4: entry without
     /// ceremony). When no register is on screen the full editor opens instead.

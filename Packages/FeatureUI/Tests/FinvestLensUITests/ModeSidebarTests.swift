@@ -274,3 +274,126 @@ struct ModeSidebarRegressionTests {
                 "the saved view is a copy of its source")
     }
 }
+
+/// Section identity, which is what `ForEach` diffs on.
+///
+/// Reported from use, 15 Aug 2026: "changing modes corrupts the sidebars —
+/// they get remnants from other sidebars". Every mode's first band is
+/// `.untitled`, whose id was the empty string, so two modes' first sections
+/// were the same section as far as SwiftUI was concerned.
+@MainActor
+@Suite("Sidebar section identity")
+struct SidebarSectionIdentityTests {
+
+    @Test("No two modes share a section id")
+    func sectionIdsAreUniqueAcrossModes() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
+        let model = AppModel()
+        try model.newDocument(at: url)
+        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        _ = try #require(model.addAccount(name: "Everyday", type: .bank))
+        model.addBudget(Budget(name: "Monthly"))
+        model.addRuleGroup(named: "Imports")
+
+        var seen: [String: AppMode] = [:]
+        for mode in AppMode.allCases where mode != .accounts {
+            for group in ModeSidebarRows.groups(for: mode, model: model) {
+                if let owner = seen[group.id], owner != mode {
+                    Issue.record("\(mode.rawValue) and \(owner.rawValue) share section '\(group.id)'")
+                }
+                seen[group.id] = mode
+            }
+        }
+        #expect(!seen.isEmpty)
+    }
+
+    /// Ids are also stable across rebuilds — an id that changes per body pass
+    /// loses the selection instead of keeping it.
+    @Test("Section ids are stable across rebuilds")
+    func sectionIdsAreStable() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
+        let model = AppModel()
+        try model.newDocument(at: url)
+        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+
+        for mode in AppMode.allCases where mode != .accounts {
+            let first = ModeSidebarRows.groups(for: mode, model: model).map(\.id)
+            let second = ModeSidebarRows.groups(for: mode, model: model).map(\.id)
+            #expect(first == second, "\(mode.rawValue) rebuilds different section ids")
+        }
+    }
+}
+
+/// The sidebar's `+`.
+///
+/// Asked for on 15 Aug 2026: "the sidebars should allow new items to be added
+/// (eg. add account in accounts list etc.)". A sidebar that lists a collection
+/// has to be able to add to it.
+@MainActor
+@Suite("Sidebar creation")
+struct SidebarCreationTests {
+
+    private func model() throws -> (AppModel, URL) {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
+        let model = AppModel()
+        try model.newDocument(at: url)
+        return (model, url)
+    }
+
+    /// Every mode that lists things the user can make offers to make them, and
+    /// each offer lands in the mode that owns it.
+    @Test("Each creation belongs to the mode that offers it")
+    func creationsBelongToTheirMode() {
+        for mode in AppMode.allCases {
+            for creation in mode.creations {
+                guard let destination = creation.destination else { continue }
+                #expect(AppMode(hosting: destination) == mode,
+                        "\(mode.rawValue) offers \(creation.rawValue), which lives elsewhere")
+            }
+        }
+        // Reports' catalogue is fixed and a saved report is saved *from* a
+        // report, so it offers nothing — absent, not a disabled button.
+        #expect(AppMode.reports.creations.isEmpty)
+        #expect(AppMode.accounts.creations == [.account])
+    }
+
+    /// Asking navigates first, so the new thing appears in a list already on
+    /// screen rather than somewhere the user then has to find.
+    @Test("Asking to create goes to the collection first")
+    func requestNavigatesFirst() throws {
+        let (model, url) = try model()
+        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+
+        model.showMode(.overview)
+        model.requestCreate(.budget)
+        #expect(model.mode == .planning)
+        #expect(model.sidebarSelection == .budgets)
+        #expect(model.sidebarCreateRequest == .budget)
+    }
+
+    /// Accounts already had a panel; it opens that rather than a second route.
+    @Test("New Account opens the panel that already existed")
+    func accountUsesItsPanel() throws {
+        let (model, url) = try model()
+        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+
+        model.requestCreate(.account)
+        #expect(model.presentedPanel == .newAccount)
+        #expect(model.sidebarCreateRequest == nil, "two routes to one editor")
+    }
+
+    /// A collection row filters by the name the reader sees, not by its key.
+    @Test("Collections filter by their displayed name")
+    func collectionsAreFilterable() throws {
+        let (model, url) = try model()
+        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+
+        let rows = ModeSidebarRows.groups(for: .planning, model: model).flatMap(\.rows)
+        let budgets = try #require(rows.first { $0.id == .budgets })
+        #expect(budgets.searchText == model.tabTitle(for: .budgets))
+        #expect(!budgets.searchText.isEmpty, "a collection that no filter can match")
+    }
+}

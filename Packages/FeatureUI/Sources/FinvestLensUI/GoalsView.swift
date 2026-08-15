@@ -80,6 +80,12 @@ struct GoalsView: View {
                 }
             }
             .navigationTitle("Savings Goals")
+            // The sidebar's + asks; this view owns the editor, so it answers.
+            .onChange(of: model.sidebarCreateRequest) {
+                guard model.sidebarCreateRequest == .goal else { return }
+                model.sidebarCreateRequest = nil
+                creating = true
+            }
             .onEscapeCommand { dismiss() }
             .toolbar {
                 if !embedded {

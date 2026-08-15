@@ -54,6 +54,11 @@ struct InvestmentsView: View {
                 }
             }
             .navigationTitle("Investments")
+            .onChange(of: model.sidebarCreateRequest) {
+                guard model.sidebarCreateRequest == .watchedSecurity else { return }
+                model.sidebarCreateRequest = nil
+                showingAddWatch = true
+            }
             .navigationDestination(for: Commodity.self) { commodity in
                 SecurityDetailView(model: model, commodity: commodity)
             }

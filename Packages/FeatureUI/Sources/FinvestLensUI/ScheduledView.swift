@@ -91,6 +91,11 @@ struct ScheduledView: View {
             }
             }
             .navigationTitle("Scheduled")
+            .onChange(of: model.sidebarCreateRequest) {
+                guard model.sidebarCreateRequest == .scheduled else { return }
+                model.sidebarCreateRequest = nil
+                showingAdd = true
+            }
             .toolbar {
                 if !embedded {
                     ToolbarItem(placement: .confirmationAction) {

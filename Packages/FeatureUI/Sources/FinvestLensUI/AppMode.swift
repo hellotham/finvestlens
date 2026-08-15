@@ -131,6 +131,24 @@ public enum AppMode: String, CaseIterable, Identifiable, Hashable, Sendable {
         }
     }
 
+    /// What this mode's sidebar can create.
+    ///
+    /// A sidebar that lists a collection has to be able to add to it — that is
+    /// what a collection sidebar is for, and every one of these already had a
+    /// creation path buried in its detail view. The `+` in the sidebar header
+    /// is the same command, where the list is.
+    public var creations: [SidebarCreation] {
+        switch self {
+        case .overview: [.overviewView]
+        case .accounts: [.account]
+        case .investments: [.watchedSecurity]
+        case .reports: []          // the catalogue is fixed; saved reports come from a report
+        case .business: [.customer, .vendor, .invoice, .job, .employee]
+        case .planning: [.budget, .goal, .scheduled]
+        case .records: [.ruleGroup, .emergencyRecord]
+        }
+    }
+
     /// The five modes on the toolbar out of the box.
     ///
     /// Planning and Records are modes in full — sidebar, tabs, state, a
@@ -145,4 +163,50 @@ public enum AppMode: String, CaseIterable, Identifiable, Hashable, Sendable {
 
     /// Whether this mode appears in the toolbar before the user customises it.
     public var isOnToolbarByDefault: Bool { Self.toolbarDefault.contains(self) }
+}
+
+
+/// Something a mode's sidebar can add to its collection (`FR-NAV-04`).
+///
+/// A request rather than a call: most of these open a sheet that belongs to the
+/// detail view, which the sidebar cannot reach. The same shape as
+/// `bankImportRequested` and the other cross-surface requests on `AppModel`.
+public enum SidebarCreation: String, Identifiable, Hashable, Sendable {
+    case account, budget, goal, scheduled, ruleGroup, emergencyRecord
+    case customer, vendor, invoice, job, employee, watchedSecurity, overviewView
+
+    public var id: String { rawValue }
+
+    public var title: LocalizedStringKey {
+        switch self {
+        case .account: "New Account…"
+        case .budget: "New Budget"
+        case .goal: "New Goal…"
+        case .scheduled: "New Scheduled Transaction…"
+        case .ruleGroup: "New Rule Group"
+        case .emergencyRecord: "New Record…"
+        case .customer: "New Customer…"
+        case .vendor: "New Vendor…"
+        case .invoice: "New Invoice…"
+        case .job: "New Job…"
+        case .employee: "New Employee…"
+        case .watchedSecurity: "Watch a Security…"
+        case .overviewView: "Save This View…"
+        }
+    }
+
+    /// Where the sidebar goes before asking, so the new thing appears in a list
+    /// the user is already looking at.
+    var destination: SidebarSelection? {
+        switch self {
+        case .budget: .budgets
+        case .goal: .goals
+        case .scheduled: .scheduled
+        case .ruleGroup: .rules
+        case .emergencyRecord: .emergencyRecords
+        case .customer, .vendor, .invoice, .job, .employee: .business
+        case .watchedSecurity: .investments
+        case .account, .overviewView: nil
+        }
+    }
 }

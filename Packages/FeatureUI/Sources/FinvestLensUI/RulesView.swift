@@ -37,6 +37,11 @@ struct RulesView: View {
                 }
             }
             .navigationTitle("Rules")
+            .onChange(of: model.sidebarCreateRequest) {
+                guard model.sidebarCreateRequest == .ruleGroup else { return }
+                model.sidebarCreateRequest = nil
+                model.addRuleGroup(named: String(localized: "New Group"))
+            }
             .toolbar {
                 if !embedded {
                     ToolbarItem(placement: .confirmationAction) {

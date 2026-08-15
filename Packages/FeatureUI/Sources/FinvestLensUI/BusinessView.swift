@@ -52,6 +52,21 @@ struct BusinessHub: View {
     }
     @State private var editing: Editing?
 
+    /// The sidebar's + for each of Business's five collections. The editors are
+    /// this view's sheets, so this view is what opens them.
+    private func answer(_ creation: SidebarCreation?) {
+        guard let creation else { return }
+        switch creation {
+        case .customer: editing = .customer
+        case .vendor: editing = .vendor
+        case .employee: editing = .employee
+        case .job: editing = .job
+        case .invoice: editing = .invoice(.invoice)
+        default: return
+        }
+        model.sidebarCreateRequest = nil
+    }
+
     private var code: String { model.reportCurrency.mnemonic }
 
     var body: some View {
@@ -146,6 +161,7 @@ struct BusinessHub: View {
             }
             }
             .navigationTitle("Business")
+            .onChange(of: model.sidebarCreateRequest) { answer(model.sidebarCreateRequest) }
             .frame(minWidth: embedded ? nil : 460, minHeight: embedded ? nil : 460)
             .onEscapeCommand { dismiss() }
             .toolbar {

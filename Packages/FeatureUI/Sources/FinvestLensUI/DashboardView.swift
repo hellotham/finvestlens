@@ -167,6 +167,11 @@ struct DashboardView: View {
             }
         }
         .navigationTitle(boardTitle)
+        .onChange(of: model.sidebarCreateRequest) {
+            guard model.sidebarCreateRequest == .overviewView else { return }
+            model.sidebarCreateRequest = nil
+            savingView = true
+        }
         // A favourite *is* a saved custom view (navigation-design §4.3), which
         // is why there is one concept here and not two.
         .alert("Save This View", isPresented: $savingView) {

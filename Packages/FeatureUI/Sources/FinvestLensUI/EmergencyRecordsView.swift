@@ -31,6 +31,11 @@ struct EmergencyRecordsView: View {
             }
         }
         .navigationTitle("Emergency Records")
+        .onChange(of: model.sidebarCreateRequest) {
+            guard model.sidebarCreateRequest == .emergencyRecord else { return }
+            model.sidebarCreateRequest = nil
+            creating = true
+        }
         .task { await unlockIfNeeded() }
     }
 

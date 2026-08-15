@@ -87,6 +87,11 @@ struct BudgetView: View {
                 }
             }
             .navigationTitle(title)
+            .onChange(of: model.sidebarCreateRequest) {
+                guard model.sidebarCreateRequest == .budget else { return }
+                model.sidebarCreateRequest = nil
+                model.addBudget(Budget(name: String(localized: "Budget")))
+            }
             .toolbar {
                 if !embedded {
                     ToolbarItem(placement: .confirmationAction) {
