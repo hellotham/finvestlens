@@ -2769,5 +2769,25 @@ gated shut by `isHeadingOnly`, so N6's work did not render in Basic Ledger;
 Reports showed two period selectors that disagreed; `close()` from the Reports
 gallery persisted the wrong mode; every rule in a group shared one SwiftUI
 identity; a held-and-watched security produced two rows with one tag; and
-`reorderAccount` took a whole-book undo snapshot. Findings not yet acted on are
-listed in [deferred.md](deferred.md).
+`reorderAccount` took a whole-book undo snapshot.
+
+**And the rest of them.** Deleting an account, budget, goal or rule group now
+closes its tab — the prune is in the edit funnel, so every delete gets it rather
+than the one that used to. The desk-state codec is one table read both ways,
+with a test that walks every case through both halves, so `.auditLog`'s drift
+cannot recur. The iOS register got N6: it forced journal style and wrote empty
+reconcile/transfer/amount, so All Transactions differed between macOS and iPad.
+Sorting is offered in every mode, not only Accounts — name order over a mode's
+*instances*, never its headings. A saved Overview view captures the cards on the
+board rather than copying the view it was saved from. Instance names come from
+one place, so a sidebar row and its own tab cannot disagree. And the sidebar
+tree, the sort comparators' account lookups, the security index and the
+custom-view decode are memoised on the book revision: the tree was pruned and
+re-sorted on every keystroke, and the custom-view JSON was re-decoded inside a
+`GeometryReader`, once per resize frame.
+
+**Between-siblings reorder now exists**, through `.onMove` on a recursive
+`AccountBranch` — `OutlineGroup` has no move affordance, which is why the half
+the design asked for had no drop target. `.onMove` draws the system insertion
+line, which is the "insertion line versus highlighted row" distinction §4.6
+asks for. Re-parenting by drag is not offered; see [deferred.md](deferred.md).

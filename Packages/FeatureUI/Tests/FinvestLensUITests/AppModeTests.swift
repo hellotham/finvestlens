@@ -313,3 +313,53 @@ struct AppModeTests {
         "session.sidebarSelection:\(url.standardizedFileURL.path)"
     }
 }
+
+/// The desk-state codec, both directions.
+///
+/// It was two independent switches — `encode` compiler-checked, `decode` a raw
+/// string switch that nothing checked — and they drifted inside a day:
+/// `.auditLog` encoded and did not decode, so that tab was written on every
+/// navigation and dropped on every reopen. This walks a value of every case
+/// through both halves.
+@MainActor
+@Suite("Desk-state codec")
+struct SessionCodecTests {
+
+    /// Every case, with a payload where it takes one.
+    private static let everyCase: [SidebarSelection] = [
+        .dashboard, .generalLedger, .reports, .investments, .business,
+        .timeMileage, .planner, .budgets, .goals, .scheduled, .rules,
+        .emergencyRecords, .auditLog,
+        .account(.random()), .budget(.random()), .goal(.random()),
+        .scheduledTransaction(.random()), .invoice(.random()), .customer(.random()),
+        .vendor(.random()), .job(.random()), .employee(.random()),
+        .ruleGroup(UUID()), .emergencyRecord(UUID()), .savedReport(UUID()),
+        .security("ASX|BHP"), .report(.balanceSheet),
+        .overviewView("mix"), .overviewCard(view: "mix", card: "netWorth"),
+    ]
+
+    @Test("Every destination survives the round trip")
+    func everyCaseRoundTrips() {
+        for selection in Self.everyCase {
+            let raw = AppModel.encode(selection)
+            #expect(!raw.isEmpty, "\(selection) encoded to nothing")
+            #expect(AppModel.decodeSelection(raw) == selection,
+                    "\(selection) encoded as \(raw) and decoded to \(String(describing: AppModel.decodeSelection(raw)))")
+        }
+    }
+
+    /// The pre-P11 spelling still restores rather than dropping the user back
+    /// to the dashboard.
+    @Test("The pre-P11 “prices” spelling still decodes")
+    func legacySpelling() {
+        #expect(AppModel.decodeSelection("prices") == .investments)
+    }
+
+    /// Nothing in the payload-free table may share a name, or one destination
+    /// would decode as another.
+    @Test("Payload-free names are distinct")
+    func plainNamesAreDistinct() {
+        let names = AppModel.plainCases.map(\.0)
+        #expect(Set(names).count == names.count)
+    }
+}

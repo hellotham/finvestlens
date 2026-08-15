@@ -173,3 +173,104 @@ struct ModeSidebarTests {
         #expect(AppMode.business.isOnToolbarByDefault)
     }
 }
+
+// MARK: - Defects the review found, fixed 15 Aug 2026
+
+@MainActor
+@Suite("Mode sidebars — regressions")
+struct ModeSidebarRegressionTests {
+
+    private func fixture() throws -> (AppModel, URL) {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
+        let model = AppModel()
+        try model.newDocument(at: url)
+        return (model, url)
+    }
+
+    /// Deleting an object used to leave its tab open, titled by a fallback,
+    /// showing an empty page until the next relaunch.
+    @Test("Deleting an account closes its tab")
+    func deletedAccountLosesItsTab() throws {
+        let (model, url) = try fixture()
+        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+
+        let keep = try #require(model.addAccount(name: "Everyday", type: .bank))
+        let doomed = try #require(model.addAccount(name: "Old Card", type: .credit))
+        model.navigate(to: .account(keep))
+        model.navigate(to: .account(doomed), inNewTab: true)
+        model.selectTab(1)                       // the *other* tab is active
+        #expect(model.openTabs.count == 3)
+
+        try model.deleteAccount(doomed)
+        #expect(model.openTabs == [.generalLedger, .account(keep)])
+        #expect(model.sidebarSelection == .account(keep), "the user was moved off their tab")
+    }
+
+    /// Deleting a budget, goal or rule group closes its tab too — the prune is
+    /// in the edit funnel, not in one delete.
+    @Test("Deleting a rule group closes its tab")
+    func deletedRuleGroupLosesItsTab() throws {
+        let (model, url) = try fixture()
+        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+
+        model.addRuleGroup(named: "Imports")
+        let group = try #require(model.ruleGroups.first?.id)
+        model.navigate(to: .ruleGroup(group))
+        #expect(model.openTabs.contains(.ruleGroup(group)))
+
+        model.deleteRuleGroup(group)
+        #expect(!model.openTabs.contains(.ruleGroup(group)))
+    }
+
+    /// Name order applies to a mode's *instances*, never to its collection
+    /// headings — alphabetising Budgets above Planner would reorder the mode's
+    /// own structure rather than its contents.
+    @Test("Name order sorts instances, not headings")
+    func nameOrderSortsInstancesOnly() throws {
+        let (model, url) = try fixture()
+        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+
+        model.addRuleGroup(named: "Zebra")
+        model.addRuleGroup(named: "Apple")
+        let rows = ModeSidebarRows.groups(for: .records, model: model).flatMap(\.rows)
+        let sorted = model.sortedRows(rows, by: .name)
+
+        #expect(sorted.map(\.id) == rows.map(\.id), "a heading moved")
+        let rules = try #require(sorted.first { $0.id == .rules })
+        #expect(rules.children?.map(\.text) == ["Apple", "Zebra"])
+    }
+
+    /// Every mode offers a sort now; only Accounts offers the account-only
+    /// criteria.
+    @Test("Every mode offers a sort, Accounts offers more")
+    func sortIsOfferedEverywhere() {
+        #expect(SidebarSort.cases(for: .accounts).count > SidebarSort.cases(for: .planning).count)
+        for mode in AppMode.allCases where mode != .accounts {
+            #expect(SidebarSort.cases(for: mode) == [.manual, .name])
+            // "Manual Order" only means something where an order can be set.
+            #expect(SidebarSort.manual.title(in: mode) != SidebarSort.manual.title)
+        }
+    }
+
+    /// A saved view captures what is on the board, not a copy of the view it
+    /// was saved from.
+    @Test("A saved view captures the cards actually shown")
+    func savedViewCapturesTheBoard() throws {
+        let (model, url) = try fixture()
+        defer {
+            model.close()
+            try? FileManager.default.removeItem(at: url)
+            UserDefaults.standard.removeObject(
+                forKey: "overview.views:\(url.standardizedFileURL.path)")
+        }
+
+        // What DashboardView passes: this view's cards, less the hidden ones.
+        let shown = OverviewView.mix.overviewCards.filter { $0 != .alerts && $0 != .wellbeing }
+        model.saveOverviewView(named: "Trimmed", cards: shown)
+        let saved = try #require(model.customOverviewViews.first)
+        #expect(saved.overviewCards == shown)
+        #expect(saved.overviewCards.count < OverviewView.mix.overviewCards.count,
+                "the saved view is a copy of its source")
+    }
+}

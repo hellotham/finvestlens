@@ -59,11 +59,27 @@ public enum SidebarSort: String, CaseIterable, Identifiable, Sendable {
         "sidebar.sort.\(mode.rawValue)"
     }
 
-    /// The criteria Accounts offers — all of them. Balance, code and the first
-    /// transaction are facts about an *account*, so the other modes' lists keep
-    /// the order their collections already have; a sort control over them would
-    /// mostly offer criteria that cannot run.
+    /// The criteria Accounts offers — all of them.
     public static let accountCases: [SidebarSort] = allCases
+
+    /// What the other modes offer. Balance, code and first-transaction are
+    /// facts about an *account*, so a budget or a rule group has no answer to
+    /// them; name and the collection's own order are the two that mean
+    /// something everywhere. `manual` reads as "the order they are in" outside
+    /// Accounts, where nothing stores a hand order.
+    public static let generalCases: [SidebarSort] = [.manual, .name]
+
+    /// What this mode's sidebar offers.
+    public static func cases(for mode: AppMode) -> [SidebarSort] {
+        mode == .accounts ? accountCases : generalCases
+    }
+
+    /// The title the menu shows for this criterion in this mode — "Manual
+    /// Order" only means something where an order can be set by hand.
+    public func title(in mode: AppMode) -> LocalizedStringKey {
+        if self == .manual, mode != .accounts { return "Original Order" }
+        return title
+    }
 }
 
 @MainActor
@@ -80,6 +96,66 @@ extension AppModel {
 
     public func setSidebarSort(_ sort: SidebarSort, for mode: AppMode) {
         UserDefaults.standard.set(sort.rawValue, forKey: SidebarSort.storageKey(for: mode))
+    }
+
+    /// The account tree as the sidebar shows it: hidden accounts pruned, then
+    /// ordered, memoised on the book revision and the two settings.
+    ///
+    /// It was a plain computed property in the view, so a 565-node tree was
+    /// deep-copied by the prune, deep-copied again by the sort, and re-sorted
+    /// with locale-aware collation — on every keystroke in the filter field and
+    /// every selection change. The comparators go through `book.account(with:)`,
+    /// which flattens the whole tree per call, so the cost was quadratic in the
+    /// thing the sidebar exists to show.
+    public func sidebarTree(showingHidden: Bool, sortedBy sort: SidebarSort) -> [AccountNode] {
+        let key = "\(bookRevision)|\(showingHidden)|\(sort.rawValue)"
+        if sidebarTreeKey == key { return sidebarTreeCache }
+        let pruned = showingHidden ? accountTree : ModeSidebar.pruningHidden(accountTree)
+        // Built once per key, so the per-comparison account lookups the
+        // comparators would otherwise do are replaced by a dictionary.
+        sortIndexRevision = -1
+        sidebarTreeCache = sorted(pruned, by: sort)
+        sidebarTreeKey = key
+        return sidebarTreeCache
+    }
+
+    /// Per-account facts the comparators need, built once per sort rather than
+    /// looked up per comparison.
+    private func sortIndex() -> (order: [GncGUID: Int], code: [GncGUID: String]) {
+        if sortIndexRevision == bookRevision { return (manualOrderIndex, codeIndex) }
+        manualOrderIndex = [:]
+        codeIndex = [:]
+        for account in book?.accounts ?? [] {
+            if let order = account.sidebarOrder { manualOrderIndex[account.guid] = order }
+            if !account.code.isEmpty { codeIndex[account.guid] = account.code }
+        }
+        sortIndexRevision = bookRevision
+        return (manualOrderIndex, codeIndex)
+    }
+
+    /// Orders a mode's sidebar rows. Only the two criteria that mean something
+    /// outside Accounts apply; anything else leaves the collection's own order.
+    func sortedRows(_ rows: [SidebarRow], by sort: SidebarSort) -> [SidebarRow] {
+        guard sort == .name else { return rows }
+        func order(_ list: [SidebarRow]) -> [SidebarRow] {
+            list.sorted { $0.searchText.localizedCaseInsensitiveCompare($1.searchText)
+                            == .orderedAscending }
+                .map { row in
+                    guard let children = row.children else { return row }
+                    var copy = row
+                    copy.children = order(children)
+                    return copy
+                }
+        }
+        // Only the *instances* move. A collection row is a heading, and
+        // alphabetising Budgets above Planner would reorder the mode's own
+        // structure rather than its contents.
+        return rows.map { row in
+            guard let children = row.children else { return row }
+            var copy = row
+            copy.children = order(children)
+            return copy
+        }
     }
 
     /// Orders one level of the account tree.
@@ -138,13 +214,9 @@ extension AppModel {
         }
     }
 
-    func manualOrder(of id: GncGUID) -> Int? {
-        book?.account(with: id)?.sidebarOrder
-    }
+    func manualOrder(of id: GncGUID) -> Int? { sortIndex().order[id] }
 
-    func accountCode(_ id: GncGUID) -> String? {
-        book?.account(with: id)?.code
-    }
+    func accountCode(_ id: GncGUID) -> String? { sortIndex().code[id] }
 
     /// The earliest posting in an account, memoised on the book revision: the
     /// sidebar asks per row on every body pass, and the answer only changes

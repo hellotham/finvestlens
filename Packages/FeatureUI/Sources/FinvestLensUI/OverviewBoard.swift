@@ -185,15 +185,23 @@ extension AppModel {
     /// fact — and per book, because which cards matter depends on the book.
     var customOverviewViews: [OverviewView] {
         get {
-            guard let key = customViewsKey,
-                  let raw = UserDefaults.standard.data(forKey: key),
-                  let decoded = try? JSONDecoder().decode([OverviewView].self, from: raw)
-            else { return [] }
+            // Decoded once per book, not once per read. `currentOverviewView`
+            // reaches this nine times in one `DashboardView` body pass, one of
+            // them inside the `GeometryReader` — so a window resize was reading
+            // UserDefaults and running JSONDecoder on every frame.
+            guard let key = customViewsKey else { return [] }
+            if customViewsKeyCached == key { return customViewsCache }
+            let decoded = UserDefaults.standard.data(forKey: key)
+                .flatMap { try? JSONDecoder().decode([OverviewView].self, from: $0) } ?? []
+            customViewsCache = decoded
+            customViewsKeyCached = key
             return decoded
         }
         set {
             guard let key = customViewsKey else { return }
             UserDefaults.standard.set(try? JSONEncoder().encode(newValue), forKey: key)
+            customViewsCache = newValue
+            customViewsKeyCached = key
         }
     }
 

@@ -610,6 +610,27 @@ public final class AppModel {
         applyNavigationChange(from: old)
     }
 
+    /// The pruned, sorted account tree the sidebar draws, and the per-account
+    /// facts its comparators read — both keyed on the book revision.
+    @ObservationIgnored var sidebarTreeCache: [AccountNode] = []
+    @ObservationIgnored var sidebarTreeKey = ""
+    @ObservationIgnored var manualOrderIndex: [GncGUID: Int] = [:]
+    @ObservationIgnored var codeIndex: [GncGUID: String] = [:]
+    @ObservationIgnored var sortIndexRevision = -1
+
+    /// Custom Overview views, decoded once per book rather than per read.
+    /// Observed, not `@ObservationIgnored`: saving a view has to redraw the
+    /// sidebar that lists it.
+    var customViewsCache: [OverviewView] = []
+    var customViewsKeyCached = ""
+
+    /// Securities, and the key→commodity index the sidebar and tab strip look
+    /// through. `securityCommodities` walks every account and builds a string
+    /// per security on each call, and the tab strip asked three times per
+    /// security tab per body pass.
+    @ObservationIgnored var securityIndexCache: [String: Commodity] = [:]
+    @ObservationIgnored var securityIndexRevision = -1
+
     /// Earliest posting per account, for the sidebar's "First Transaction"
     /// order. Memoised on ``bookRevision``: the sidebar asks per row on every
     /// body pass, and one pass over 46k transactions per pass is the shape of
@@ -727,8 +748,14 @@ public final class AppModel {
     /// longer holds it. Resolved through the same composite key the sidebar and
     /// ``securityCommodities`` both use, so the three agree on identity.
     public func securityCommodity(forKey key: String) -> Commodity? {
-        securityCommodities.first { SidebarSelection.securityKey($0) == key }
-            ?? watchlist.first { SidebarSelection.securityKey($0) == key }
+        if securityIndexRevision != bookRevision {
+            securityIndexCache = [:]
+            for commodity in securityCommodities + watchlist {
+                securityIndexCache[SidebarSelection.securityKey(commodity)] = commodity
+            }
+            securityIndexRevision = bookRevision
+        }
+        return securityIndexCache[key]
     }
 
     /// Switches mode without disturbing where that mode was — the toolbar
@@ -2344,6 +2371,62 @@ public final class AppModel {
     func refreshAfterChange() {
         document?.markDirty()
         refreshAll()
+        pruneDeadTabs()
+    }
+
+    /// Closes any tab whose subject the book no longer has.
+    ///
+    /// Here rather than in each delete, because there are a dozen deletes and
+    /// only one of them used to clean up — `deleteAccount` cleared the *active*
+    /// selection and nothing else, so deleting an account open in another tab
+    /// left a tab titled "Account" that showed an empty register until the next
+    /// relaunch. Every edit passes through here; a tab is dead the moment its
+    /// subject is, whichever command did it and whichever mode was showing.
+    func pruneDeadTabs() {
+        guard isOpen else { return }
+        var changed = false
+        for (mode, list) in tabsByMode {
+            let live = list.filter { exists($0) }
+            guard live.count != list.count else { continue }
+            // Keep the user on the same tab where it survived: closing a tab
+            // before the active one shifts every index after it.
+            let active = activeTabByMode[mode] ?? 0
+            let survivingBefore = zip(list.indices, list)
+                .prefix(max(0, active - 1))
+                .filter { exists($0.1) }
+                .count
+            tabsByMode[mode] = live
+            activeTabByMode[mode] = min(active > 0 ? survivingBefore + 1 : 0, live.count)
+            changed = true
+        }
+        guard changed else { return }
+        refreshRegister()
+        persistSessionSelection()
+    }
+
+    /// Whether the book still has what a selection names. Collection
+    /// destinations always do — they are areas, not instances.
+    private func exists(_ selection: SidebarSelection) -> Bool {
+        switch selection {
+        case .account(let id): book?.account(with: id) != nil
+        case .budget(let id): budgets.contains { $0.id == id }
+        case .goal(let id): savingsGoals.contains { $0.id == id }
+        case .scheduledTransaction(let id): scheduledTransactions.contains { $0.id == id }
+        case .ruleGroup(let id): ruleGroups.contains { $0.id == id }
+        case .emergencyRecord(let id): emergencyRecords.contains { $0.id == id }
+        case .savedReport(let id): savedReports.contains { $0.id == id }
+        case .security(let key): securityCommodity(forKey: key) != nil
+        case .invoice(let id): businessInvoices.contains { $0.guid == id }
+        case .customer(let id): businessCustomers.contains { $0.guid == id }
+        case .vendor(let id): businessVendors.contains { $0.guid == id }
+        case .job(let id): businessJobs.contains { $0.guid == id }
+        case .employee(let id): businessEmployees.contains { $0.guid == id }
+        case .overviewView(let id): overviewViews.contains { $0.id == id }
+        case .dashboard, .generalLedger, .reports, .report, .investments,
+             .business, .timeMileage, .planner, .budgets, .goals, .scheduled,
+             .rules, .emergencyRecords, .auditLog, .overviewCard:
+            true
+        }
     }
 
     // MARK: Undo / redo (HIG: every edit must be undoable)

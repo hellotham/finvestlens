@@ -22301,49 +22301,49 @@
         }
       }
     },
-    "Choose how the accounts are ordered": {
+    "Choose how this list is ordered": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wählen, wie die Konten angeordnet werden"
+            "value": "Wählen, wie diese Liste angeordnet wird"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Elegir cómo se ordenan las cuentas"
+            "value": "Elegir cómo se ordena esta lista"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Choisir l’ordre des comptes"
+            "value": "Choisir l’ordre de cette liste"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Scegli come sono ordinati i conti"
+            "value": "Scegli come è ordinato questo elenco"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "勘定科目の並び順を選びます"
+            "value": "このリストの並び順を選びます"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Escolher como as contas são ordenadas"
+            "value": "Escolher como esta lista é ordenada"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "选择科目的排列方式"
+            "value": "选择此列表的排列方式"
           }
         }
       }
@@ -57528,6 +57528,53 @@
         }
       }
     },
+    "Original Order": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ursprüngliche Reihenfolge"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Orden original"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ordre d’origine"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ordine originale"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "元の並び順"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ordem original"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "原始顺序"
+          }
+        }
+      }
+    },
     "Out of balance": {
       "extractionState": "manual",
       "localizations": {
@@ -75664,49 +75711,49 @@
         }
       }
     },
-    "Sort accounts": {
+    "Sort this list": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Konten sortieren"
+            "value": "Diese Liste sortieren"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ordenar cuentas"
+            "value": "Ordenar esta lista"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Trier les comptes"
+            "value": "Trier cette liste"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ordina conti"
+            "value": "Ordina questo elenco"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "勘定科目を並べ替える"
+            "value": "このリストを並べ替える"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ordenar contas"
+            "value": "Ordenar esta lista"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "排序科目"
+            "value": "排序此列表"
           }
         }
       }

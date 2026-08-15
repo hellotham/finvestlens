@@ -309,7 +309,13 @@ struct RegisterTableView: View {
 
     /// The style actually in force. All Transactions is a journal whatever the
     /// preference says — the same substitution the macOS sheet makes.
-    private var style: RegisterStyle { wholeBook ? .journal : registerStyle }
+    /// The chosen style, here as everywhere. GnuCash's GENERAL_JOURNAL gets
+    /// nine columns and every cursor — ledger *and* journal
+    /// (split-register-layout.c:584-620) — so forcing journal ignored the
+    /// user's Basic Ledger choice in the register Accounts lands on. Fixed on
+    /// macOS in P12/N6; this is the iPad half, which the same review found had
+    /// been left behind.
+    private var style: RegisterStyle { registerStyle }
 
     /// The row height at 100% Text Size.
     ///
@@ -726,6 +732,11 @@ struct RegisterTableView: View {
             ReconcileBadge(glyph: data.reconcile) {
                 model.cycleReconcileState(splitID: data.id)
             }
+        // A whole-book heading has the flag its legs agree on, and nothing
+        // where they differ — but it has no split to cycle, so it reads only.
+        case .main(let data) where wholeBook && !data.reconcile.isEmpty:
+            ReconcileBadge(glyph: data.reconcile) {}
+                .allowsHitTesting(false)
         case .bookLeg(let leg):
             ReconcileBadge(glyph: leg.legReconcile) {
                 model.cycleReconcileState(splitID: leg.id)
@@ -746,8 +757,12 @@ struct RegisterTableView: View {
     @ViewBuilder
     private func amountCell(_ row: RegisterTableRow, code: String) -> some View {
         switch row.kind {
+        // `isHeadingOnly` means "no anchoring split to edit through", not
+        // "nothing to say": a whole-book row's amount is the transaction total,
+        // which GnuCash puts in the same cell (split-register-model.c:1650).
         case .main(let data) where data.isHeadingOnly:
-            restText("")
+            restText(wholeBook ? AmountFormat.string(data.amount, code: code) : "",
+                     trailing: true, monospaced: true)
         case .main(let data):
             GridCell(restValue: AmountFormat.string(data.amount, code: code),
                      editValue: data.amountEditText
@@ -918,6 +933,7 @@ struct RegisterTableView: View {
     private func wholeBookBase() -> [RegisterBaseRow] {
         var out: [RegisterBaseRow] = []
         for txn in model.journalTransactions(forAccountID: nil) {
+            let summary = model.wholeBookRowSummary(ofTransaction: txn.guid)
             out.append(RegisterBaseRow(
                 id: .txn(txn.guid), txn: txn.guid,
                 kind: .main(RegisterMainBase(
@@ -925,10 +941,10 @@ struct RegisterTableView: View {
                     date: txn.datePosted, description: txn.transactionDescription,
                     notes: txn.notes,
                     tags: txn.tags.joined(separator: ", "),
-                    reconcile: "",
+                    reconcile: summary.reconcile,
                     hasDocument: txn.documentLink != nil,
-                    isSimple: false, transferName: "",
-                    amount: 0, runningBalance: nil))))
+                    isSimple: false, transferName: summary.accounts,
+                    amount: summary.total, runningBalance: nil))))
             for leg in model.legRows(ofTransaction: txn.guid) {
                 out.append(RegisterBaseRow(id: .split(leg.id), txn: txn.guid,
                                            kind: .bookLeg(leg)))

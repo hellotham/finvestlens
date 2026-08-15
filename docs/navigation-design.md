@@ -580,19 +580,17 @@ corrected this document, is in [implemented.md](implemented.md).
 Two things this design asks for that the build did not deliver, recorded here
 rather than left to be rediscovered:
 
-- **Sidebar drag, both halves** (§4.6). `AppModel.reorderAccount` and the
-  `finvestlens-sidebar-order` kvp slot are built and tested, but there is no
-  between-siblings drop target and no distinct drag feedback — so the drag is
-  **off**. It was briefly shipped with only the re-parent half wired, which
-  meant a drag intended to reorder silently moved an account under a different
-  parent: a book edit, from a gesture that looked like sorting. A gesture that
-  does something other than what it looks like is worse than one that is
-  absent. Re-parenting remains available through the account editor.
-- **Sorting outside Accounts** (§4.6 says "per section and per mode"). The sort
-  control ships for Accounts only: balance, code and first-transaction are facts
-  about an *account*, and a control over the other modes' lists would mostly
-  offer criteria that cannot run. Name and manual order could be offered there
-  later.
+- **Re-parenting by drag.** The reorder half of §4.6 is built: `.onMove` on
+  each level of the tree, gated on manual order, with the system's insertion
+  line as the feedback. Dropping *onto* a row to re-parent is not offered.
+  It was briefly shipped as the *only* half, which meant every drag re-parented
+  — a book edit from a gesture that looked like sorting. Bringing it back needs
+  a `DropDelegate` that distinguishes "between" from "onto" during the hover and
+  draws each differently; until then re-parenting is in the account editor,
+  where it is deliberate.
+- *(Sorting outside Accounts is done: every mode offers Original Order and
+  Name; Accounts additionally offers code, balance, type and first
+  transaction, which are facts only an account has.)*
 
 Two things to decide *during* the build rather than before it:
 

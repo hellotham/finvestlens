@@ -61,6 +61,19 @@ struct SidebarRow: Identifiable {
                    detail: detail, children: nil)
     }
 
+    /// One thing in a collection, named the way its tab names it.
+    ///
+    /// The two used to be spelled separately — fourteen rules in two files,
+    /// including the invoice's "number, or the owner if it has none" and the
+    /// employee's "address name, or the username" — so a row and its own tab
+    /// could disagree in the same window.
+    @MainActor
+    static func instance(_ id: SidebarSelection, in model: AppModel,
+                         symbol: String? = nil, detail: String? = nil) -> SidebarRow {
+        SidebarRow(id: id, key: nil, text: model.tabTitle(for: id), symbol: symbol,
+                   detail: detail, children: nil)
+    }
+
     /// The plain-text name, for filtering and for VoiceOver on instance rows.
     /// Collections match on nothing here — their label is a catalog key that
     /// SwiftUI resolves at render time, so filtering against the English source
@@ -161,34 +174,58 @@ struct ModeSidebar: View {
                 }
                 .toggleStyle(.button)
                 .help("Show hidden accounts")
-                sortMenu
             }
+            // Every mode, not just Accounts: name order means something over a
+            // list of budgets or customers too, and a control that appears in
+            // one sidebar and not the others is the inconsistency this phase
+            // exists to remove.
+            sortMenu
         }
         .padding(8)
     }
 
-    /// How the tree is ordered (`FR-NAV-12`).
+    /// How this mode's list is ordered (`FR-NAV-12`).
     private var sortMenu: some View {
         Menu {
-            Picker("Sort By", selection: $accountSortRaw) {
-                ForEach(SidebarSort.accountCases) { candidate in
-                    Text(candidate.title).tag(candidate.rawValue)
+            Picker("Sort By", selection: sortBinding) {
+                ForEach(SidebarSort.cases(for: model.mode)) { candidate in
+                    Text(candidate.title(in: model.mode)).tag(candidate.rawValue)
                 }
             }
             .pickerStyle(.inline)
             // The book has no opening-date field, so "First Transaction" is
             // derived — said here rather than implied by the name.
-            if let note = accountSort.note {
+            if let note = currentSort.note {
                 Divider()
                 Text(note)
             }
         } label: {
             Image(systemName: "arrow.up.arrow.down")
-                .accessibilityLabel("Sort accounts")
+                .accessibilityLabel("Sort this list")
         }
         .menuStyle(.borderlessButton)
         .fixedSize()
-        .help("Choose how the accounts are ordered")
+        .help("Choose how this list is ordered")
+    }
+
+    /// Accounts reads through `@AppStorage` so its (expensive) tree redraws on
+    /// a change; the other modes read the same key space through the model,
+    /// which is cheap and needs no second storage property per mode.
+    private var currentSort: SidebarSort {
+        model.mode == .accounts ? accountSort : model.sidebarSort(for: model.mode)
+    }
+
+    private var sortBinding: Binding<String> {
+        Binding(
+            get: { currentSort.rawValue },
+            set: { raw in
+                let sort = SidebarSort(rawValue: raw) ?? .manual
+                if model.mode == .accounts {
+                    accountSortRaw = raw
+                } else {
+                    model.setSidebarSort(sort, for: model.mode)
+                }
+            })
     }
 
     private var filterPrompt: LocalizedStringKey {
@@ -215,7 +252,10 @@ struct ModeSidebar: View {
             if model.mode == .accounts {
                 accountsSidebar
             } else {
-                ForEach(filtered(ModeSidebarRows.groups(for: model.mode, model: model))) { group in
+                let groups = ModeSidebarRows.groups(for: model.mode, model: model)
+                    .map { SidebarGroup(id: $0.id, key: $0.key, text: $0.text,
+                                        rows: model.sortedRows($0.rows, by: currentSort)) }
+                ForEach(filtered(groups)) { group in
                     section(group)
                 }
             }
@@ -320,8 +360,7 @@ struct ModeSidebar: View {
     // MARK: Accounts
 
     private var visibleTree: [AccountNode] {
-        let tree = showHidden ? model.accountTree : Self.pruningHidden(model.accountTree)
-        return model.sorted(tree, by: accountSort)
+        model.sidebarTree(showingHidden: showHidden, sortedBy: accountSort)
     }
 
     /// Drops hidden accounts and everything under them. Hiding a parent hides
@@ -361,9 +400,8 @@ struct ModeSidebar: View {
         }
         Section("Accounts") {
             if trimmedFilter.isEmpty {
-                OutlineGroup(visibleTree, children: \.children) { node in
-                    draggableAccountRow(node)
-                }
+                AccountBranch(model: model, nodes: visibleTree,
+                              canReorder: accountSort.allowsDragging)
             } else {
                 // Filtering flattens to matches and shows full names — the same
                 // shape as Find's account picker, and the reason typing
@@ -384,47 +422,8 @@ struct ModeSidebar: View {
         }
     }
 
-    /// An account row.
-    ///
-    /// **Dragging is off.** The design (navigation-design §4.6) asks for two
-    /// drops with two meanings — between siblings reorders, onto a row
-    /// re-parents — and only the second was wired: there was no between-siblings
-    /// drop target, and no distinct feedback to tell the two apart while
-    /// dragging. So every drag re-parented, which is a *book edit*: someone
-    /// dragging an account up two rows to sort it would have moved it under a
-    /// different parent instead, silently changing the chart of accounts.
-    ///
-    /// A gesture that does something other than what it looks like is worse
-    /// than one that is absent, so it is absent until the reorder half exists.
-    /// `AppModel.reorderAccount` and `Account.sidebarOrder` are built and
-    /// tested, waiting for it; re-parenting stays available through Edit ▸ the
-    /// account's parent, where it is a deliberate act.
-    private func draggableAccountRow(_ node: AccountNode) -> some View {
-        accountRow(node, label: node.name)
-    }
-
     private func accountRow(_ node: AccountNode, label: String) -> some View {
-        HStack {
-            // GnuCash account colour, shown Finder-tag style.
-            if let dot = node.color.flatMap(GnuCashColor.color(from:)) {
-                Circle()
-                    .fill(dot)
-                    .frame(width: 9, height: 9)
-                    .accessibilityHidden(true)
-            }
-            Text(label)
-                .scaledFont(.body)
-                .foregroundStyle(node.isHidden ? .secondary : .primary)
-            Spacer()
-            Text(AmountFormat.string(node.balance, code: node.currencyCode))
-                .scaledFont(.body)
-                .monospacedDigit()
-                .foregroundStyle(node.balance < 0 ? .red : .secondary)
-        }
-        .tag(SidebarSelection.account(node.id))
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(label)
-        .accessibilityValue(AmountFormat.string(node.balance, code: node.currencyCode))
+        AccountSidebarRow(node: node, label: label)
     }
 
     // MARK: Context menu
@@ -514,8 +513,7 @@ enum ModeSidebarRows {
     private static func overview(_ model: AppModel) -> [SidebarGroup] {
         func row(_ view: OverviewView) -> SidebarRow {
             let cards = view.overviewCards.map { card in
-                SidebarRow.instance(.overviewCard(view: view.id, card: card.rawValue),
-                                    card.title)
+                SidebarRow.instance(.overviewCard(view: view.id, card: card.rawValue), in: model)
             }
             if let key = view.title {
                 return .collection(.overviewView(view.id), key,
@@ -546,7 +544,7 @@ enum ModeSidebarRows {
         for namespace in byNamespace.keys.sorted() {
             let holdings = (byNamespace[namespace] ?? [])
                 .sorted { $0.mnemonic < $1.mnemonic }
-                .map { security($0) }
+                .map { security($0, model) }
             guard !holdings.isEmpty else { continue }
             groups.append(.named("ns-\(namespace)", namespace, holdings))
         }
@@ -555,14 +553,14 @@ enum ModeSidebarRows {
         // ambiguous. `InvestmentsView` filters the same way.
         let watched = model.watchlist.filter { model.isWatchOnly($0) }
         if !watched.isEmpty {
-            groups.append(.titled("watchlist", "Watchlist", watched.map { security($0) }))
+            groups.append(.titled("watchlist", "Watchlist", watched.map { security($0, model) }))
         }
         return groups
     }
 
-    private static func security(_ commodity: Commodity) -> SidebarRow {
-        .instance(.security(SidebarSelection.securityKey(commodity)),
-                  commodity.mnemonic, detail: commodity.fullName)
+    private static func security(_ commodity: Commodity, _ model: AppModel) -> SidebarRow {
+        .instance(.security(SidebarSelection.securityKey(commodity)), in: model,
+                  detail: commodity.fullName)
     }
 
     private static func reports(_ model: AppModel) -> [SidebarGroup] {
@@ -577,11 +575,11 @@ enum ModeSidebarRows {
             let kinds = ReportKind.allCases.filter { $0.group == group }
             guard !kinds.isEmpty else { continue }
             groups.append(.titled(group.rawValue, group.title,
-                                  kinds.map { .instance(.report($0), $0.rawValue, symbol: $0.icon) }))
+                                  kinds.map { .instance(.report($0), in: model, symbol: $0.icon) }))
         }
         if !model.savedReports.isEmpty {
             groups.append(.titled("saved", "Saved",
-                                  model.savedReports.map { .instance(.savedReport($0.id), $0.name) }))
+                                  model.savedReports.map { .instance(.savedReport($0.id), in: model) }))
         }
         return groups
     }
@@ -590,12 +588,12 @@ enum ModeSidebarRows {
         [.untitled([
             .collection(.planner, "Planner", symbol: "chart.xyaxis.line"),
             .collection(.budgets, "Budgets", symbol: "chart.bar.doc.horizontal",
-                        children: model.budgets.map { .instance(.budget($0.id), $0.name) }),
+                        children: model.budgets.map { .instance(.budget($0.id), in: model) }),
             .collection(.goals, "Savings Goals", symbol: "target",
-                        children: model.savingsGoals.map { .instance(.goal($0.id), $0.name) }),
+                        children: model.savingsGoals.map { .instance(.goal($0.id), in: model) }),
             .collection(.scheduled, "Scheduled", symbol: "calendar.badge.clock",
                         children: model.scheduledTransactions.map {
-                            .instance(.scheduledTransaction($0.id), $0.name)
+                            .instance(.scheduledTransaction($0.id), in: model)
                         }),
         ])]
     }
@@ -614,31 +612,28 @@ enum ModeSidebarRows {
         if !model.businessInvoices.isEmpty {
             groups.append(.titled("invoices", "Invoices & Bills",
                                   model.businessInvoices.map { invoice in
-                                      .instance(.invoice(invoice.guid),
-                                                invoice.id.isEmpty ? invoice.owner.displayName : invoice.id,
+                                      .instance(.invoice(invoice.guid), in: model,
                                                 detail: invoice.owner.displayName)
                                   }))
         }
         if !model.businessCustomers.isEmpty {
             groups.append(.titled("customers", "Customers",
-                                  model.businessCustomers.map { .instance(.customer($0.guid), $0.name) }))
+                                  model.businessCustomers.map { .instance(.customer($0.guid), in: model) }))
         }
         if !model.businessVendors.isEmpty {
             groups.append(.titled("vendors", "Vendors",
-                                  model.businessVendors.map { .instance(.vendor($0.guid), $0.name) }))
+                                  model.businessVendors.map { .instance(.vendor($0.guid), in: model) }))
         }
         if !model.businessJobs.isEmpty {
             groups.append(.titled("jobs", "Jobs",
-                                  model.businessJobs.map { .instance(.job($0.guid), $0.name) }))
+                                  model.businessJobs.map { .instance(.job($0.guid), in: model) }))
         }
         if !model.businessEmployees.isEmpty {
             // An employee's name lives on their address; the username is the
             // fallback the hub already uses when it is blank.
             groups.append(.titled("employees", "Employees",
                                   model.businessEmployees.map { employee in
-                                      .instance(.employee(employee.guid),
-                                                employee.address.name.isEmpty
-                                                    ? employee.username : employee.address.name)
+                                      .instance(.employee(employee.guid), in: model)
                                   }))
         }
         return groups
@@ -647,14 +642,95 @@ enum ModeSidebarRows {
     private static func records(_ model: AppModel) -> [SidebarGroup] {
         [.untitled([
             .collection(.rules, "Rules", symbol: "wand.and.stars",
-                        children: model.ruleGroups.map { .instance(.ruleGroup($0.id), $0.name) }),
+                        children: model.ruleGroups.map { .instance(.ruleGroup($0.id), in: model) }),
             .collection(.emergencyRecords, "Emergency Records", symbol: "cross.case",
                         children: model.emergencyRecords.map {
-                            .instance(.emergencyRecord($0.id), $0.title)
+                            .instance(.emergencyRecord($0.id), in: model)
                         }),
             // The book's own history: a collection, which is why it is a
             // destination now rather than the modal sheet it used to be.
             .collection(.auditLog, "Audit Log", symbol: "clock.arrow.circlepath"),
         ])]
+    }
+}
+
+
+/// One account row, shared by the tree, the favourites band and the filtered
+/// flat list — so all three look and read the same.
+struct AccountSidebarRow: View {
+    let node: AccountNode
+    let label: String
+
+    var body: some View {
+        HStack {
+            // GnuCash account colour, shown Finder-tag style.
+            if let dot = node.color.flatMap(GnuCashColor.color(from:)) {
+                Circle()
+                    .fill(dot)
+                    .frame(width: 9, height: 9)
+                    .accessibilityHidden(true)
+            }
+            Text(label)
+                .scaledFont(.body)
+                .foregroundStyle(node.isHidden ? .secondary : .primary)
+            Spacer()
+            Text(AmountFormat.string(node.balance, code: node.currencyCode))
+                .scaledFont(.body)
+                .monospacedDigit()
+                .foregroundStyle(node.balance < 0 ? .red : .secondary)
+        }
+        .tag(SidebarSelection.account(node.id))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(label)
+        .accessibilityValue(AmountFormat.string(node.balance, code: node.currencyCode))
+    }
+}
+
+/// One level of the account tree, recursing into its children.
+///
+/// A view type rather than a `@ViewBuilder` function because it is recursive,
+/// and an opaque `some View` cannot be defined in terms of itself.
+///
+/// It exists at all because `OutlineGroup` has no move affordance: the
+/// between-siblings reorder `FR-NAV-12` asks for had no drop target, so the only
+/// drag that existed re-parented — a book edit from a gesture that looked like
+/// sorting. `.onMove` is the system's own reorder, and it draws the insertion
+/// line, which is exactly the "insertion line versus highlighted row" feedback
+/// §4.6 asks for without this code drawing either.
+///
+/// Offered only under manual order: dropping something "between" a sorted list
+/// is a promise the sort breaks on the next redraw.
+struct AccountBranch: View {
+    @Bindable var model: AppModel
+    let nodes: [AccountNode]
+    let canReorder: Bool
+
+    var body: some View {
+        ForEach(nodes) { node in
+            if let children = node.children, !children.isEmpty {
+                DisclosureGroup {
+                    AccountBranch(model: model, nodes: children, canReorder: canReorder)
+                } label: {
+                    AccountSidebarRow(node: node, label: node.name)
+                }
+            } else {
+                AccountSidebarRow(node: node, label: node.name)
+            }
+        }
+        .onMove(perform: moveHandler)
+    }
+
+    /// Typed explicitly: a ternary inline in `.onMove` gave the type-checker
+    /// nothing to anchor the optional to.
+    private var moveHandler: ((IndexSet, Int) -> Void)? {
+        guard canReorder else { return nil }
+        return { offsets, destination in move(from: offsets, to: destination) }
+    }
+
+    /// `.onMove` reports the destination *before* the removal, which is one
+    /// more than the final index when moving down.
+    private func move(from offsets: IndexSet, to destination: Int) {
+        guard let source = offsets.first, nodes.indices.contains(source) else { return }
+        model.reorderAccount(nodes[source].id, to: destination > source ? destination - 1 : destination)
     }
 }

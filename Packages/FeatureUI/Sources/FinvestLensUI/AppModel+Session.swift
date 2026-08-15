@@ -164,22 +164,59 @@ extension AppModel {
         windowPeriod = period
     }
 
-    private static func encode(_ selection: SidebarSelection) -> String {
+    // MARK: The desk-state codec
+    //
+    // One table, read both ways. It used to be two independent switches —
+    // `encode` exhaustive and compiler-checked, `decode` a `switch` over raw
+    // strings that the compiler never sees — and they drifted within a day:
+    // `.auditLog` encoded and did not decode, so that tab was written on every
+    // navigation and silently dropped on every reopen. Adding a case now means
+    // adding one row, and `encode` still fails to compile until it is there.
+
+    /// Destinations with no payload, spelled once.
+    static let plainCases: [(String, SidebarSelection)] = [
+        ("dashboard", .dashboard),
+        ("generalLedger", .generalLedger),
+        ("reports", .reports),
+        ("investments", .investments),
+        ("business", .business),
+        ("timeMileage", .timeMileage),
+        ("planner", .planner),
+        ("budgets", .budgets),
+        ("goals", .goals),
+        ("scheduled", .scheduled),
+        ("rules", .rules),
+        ("emergencyRecords", .emergencyRecords),
+        ("auditLog", .auditLog),
+    ]
+
+    /// GnuCash-GUID instances: prefix, constructor, and the id to encode.
+    private static let guidCases: [(String, (GncGUID) -> SidebarSelection)] = [
+        ("account:", SidebarSelection.account),
+        ("budget:", SidebarSelection.budget),
+        ("goal:", SidebarSelection.goal),
+        ("scheduledTransaction:", SidebarSelection.scheduledTransaction),
+        ("invoice:", SidebarSelection.invoice),
+        ("customer:", SidebarSelection.customer),
+        ("vendor:", SidebarSelection.vendor),
+        ("job:", SidebarSelection.job),
+        ("employee:", SidebarSelection.employee),
+    ]
+
+    /// Foundation-UUID instances — the collections that live outside the engine.
+    private static let uuidCases: [(String, (UUID) -> SidebarSelection)] = [
+        ("ruleGroup:", SidebarSelection.ruleGroup),
+        ("emergencyRecord:", SidebarSelection.emergencyRecord),
+        ("savedReport:", SidebarSelection.savedReport),
+    ]
+
+    /// Internal, not private, so `SessionCodecTests` can walk every case
+    /// through both halves. The codec is the unit — testing it through a book
+    /// only proves the liveness filter, which drops instances the book does not
+    /// have and would hide a decode gap rather than reveal it.
+    static func encode(_ selection: SidebarSelection) -> String {
         switch selection {
-        case .dashboard: "dashboard"
         case .account(let id): "account:\(id.hexString)"
-        case .reports: "reports"
-        case .generalLedger: "generalLedger"
-        case .budgets: "budgets"
-        case .scheduled: "scheduled"
-        case .rules: "rules"
-        case .goals: "goals"
-        case .investments: "investments"
-        case .business: "business"
-        case .timeMileage: "timeMileage"
-        case .planner: "planner"
-        case .emergencyRecords: "emergencyRecords"
-        case .auditLog: "auditLog"
         case .budget(let id): "budget:\(id.hexString)"
         case .goal(let id): "goal:\(id.hexString)"
         case .scheduledTransaction(let id): "scheduledTransaction:\(id.hexString)"
@@ -195,31 +232,13 @@ extension AppModel {
         case .report(let kind): "report:\(kind.rawValue)"
         case .overviewView(let id): "overviewView:\(id)"
         case .overviewCard(let view, let card): "overviewCard:\(view)/\(card)"
+        // Everything without a payload comes from the shared table, so a name
+        // written here that the decoder does not know cannot exist.
+        default: Self.plainCases.first { $0.1 == selection }?.0 ?? ""
         }
     }
 
-    /// GUID-keyed instance destinations, by prefix.
-    private static let guidCases: [(String, (GncGUID) -> SidebarSelection)] = [
-        ("account:", SidebarSelection.account),
-        ("budget:", SidebarSelection.budget),
-        ("goal:", SidebarSelection.goal),
-        ("scheduledTransaction:", SidebarSelection.scheduledTransaction),
-        ("invoice:", SidebarSelection.invoice),
-        ("customer:", SidebarSelection.customer),
-        ("vendor:", SidebarSelection.vendor),
-        ("job:", SidebarSelection.job),
-        ("employee:", SidebarSelection.employee),
-    ]
-
-    /// UUID-keyed instance destinations — the collections that live outside the
-    /// engine and so carry Foundation UUIDs rather than GnuCash GUIDs.
-    private static let uuidCases: [(String, (UUID) -> SidebarSelection)] = [
-        ("ruleGroup:", SidebarSelection.ruleGroup),
-        ("emergencyRecord:", SidebarSelection.emergencyRecord),
-        ("savedReport:", SidebarSelection.savedReport),
-    ]
-
-    private static func decodeSelection(_ raw: String) -> SidebarSelection? {
+    static func decodeSelection(_ raw: String) -> SidebarSelection? {
         for (prefix, make) in guidCases where raw.hasPrefix(prefix) {
             return GncGUID(hex: String(raw.dropFirst(prefix.count))).map(make)
         }
@@ -228,6 +247,10 @@ extension AppModel {
         }
         if raw.hasPrefix("security:") {
             return .security(String(raw.dropFirst("security:".count)))
+        }
+        if raw.hasPrefix("report:") {
+            return ReportKind(rawValue: String(raw.dropFirst("report:".count)))
+                .map(SidebarSelection.report)
         }
         if raw.hasPrefix("overviewView:") {
             return .overviewView(String(raw.dropFirst("overviewView:".count)))
@@ -238,27 +261,9 @@ extension AppModel {
             return .overviewCard(view: String(body[body.startIndex..<slash]),
                                  card: String(body[body.index(after: slash)...]))
         }
-        if raw.hasPrefix("report:") {
-            return ReportKind(rawValue: String(raw.dropFirst("report:".count)))
-                .map(SidebarSelection.report)
-        }
-        switch raw {
-        case "dashboard": return .dashboard
-        case "auditLog": return .auditLog
-        case "reports": return .reports
-        case "generalLedger": return .generalLedger
-        case "budgets": return .budgets
-        case "scheduled": return .scheduled
-        case "rules": return .rules
-        case "planner": return .planner
-        case "emergencyRecords": return .emergencyRecords
-        case "goals": return .goals
-        // "prices" is the pre-P11 spelling: a saved session must still
-        // restore rather than silently dropping the user back to the dashboard.
-        case "investments", "prices": return .investments
-        case "business": return .business
-        case "timeMileage": return .timeMileage
-        default: return nil
-        }
+        // "prices" is the pre-P11 spelling: a saved session must still restore
+        // rather than silently dropping the user back to the dashboard.
+        if raw == "prices" { return .investments }
+        return plainCases.first { $0.0 == raw }?.1
     }
 }

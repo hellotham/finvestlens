@@ -175,8 +175,16 @@ struct DashboardView: View {
             Button("Save") {
                 let name = newViewName.trimmingCharacters(in: .whitespaces)
                 if !name.isEmpty {
-                    model.saveOverviewView(named: name,
-                                           cards: model.currentOverviewView.overviewCards)
+                    // The cards the *user* chose: this view's set, less the
+                    // ones switched off. Passing the source view's whole list
+                    // made every saved view an exact copy of the one it was
+                    // saved from. Width and relevance still gate at layout
+                    // time — those are the board's decisions, not the user's,
+                    // so they do not belong in a saved view.
+                    model.saveOverviewView(
+                        named: name,
+                        cards: model.currentOverviewView.overviewCards
+                            .filter { !hiddenPanels.contains($0.rawValue) })
                 }
                 newViewName = ""
             }
