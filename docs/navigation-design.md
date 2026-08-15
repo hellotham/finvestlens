@@ -154,8 +154,9 @@ two-level rule is written "in general". If it proves unwieldy the HIG's own
 remedy — a content column between sidebar and detail — can be added later
 without disturbing anything else.
 
-Seven modes is a lot for one segmented control. At narrow widths it must drop
-to icons only rather than let the system push it into the overflow menu.
+Five on the toolbar at a time (§4.1a) keeps the segmented control honest; at
+narrow widths it drops to icons rather than letting the system push it into the
+overflow menu.
 
 **How many modes is too many? The test is whether you work there.** A mode is a
 place you settle into for a session — its own sidebar, its own open tabs, its
@@ -173,11 +174,84 @@ wrongly. That is a destination reached in context, not a top-level place. They
 become a **collection inside Records** — the book's own paperwork, alongside
 assets, deductions and the audit log.
 
-So: **seven modes, and Rules is not one of them.** The alternative worth
-naming is Settings — rules that transform incoming data are configuration, and
-that is where several mail clients put them — but Records keeps them
-inspectable next to the records they classify, and the app's rules already do
-more than classify (they allocate to goals and link to bills).
+So Rules is not a mode. The alternative worth naming is Settings — rules that
+transform incoming data are configuration, and that is where several mail
+clients put them — but Records keeps them inspectable next to the records they
+classify, and the app's rules already do more than classify (they allocate to
+goals and link to bills).
+
+That leaves six, and six is more than feels comfortable. §4.1a is that argument.
+
+### 4.1a How many modes, and what to do about it
+
+Six passes the working-session test and still feels like too many. Both things
+can be true: the test says what *qualifies*, not what should be **on screen at
+once**. The options, against what the HIG actually says.
+
+**The two quotes that rule things out.** On overflow, from Tab bars:
+
+> "**Avoid overflow tabs.** … The More tab makes it harder for people to reach
+> and notice content on tabs that are hidden, so limit scenarios in your app
+> where this can happen."
+
+and from Toolbars:
+
+> "Don't add an overflow menu manually, and **avoid layouts that cause toolbar
+> items to overflow by default**."
+
+And on hiding by circumstance, from Tab bars:
+
+> "**Don't disable or hide tab bar buttons, even when their content is
+> unavailable.** Having tab bar buttons available in some cases but not others
+> makes your app's interface appear unstable and unpredictable. If a section is
+> empty, explain why its content is unavailable."
+
+So "5 + More", "4 + Other", and "hide Business when the book has no business"
+are all specifically discouraged — the last one being tempting and wrong.
+
+**The quote that opens the door**, from Toolbars:
+
+> "In iPadOS and macOS apps, **consider letting people customize the toolbar** to
+> include their most common items. Toolbar customization is especially useful in
+> apps that provide a lot of items — **or that include advanced functionality
+> that not everyone needs** — and in apps that people tend to use for long
+> periods of time."
+
+That is this app exactly: a lot of areas, several of which a given person never
+touches, used for long sessions.
+
+#### The options
+
+| | Shape | Cost |
+|---|---|---|
+| **A** | 5 fixed + a **More** menu holding the rest | The documented anti-pattern, twice over. Planning and Records become the areas nobody finds |
+| **B** | 5 fixed; **Planning folds into Accounts** (its sidebar gains Budgets · Goals · Scheduled) and **Records dissolves** — assets are already accounts, deductions and logbooks hang off transactions, listing happens in Reports | Coherent: everything in Accounts' sidebar is account-anchored. But it discards the Records design, and tax-time browsing becomes report-shaped when it wants to be editable |
+| **C** | 5 fixed; **Planning and Records become Overview *views*** — boards of cards — with editing by zooming a card and listing via Reports | Most consistent with the Overview design. But a budget wants a real editor, and a card that is secretly an editor is a worse budget screen than a mode |
+| **D** | Accept **6**, sized so the segmented control never overflows | Honest; nothing is hidden. Against the instinct that six is too many, and tight at narrow widths |
+| **E** | **5 by default, the set is customisable**, and *every* mode is always in the View menu with a shortcut | Recommended — below |
+
+#### Recommended: E
+
+- **Default toolbar: Overview · Accounts · Investments · Reports · Business.**
+  Five, as asked, and the five most people use.
+- **Planning and Records are modes** — full sidebars, tabs, state — but not on
+  the toolbar by default. Someone who budgets adds Planning once and it stays.
+- **Every mode is always in the View menu** with ⌘1…⌘7. Nothing is hidden, which
+  is the objection to A: an item in a menu with a shortcut is discoverable and
+  permanent, where an item behind "More" is neither.
+- Customisation is the **system's** toolbar customisation, not a bespoke
+  settings pane — the mechanism the HIG points at, and one macOS users already
+  know.
+
+This dissolves the argument rather than settling it. "How many modes" stops
+being one number for everyone and becomes each person's own, which is what the
+customisation guidance is for. It also protects the Planning and Records designs
+— they are not cut to make a count work, they are simply not in everyone's way.
+
+The risk to watch: a default that hides something people need means they never
+learn it exists. Mitigated by the View menu, and by Overview — a Planning card
+on the default board is the advertisement for a mode not on the toolbar, and a
+click on it can offer to add it.
 
 ### 4.3 Overview is a board of views, not a board of tiles
 
@@ -383,11 +457,13 @@ destination row would be worse than offering nothing.
 
 ## 6 Settled
 
-- **Seven modes**: Overview · Accounts · Investments · Reports · Planning ·
-  Business · Records. Business is its own mode; Time & Mileage joins it.
-  **Rules are not a mode** — they fail the working-session test and become a
-  Records collection (§4.1). Business stays thin until invoices and payees fill
-  its sidebar, which is expected rather than a gap.
+- **Six modes exist; five are on the toolbar by default** (§4.1a): Overview ·
+  Accounts · Investments · Reports · Business, with Planning and Records added
+  by the user through standard toolbar customisation. Every mode is always in
+  the View menu with a shortcut, so nothing is hidden — the objection to a
+  "More" menu. **Rules are not a mode** — they fail the working-session test and
+  become a Records collection. Business stays thin until invoices and payees
+  fill its sidebar, which is expected rather than a gap.
 - **No Tools mode** — its contents are commands, and commands belong in the
   menu bar. A mode needs a collection.
 - **Overview is the launch page** and reports across every mode.
