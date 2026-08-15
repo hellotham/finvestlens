@@ -134,3 +134,113 @@ struct BondPricingTests {
         #expect(model.parPercentScaled(dec("99.5"), for: unknown) == dec("0.995"))
     }
 }
+
+/// Reading the foreign amount a card issuer wrote into the narrative.
+///
+/// Every string below is a real ANZ memo shape from the reference book,
+/// including the malformed tails the bank actually writes ("2.2.94 AUD").
+@MainActor
+@Suite("Card narrative FX")
+struct NarrativeFXTests {
+
+    private func parse(_ memo: String) -> (amount: Decimal, code: String, fee: Decimal?)? {
+        AppModel.parseNarrativeFX(memo)
+    }
+
+    @Test("The foreign amount and its currency are read")
+    func amountAndCurrency() throws {
+        let found = try #require(parse("RCP-Booking               George Town  1773.84  MYR22.68 AUD"))
+        #expect(found.amount == dec("1773.84"))
+        #expect(found.code == "MYR")
+        #expect(found.fee == dec("22.68"))
+    }
+
+    @Test("Both currencies the book carries are read the same way")
+    func bothCurrencies() throws {
+        #expect(parse("SOFITEL KUALA LUMPUR DAMA KUALA LUMPUR  60.00  MYR 0.75 AUD")?.amount == dec("60"))
+        #expect(parse("THE COFFEE CLUB           AUCKLAND  48.50  NZD 1.46 AUD")?.code == "NZD")
+    }
+
+    /// Two spaces before the figure is the anchor. Without it a street number
+    /// in the merchant's address parses as a purchase.
+    @Test("A domestic row with numbers in its address is not a purchase abroad")
+    func domesticRow() {
+        #expect(parse("MOTTOSOUTHBNE PTY LTD     MACQUARIE PAR") == nil)
+        #expect(parse("SHELL COLES EXPRESS 1234  BRISBANE") == nil)
+        // A narrative naming a currency is read whatever that currency is —
+        // deciding it is *foreign* needs the transaction, and belongs to the
+        // scan (`narrativeForeignCandidates`), not to the reader. AUD is not
+        // special in a book that might be kept in something else.
+        #expect(parse("SOMEWHERE                 SYDNEY  40.00  AUD")?.code == "AUD")
+    }
+
+    /// The bank's fee tail is not always well formed; a fee that cannot be read
+    /// is better absent than invented.
+    @Test("A malformed fee tail does not corrupt the amount")
+    func malformedTail() throws {
+        let found = try #require(parse("KTMB GO TICKETING         CYBERJAYA  228.00  MYR 2.2.94 AUD"))
+        #expect(found.amount == dec("228"))
+        #expect(found.code == "MYR")
+    }
+
+    /// A dry run over the real book produced a "fee" of 390.39 against an 11.51
+    /// charge, from the parser running into the merchant's own text. A card fee
+    /// is a small percentage; anything else is discarded rather than reported.
+    @Test("An implausible fee is discarded, not reported")
+    func implausibleFee() {
+        let believable = NarrativeFX(transactionID: .random(), date: day(0), narrative: "",
+                                     foreignAmount: dec("1773.84"), currencyCode: "MYR",
+                                     fee: dec("22.68"), localAmount: dec("670.59"))
+        #expect(believable.plausibleFee == dec("22.68"))
+
+        let nonsense = NarrativeFX(transactionID: .random(), date: day(0), narrative: "",
+                                   foreignAmount: dec("12.90"), currencyCode: "NZD",
+                                   fee: dec("390.39"), localAmount: dec("11.51"))
+        #expect(nonsense.plausibleFee == nil)
+    }
+
+    @Test("The implied rate is the local amount over the foreign")
+    func impliedRate() {
+        let row = NarrativeFX(transactionID: .random(), date: day(0), narrative: "",
+                              foreignAmount: dec("1773.84"), currencyCode: "MYR",
+                              fee: nil, localAmount: dec("670.59"))
+        #expect(row.impliedRate > dec("0.378") && row.impliedRate < dec("0.379"))
+    }
+
+    /// The whole point of the scan: a transaction the book already holds as
+    /// multi-currency has nothing left to recover.
+    @Test("A transaction already in its own currency is not a candidate")
+    func alreadyForeign() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
+        let model = AppModel()
+        try model.newDocument(at: url)
+        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+
+        let card = try #require(model.addAccount(name: "Card", type: .credit, commodity: .aud))
+        let spend = try #require(model.addAccount(name: "Lodging", type: .expense, commodity: .aud))
+        let memo = "RCP-Booking               George Town  1773.84  MYR22.68 AUD"
+        try model.addTransaction(date: day(0), description: "Hotel", currency: .aud, splits: [
+            SplitInput(accountID: card, value: dec("-670.59"), memo: memo),
+            SplitInput(accountID: spend, value: dec("670.59")),
+        ])
+        #expect(model.narrativeForeignCandidates(accountName: "Card").count == 1)
+        // Captured before anything else is posted: `.last` is the newest
+        // transaction, and the next block adds one.
+        let id = try #require(model.book?.transactions.last?.guid)
+
+        // The scan is where a same-currency narrative is rejected.
+        let domestic = try #require(model.addAccount(name: "Cash", type: .bank, commodity: .aud))
+        try model.addTransaction(date: day(1), description: "Fuel", currency: .aud, splits: [
+            SplitInput(accountID: domestic, value: dec("-40"),
+                       memo: "SOMEWHERE                 SYDNEY  40.00  AUD"),
+            SplitInput(accountID: spend, value: dec("40")),
+        ])
+        #expect(model.narrativeForeignCandidates(accountName: "Cash").isEmpty,
+                "a narrative naming the account's own currency is not a conversion")
+        #expect(model.restructureAsForeign(transactionID: id, foreignAmount: dec("1773.84"),
+                                           currencyCode: "MYR") == .restructured)
+        #expect(model.narrativeForeignCandidates(accountName: "Card").isEmpty,
+                "recovered once, and not offered again")
+    }
+}
