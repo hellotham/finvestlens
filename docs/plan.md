@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Document status** | **Phases P0–P11 complete; P12 (navigation) is open and blocks 1.1.** v1.0 was P0–P6 (13 July 2026); P7 business, P8 extended import, P9 planning & insights, P10 ledger CLI & interchange and P11 the Investments hub have landed since, **plus the Jul 2026 usability/performance and report-quality redesigns**, and the Aug 2026 register-style restoration and large-book NAS validation that closed the last NFR-02 item (`finlab`, [lab.md](lab.md)). Online bank sync skipped to [deferred.md](deferred.md). |
+| **Document status** | **Phases P0–P12 complete.** v1.0 was P0–P6 (13 July 2026); P7 business, P8 extended import, P9 planning & insights, P10 ledger CLI & interchange and P11 the Investments hub have landed since, **plus the Jul 2026 usability/performance and report-quality redesigns**, and the Aug 2026 register-style restoration and large-book NAS validation that closed the last NFR-02 item (`finlab`, [lab.md](lab.md)). Online bank sync skipped to [deferred.md](deferred.md). |
 | **Last updated** | 2026-08-15 |
 | **Scope** | The build plan: phases, workstreams, tasks, dependencies, and exit criteria |
 | **Companions** | [PRD](prd.md) · [Architecture](architecture.md) · [Porting Strategy](porting.md) · [Implemented](implemented.md) · [Deferred backlog](deferred.md) · [Money study](enhancements-msmoney.md) · [Firefly study](enhancements-firefly.md) · [Frollo study](enhancements-frollo.md) |
@@ -27,9 +27,9 @@ This is the authoritative **delivery schedule and status record**. It sequences 
 | **P9 — Planning & insights** | ✅ Complete (24 Jul 2026) | Debt & Lifetime planners, tax estimator, Spending Insights, wellbeing score, passport PDF, savings challenges, Emergency Records, audit log — design in [planning-design.md](planning-design.md). |
 | **P10 — Ledger CLI & interchange** | ✅ Complete (25 Jul 2026) — P10a–P10d all delivered | Ledger 3 journal import/export + the read-only `finlens` CLI. Research + phased plan in [ledger-design.md](ledger-design.md) (format spec: [ledger-format-reference.md](ledger-format-reference.md), CLI spec: [ledger-cli-reference.md](ledger-cli-reference.md)). |
 | **P11 — The Investments hub** | ✅ Complete (15 Aug 2026) — I1–I7 | Portfolio panel, security detail, FIIG bond provider, fundamentals sidecar, reconciliation. Design: [investments-design.md](investments-design.md). |
-| **P12 — Modes, sidebar & tabs** | 📋 Planned (accepted 15 Aug 2026) | The navigation redesign, **all of it in 1.1**: modes in the toolbar, one sidebar per mode, a tabbed detail pane, Overview as a board of views. Design: [navigation-design.md](navigation-design.md); requirements `FR-NAV-01…12`. |
+| **P12 — Modes, sidebar & tabs** | ✅ Complete (15 Aug 2026) | The navigation redesign, all of it: seven modes on ⌘1…⌘7 with five on the toolbar, one sidebar per mode, a tabbed detail pane, Overview as a board of views, one period selector, All Transactions repaired, sidebar sorting. Design: [navigation-design.md](navigation-design.md); requirements `FR-NAV-01…12`. |
 
-**Every phase P0–P11 is delivered**; a set of low-priority tails deferred *within* them is tracked, ranked, in [deferred.md](deferred.md). **P12 is the open phase** and blocks 1.1. The narrative of what was built, with the audits and measurements behind it, is in [implemented.md](implemented.md).
+**Every phase P0–P12 is delivered**; a set of low-priority tails deferred *within* them is tracked, ranked, in [deferred.md](deferred.md). The narrative of what was built, with the audits and measurements behind it, is in [implemented.md](implemented.md).
 
 ---
 
@@ -376,9 +376,11 @@ are contained: neither can affect prices already in the book.
 
 ## 13d. Phase P12 — Modes, sidebar and tabs
 
-**Status.** 📋 **Planned (accepted 15 Aug 2026).** Design, alternatives and the
-guidance behind each decision live in [navigation-design.md](navigation-design.md);
-requirements are `FR-NAV-01` … `FR-NAV-12`.
+**Status.** ✅ **Complete (15 Aug 2026).** All seven sub-phases N1–N7 shipped.
+Design, alternatives and the guidance behind each decision live in
+[navigation-design.md](navigation-design.md); requirements are `FR-NAV-01` …
+`FR-NAV-12`. What was built, and the two places the build corrected the
+design, are in [implemented.md](implemented.md).
 
 **Objective.** One sidebar currently holds thirteen functional destinations
 above a 565-account tree. The account list is therefore present in Reports where

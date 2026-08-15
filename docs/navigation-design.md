@@ -182,7 +182,9 @@ clients put them — but Records keeps them inspectable next to the records they
 classify, and the app's rules already do more than classify (they allocate to
 goals and link to bills).
 
-That leaves six, and six is more than feels comfortable. §4.1a is that argument.
+That leaves six *working* modes; with Overview — a mode by exception, since you
+glance at it rather than work in it — there are seven, which is more than feels
+comfortable. §4.1a is that argument, and ⌘1…⌘7 is the count it settles on.
 
 ### 4.1a How many modes, and what to do about it
 
@@ -526,7 +528,7 @@ destination row would be worse than offering nothing.
 
 ## 6 Settled
 
-- **Six modes exist; five are on the toolbar by default** (§4.1a): Overview ·
+- **Seven modes exist; five are on the toolbar by default** (§4.1a): Overview ·
   Accounts · Investments · Reports · Business, with Planning and Records added
   by the user through standard toolbar customisation. Every mode is always in
   the View menu with a shortcut, so nothing is hidden — the objection to a
@@ -572,9 +574,21 @@ already has. Business likewise stays thin until invoices and payees fill it.
 
 ## 7 Still open
 
-Nothing blocking. **All of P12 lands in 1.1** (decided 15 Aug 2026): the current
-design is internally inconsistent, and shipping half would leave two navigation
-models in one window.
+**Built 15 Aug 2026** — all seven sub-phases. What shipped, and where the build
+corrected this document, is in [implemented.md](implemented.md).
+
+Two things this design asks for that the build did not deliver, recorded here
+rather than left to be rediscovered:
+
+- **Distinct drag feedback** (§4.6): an insertion line for a reorder versus a
+  highlighted row for a re-parent. The two operations exist and are gated on
+  manual order; they currently look the same while dragging, which is the half
+  of the design that stops people moving an account they meant to sort.
+- **Sorting outside Accounts** (§4.6 says "per section and per mode"). The sort
+  control ships for Accounts only: balance, code and first-transaction are facts
+  about an *account*, and a control over the other modes' lists would mostly
+  offer criteria that cannot run. Name and manual order could be offered there
+  later.
 
 Two things to decide *during* the build rather than before it:
 

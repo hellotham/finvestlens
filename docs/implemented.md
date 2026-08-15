@@ -2689,3 +2689,67 @@ accounts), silent save failures on book-switch/quit/conflict resolution (now
 surfaced, quit cancels on failure), transaction-editor errors no longer silently
 dismissed, lock heartbeat timer (idle books no longer go stale-breakable),
 autosave (5-minute interval), stale importer/OFX comments.
+
+## P12 — Modes, sidebar and tabs (15 Aug 2026)
+
+The navigation redesign, all seven sub-phases. Design and rejected alternatives:
+[navigation-design.md](navigation-design.md); requirements `FR-NAV-01…12`;
+schedule and exit criteria: [plan.md](plan.md) §13d.
+
+**N1 — Modes.** `AppMode`: Overview · Accounts · Investments · Reports ·
+Business · Planning · Records, on ⌘1…⌘7, each its own `ToolbarItem(id:)` so the
+five-mode default is arranged through the *system's* toolbar customisation
+rather than a bespoke pane. Toggles, not buttons: the control's job is
+orientation, so VoiceOver has to be able to say which one is on. Each mode owns
+its own selection and open tabs. The flat `SidebarSelection` became a view onto
+per-mode state, so the `didSet` that drove the register became one explicit
+funnel reached identically by a mode switch, a selection, a session restore and
+a book close.
+
+**N2 — One sidebar per mode.** Thirteen destinations above 565 accounts became
+one kind of thing per mode, two levels deep. Grouping that leads nowhere is a
+`Section` header, because a selectable row has to lead somewhere. The
+filter-erases-navigation bug is gone rather than fixed: there is nothing left
+for a filter to erase. The audit log stopped being a modal sheet — it is a
+collection the book keeps. Accounts keeps its four-level tree, the exception the
+guidance grants.
+
+**N3 — Tabs.** A tabbed interface in the detail pane, not window tabs: a window
+tab carries a whole window, so three open registers would mean three copies of
+the account tree. GnuCash's rules throughout — never a duplicate
+(`gnc-main-window.cpp:3291`), a new tab is deliberate
+(`gnc-plugin-page-account-tree.cpp:987`), a placeholder opens nothing. The home
+tab is derived, not stored, so it cannot be closed or lost to a stale desk
+state. ⌥⌘W closes a tab; ⌘W stays the window's.
+
+**N4 — Overview as a board of views.** Views with their cards nested beneath, so
+the sidebar doubles as the card index. Selecting never switches mode — the door
+out is a button that says where it goes. A card selection carries the view it
+was picked from, because Net Worth is on Mix *and* on Accounts and two rows with
+one tag make selection ambiguous. A favourite is a saved custom view; there is
+no second concept. Business contributes no card yet, and its empty view says so.
+
+**N5 — One period.** The dashboard kept a period under its own key while reports
+opened on the book's default: two answers to one question, with nothing on
+screen saying so. `AppModel.period` is now the only one, in the toolbar, seeding
+what a fresh report opens on. `nil` means "the book's default" rather than a
+copy, so changing the default in Settings takes effect immediately.
+
+**N6 — All Transactions repaired, and the design corrected.** Checked against
+GnuCash before building: `split-register-layout.c:584-620` gives
+`GENERAL_JOURNAL` nine columns and every cursor, so forcing journal style was
+wrong (fixed); `gnc-split-reg.c:894` says "no anchoring split", so dropping
+Transfer from the ⇥ order was **right** and stays; `split-register-model.c:1650`
+fills the total cell from the transaction, so a blank amount was wrong (fixed).
+A whole-book row now takes reconcile, accounts and total from the transaction.
+
+**N7 — Sidebar sorting.** Six orders, applied per level. The manual order lives
+in the account's kvp (`finvestlens-sidebar-order`) so it round-trips; GnuCash
+ignores it, which is the right failure mode. "First Transaction" is derived and
+says so. Dragging is offered only under manual order.
+
+**Deviations, recorded rather than hidden.** The sort control ships for Accounts
+only — balance, code and first-transaction are facts about an account. ⌘-click
+is not bound to "open in new tab": in a macOS `List` it is the extend-selection
+modifier. The distinct drag feedback §4.6 asks for (insertion line versus
+highlighted row) is not built, and the drag is unverified on screen.
