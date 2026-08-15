@@ -157,6 +157,28 @@ without disturbing anything else.
 Seven modes is a lot for one segmented control. At narrow widths it must drop
 to icons only rather than let the system push it into the overflow menu.
 
+**How many modes is too many? The test is whether you work there.** A mode is a
+place you settle into for a session — its own sidebar, its own open tabs, its
+own state to come back to. Ask of each: *would you spend twenty minutes in it?*
+
+| | Working session? | |
+|---|---|---|
+| Accounts, Investments, Reports, Planning, Business, Records | yes | modes |
+| Overview | no, you glance — but it is the landing | mode by exception |
+| **Rules** | **no** — you adjust one and leave | **not a mode** |
+
+Rules fail it, and they fail it twice over: you almost never *go* to Rules, you
+arrive from somewhere else, usually because an import categorised something
+wrongly. That is a destination reached in context, not a top-level place. They
+become a **collection inside Records** — the book's own paperwork, alongside
+assets, deductions and the audit log.
+
+So: **seven modes, and Rules is not one of them.** The alternative worth
+naming is Settings — rules that transform incoming data are configuration, and
+that is where several mail clients put them — but Records keeps them
+inspectable next to the records they classify, and the app's rules already do
+more than classify (they allocate to goals and link to bills).
+
 ### 4.3 Overview is a board of views, not a board of tiles
 
 Overview is the app's front page: it opens there, and it reports across every
@@ -173,17 +195,34 @@ an overdue invoice.
 So: **every mode must be able to contribute at least one tile**, and Business
 needs a receivables/overdue tile before it can hold up its end.
 
-**Overview's sidebar is its list of views** — which is what the mode was
-missing. Standard views (Mix · Accounts · Investments · Business · Planning),
-the user's custom views, and favourites. A *view* is a named selection of tiles
-and their order; the board-packing algorithm already decides placement from
-window size, so a view only has to say which tiles are eligible.
+**Overview's sidebar is views, with their cards nested under them.** Clicking a
+view shows the board; clicking a card under it shows that card full-window.
+Section → instances, the same two-level shape as every other mode, and it means
+the sidebar doubles as the card index — no separate "which cards are on this
+view?" affordance is needed.
 
-**Every tile can be opened full-window.** A tile is a summary at board size and
-a full page when zoomed, with a close button returning to the board. This is
-also how a tile that is *not* on the current view is reached: a toolbar button
-lists every tile, and choosing one opens it zoomed until closed. Nothing is
-unreachable merely because it did not fit.
+```
+▾ Mix                 ← click: the board
+    Net Worth         ← click: that card, full-window
+    Cash Flow
+    Allocation
+▾ Accounts
+    …
+▾ Custom
+  ▾ Tax Time          ← a saved view
+      Deductions
+```
+
+Standard views (Mix · Accounts · Investments · Business · Planning), then the
+user's own. **A favourite is just a saved custom view** — no separate concept.
+A view is a named selection of cards; the board-packing algorithm already
+decides placement from window size, so a view only says which cards are
+eligible and in what priority.
+
+**Every card can be opened full-window**, with a close button returning to the
+board. A card *not* on the current view is still reachable — a toolbar button
+lists every card, and choosing one opens it full-window until closed. Nothing
+is unreachable merely because it did not fit the board.
 
 **One timescale, everywhere.** A single period selector governs the board, and
 is the same control every other mode uses — and the default period a report
@@ -280,6 +319,48 @@ of the account tree, and switching tabs would switch modes. In-window tabs keep
 - The mode's home tab (All Transactions; the Investments and Reports hubs) is
   first and not closeable.
 
+### 4.6 Sidebar behaviour common to every mode
+
+The sidebar is one component with one set of manners, whatever collection it is
+showing.
+
+**Sorting.** Each section sorts by a criterion or by hand:
+
+- *By criterion* — name, code, balance, type, and for accounts the date of the
+  earliest transaction (the book has no opening-date field, so "opened" is
+  derived, and that should be said in the UI rather than implied).
+- *By hand* — a persisted order per parent. Stored in the account's own kvp so
+  it round-trips like everything else; GnuCash has no such slot and will ignore
+  it, which is the right failure mode.
+
+Sorting is per section and per mode, and it is desk state.
+
+**Dragging** does two different things and the design must not blur them:
+
+| Drop target | Meaning | Risk |
+|---|---|---|
+| Between siblings | reorder — sets the manual order | none |
+| Onto another account | **re-parent** — changes the tree | real; the book changes |
+
+Re-parenting is a book edit, undoable, and it already exists behind
+`validParents(forAccount:)`. It must look different from a reorder while
+dragging — an insertion line versus a highlighted row — or people will move
+accounts they meant to sort. Dragging is disabled while a criterion sort is
+active: dropping something "between" a sorted list is a promise the sort will
+immediately break.
+
+**One context menu.** A per-row `.contextMenu` is only consulted when the row
+is *outside* the current selection; right-clicking the selected row goes through
+the `List`'s own selection machinery, which with no selection-typed menu
+supplied fell back to the system default. That is why the same account offered
+two different menus depending on whether it happened to be selected.
+
+The fix is `contextMenu(forSelectionType:)` on the List — one definition serving
+both paths by construction, and multi-selection for free. Applied 15 Aug 2026
+(`Views.swift`, `AccountsSidebar.sidebarMenu(for:)`). Rows that are not accounts
+get an empty menu, which is correct: offering an account's Delete on a
+destination row would be worse than offering nothing.
+
 ## 5 Consequences to plan for
 
 - **Session state changes shape.** `SidebarSelection` (`AppModel.swift:150`) is
@@ -304,6 +385,9 @@ of the account tree, and switching tabs would switch modes. In-window tabs keep
 
 - **Seven modes**: Overview · Accounts · Investments · Reports · Planning ·
   Business · Records. Business is its own mode; Time & Mileage joins it.
+  **Rules are not a mode** — they fail the working-session test and become a
+  Records collection (§4.1). Business stays thin until invoices and payees fill
+  its sidebar, which is expected rather than a gap.
 - **No Tools mode** — its contents are commands, and commands belong in the
   menu bar. A mode needs a collection.
 - **Overview is the launch page** and reports across every mode.
@@ -318,9 +402,6 @@ fullest of any mode.
 
 ## 7 Still open
 
-1. **Where do Rules live** — Records, or Accounts where importing and
-   categorising actually happen? They are a collection either way; the question
-   is which mode a user looks in.
-2. **How much of this ships before 1.1.** §4.4's repair of All Transactions and
-   the filter-erases-navigation bug are small and independent; the mode
-   structure is not.
+1. **How much of this ships before 1.1.** The sidebar's context menu is fixed
+   already; repairing All Transactions (§4.4) and the filter-erases-navigation
+   bug are small and independent. The mode structure is not, and 1.1 is close.

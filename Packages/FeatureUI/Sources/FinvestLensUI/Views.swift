@@ -1028,6 +1028,9 @@ struct AccountsSidebar: View {
             }
             accountsSection
         }
+        .contextMenu(forSelectionType: SidebarSelection.self) { selection in
+            sidebarMenu(for: selection)
+        }
     }
 
     @ViewBuilder
@@ -1078,29 +1081,46 @@ struct AccountsSidebar: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(label)
         .accessibilityValue(AmountFormat.string(node.balance, code: node.currencyCode))
-        .contextMenu {
-            Button(model.isFavouriteAccount(node.id) ? "Remove from Favourites" : "Add to Favourites",
-                   systemImage: model.isFavouriteAccount(node.id) ? "star.slash" : "star") {
-                model.toggleFavouriteAccount(node.id)
+    }
+
+    /// One menu for every sidebar row, whether or not it is the selected one.
+    ///
+    /// A per-row `.contextMenu` is only consulted when the row is *outside* the
+    /// selection; right-clicking the selected row goes through the `List`'s
+    /// selection machinery instead, which — with no selection-typed menu
+    /// supplied — fell back to the system's default. That is why the same
+    /// account offered two different menus depending on whether it happened to
+    /// be selected. Attaching the menu to the selection type is the API meant
+    /// for this: one definition, both paths.
+    @ViewBuilder
+    func sidebarMenu(for selection: Set<SidebarSelection>) -> some View {
+        // Account rows carry account actions. Destinations have none, and an
+        // empty menu is correct — better than offering an account's Delete on
+        // a row that is not an account.
+        if selection.count == 1, case let .account(id)? = selection.first {
+            let hasChildren = !(model.book?.account(with: id)?.children.isEmpty ?? true)
+            Button(model.isFavouriteAccount(id) ? "Remove from Favourites" : "Add to Favourites",
+                   systemImage: model.isFavouriteAccount(id) ? "star.slash" : "star") {
+                model.toggleFavouriteAccount(id)
             }
             Divider()
-            Button("Edit…") { sheet = .edit(node.id) }
+            Button("Edit…") { sheet = .edit(id) }
             Button("Reconcile…") {
                 #if os(macOS)
-                openWindow(id: "reconcile", value: node.id)
+                openWindow(id: "reconcile", value: id)
                 #else
-                sheet = .reconcile(node.id)
+                sheet = .reconcile(id)
                 #endif
             }
             // Only where there is a subtree to cascade onto.
-            if !(node.children ?? []).isEmpty {
-                Button("Cascade Properties…") { sheet = .cascade(node.id) }
+            if hasChildren {
+                Button("Cascade Properties…") { sheet = .cascade(id) }
             }
             // Always offered. It used to appear only for an account with
             // nothing in it, which on a real book is almost none of them — so
             // the answer to "why can't I delete this?" was a button that wasn't
             // there.
-            Button("Delete…", role: .destructive) { sheet = .delete(node.id) }
+            Button("Delete…", role: .destructive) { sheet = .delete(id) }
         }
     }
 }
