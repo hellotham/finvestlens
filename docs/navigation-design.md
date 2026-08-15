@@ -121,51 +121,119 @@ the app supports, with labels short enough to survive it.
 
 ### 4.2 The sidebar shows one mode's instances, two levels deep
 
-The point missed on the first pass: **every mode has real instance
-collections**, so no mode's sidebar has to be a menu. Verified against the
-model:
+**Every mode has real instance collections**, so no mode's sidebar has to be a
+menu. Verified against the model:
 
 | Mode | Sidebar | Backing collection |
 |---|---|---|
-| Overview | *(none — the dashboard is the whole window)* | — |
+| Overview | *(none — the board is the whole window)* | — |
 | Accounts | Favourites, then the account tree | `accountTree`, `favouriteAccountNodes` |
-| Investments | Securities grouped by type; portfolios | `securityAccountNodes`, commodities |
+| Investments | Securities by type; portfolios | `securityAccountNodes`, commodities |
 | Reports | Standard · Custom · Favourites | report catalogue, saved reports |
 | Planning | Budgets · Goals · Scheduled | `budgets`, `savingsGoals`, `scheduledTransactions` (`AppModel.swift:609-638`) |
-| Records | Rules · Time & Mileage · Emergency Records | `ruleGroups`, `billableEntries`, `emergencyRecords` (`AppModel.swift:608-647`) |
+| Business | Customers · Vendors · Invoices · Jobs · Employees · Time & Mileage | `businessCustomers` et al., `billableEntries` |
+| Records | Rules · Emergency Records · Audit log | `ruleGroups`, `emergencyRecords` (`AppModel.swift:608-644`) |
 
 Each is a section header plus its instances — **exactly two levels**, which is
 what the sidebar guidance asks for. Selecting a budget shows that budget;
 selecting a rule shows that rule. What used to be a destination ("Budgets")
-becomes a section heading over the things themselves.
+becomes a heading over the things themselves.
 
-Two places this does not fall out cleanly:
+**The test for whether something is a mode: does it have a collection?**
+That is what settles "should there be a Tools mode" — no. Repair Book, Close
+Financial Year, Import, Export and the like are *commands*, and a sidebar full
+of commands is the menu this design exists to remove. Commands belong in the
+menu bar, where they already are. Only the audit **log** is a collection, and it
+sits in Records.
 
-- **Business** is a hub of its own — customers, vendors, invoices, jobs,
-  employees. Under Records it would need three levels. It is a mode of its own,
-  or Records is renamed and Business moves out.
-- **Accounts** is four levels deep and stays that way. GnuCash users expect the
-  tree, and the two-level rule is written "in general". If it proves unwieldy,
-  the HIG's own remedy — a content column between sidebar and detail — can be
-  added without disturbing anything else.
+**Time & Mileage goes to Business**, not Records: billable time and mileage
+exist to be invoiced, so they belong beside the invoices.
 
-### 4.3 Tabs are a tabbed interface, not window tabs
+**Accounts stays four levels deep.** GnuCash users expect the tree, and the
+two-level rule is written "in general". If it proves unwieldy the HIG's own
+remedy — a content column between sidebar and detail — can be added later
+without disturbing anything else.
+
+Seven modes is a lot for one segmented control. At narrow widths it must drop
+to icons only rather than let the system push it into the overflow menu.
+
+### 4.3 Overview is cross-mode, and one mode contributes nothing
+
+Overview is the app's front page: it opens there, and it reports across every
+mode rather than about accounts.
+
+It is already less account-bound than it looks. Of the seventeen tiles
+(`DashboardView.swift:141`), `allocation`, `performance` and `topMovers` are
+investment tiles and `goals`, `bills` and `wellbeing` are planning ones. But
+nine of seventeen — netWorth, income, expenses, cashflow, savingsRate, accounts,
+recentActivity, composition, spendingTrend — are account-centric, and
+**Business contributes no tile at all**: nothing shows receivables, payables or
+an overdue invoice.
+
+The rule that follows: **every mode must be able to contribute at least one
+tile, and the default board carries one from each.** Business needs a
+receivables/overdue tile before it can hold up its end; Records needs one
+(rules that fired, or records due for review) or it is a mode nobody is
+reminded of.
+
+### 4.4 The Accounts home page is All Transactions — repaired
+
+Not another card page. Investments and Reports are *reading* modes, so a hub
+suits them; Accounts is a *working* mode, and Overview already carries the
+reading layer for the whole app. A second summary page in Accounts would
+duplicate Overview and delay the thing people came for.
+
+All Transactions is the right landing because it is the ledger's inbox — the
+newest activity across every account, which is exactly what a categorise or
+reconcile session starts from. It becomes the first tab of Accounts mode, and
+is not closeable.
+
+**But it has to stop being a journal.** It is already the same component —
+`RegisterSheet(model:wholeBook: true)` (`Views.swift:1590`) — yet `wholeBook`
+changes three things that make it read as an anachronism:
+
+| `RegisterSheet.swift` | What `wholeBook` does | Why it is wrong here |
+|---|---|---|
+| `:81` | `style: wholeBook ? .journal : style` | The chosen register style is ignored; every transaction is fully exploded whether or not the user asked for Basic Ledger |
+| `:879` | `guard !wholeBook else { return [] }` — no reconcile | Each row *is* a split of some account, so its reconcile state is meaningful and needed |
+| `:2838` | Transfer and Amount dropped from the ⇥ order | Editing behaves differently from every other register |
+
+The fix is to make the whole-book register a register **scoped to every
+account** rather than a separate dialect: honour the chosen style, show
+reconcile, keep the editing order, and add an **Account** column — the one
+thing it genuinely needs that a single-account register does not.
+
+### 4.5 Tabs are a tabbed interface, not window tabs
 
 Several open items within a mode — registers, reports, portfolios — as document
-tabs across the top of the **detail pane**, in the manner of a code editor's
-file tabs.
+tabs across the top of the **detail pane**, in the manner of a code editor.
 
-**Not macOS window tabs.** A window tab carries a whole window, so each one
-would bring its own sidebar and toolbar; opening three registers would mean
-three copies of the account tree, and switching tabs would switch modes too.
-That defeats the point of a mode-scoped sidebar. In-window tabs keep **one
-sidebar serving many open items**, which is the actual requirement.
+**Not macOS window tabs.** A window tab carries a whole window, so each would
+bring its own sidebar and toolbar; three open registers would mean three copies
+of the account tree, and switching tabs would switch modes. In-window tabs keep
+**one sidebar serving many open items**, which is the requirement.
 
-Consequences to design deliberately: what opens a tab versus replacing the
-current one (a single click replaces, ⌘-click or double-click pins, as editors
-do); how tabs are closed and reordered; whether the set survives relaunch
-(it should — it is desk state, so `UserDefaults`, never the book); and
-"All Transactions" / "All Investments" as a first, permanent tab.
+**Behaviour, following GnuCash** (read 15 Aug 2026 from
+`~/Repositories/gnucash-reference` after adding `gnucash/gnome` and
+`gnucash/gnome-utils` to the sparse checkout):
+
+- **Single click selects; it does not open a tab.** GnuCash opens a register
+  from the account tree on *double*-click — `gnc_plugin_page_account_tree_double_click_cb`
+  → `gppat_open_account_common` (`gnc-plugin-page-account-tree.cpp:987`).
+  Here, single click *replaces* the current tab's content, which is today's
+  behaviour and worth keeping.
+- **A new tab is a deliberate act**: double-click, ⌘-click, or the row's
+  context menu — "Open in New Tab" — or a new-tab button on the strip.
+- **Never open a duplicate.** GnuCash checks first:
+  `if (gnc_main_window_page_exists(page)) { gnc_main_window_display_page(page); return; }`
+  (`gnc-main-window.cpp:3291`). Opening something already open focuses its
+  existing tab.
+- **A placeholder account opens nothing.** GnuCash expands or collapses the row
+  instead, because a placeholder has no register — worth copying rather than
+  showing an empty one.
+- Tabs persist across relaunch: desk state, so `UserDefaults`, never the book.
+- The mode's home tab (All Transactions; the Investments and Reports hubs) is
+  first and not closeable.
 
 ## 5 Consequences to plan for
 
@@ -187,12 +255,24 @@ do); how tabs are closed and reordered; whether the set survives relaunch
   sidebar is a day's work, ships independently, and is not thrown away by the
   full design.
 
-## 6 Questions still needing an answer
+## 6 Settled
 
-1. **Six modes or seven** — does Business come out of Records into its own mode?
-   It is the one collection that will not fit two levels under anything else.
-2. **Does Overview stay a mode**, or become the Accounts landing page? It is the
-   app's front page and a lot of work went into the tile board, which argues for
-   its own mode.
-3. **Tab behaviour on single click** — replace the current tab (editor-style
-   preview) or always open a new one?
+- **Seven modes**: Overview · Accounts · Investments · Reports · Planning ·
+  Business · Records. Business is its own mode; Time & Mileage joins it.
+- **No Tools mode** — its contents are commands, and commands belong in the
+  menu bar. A mode needs a collection.
+- **Overview is the launch page** and reports across every mode.
+- **Accounts lands on All Transactions**, repaired into a real register.
+- **Single click replaces the tab; a new tab is deliberate**; an already-open
+  item focuses rather than duplicates.
+
+## 7 Still open
+
+1. **Does Records earn its place?** Rules, Emergency Records and the audit log
+   are a thin collection, and Rules arguably belong with Accounts, where
+   importing and categorising happen. Six modes with Rules under Accounts is
+   defensible. Needs a call before the mode list is fixed in code.
+2. **Does All Transactions stay fast enough as the launch-adjacent tab?** The
+   reference book holds 46,831 transactions and 104,195 splits; the register is
+   virtualised, but landing on the whole book by default is a new load pattern
+   and wants measuring before it is made the default.
