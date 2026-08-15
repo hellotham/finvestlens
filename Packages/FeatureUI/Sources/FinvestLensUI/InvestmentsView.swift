@@ -99,7 +99,13 @@ struct InvestmentsView: View {
                     Task { await model.updatePrices() }
                 }
                 .disabled(model.pricableSecurities.isEmpty || model.quoteProgress != nil)
-                Menu("Update Options", systemImage: "chevron.down") {
+                // `ellipsis.circle`, not `chevron.down`. A toolbar `Menu`
+                // draws its symbol and drops the title, so a chevron symbol
+                // rendered as a lone chevron — a control with no name at all,
+                // which is what was reported on 16 Aug 2026. HIG *Toolbars*
+                // gives this shape its own name: "Add a More menu to contain
+                // additional actions."
+                Menu("Update Options", systemImage: "ellipsis.circle") {
                     // Scope, remembered per book (`FR-INV-25`). The default run
                     // used to ask about every security the book had ever held —
                     // 87 on the reference book, 48 of them closed.

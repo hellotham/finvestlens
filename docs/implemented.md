@@ -3011,3 +3011,90 @@ Yahoo rows current to 14 Aug, and simply has no company text).
 WAMFF is the boundary case worth recording: it failed the profile fetch like
 the super options did, but it has a live price series, so it is **not** marked.
 The evidence that settles it is the price table, not the fund'"'"'s name.
+
+## Price provenance: one provider default, and prices that cannot lie (16 Aug 2026)
+
+A user question — "I thought we implemented preferred price provider in
+settings with a fallback to Yahoo, was this not done?" — turned out to be four
+defects, found by reading the reference book's own price table rather than the
+code.
+
+**The book said what happened.** EODHD priced 30 securities a day to 11 Aug;
+from the 12th Yahoo took over and priced 21. Eleven holdings silently stopped
+being valued (AMP, COL, IAG, LLC, PL8, PPT, VAP, VDHG, YMAX, MG, WMX). Nothing
+was wrong with them.
+
+1. **There was no setting.** Settings managed API *keys* only.
+   `preferredQuoteProvider` is now a per-book preference; absent one, a
+   configured **keyed** provider wins, because going to the trouble of storing a
+   key is the preference. Yahoo is the answer only when nothing else is set up.
+2. **Three hardcoded copies of the default.** `updateAllPrices()` (⌘⇧U), the
+   six-hourly `refreshQuotesNow()`, and `preferredProvider` each spelled
+   `availableProviders.contains(.yahoo) ? .yahoo : …` — and Yahoo needs no key,
+   so that branch always won. One definition now; `preferredProvider` is an
+   alias of it. The provider picker also opens on the book's provider rather
+   than Yahoo.
+3. **Coverage followed the provider.** A security the chosen provider could not
+   serve was reported and left unpriced. A fallback sweep now offers anything
+   still unpriced to every *other* configured provider before calling it a
+   failure, so the priced set is the union of what the book's providers can do
+   between them — the same set whichever leads. `Price.source` still records who
+   served each row.
+4. **A price in the wrong currency was stored anyway.** `QuoteService.price(from:)`
+   noted a currency mismatch in the source string —
+   `Finance::Quote:yahoo (USD)` — and wrote the provider's number against the
+   requested currency regardless. On the reference book that is **1,205 wrong
+   rows**: `MG` (Mercer Growth, an Australian super option) sent to Yahoo as a
+   bare mnemonic resolves to a US-listed namesake, and 836 of that company's USD
+   closes were recorded as the fund's AUD unit price. It now throws. A test had
+   asserted the old behaviour and so encoded the bug; it asserts the drop now.
+
+Related, same root cause as `WMX`: **a bare mnemonic finds a US namesake.** Both
+`MG` and `WMX` lack an exchange suffix, and Yahoo answers 200 for both. The zero
+price guard (`YahooQuoteProvider`) catches one shape of this and the currency
+guard catches the other.
+
+### Warnings that were not warnings
+
+- **Gaps counted the tail.** `PriceHealth.gaps` ran from the first priced day to
+  *today*, so the stretch after the last price counted as a hole — even though
+  that is staleness and already has its own measure and its own worklist entry.
+  Sixteen holdings were reported as having gaps while sitting at 154 of 157 days
+  priced. Gaps are interior-only now.
+- **FIIG was offered to bonds that did not need it.** The offer keyed on the
+  identifier's *shape* alone, so bonds already drawing sparklines from prices
+  they had were told a new provider might help. It now requires the security to
+  be unpriced or stale as well.
+
+## Tabs, and the control that makes one (16 Aug 2026)
+
+The tab strip shipped hidden behind `openTabs.count > 1` — and the strip is
+where the `+` lives, so the control that creates a tab appeared only once you
+had two. Reported as "I am not seeing the tab in accounts etc, nor the ability
+to create a tab". The strip is now always visible in every mode.
+
+Its `+` was also a bare `plus`, which is the sidebar's symbol for "add an item
+to this collection" a few pixels away — in Accounts it read as "new account".
+It is `plus.rectangle.on.rectangle` behind a divider now, and inactive tabs are
+outlined rather than invisible so a lone home tab reads as a tab.
+
+## The toolbar says less and means more (16 Aug 2026)
+
+- **No window title.** HIG *Toolbars*: "If titling a toolbar seems redundant,
+  you can leave the title area empty." Here it was redundant three times over —
+  the mode button is highlighted, the sidebar header names the mode, the tab
+  strip names what is open. Reclaiming ~120pt is what lets the mode buttons keep
+  their labels at *every* window width rather than only above 868pt.
+- **No unlabelled controls.** `Menu("Update Options", systemImage: "chevron.down")`
+  drew as a lone chevron, because a toolbar `Menu` renders its symbol and drops
+  its title — it is `ellipsis.circle` now, the More idiom the HIG names. The
+  period selector's label was its *value* ("This financial year") with no
+  tooltip and no accessible name, so VoiceOver read a period without saying what
+  it governed.
+- **Stacked labels were measured and not adopted.** Label-below-icon would save
+  159pt (329 vs 488), enough for all seven modes at the minimum window. But it
+  needs `ExpandedWindowToolbarStyle` — still in the macOS 26.5 SDK, undeprecated
+  — and the current HIG Toolbars page describes a single row with
+  leading/center/trailing groupings and never mentions stacking, expanded style
+  or label-below-icon. Emptying the title area bought the room without the
+  legacy chrome, so the stacked layout was not needed.

@@ -542,8 +542,18 @@ public extension FinancialReports {
     private static func gaps(for commodity: Commodity, pricedDays: Set<Date>,
                              periods: [HoldingPeriod], calendar: TradingCalendar,
                              exchange: String, asOf: Date) -> [PriceGap] {
-        guard let first = pricedDays.min() else { return [] }
-        let candidates = calendar.tradingDays(for: exchange, from: first, to: asOf)
+        guard let first = pricedDays.min(), let last = pricedDays.max() else { return [] }
+        // **Interior only.** A gap is a hole *between* prices; the stretch after
+        // the last one is not a gap, it is how far behind the security is — and
+        // that already has its own measure (`tradingDaysBehind`) and its own
+        // entry on the worklist (`.stale`). Running to `asOf` counted the tail
+        // twice and produced the bulk of the false alarms: measured on the
+        // reference book 16 Aug 2026, a fetch had covered 21 of ~51 ASX
+        // securities over three days, so the other thirty were each reported as
+        // having a three-day "gap" while sitting at 154 of 157 days priced.
+        // Nothing was missing from their history; the fetch had simply moved on
+        // without them.
+        let candidates = calendar.tradingDays(for: exchange, from: first, to: min(last, asOf))
         guard !candidates.isEmpty else { return [] }
 
         var runs: [PriceGap] = []

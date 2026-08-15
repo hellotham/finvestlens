@@ -16,7 +16,19 @@ struct QuotesView: View {
     @Bindable var model: AppModel
     @Environment(\.dismiss) private var dismiss
 
-    @State private var selectedProvider: QuoteProviderKind = .yahoo
+    /// Opens on the book's own provider rather than Yahoo — a picker that
+    /// always starts somewhere the user did not choose is how a configured
+    /// provider gets bypassed one run at a time.
+    @State private var chosenProvider: QuoteProviderKind?
+    /// The picker's value: the book's provider until someone picks another.
+    /// A picker hardcoded to Yahoo is how a configured provider gets bypassed
+    /// one run at a time.
+    private var provider: QuoteProviderKind { chosenProvider ?? model.preferredProvider }
+    /// The picker binds through this so an untouched picker still *shows* the
+    /// book's provider.
+    private var providerBinding: Binding<QuoteProviderKind> {
+        Binding(get: { provider }, set: { chosenProvider = $0 })
+    }
     @State private var isFetching = false
     @State private var selection: Set<Commodity> = []
     @State private var confirmRefetch = false
@@ -54,7 +66,7 @@ struct QuotesView: View {
 
     private var fetchSection: some View {
         Section {
-            Picker("Provider", selection: $selectedProvider) {
+            Picker("Provider", selection: providerBinding) {
                 ForEach(model.availableProviders) { Text($0.displayName).tag($0) }
             }
             Button {
@@ -196,15 +208,14 @@ struct QuotesView: View {
     // MARK: Actions
 
     private func ensureValidProvider() {
-        if !model.availableProviders.contains(selectedProvider),
+        if !model.availableProviders.contains(provider),
            let first = model.availableProviders.first {
-            selectedProvider = first
+            chosenProvider = first
         }
     }
 
     private func updatePrices() {
         isFetching = true
-        let provider = selectedProvider
         Task {
             await model.updatePriceHistory(using: provider)
             isFetching = false
@@ -213,7 +224,6 @@ struct QuotesView: View {
 
     private func refetchSelected() {
         isFetching = true
-        let provider = selectedProvider
         let commodities = model.pricableSecurities.filter { selection.contains($0) }
         Task {
             await model.refetchPriceHistory(for: commodities, using: provider)

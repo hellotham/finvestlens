@@ -238,14 +238,20 @@ struct BatchQuoteServiceTests {
         let prices = try await service.latestPrices(
             for: [first, second, missing], in: .aud, using: .fiig)
 
-        #expect(prices.count == 2)
         #expect(prices[first]?.value == dec("98.5"))
         #expect(prices[first]?.currency == .aud)
         #expect(prices[missing] == nil)
         #expect(http.requestedURLs.count == 1)
-        // A USD bond in an AUD book leaves a visible trace instead of being
-        // silently relabelled — the same convention the single-quote path uses.
-        #expect(prices[second]?.source == "Finance::Quote:fiig (USD)")
+        // A USD bond in an AUD book is **dropped**, not relabelled.
+        //
+        // This test used to assert the opposite — that the row was stored with
+        // `source == "Finance::Quote:fiig (USD)"` — and in doing so it encoded
+        // the bug: the provider's USD figure was written against AUD, and the
+        // only trace was a suffix on a string nothing reads. On the reference
+        // book that produced 1,205 wrong rows. A price in the wrong currency is
+        // not a price of this security.
+        #expect(prices[second] == nil)
+        #expect(prices.count == 1)
     }
 
     @Test("A provider with no batch path is looped, and one failure loses only itself")

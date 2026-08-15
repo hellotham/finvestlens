@@ -52,11 +52,17 @@ enum ModeLabelFit {
     /// Symbol (16) + gap (4) + the bordered button's horizontal padding (20).
     static let symbolAndPadding: CGFloat = 40
 
-    /// Everything else the toolbar has to hold: the sidebar toggle, the title
-    /// area, and the trailing group (search, create, inspector). Deliberately
-    /// generous — being wrong towards icons costs a word, and being wrong the
-    /// other way costs the overflow menu the HIG warns against.
-    static let reservedForTheRest: CGFloat = 380
+    /// Everything else the toolbar has to hold: the sidebar toggle and the
+    /// trailing group (search, create, inspector). Deliberately generous —
+    /// being wrong towards icons costs a word, and being wrong the other way
+    /// costs the overflow menu the HIG warns against.
+    ///
+    /// Was 380 while the window carried a title. Emptying the title area (HIG
+    /// *Toolbars*: "If titling a toolbar seems redundant, you can leave the
+    /// title area empty") gave back about 120pt, which is what now lets the
+    /// default five keep their words at **every** width the window can take,
+    /// rather than only above 868pt.
+    static let reservedForTheRest: CGFloat = 260
 
     /// Whether `modes` can all show their labels in a window of `width`.
     static func labelsFit(_ modes: [AppMode], in available: CGFloat) -> Bool {

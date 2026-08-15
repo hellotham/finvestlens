@@ -388,8 +388,18 @@ extension AppModel {
         // known here, and whether the bond is actually in FIIG's index is one
         // request away. Only raised for securities that are actually held —
         // pointing at a bond redeemed years ago is noise.
+        // ...and only where FIIG would actually change anything. A bond whose
+        // prices are already arriving needs no new provider, however
+        // ISIN-shaped its identifier is: reported 16 Aug 2026, four bonds were
+        // offered FIIG while three of them were drawing sparklines from prices
+        // they already had. An offer that is already satisfied is not an
+        // offer, it is noise on a worklist — and a worklist people learn to
+        // ignore is worse than none.
         let held = Set(health.securities.filter(\.isHeld).map(\.commodity))
-        let candidates = fiigCandidates.filter { held.contains($0) }
+        let wanting = Set(health.securities
+            .filter { $0.freshness == .missing || $0.freshness == .old }
+            .map(\.commodity))
+        let candidates = fiigCandidates.filter { held.contains($0) && wanting.contains($0) }
         if !candidates.isEmpty {
             issues.append(InvestmentIssue(kind: .bondProvider, count: candidates.count,
                                           symbols: candidates.map(\.mnemonic).sorted()))

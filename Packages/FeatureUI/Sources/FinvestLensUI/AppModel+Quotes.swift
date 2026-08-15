@@ -33,6 +33,43 @@ extension AppModel {
         QuoteProviderKind.allCases.filter { !$0.requiresAPIKey || (apiKeys.key(for: $0)?.isEmpty == false) }
     }
 
+    /// The provider both unattended paths use: ⌘⇧U and the six-hourly
+    /// auto-refresh (`FR-INV-22`).
+    ///
+    /// Both used to name Yahoo outright — `availableProviders.contains(.yahoo)
+    /// ? .yahoo : …`, and Yahoo needs no key so that branch always won. A book
+    /// configured for EODHD was therefore priced by Yahoo every six hours
+    /// regardless, and on 12 Aug 2026 the reference book's daily coverage fell
+    /// from 30 securities to 21 without a word: the provider had changed under
+    /// it. Configuring a key has to be enough; asking someone to also pick the
+    /// provider on every run is the same instruction twice.
+    ///
+    /// So: whatever the book was told to prefer, else a keyed provider if one
+    /// is configured — going to the trouble of storing a key *is* the
+    /// preference — and Yahoo only when nothing else is set up.
+    /// One name for it, used by every caller that does not name a provider
+    /// itself. There were **three** hardcoded copies of
+    /// `contains(.yahoo) ? .yahoo : …` — in ⌘⇧U, in the six-hourly refresh, and
+    /// as `preferredProvider` for the security pages — so "the default
+    /// provider" meant Yahoo in three places and was configurable in none.
+    public var preferredProvider: QuoteProviderKind { preferredQuoteProvider }
+
+    public var preferredQuoteProvider: QuoteProviderKind {
+        get {
+            if case let .string(raw)? = book?.kvp["finvestlens/quoteProvider"],
+               let stored = QuoteProviderKind(rawValue: raw),
+               availableProviders.contains(stored) {
+                return stored
+            }
+            return availableProviders.first { $0.requiresAPIKey } ?? .yahoo
+        }
+        set {
+            editingBookKvp(named: "Change Price Provider") {
+                book?.kvp["finvestlens/quoteProvider"] = .string(newValue.rawValue)
+            }
+        }
+    }
+
     // MARK: Symbol overrides
 
     private func symbolKey(_ commodity: Commodity) -> String {
@@ -130,12 +167,14 @@ extension AppModel {
         }
     }
 
-    /// Fetches the latest prices now, if auto-refresh is on and Yahoo (keyless)
-    /// is available and there are securities to price.
+    /// Fetches the latest prices now, if auto-refresh is on and there are
+    /// securities to price — through the book's own provider, not Yahoo by
+    /// assumption. This runs unattended every six hours, so a provider it
+    /// picks for itself is a provider nobody chose.
     public func refreshQuotesNow() async {
         guard autoRefreshQuotes, !pricableSecurities.isEmpty,
-              availableProviders.contains(.yahoo) else { return }
-        await fetchLatestQuotes(using: .yahoo)
+              !availableProviders.isEmpty else { return }
+        await fetchLatestQuotes(using: preferredQuoteProvider)
     }
 
     /// (Re)starts the periodic refresh loop: refreshes immediately, then every
@@ -240,6 +279,50 @@ extension AppModel {
                 quoteProgress = Double(done) / Double(commodities.count)
             }
         }
+        // **The sweep that makes coverage provider-independent.**
+        //
+        // Until now a security the chosen provider could not serve was simply
+        // reported and left unpriced, so which securities got prices depended
+        // on which provider happened to run. Measured on the reference book:
+        // EODHD priced 30 securities a day to 11 Aug, Yahoo took over on the
+        // 12th and priced 21, and eleven holdings quietly stopped being valued
+        // — AMP, COL, IAG, LLC, PL8, PPT, VAP, VDHG, YMAX, MG, WMX. Nothing was
+        // wrong with those securities; the run had changed underneath them.
+        //
+        // So anything still unpriced is offered to every *other* configured
+        // provider before being called a failure. The priced set becomes the
+        // union of what the book's providers can do between them, which is the
+        // same set whichever one leads — and `Price.source` still records who
+        // actually served each row, so the book never loses that.
+        let servedSoFar = Set(fetched.map(\.commodity))
+        let stillMissing = commodities.filter { !servedSoFar.contains($0) }
+        if !stillMissing.isEmpty {
+            var recovered: Set<Commodity> = []
+            for commodity in stillMissing {
+                let tried = effectiveProvider(for: commodity, in: kind)
+                for alternate in availableProviders.sorted(by: { $0.rawValue < $1.rawValue })
+                where alternate != tried && !alternate.matchesByIdentifier {
+                    quoteStatus = .fetching("\(commodity.mnemonic) via \(alternate.displayName)")
+                    if let price = try? await service.latestPrice(
+                        for: commodity, in: reportCurrency, using: alternate,
+                        symbolOverride: quoteSymbol(for: commodity)) {
+                        fetched.append(contentsOf: normalisedParPercent([price], from: alternate))
+                        recovered.insert(commodity)
+                        break
+                    }
+                }
+            }
+            // A security recovered elsewhere is not a failure, so its first
+            // provider's complaint comes off the list — otherwise every run
+            // would report problems it had already solved.
+            if !recovered.isEmpty {
+                let names = Set(recovered.map(\.mnemonic))
+                failures.removeAll { line in
+                    names.contains(where: { line.hasPrefix("\($0):") })
+                }
+            }
+        }
+
         // Collected first, then applied in one go: the fetches await, and an
         // edit has to snapshot and mutate without suspending in between.
         // Identical same-day rows are skipped: the auto-refresh runs on every
@@ -310,9 +393,7 @@ extension AppModel {
             return
         }
         guard quoteProgress == nil else { return }   // one run at a time
-        let provider: QuoteProviderKind = availableProviders.contains(.yahoo)
-            ? .yahoo : (availableProviders.first ?? .yahoo)
-        await updatePriceHistory(using: provider)
+        await updatePriceHistory(using: preferredQuoteProvider)
     }
 
     /// When the newest security price landed, if any — "last updated" for the

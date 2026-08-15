@@ -120,10 +120,4 @@ extension AppModel {
         await refetchPriceHistory(for: [commodity], using: kind ?? preferredProvider)
     }
 
-    /// The provider a fetch uses when the caller does not name one: Yahoo when
-    /// it is available (keyless, best ASX coverage — D5), otherwise whatever is
-    /// configured.
-    public var preferredProvider: QuoteProviderKind {
-        availableProviders.contains(.yahoo) ? .yahoo : (availableProviders.first ?? .yahoo)
-    }
 }

@@ -34,16 +34,26 @@ struct ModeTabStrip: View {
                 ForEach(Array(model.openTabs.enumerated()), id: \.offset) { index, selection in
                     tab(index: index, selection: selection)
                 }
+                // A rule before it, and a symbol that is about *tabs*.
+                //
+                // A bare `plus` was ambiguous and, worse, it was the sidebar's
+                // symbol for "add an item to this collection" sitting a few
+                // pixels away — so in Accounts it read as "new account".
+                // Reported 16 Aug 2026: "a + button can mean anything, and I
+                // would have thought 'add item to collection'." The stacked
+                // rectangles say which kind of new thing this makes, and the
+                // divider says it is not one of the tabs.
+                Divider().frame(height: 14).padding(.horizontal, 4)
                 Button {
                     model.openNewTab()
                 } label: {
-                    Image(systemName: "plus")
+                    Image(systemName: "plus.rectangle.on.rectangle")
                         .scaledFont(.callout)
                 }
                 .buttonStyle(.plain)
-                .padding(.horizontal, 6)
-                .help("Open what is showing in a second tab")
-                .accessibilityLabel("New tab")
+                .padding(.trailing, 6)
+                .help("New Tab (⌘T) — opens what is showing in a second tab")
+                .accessibilityLabel("New Tab")
                 Spacer(minLength: 0)
             }
             .padding(.horizontal, 6)
@@ -91,8 +101,14 @@ struct ModeTabStrip: View {
         .padding(.horizontal, 8)
         .padding(.vertical, 3)
         .background {
+            // The active tab is filled; the others are outlined rather than
+            // invisible. With the strip now always on screen, a lone unfilled
+            // title would have read as a heading — the outline is what says
+            // "this is a tab, and there can be more of them".
             RoundedRectangle(cornerRadius: 5)
                 .fill(isActive ? AnyShapeStyle(.selection) : AnyShapeStyle(.clear))
+                .strokeBorder(isActive ? AnyShapeStyle(.clear)
+                                       : AnyShapeStyle(.separator), lineWidth: 1)
         }
         .contentShape(Rectangle())
         .contextMenu {

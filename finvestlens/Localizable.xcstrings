@@ -51665,6 +51665,53 @@
         }
       }
     },
+    "New Tab (⌘T) — opens what is showing in a second tab": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neuer Tab (⌘T) – öffnet das Angezeigte in einem zweiten Tab"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nueva pestaña (⌘T): abre lo mostrado en una segunda pestaña"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nouvel onglet (⌘T) — ouvre l’affichage actuel dans un second onglet"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nuova scheda (⌘T) — apre ciò che è visibile in una seconda scheda"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新規タブ（⌘T）— 表示中の内容を2つ目のタブで開きます"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nova aba (⌘T) — abre o que está exibido em uma segunda aba"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新建标签页（⌘T）— 在第二个标签页中打开当前内容"
+          }
+        }
+      }
+    },
     "New Transaction": {
       "extractionState": "manual",
       "localizations": {
@@ -51990,53 +52037,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "新摘要"
-          }
-        }
-      }
-    },
-    "New tab": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Neuer Tab"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nueva pestaña"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nouvel onglet"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nuovo pannello"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "新規タブ"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nova aba"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "新建标签页"
           }
         }
       }
@@ -57900,53 +57900,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "在账簿中展开该交易——选中后按 ⌘E，或点击其展开箭头。"
-          }
-        }
-      }
-    },
-    "Open what is showing in a second tab": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Das Angezeigte in einem zweiten Tab öffnen"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Abrir lo que se muestra en una segunda pestaña"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ouvrir ce qui est affiché dans un second onglet"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Apri ciò che è visualizzato in un secondo pannello"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "表示中の内容を 2 つ目のタブで開く"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Abrir o que está sendo exibido em uma segunda aba"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在第二个标签页中打开当前显示的内容"
           }
         }
       }
@@ -69239,6 +69192,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "报表设置"
+          }
+        }
+      }
+    },
+    "Reporting period": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Berichtszeitraum"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Periodo del informe"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Période de référence"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Periodo di riferimento"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "レポート期間"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Período do relatório"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "报告期间"
+          }
+        }
+      }
+    },
+    "Reporting period — governs the board, the reports, and what a new report opens on": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Berichtszeitraum – gilt für die Übersicht, die Berichte und den Zeitraum neuer Berichte"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Periodo del informe: rige el panel, los informes y el periodo inicial de un informe nuevo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Période de référence — régit le tableau, les rapports et la période d’ouverture d’un nouveau rapport"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Periodo di riferimento — vale per la bacheca, i report e il periodo iniziale di un nuovo report"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "レポート期間 — ボード、レポート、新規レポートの初期期間に適用されます"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Período do relatório — rege o painel, os relatórios e o período inicial de um novo relatório"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "报告期间 — 适用于概览板、报告，以及新建报告的默认期间"
           }
         }
       }

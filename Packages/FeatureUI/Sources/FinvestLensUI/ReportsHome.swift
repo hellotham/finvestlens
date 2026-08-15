@@ -577,6 +577,14 @@ struct PeriodSelector: View {
             Label(model.label(for: period), systemImage: "calendar")
         }
         .fixedSize()
+        // The label is the *value* — "This financial year" — which leaves the
+        // control unnamed: VoiceOver read the period aloud without saying what
+        // it governed, and there was no tooltip at all. When the toolbar
+        // tightens, the text drops and what is left is a calendar and a
+        // chevron, which is the unlabelled button reported on 16 Aug 2026.
+        .help("Reporting period — governs the board, the reports, and what a new report opens on")
+        .accessibilityLabel("Reporting period")
+        .accessibilityValue(model.label(for: period))
         .popover(isPresented: $customShown) {
             Form {
                 DatePicker("From", selection: $customFrom, displayedComponents: .date)

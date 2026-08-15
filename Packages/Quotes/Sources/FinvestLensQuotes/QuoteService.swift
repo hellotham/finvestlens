@@ -139,7 +139,7 @@ public struct QuoteService: Sendable {
                 "\(key) is an ISIN — \(kind.rawValue) is keyed by ticker. Choose an identifier-keyed provider for this security, or set its quote symbol.")
         }
         let quote = try await provider.latestQuote(symbol: kind.providerSymbol(for: key))
-        return Self.price(from: quote, commodity: commodity, currency: currency, kind: kind)
+        return try Self.price(from: quote, commodity: commodity, currency: currency, kind: kind)
     }
 
     /// Latest prices for several commodities in **one** provider request, where
@@ -193,8 +193,11 @@ public struct QuoteService: Sendable {
         var out: [Commodity: Price] = [:]
         for (commodity, key) in keys {
             guard let quote = quotes[key] else { continue }
-            out[commodity] = Self.price(from: quote, commodity: commodity,
-                                        currency: currency, kind: kind)
+            // A mismatch drops that one security, not the batch: the rest of
+            // the index is perfectly good and losing it over one bad ticker is
+            // how a whole run's worth of prices goes missing.
+            out[commodity] = try? Self.price(from: quote, commodity: commodity,
+                                             currency: currency, kind: kind)
         }
         return out
     }
@@ -212,19 +215,46 @@ public struct QuoteService: Sendable {
         let symbol = kind.providerSymbol(
             for: Self.lookupKey(for: commodity, override: symbolOverride, kind: kind))
         let quotes = try await provider.history(symbol: symbol, from: from, to: to)
-        return quotes.map { Self.price(from: $0, commodity: commodity, currency: currency, kind: kind) }
+        // History is one instrument, so a mismatch condemns the whole series:
+        // half a series in the wrong currency is worse than none.
+        return try quotes.map {
+            try Self.price(from: $0, commodity: commodity, currency: currency, kind: kind)
+        }
     }
 
-    /// Maps a ``Quote`` to a `Price`. The provider-reported currency, if any, is
-    /// carried in the price `source` for provenance but does not override the
-    /// caller's `currency` (multi-currency FX valuation is a higher layer) —
+    /// Maps a ``Quote`` to a `Price`, refusing one whose currency is not the
+    /// caller's —
     /// so a USD-listed ticker fetched into an AUD book leaves a visible trace
     /// ("Finance::Quote:yahoo (USD)") instead of an unrecoverable mislabel.
-    static func price(from quote: Quote, commodity: Commodity, currency: Commodity, kind: QuoteProviderKind) -> Price {
-        var source = "Finance::Quote:\(kind.rawValue)"
+    /// A quote whose currency is not the one asked for is **not** a price of
+    /// this security, and must not be stored as one.
+    ///
+    /// This used to note the mismatch in the source string — `Finance::Quote:
+    /// yahoo (USD)` — and store the provider's number against the requested
+    /// currency anyway. So a USD figure was written as AUD. On the reference
+    /// book that is 1,205 rows across two securities: `MG` (Mercer Growth, an
+    /// Australian super option) sent to Yahoo as a bare mnemonic resolves to a
+    /// US-listed namesake, and 836 of that company's USD closes were recorded
+    /// as the fund's AUD unit price. Every valuation drawn through them was
+    /// wrong by an exchange rate and by being a different company.
+    ///
+    /// The honest answer is to refuse. A mismatch means the identifier found
+    /// the wrong instrument or the price needs converting, and neither is
+    /// something a silent relabel can fix.
+    struct CurrencyMismatch: Error, CustomStringConvertible {
+        let symbol: String, reported: String, expected: String
+        var description: String {
+            "\(symbol) priced in \(reported), not \(expected) — check the ticker's exchange suffix"
+        }
+    }
+
+    static func price(from quote: Quote, commodity: Commodity, currency: Commodity,
+                      kind: QuoteProviderKind) throws -> Price {
+        let source = "Finance::Quote:\(kind.rawValue)"
         if let reported = quote.currencyCode, !reported.isEmpty,
            reported.caseInsensitiveCompare(currency.mnemonic) != .orderedSame {
-            source += " (\(reported))"
+            throw CurrencyMismatch(symbol: quote.symbol, reported: reported,
+                                   expected: currency.mnemonic)
         }
         return Price(
             commodity: commodity,

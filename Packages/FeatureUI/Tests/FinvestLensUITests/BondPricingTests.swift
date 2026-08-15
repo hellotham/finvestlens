@@ -544,3 +544,67 @@ struct UnquotedSecurityTests {
         #expect(!reopened.isUnquoted(again))
     }
 }
+
+/// One provider default, observed everywhere (`FR-INV-22`).
+///
+/// Reported 16 Aug 2026: "I thought we implemented preferred price provider in
+/// settings with a fallback to Yahoo — was this not done?" It was not. There
+/// were three hardcoded copies of `contains(.yahoo) ? .yahoo : …` and no
+/// setting at all, so a book configured for EODHD was priced by Yahoo every six
+/// hours and its daily coverage fell from 30 securities to 21 without a word.
+@MainActor
+@Suite("Preferred price provider")
+struct PreferredProviderTests {
+
+    private func book() throws -> (AppModel, URL) {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
+        let model = AppModel()
+        try model.newDocument(at: url)
+        return (model, url)
+    }
+
+    /// Storing a key *is* the preference. Asking someone to configure EODHD and
+    /// then also pick it on every run is the same instruction twice.
+    @Test("A configured keyed provider beats the keyless default")
+    func keyedProviderWins() throws {
+        let (model, url) = try book()
+        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+
+        // Whatever the environment has, the rule is the same: never Yahoo when
+        // a keyed provider is available and nothing else was chosen.
+        let keyed = model.availableProviders.filter(\.requiresAPIKey)
+        if keyed.isEmpty {
+            #expect(model.preferredProvider == .yahoo, "nothing configured, so the keyless one")
+        } else {
+            #expect(model.preferredProvider != .yahoo)
+            #expect(keyed.contains(model.preferredProvider))
+        }
+    }
+
+    /// And an explicit choice outranks the inference, and persists in the book.
+    @Test("The book's own choice wins and is remembered")
+    func explicitChoiceWinsAndPersists() async throws {
+        let (model, url) = try book()
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        model.preferredQuoteProvider = .yahoo
+        #expect(model.preferredProvider == .yahoo)
+        try model.save()
+        model.close()
+
+        let reopened = AppModel()
+        try await reopened.open(at: url)
+        defer { reopened.close() }
+        #expect(reopened.preferredProvider == .yahoo, "a per-book setting, not a per-run one")
+    }
+
+    /// `preferredProvider` and `preferredQuoteProvider` must never diverge —
+    /// two names for one default is how three hardcoded copies happened.
+    @Test("There is one default, under two names")
+    func oneDefinition() throws {
+        let (model, url) = try book()
+        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        #expect(model.preferredProvider == model.preferredQuoteProvider)
+    }
+}

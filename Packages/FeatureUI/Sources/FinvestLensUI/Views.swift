@@ -406,12 +406,13 @@ public struct FinvestLensRootView: View {
             SearchResultsView(model: model)
         } else {
             VStack(spacing: 0) {
-                // The strip appears once there is something beside the home tab.
-                // A one-tab strip is chrome that says nothing, and the mode's
-                // home is already named by the mode selector and the sidebar.
-                if model.openTabs.count > 1 {
-                    ModeTabStrip(model: model)
-                }
+                // **Always**, in every mode. It used to appear only once a
+                // second tab existed — and the strip is where the `+` lives, so
+                // the control that makes a tab was hidden until you had one.
+                // Reported 16 Aug 2026: "I am not seeing the tab in accounts
+                // etc, nor the ability to create a tab." The one-tab strip is
+                // not chrome that says nothing; it is the affordance.
+                ModeTabStrip(model: model)
                 destinationView
                     // Areas that were modal sheets suppress their Done/sheet
                     // chrome via this flag when shown inline.
@@ -540,12 +541,14 @@ public struct FinvestLensRootView: View {
     private var splitView: some View {
         NavigationSplitView {
             ModeSidebar(model: model)
-                // The title names the mode, because the sidebar's contents now
-                // do too — HIG *Toolbars* counts "the title of the current
-                // view" as one of a toolbar's three jobs, and a column headed
-                // "Accounts" above a list of budgets was the old sidebar's
-                // conflation showing through in one more place.
-                .navigationTitle(model.mode.title)
+                // **No title.** HIG *Toolbars*: "If titling a toolbar seems
+                // redundant, you can leave the title area empty" — Notes does
+                // exactly this. Here it is redundant three times over: the
+                // mode's toolbar button is highlighted, the sidebar header
+                // names the mode in words, and the tab strip names what is
+                // open. Reclaiming the title area is what lets the mode
+                // buttons keep their labels at every window width.
+                .navigationTitle("")
         } detail: {
             // Editing an existing transaction happens in the register row
             // itself (see `RegisterView`), not in a pane beside it: the row

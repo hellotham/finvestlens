@@ -33,9 +33,13 @@ struct ModeLabelFitTests {
     /// there up, including the 986pt window this was reported from and the
     /// 1280pt default. Someone who squeezes the window to its floor gets
     /// symbols, which is the documented degradation and not a failure.
-    @Test("The default five fit a real window, but not the minimum one")
+    /// Updated 16 Aug 2026: emptying the title area returned about 120pt, so
+    /// the default five now keep their words at **every** width the window can
+    /// take, the 860pt minimum included. The degradation stays for a
+    /// customised toolbar, which is what it was for.
+    @Test("The default five fit every window the app allows")
     func defaultsFit() {
-        #expect(!ModeLabelFit.labelsFit(defaults, in: 860), "eight points short")
+        #expect(ModeLabelFit.labelsFit(defaults, in: 860), "the minimum window")
         #expect(ModeLabelFit.labelsFit(defaults, in: 986))
         #expect(ModeLabelFit.labelsFit(defaults, in: 1_280))
     }
@@ -50,7 +54,7 @@ struct ModeLabelFitTests {
     /// Narrow windows drop to symbols rather than overflowing.
     @Test("A narrow window gives up the labels")
     func narrowWindowDropsLabels() {
-        #expect(!ModeLabelFit.labelsFit(defaults, in: 700))
+        #expect(!ModeLabelFit.labelsFit(defaults, in: 600))
         #expect(!ModeLabelFit.labelsFit(defaults, in: 0), "no measurement yet is not a licence")
     }
 
