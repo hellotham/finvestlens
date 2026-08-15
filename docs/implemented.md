@@ -20,6 +20,30 @@ Companions: [PRD](prd.md) · [Architecture](architecture.md) · [Plan](plan.md) 
 
 ---
 
+## Sidebar — one context menu instead of two (15 Aug 2026)
+
+Reported from use: right-clicking an account gave a different menu depending on
+whether that account happened to be *selected* — the app's own menu (Favourites,
+Edit, Reconcile, Cascade, Delete) on an unselected row, the system's default on
+the selected one.
+
+The cause is a SwiftUI routing rule rather than a mistake in the menu itself: a
+per-row `.contextMenu` is consulted only when the row is **outside** the current
+selection. Right-clicking the selected row goes through the `List`'s selection
+machinery, and with no selection-typed menu supplied it fell back to the system
+default.
+
+Fixed with `contextMenu(forSelectionType:)` on the sidebar `List`
+(`Views.swift`, `AccountsSidebar.sidebarMenu(for:)`), which is the API meant for
+this: **one definition serving both paths by construction**, so they cannot
+drift apart again, with multi-selection handled for free. Rows that are not
+accounts get an empty menu deliberately — offering an account's Delete on a
+destination row would be worse than offering nothing.
+
+The wider sidebar design this belongs to — modes, per-mode collections, sorting
+and drag semantics — is in [navigation-design.md](navigation-design.md), which
+is still a proposal. This fix stands on its own and survives it.
+
 ## Import review sheet — the crash on a real statement (15 Aug 2026)
 
 Reported from daily use: the app aborted when importing a two-month credit-card
