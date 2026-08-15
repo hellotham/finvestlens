@@ -2,12 +2,12 @@
 
 | | |
 |---|---|
-| **Document status** | **All phases P0–P10 complete** (v1.0 was P0–P6, 13 July 2026; P7 business, P8 extended import, P9 planning & insights, and P10 ledger CLI & interchange since), **plus the Jul 2026 usability/performance and report-quality redesigns**, and the Aug 2026 register-style restoration and large-book NAS validation that closed the last NFR-02 item (`finlab`, [lab.md](lab.md)). Online bank sync skipped to [deferred.md](deferred.md). |
-| **Last updated** | 2026-08-10 |
+| **Document status** | **Phases P0–P11 complete; P12 (navigation) is open and blocks 1.1.** v1.0 was P0–P6 (13 July 2026); P7 business, P8 extended import, P9 planning & insights, P10 ledger CLI & interchange and P11 the Investments hub have landed since, **plus the Jul 2026 usability/performance and report-quality redesigns**, and the Aug 2026 register-style restoration and large-book NAS validation that closed the last NFR-02 item (`finlab`, [lab.md](lab.md)). Online bank sync skipped to [deferred.md](deferred.md). |
+| **Last updated** | 2026-08-15 |
 | **Scope** | The build plan: phases, workstreams, tasks, dependencies, and exit criteria |
 | **Companions** | [PRD](prd.md) · [Architecture](architecture.md) · [Porting Strategy](porting.md) · [Implemented](implemented.md) · [Deferred backlog](deferred.md) · [Money study](enhancements-msmoney.md) · [Firefly study](enhancements-firefly.md) · [Frollo study](enhancements-frollo.md) |
 
-This is the authoritative **delivery schedule and status record**. It sequences the requirements from the [PRD](prd.md) (`FR-*`), the architecture decisions ([`ADR-*`](architecture.md)), and the porting map ([Porting §2](porting.md)) into eleven phases (P0–P10), and records where each one stands. Each phase lists its **objective, workstreams/tasks, dependencies, deliverables, exit criteria, test focus, and risks**.
+This is the authoritative **delivery schedule and status record**. It sequences the requirements from the [PRD](prd.md) (`FR-*`), the architecture decisions ([`ADR-*`](architecture.md)), and the porting map ([Porting §2](porting.md)) into thirteen phases (P0–P12), and records where each one stands. Each phase lists its **objective, workstreams/tasks, dependencies, deliverables, exit criteria, test focus, and risks**.
 
 ### Phase status
 
@@ -26,8 +26,10 @@ This is the authoritative **delivery schedule and status record**. It sequences 
 | **P8 — Extended import** | ✅ Complete (24 Jul 2026) | MT940/MT942 + CAMT.053 importers feed the Import Matcher; format auto-detection incl. content sniffing. Online bank sync (FR-XIO-07) **skipped by decision (24 Jul 2026)** — moved to [deferred.md](deferred.md) §5. |
 | **P9 — Planning & insights** | ✅ Complete (24 Jul 2026) | Debt & Lifetime planners, tax estimator, Spending Insights, wellbeing score, passport PDF, savings challenges, Emergency Records, audit log — design in [planning-design.md](planning-design.md). |
 | **P10 — Ledger CLI & interchange** | ✅ Complete (25 Jul 2026) — P10a–P10d all delivered | Ledger 3 journal import/export + the read-only `finlens` CLI. Research + phased plan in [ledger-design.md](ledger-design.md) (format spec: [ledger-format-reference.md](ledger-format-reference.md), CLI spec: [ledger-cli-reference.md](ledger-cli-reference.md)). |
+| **P11 — The Investments hub** | ✅ Complete (15 Aug 2026) — I1–I7 | Portfolio panel, security detail, FIIG bond provider, fundamentals sidecar, reconciliation. Design: [investments-design.md](investments-design.md). |
+| **P12 — Modes, sidebar & tabs** | 📋 Planned (accepted 15 Aug 2026) | The navigation redesign, **all of it in 1.1**: modes in the toolbar, one sidebar per mode, a tabbed detail pane, Overview as a board of views. Design: [navigation-design.md](navigation-design.md); requirements `FR-NAV-01…12`. |
 
-**Every phase P0–P10 is delivered**; a set of low-priority tails deferred *within* them is tracked, ranked, in [deferred.md](deferred.md). The narrative of what was built, with the audits and measurements behind it, is in [implemented.md](implemented.md).
+**Every phase P0–P11 is delivered**; a set of low-priority tails deferred *within* them is tracked, ranked, in [deferred.md](deferred.md). **P12 is the open phase** and blocks 1.1. The narrative of what was built, with the audits and measurements behind it, is in [implemented.md](implemented.md).
 
 ---
 
@@ -371,6 +373,104 @@ synthetic fixture cannot reproduce it.
 fundamentals must degrade to "unavailable" rather than look broken. FIIG
 geo-restricts non-AU egress and serves an incomplete certificate chain. Both
 are contained: neither can affect prices already in the book.
+
+## 13d. Phase P12 — Modes, sidebar and tabs
+
+**Status.** 📋 **Planned (accepted 15 Aug 2026).** Design, alternatives and the
+guidance behind each decision live in [navigation-design.md](navigation-design.md);
+requirements are `FR-NAV-01` … `FR-NAV-12`.
+
+**Objective.** One sidebar currently holds thirteen functional destinations
+above a 565-account tree. The account list is therefore present in Reports where
+it means nothing, absent the moment the user types in a field labelled "Filter
+accounts", and pinned to the window's bottom edge where the HIG says not to put
+what people use most. Replace it with **modes**: an always-visible mode selector
+in the toolbar, one sidebar per mode showing one kind of thing two levels deep,
+and a tabbed detail pane so several registers or reports share one sidebar.
+
+**All of it ships in 1.1.** The halves are not independent: a mode-scoped
+sidebar without a mode selector is unreachable, and a mode selector over the
+present mixed sidebar is two navigation models in one window. Shipping part
+would leave the inconsistency this phase exists to remove.
+
+**Sub-phases** (ordered by dependency; N1 is the spine):
+
+- **N1 — Mode infrastructure.** `AppMode`; per-mode state *(selection, open
+  tabs, sidebar scroll)* replacing the flat `SidebarSelection`
+  (`AppModel.swift:150`); migration for stored desk state, with the old flat
+  value mapped to its mode; View menu listing every mode with ⌘1…⌘n; toolbar
+  segmented control with system toolbar customisation and the five-mode default.
+  *(FR-NAV-01, 02, 03)*
+- **N2 — Mode-scoped sidebars.** One sidebar component parameterised by mode;
+  the six collections wired to their existing model arrays; the mixed sidebar
+  deleted. The filter-erases-navigation bug (`Views.swift:994`) disappears with
+  the mixing that caused it — there is nothing left for a filter to erase.
+  *(FR-NAV-04)*
+- **N3 — The tabbed interface.** Tab strip in the detail pane; click replaces,
+  double/⌘-click/context-menu/new-tab-button opens; an already-open item is
+  focused, never duplicated; a placeholder expands rather than opening an empty
+  register; the mode's home tab is first and not closeable; the set persists as
+  desk state. *(FR-NAV-05, 06)*
+- **N4 — Overview as a board of views.** Sidebar of views with their cards
+  nested beneath; card zoom to full window with a close button; toolbar list of
+  every card including those not on the board; custom views, favourites as saved
+  views; and the navigation rule — selection never switches mode, drill-down and
+  the explicit "Open …" button do. *(FR-NAV-07, 08, 09, 10)*
+- **N5 — One period selector.** A single control governing every mode and
+  seeding report defaults, replacing the dashboard's private period.
+  *(FR-NAV-11)*
+- **N6 — All Transactions repaired.** It is already `RegisterSheet(wholeBook:)`
+  but that flag forks three behaviours: journal style forced over the user's
+  choice (`RegisterSheet.swift:81`), reconcile dropped (`:879`), Transfer and
+  Amount removed from the ⇥ order (`:2838`). Honour the chosen style, restore
+  reconcile and the editing order, add an **Account** column, and make it the
+  Accounts home tab. *(FR-REG-09, FR-NAV-06)*
+- **N7 — Sidebar manners.** Sort by criterion or by hand, manual order in the
+  account's kvp; drag to reorder between siblings versus **re-parent** onto a
+  row, with distinct drag feedback and dragging disabled while a criterion sort
+  is active. *(FR-NAV-12; the shared context menu shipped 15 Aug 2026.)*
+
+**Exit criteria.**
+1. Every mode's sidebar contains exactly one kind of thing, two levels deep, and
+   no list of commands.
+2. The mode selector is visible in every mode at every supported window width,
+   and never reaches the system overflow menu.
+3. A mode absent from the toolbar is still reachable from the View menu by
+   shortcut; no mode is ever hidden or disabled for having empty content.
+4. Switching mode and returning restores that mode's selection and open tabs.
+5. No gesture switches mode except a drill-down or an explicit button —
+   demonstrated by selecting every Overview view and card in turn with the mode
+   selector unchanged throughout.
+6. Opening an already-open item focuses its tab; the open set survives relaunch.
+7. All Transactions honours the chosen register style, shows reconcile, tabs
+   through Transfer and Amount, and carries an Account column.
+8. On the reference book: the sidebar renders 565 accounts, and the whole-book
+   home tab opens within the measured envelope (20.5 ms cold row supply,
+   `LiveWholeBookPerfTests`).
+9. Catalogs match the compiler in eight languages; both platforms build; the
+   accessibility gate passes on every new surface.
+
+**Dependencies.** None outside the app layer — no engine, persistence or
+interchange change. That is what makes a change this visible tractable.
+
+**Risks.**
+- **Attribute-graph exhaustion.** Every mode sidebar and the tab strip must stay
+  lazy; the 15 Aug 2026 import crash was a non-lazy container holding rows that
+  each fanned out. Only the visible tab may build content.
+- **Losing the user's place.** Desk-state migration must map every stored
+  `SidebarSelection` to a mode; a user who reopens into a different place than
+  they left will not trust the release.
+- **Localization volume.** Mode names, view names, tab commands and sort
+  criteria across eight languages; the catalog gate is the check.
+- **Scope pressure.** Records ships with the collections it already has (rules,
+  emergency records, audit log). Its new collections — assets, depreciation
+  schedules, deductions, logbooks, timesheets — are
+  [records-and-rules-design.md](records-and-rules-design.md) and a later phase,
+  not 1.1. Business likewise stays thin until invoices and payees fill it.
+
+**Verification.** The reference book is the acceptance case: 565 accounts,
+46,831 transactions, and a sidebar that must stay responsive while the mode
+selector never moves on its own.
 
 ## 14. Quality gates (apply every phase)
 

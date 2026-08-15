@@ -1,7 +1,9 @@
 # Navigation design — modes, sidebar, tabs
 
-Status: **proposal for decision** (15 Aug 2026, revised same day after review).
-Nothing here is built yet.
+Status: **accepted 15 Aug 2026**, scheduled in [plan.md](plan.md) as **P12**.
+Requirements are `FR-NAV-01` … `FR-NAV-12` in [prd.md](prd.md). All of it lands
+in 1.1: the present design is internally inconsistent, and shipping half of it
+would leave two navigation models in one app.
 
 Companions: [PRD](prd.md) · [Architecture](architecture.md) ·
 [Usability review](usability-review.md) · [Register UX research](register-ux-research.md)
@@ -298,6 +300,53 @@ board. A card *not* on the current view is still reachable — a toolbar button
 lists every card, and choosing one opens it full-window until closed. Nothing
 is unreachable merely because it did not fit the board.
 
+#### Selecting changes what you see; drilling in changes where you are
+
+The views are named after modes, which raises a fair question: does choosing
+Overview's "Accounts" view *go to* Accounts mode? **No — and the rule is worth
+stating as a rule, because the alternative is a trapdoor.**
+
+| Gesture | Effect | Mode |
+|---|---|---|
+| Pick a view in the sidebar | the board changes | unchanged |
+| Pick a card under a view | that card, full-window | unchanged |
+| Click **through** a card — an account row, a holding, an overdue invoice | the underlying data | **switches** |
+| Press the board's **"Open Accounts"** button | that mode | **switches**, explicitly |
+
+Three reasons selection must not navigate:
+
+1. **It would rebuild the fault this whole design removes.** Overview's sidebar
+   holds views with cards nested under them. If the parent row navigated away
+   while the child row showed content, that is one list doing navigation *and*
+   data — the exact conflation being deleted from the account sidebar, rebuilt
+   at smaller scale in the mode meant to demonstrate the pattern.
+2. **It would make the mode selector lie.** Its whole job is orientation —
+   *"if you hide the tab bar, people can forget which area of the app they're
+   in."* A control that moves because you clicked something else is worse than
+   one that is hidden: you did not ask to go, and the indicator you rely on
+   shifted underneath you.
+3. **It would empty Overview.** If every named view is a doorway, only "Mix" is
+   really Overview, and the front page becomes a launcher rather than the
+   cross-mode report it is meant to be.
+
+This also closes a loop opened in §4.4: Accounts mode lands on All Transactions
+rather than a hub *because Overview already carries the reading layer*. So
+Overview's "Accounts" view **is** the accounts hub that Accounts mode
+deliberately does not duplicate — not a doorway to it.
+
+Mode switching from Overview is still wanted; it belongs on the **drill-down**,
+where the user asked for the underlying data, and on an **explicit button**, so
+the door is visible rather than sprung. A navigation rule people must get
+comfortable with is one they will get wrong for a while, and that cost lands on
+the least confident users. Nothing here moves you except a click that asks to
+move.
+
+*(Rejected alternative: views genuinely switch modes. Its honest form is
+Overview with **no view list at all** — one board, and the mode buttons as the
+only way to change area. Coherent and simpler, but it discards custom views and
+the card index. What does not work is the middle: mode-named views that
+sometimes navigate.)*
+
 **One timescale, everywhere.** A single period selector governs the board, and
 is the same control every other mode uses — and the default period a report
 opens with. Today the dashboard has its own period and reports have their own;
@@ -476,8 +525,45 @@ assets, depreciation schedules, deductions, logbooks and timesheets are real
 collections with an external requirement behind them. Its sidebar is the
 fullest of any mode.
 
+## 6a Build order
+
+Scheduled as **P12** in [plan.md](plan.md) §13d, where the exit criteria and
+risks live. The order, and why it is this order:
+
+| | Sub-phase | Why here |
+|---|---|---|
+| **N1** | Mode infrastructure — `AppMode`, per-mode state, desk-state migration, View menu, toolbar control | The spine. Nothing else can be reached without a mode selector |
+| **N2** | Mode-scoped sidebars | Needs N1 to know which mode it is in. Deletes the mixed sidebar, and the filter bug with it |
+| **N3** | The tabbed interface | Needs N2: a tab is opened *from* a sidebar row |
+| **N4** | Overview as a board of views | Needs N1 only; can run beside N2/N3 |
+| **N5** | One period selector | Independent; touches every mode, so it lands after the modes exist |
+| **N6** | All Transactions repaired | Independent of the rest — could ship first, and is the Accounts home tab N3 needs |
+| **N7** | Sidebar sorting and drag | Last: it refines N2's component rather than shaping it |
+
+**The one-way doors.** N1's desk-state migration and N2's deletion of the old
+sidebar are the changes that cannot be half-shipped, which is why the phase is
+all-or-nothing for 1.1 rather than staged across releases.
+
+**What is deliberately *not* in P12:** Records' new collections (assets,
+depreciation, deductions, logbooks, timesheets) and the Rules work — both are
+[records-and-rules-design.md](records-and-rules-design.md), both are feature
+work rather than navigation, and Records ships in P12 with the collections it
+already has. Business likewise stays thin until invoices and payees fill it.
+
 ## 7 Still open
 
-1. **How much of this ships before 1.1.** The sidebar's context menu is fixed
-   already; repairing All Transactions (§4.4) and the filter-erases-navigation
-   bug are small and independent. The mode structure is not, and 1.1 is close.
+Nothing blocking. **All of P12 lands in 1.1** (decided 15 Aug 2026): the current
+design is internally inconsistent, and shipping half would leave two navigation
+models in one window.
+
+Two things to decide *during* the build rather than before it:
+
+1. **View names.** Overview's views are currently named after modes (Mix,
+   Accounts, Investments, Business, Planning). §4.3 makes that unambiguous with
+   an explicit "Open …" button rather than a rename, but if the collision still
+   misleads in use, renaming views after *questions* — Everything, Spending,
+   Wealth, Business, Plans — is the fallback: modes are nouns, views are
+   questions.
+2. **Whether Accounts needs the third column.** Its tree stays four levels deep
+   in P12. The HIG's remedy, a content list between sidebar and detail, is
+   additive and can follow if the tree proves unwieldy in the new layout.
