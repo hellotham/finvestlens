@@ -23,7 +23,7 @@ import FinvestLensReports
 
 /// Every report the app can produce, with the metadata the gallery and the
 /// parameter bar need.
-public enum ReportKind: String, CaseIterable, Identifiable, Codable {
+public enum ReportKind: String, CaseIterable, Identifiable, Codable, Sendable {
     case balanceSheet = "Balance Sheet"
     case incomeStatement = "Income Statement"
     case equityStatement = "Equity Statement"
@@ -50,11 +50,26 @@ public enum ReportKind: String, CaseIterable, Identifiable, Codable {
 
     public var id: String { rawValue }
 
-    enum Group: String, CaseIterable {
+    enum Group: String, CaseIterable, Identifiable {
         case statements = "Statements"
         case activity = "Activity"
         case investments = "Investments"
         case business = "Business"
+
+        var id: String { rawValue }
+
+        /// The catalog key, spelled out rather than derived from `rawValue`: a
+        /// `LocalizedStringKey` built from a runtime `String` is invisible to
+        /// `-emit-localized-strings`, so the compiler would never emit it and
+        /// the CI gate would never miss it.
+        var title: LocalizedStringKey {
+            switch self {
+            case .statements: "Statements"
+            case .activity: "Activity"
+            case .investments: "Investments"
+            case .business: "Business"
+            }
+        }
     }
 
     var group: Group {
@@ -208,20 +223,54 @@ struct ReportsHome: View {
         Group {
             if let configuration = openConfiguration {
                 ReportScreen(model: model, configuration: configuration) {
+                    // Closing a report returns to the gallery, which is the
+                    // collection row — so the sidebar has to come back with it
+                    // rather than keep pointing at a report nothing is showing.
+                    model.navigate(to: .reports)
                     openConfiguration = nil
                 }
             } else {
                 ReportGallery(model: model) { configuration in
                     openConfiguration = configuration
+                    // Keep the sidebar in step with the gallery: opening a
+                    // report from either place must leave both saying the same
+                    // thing.
+                    if let kind = ReportKind(rawValue: configuration.kind) {
+                        model.navigate(to: .report(kind))
+                    }
                 }
             }
         }
+        // Driven by the selection rather than only by `onAppear`: the sidebar
+        // now lists the catalogue, so a second report chosen while this view is
+        // already on screen has to replace the first. Held as `@State` rather
+        // than derived, because the report screen edits its configuration —
+        // period, accounts, depth — and a derived value would discard those
+        // edits on the next body pass.
+        .task(id: model.sidebarSelection) { applySelection() }
         .onAppear {
             // A menu item may ask to jump straight to one report.
             if let kind = model.pendingReportKind {
                 model.pendingReportKind = nil
                 openConfiguration = kind.defaultConfiguration(for: model)
+            } else {
+                applySelection()
             }
+        }
+    }
+
+    private func applySelection() {
+        switch model.sidebarSelection {
+        case .report(let kind):
+            guard ReportKind(rawValue: openConfiguration?.kind ?? "") != kind else { return }
+            openConfiguration = kind.defaultConfiguration(for: model)
+        case .savedReport(let id):
+            guard let saved = model.savedReports.first(where: { $0.id == id }) else { return }
+            openConfiguration = saved.configuration
+        case .reports:
+            openConfiguration = nil
+        default:
+            break
         }
     }
 }

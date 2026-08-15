@@ -18,7 +18,30 @@ struct BudgetView: View {
     @State private var showingEdit = false
     @State private var showingSuggest = false
 
-    private var budget: Budget? { model.budgets.first }
+    /// The budget the sidebar has selected, or the only one there is.
+    ///
+    /// This used to be `.first` unconditionally, which was right while Budgets
+    /// was a single destination and a book had one budget. Now the sidebar
+    /// lists them, so selecting one has to show it (`FR-NAV-04`); `.first`
+    /// remains the answer when the collection row itself is selected.
+    private var budget: Budget? {
+        if let id = model.sidebarSelection?.budgetID,
+           let chosen = model.budgets.first(where: { $0.id == id }) {
+            return chosen
+        }
+        return model.budgets.first
+    }
+
+    /// The budget's own name once one is chosen, the area's title otherwise.
+    /// Branched rather than a ternary: one `Text` initializer would have to
+    /// serve both, taking the user's name through the catalog or ours past it.
+    private var title: Text {
+        if let name = budget?.name, !name.isEmpty {
+            Text(name)
+        } else {
+            Text("Budget")
+        }
+    }
 
     var body: some View {
         NavigationStack {
@@ -63,7 +86,7 @@ struct BudgetView: View {
                     }
                 }
             }
-            .navigationTitle("Budget")
+            .navigationTitle(title)
             .toolbar {
                 if !embedded {
                     ToolbarItem(placement: .confirmationAction) {

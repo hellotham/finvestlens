@@ -87,6 +87,7 @@ struct EmergencyRecordsView: View {
                 Button("Add Record…") { creating = true }
             }
         } else {
+            SidebarFocusScroll(model: model) {
             List {
                 ForEach(EmergencyRecord.Kind.allCases) { kind in
                     let records = model.emergencyRecords
@@ -109,10 +110,12 @@ struct EmergencyRecordsView: View {
                                     }
                                 }
                                 .buttonStyle(.plain)
+                                .sidebarInstance(.emergencyRecord(record.id), in: model)
                             }
                         }
                     }
                 }
+            }
             }
         }
     }
@@ -123,6 +126,10 @@ struct EmergencyRecordsView: View {
 struct AuditLogSheet: View {
     @Bindable var model: AppModel
     @Environment(\.dismiss) private var dismiss
+    /// Shown inline as a Records destination since P12; still presentable as a
+    /// sheet, which is why the Done button and the fixed frame are conditional
+    /// rather than deleted.
+    @Environment(\.isEmbeddedDestination) private var embedded
 
     var body: some View {
         NavigationStack {
@@ -147,14 +154,16 @@ struct AuditLogSheet: View {
                 }
             }
             .navigationTitle("Audit Log")
-            .onEscapeCommand { dismiss() }
+            .onEscapeCommand { if !embedded { dismiss() } }
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") { dismiss() }.keyboardShortcut(.cancelAction)
+                if !embedded {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Done") { dismiss() }.keyboardShortcut(.cancelAction)
+                    }
                 }
             }
         }
-        .frame(minWidth: 480, minHeight: 420)
+        .frame(minWidth: embedded ? nil : 480, minHeight: embedded ? nil : 420)
     }
 }
 

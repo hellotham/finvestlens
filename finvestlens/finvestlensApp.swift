@@ -146,15 +146,17 @@ struct finvestlensApp: App {
             // (Edit ▸ Find…, ⌘F) and where macOS users look for it.
             CommandGroup(after: .sidebar) {
                 Divider()
-                Button("Dashboard") { model.show(.dashboard) }
-                    .keyboardShortcut("1", modifiers: [.command, .option])
-                    .disabled(!model.isOpen)
-                Button("Reports") { model.show(.reports) }
-                    .keyboardShortcut("2", modifiers: [.command, .option])
-                    .disabled(!model.isOpen)
-                Button("All Transactions") { model.show(.generalLedger) }
-                    .keyboardShortcut("3", modifiers: [.command, .option])
-                    .disabled(!model.isOpen)
+                // Every mode, always, with ⌘1…⌘7 — including the two that are
+                // off the toolbar until someone adds them. That is what makes
+                // the five-mode default an arrangement rather than a hiding
+                // place, and it is the objection to a "More" menu: an item in a
+                // menu with a shortcut is discoverable and permanent
+                // (docs/navigation-design.md §4.1a).
+                ForEach(AppMode.allCases) { mode in
+                    Button { model.showMode(mode) } label: { Text(mode.title) }
+                        .keyboardShortcut(mode.shortcut, modifiers: .command)
+                        .disabled(!model.isOpen)
+                }
                 Divider()
                 // HIG *Toolbars* (macOS): "Make every toolbar item available
                 // as a command in the menu bar" — people can hide or
@@ -274,7 +276,10 @@ struct finvestlensApp: App {
                     .disabled(!model.isOpen)
                 Button("Emergency Records…") { model.show(.emergencyRecords) }
                     .disabled(!model.isOpen)
-                Button("Audit Log…") { model.presentedPanel = .auditLog }
+                // A destination since P12, not a sheet: the log is a collection
+                // the book keeps, and Records is where the book's own paperwork
+                // lives (docs/navigation-design.md §4.2).
+                Button("Audit Log") { model.show(.auditLog) }
                     .disabled(!model.isOpen)
                 Button("Repair Book…") { model.checkAndRepair() }
                     .disabled(!model.isOpen)
@@ -295,13 +300,12 @@ struct finvestlensApp: App {
                     .disabled(!model.isOpen || !model.isIntelligenceAvailable)
                     .help(model.intelligenceUnavailableReason
                           ?? "Pick receipts and statements — each is matched to its transaction, linked, and categorised")
-                // The go-to family (⌥⌘1 Dashboard, ⌥⌘2 Reports, ⌥⌘3 All
-                // Transactions) lives in the View menu, where the HIG puts
-                // commands that change what is displayed. A second "Dashboard"
-                // item sat here on ⌥⌘0 and did less than its twin — it set the
-                // sidebar selection but left an open panel and the search field
-                // alone — so two identically titled menu items behaved
-                // differently. ⌥⌘1 is the one that actually goes there.
+                // Mode switching (⌘1…⌘7) lives in the View menu, where the
+                // HIG puts commands that change what is displayed. A second
+                // "Dashboard" item sat here on ⌥⌘0 and did less than its twin —
+                // it set the sidebar selection but left an open panel and the
+                // search field alone — so two identically titled menu items
+                // behaved differently. The View menu's is the one that goes.
             }
             CommandMenu("Reports") {
                 // Inline, in the detail pane, like the dashboard — a detached

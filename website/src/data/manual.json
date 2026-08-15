@@ -78,7 +78,7 @@
             },
             {
               "type": "tip",
-              "value": "⌥⌘1 returns to the dashboard from anywhere. **Up Next** is the card to read first: it lists what is most worth doing in the book right now."
+              "value": "⌘1 returns to Overview from anywhere — every mode has its own number, ⌘1 to ⌘7. **Up Next** is the card to read first: it lists what is most worth doing in the book right now."
             }
           ]
         },
@@ -1181,16 +1181,32 @@
               "type": "table",
               "rows": [
                 [
-                  "⌥⌘1",
-                  "Dashboard"
+                  "⌘1",
+                  "Overview"
                 ],
                 [
-                  "⌥⌘2",
+                  "⌘2",
+                  "Accounts"
+                ],
+                [
+                  "⌘3",
+                  "Investments"
+                ],
+                [
+                  "⌘4",
                   "Reports"
                 ],
                 [
-                  "⌥⌘3",
-                  "All transactions"
+                  "⌘5",
+                  "Business"
+                ],
+                [
+                  "⌘6",
+                  "Planning"
+                ],
+                [
+                  "⌘7",
+                  "Records"
                 ],
                 [
                   "⌘F",

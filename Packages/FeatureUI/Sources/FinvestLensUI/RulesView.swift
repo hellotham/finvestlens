@@ -77,11 +77,17 @@ struct RulesView: View {
     }
 
     private var list: some View {
+        SidebarFocusScroll(model: model) {
         List {
             ForEach(model.ruleGroups) { group in
                 Section {
                     ForEach(group.rules) { rule in
                         row(rule, in: group)
+                            // The sidebar lists *groups*, so every rule in the
+                            // selected group is highlighted — the group is what
+                            // was picked, and pretending one rule was would be
+                            // a different answer to the one the click gave.
+                            .sidebarInstance(.ruleGroup(group.id), in: model)
                     }
                     .onDelete { offsets in
                         for index in offsets { model.deleteRule(group.rules[index].id) }
@@ -121,6 +127,7 @@ struct RulesView: View {
                 }
             }
             .onMove { model.moveRuleGroups(from: $0, to: $1) }
+        }
         }
     }
 

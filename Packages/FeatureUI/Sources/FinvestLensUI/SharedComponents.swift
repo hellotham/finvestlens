@@ -134,3 +134,49 @@ struct EmbeddedQuickLook: NSViewRepresentable {
 #endif
 
 
+
+// MARK: - Sidebar ▸ content join (P12/N2)
+
+/// Ties a row in a collection view to the sidebar row that names it.
+///
+/// The sidebar says *which* instance; the collection view knows *where* it is.
+/// This is the join, and it does both halves at once so they cannot drift: the
+/// row's scroll identity is the very selection value the sidebar stores, and it
+/// carries a wash while that is what is selected.
+///
+/// A tint wash rather than the system's selection colour, because the row is not
+/// focused for keyboard purposes — it is the answer to "which one did I click
+/// in the sidebar?". VoiceOver is told the same thing through `.isSelected`,
+/// which is the part a colour alone cannot say.
+@MainActor
+extension View {
+    func sidebarInstance(_ selection: SidebarSelection, in model: AppModel) -> some View {
+        let focused = model.sidebarSelection == selection
+        return self
+            .id(selection)
+            .listRowBackground(focused ? Color.appAccent.opacity(0.15) : nil)
+            .accessibilityAddTraits(focused ? .isSelected : [])
+    }
+}
+
+/// Scrolls its content to whatever the sidebar has selected.
+///
+/// Pairs with ``SwiftUI/View/sidebarInstance(_:in:)``: because a row's scroll id
+/// *is* its sidebar selection, this needs to know nothing about what the list
+/// holds. Without it, choosing the ninetieth budget highlights a row nobody can
+/// see, and selecting appears to do nothing at all.
+@MainActor
+struct SidebarFocusScroll<Content: View>: View {
+    @Bindable var model: AppModel
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        ScrollViewReader { proxy in
+            content
+                .task(id: model.sidebarSelection) {
+                    guard let target = model.sidebarSelection else { return }
+                    withAnimation { proxy.scrollTo(target, anchor: .center) }
+                }
+        }
+    }
+}

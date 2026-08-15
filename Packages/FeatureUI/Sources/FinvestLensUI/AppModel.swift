@@ -144,9 +144,16 @@ public enum RootPanel: String, Identifiable, Sendable {
     public var id: String { rawValue }
 }
 
-/// What the sidebar has selected: a top-level app area or a specific account.
-/// Areas that used to open as modal sheets are now navigation destinations
-/// shown inline in the detail pane (HIG: minimise modality).
+/// What the sidebar has selected.
+///
+/// Two kinds of thing, and the distinction is the sidebar's whole shape since
+/// P12: a **collection** (the parent row — Budgets, Rules, Favourites) and an
+/// **instance within it** (that budget, that rule). Exactly two levels, which is
+/// what HIG *Sidebars* asks for; accounts are the deliberate exception, since
+/// GnuCash users expect the tree (navigation-design §4.2).
+///
+/// Areas that used to open as modal sheets are navigation destinations shown
+/// inline in the detail pane (HIG: minimise modality).
 public enum SidebarSelection: Hashable, Sendable {
     case dashboard
     case account(GncGUID)
@@ -167,6 +174,71 @@ public enum SidebarSelection: Hashable, Sendable {
     case investments
     case business
     case timeMileage
+
+    // MARK: Instances (P12/N2)
+    //
+    // "What used to be a destination ('Budgets') becomes a heading over the
+    // things themselves" — the parent row still selects the whole collection,
+    // and the rows beneath select one of them.
+
+    case budget(GncGUID)
+    case goal(GncGUID)
+    case scheduledTransaction(GncGUID)
+    case ruleGroup(UUID)
+    case emergencyRecord(UUID)
+    case savedReport(UUID)
+    /// One report from the standard catalogue, opened with its default
+    /// configuration — the sidebar's "Standard" collection.
+    case report(ReportKind)
+    case invoice(GncGUID)
+    case customer(GncGUID)
+    case vendor(GncGUID)
+    case job(GncGUID)
+    case employee(GncGUID)
+    /// A security, keyed by ``securityKey`` rather than by its ``Commodity``.
+    /// The commodity value carries mutable fields — quote source, timezone,
+    /// kvp — so two values of the *same* security compare unequal, and the
+    /// selection would drop the moment a price fetch rewrote one of them.
+    case security(String)
+    /// The book's own history. A collection, which is why it is a Records
+    /// destination now rather than the modal sheet it used to be — everything
+    /// else in the Tools menu is a command (navigation-design §4.2).
+    case auditLog
+
+    /// The identity Investments already dedupes securities by
+    /// (`AppModel.securityCommodities`), reused so the sidebar and the hub agree
+    /// on what counts as one security.
+    public static func securityKey(_ commodity: Commodity) -> String {
+        "\(commodity.namespace)|\(commodity.mnemonic)"
+    }
+
+    // MARK: Reading the focused instance
+    //
+    // A collection view asks "is one of mine selected?" and shows it. Each
+    // accessor is one case test; written out rather than generated so that
+    // adding a collection to the sidebar without teaching its view to focus is
+    // a missing accessor rather than a silently ignored selection.
+
+    public var budgetID: GncGUID? { if case .budget(let id) = self { id } else { nil } }
+    public var goalID: GncGUID? { if case .goal(let id) = self { id } else { nil } }
+    public var scheduledID: GncGUID? {
+        if case .scheduledTransaction(let id) = self { id } else { nil }
+    }
+    public var ruleGroupID: UUID? { if case .ruleGroup(let id) = self { id } else { nil } }
+    public var emergencyRecordID: UUID? {
+        if case .emergencyRecord(let id) = self { id } else { nil }
+    }
+    public var savedReportID: UUID? { if case .savedReport(let id) = self { id } else { nil } }
+    public var reportKind: ReportKind? { if case .report(let kind) = self { kind } else { nil } }
+    public var invoiceID: GncGUID? { if case .invoice(let id) = self { id } else { nil } }
+    /// Any business party — customer, vendor, job or employee. The hub lists
+    /// them all on one page, so it wants the party rather than which kind.
+    public var businessPartyID: GncGUID? {
+        switch self {
+        case .customer(let id), .vendor(let id), .job(let id), .employee(let id): id
+        default: nil
+        }
+    }
 }
 
 /// The observable application/document model driving the UI.
@@ -361,24 +433,99 @@ public final class AppModel {
         return unreconciledRowsCache
     }
 
-    /// The sidebar's current destination (an app area or an account). The
-    /// source of truth for what the detail pane shows.
-    public var sidebarSelection: SidebarSelection? = .dashboard {
-        didSet {
-            let old = Self.accountID(of: oldValue)
-            let new = Self.accountID(of: sidebarSelection)
-            if old != new {
-                // GnuCash's Save Sort Order / Save Filter, without the button:
-                // leaving a register remembers how it was arranged, returning
-                // restores it. Held outside the book, as GnuCash holds it in its
-                // state file — sorting a register is not an edit, and must not
-                // mark the document dirty or show up in an export.
-                persistRegisterViewState(for: old)
-                restoreRegisterViewState(for: new)
-                refreshRegister()
-            }
-            persistSessionSelection()
+    // MARK: Navigation — mode, and each mode's own selection
+
+    /// The current mode (`FR-NAV-01`), and each mode's destination.
+    ///
+    /// These are stored rather than computed so `@Observable` instruments them:
+    /// the public accessors below read them, which is what registers a view
+    /// showing the sidebar or the mode control as a dependency.
+    private var currentMode: AppMode = .overview
+    private var selectionByMode: [AppMode: SidebarSelection] = [:]
+
+    private func storedSelection(in mode: AppMode) -> SidebarSelection {
+        selectionByMode[mode] ?? mode.defaultSelection
+    }
+
+    /// The mode the window is in. Switching restores that mode's own selection,
+    /// so leaving Accounts for Reports and coming back lands on the register you
+    /// left rather than a default (`FR-NAV-03`).
+    public var mode: AppMode {
+        get { currentMode }
+        set {
+            guard newValue != currentMode else { return }
+            let old = storedSelection(in: currentMode)
+            currentMode = newValue
+            applyNavigationChange(from: old)
         }
+    }
+
+    /// The current mode's destination — the source of truth for what the detail
+    /// pane shows.
+    ///
+    /// Assigning moves there, switching mode when the destination belongs to
+    /// another one, because every assignment from code is an explicit act: a
+    /// menu command, a dashboard card, a search result. The rule that
+    /// *selecting* must not switch mode (navigation-design §4.3) is a rule about
+    /// gestures, and it is kept where gestures are — each mode's sidebar offers
+    /// only its own destinations, so a click can never name a foreign one.
+    public var sidebarSelection: SidebarSelection? {
+        get { storedSelection(in: currentMode) }
+        set { navigate(to: newValue ?? currentMode.defaultSelection) }
+    }
+
+    /// Moves to `selection`, switching mode if it lives in another one.
+    public func navigate(to selection: SidebarSelection) {
+        let old = storedSelection(in: currentMode)
+        let target = AppMode(hosting: selection)
+        selectionByMode[target] = selection
+        currentMode = target
+        applyNavigationChange(from: old)
+    }
+
+    /// Where every mode is, for session persistence — see `AppModel+Session`.
+    var navigationSnapshot: (mode: AppMode, selections: [AppMode: SidebarSelection]) {
+        (currentMode, selectionByMode)
+    }
+
+    /// Re-applies a whole desk state in one step — see `AppModel+Session`.
+    ///
+    /// One funnel rather than a mode assignment followed by a selection
+    /// assignment: the two-step form refreshes the register against the
+    /// half-restored state, and a restore that happens to land on the mode
+    /// already showing would skip the refresh altogether.
+    func restoreNavigation(mode restored: AppMode, selections: [AppMode: SidebarSelection]) {
+        let old = storedSelection(in: currentMode)
+        currentMode = restored
+        selectionByMode = selections
+        applyNavigationChange(from: old)
+    }
+
+    /// Forgets where every mode was — called when the book closes, so one
+    /// book's desk does not open on top of the next one's.
+    func resetNavigation() {
+        let old = storedSelection(in: currentMode)
+        currentMode = .overview
+        selectionByMode = [:]
+        applyNavigationChange(from: old)
+    }
+
+    /// The tail every navigation shares: the register follows the selection, and
+    /// where you are is remembered.
+    private func applyNavigationChange(from old: SidebarSelection) {
+        let oldAccount = Self.accountID(of: old)
+        let newAccount = Self.accountID(of: sidebarSelection)
+        if oldAccount != newAccount {
+            // GnuCash's Save Sort Order / Save Filter, without the button:
+            // leaving a register remembers how it was arranged, returning
+            // restores it. Held outside the book, as GnuCash holds it in its
+            // state file — sorting a register is not an edit, and must not
+            // mark the document dirty or show up in an export.
+            persistRegisterViewState(for: oldAccount)
+            restoreRegisterViewState(for: newAccount)
+            refreshRegister()
+        }
+        persistSessionSelection()
     }
 
     private static func accountID(of selection: SidebarSelection?) -> GncGUID? {
@@ -387,10 +534,12 @@ public final class AppModel {
     }
 
     /// The selected account, if the sidebar is on an account. Setting it is
-    /// navigation to that account (or the dashboard when cleared).
+    /// navigation to that account; clearing it lands on the Accounts mode's own
+    /// home (All Transactions) rather than jumping to Overview, which would be a
+    /// mode switch nobody asked for.
     public var selectedAccountID: GncGUID? {
         get { Self.accountID(of: sidebarSelection) }
-        set { sidebarSelection = newValue.map(SidebarSelection.account) ?? .dashboard }
+        set { navigate(to: newValue.map(SidebarSelection.account) ?? .generalLedger) }
     }
 
     /// Bumped by New Transaction (⌘N) while a register is showing; the entry
@@ -413,6 +562,22 @@ public final class AppModel {
         presentedPanel = nil
         searchQuery = ""
         sidebarSelection = selection
+    }
+
+    /// The security a `.security` selection names, or `nil` if the book no
+    /// longer holds it. Resolved through the same composite key the sidebar and
+    /// ``securityCommodities`` both use, so the three agree on identity.
+    public func securityCommodity(forKey key: String) -> Commodity? {
+        securityCommodities.first { SidebarSelection.securityKey($0) == key }
+            ?? watchlist.first { SidebarSelection.securityKey($0) == key }
+    }
+
+    /// Switches mode without disturbing where that mode was — the toolbar
+    /// control and the View menu's ⌘1…⌘7 (`FR-NAV-02`, `FR-NAV-03`).
+    public func showMode(_ target: AppMode) {
+        presentedPanel = nil
+        searchQuery = ""
+        mode = target
     }
 
     /// Display order of the register (`FR-REG-01`).
@@ -1758,7 +1923,7 @@ public final class AppModel {
         accountTree = []
         registerRows = []
         registerSummary = nil
-        selectedAccountID = nil
+        resetNavigation()
         resetRegisterView()
         ruleGroups = []
         scheduledTransactions = []

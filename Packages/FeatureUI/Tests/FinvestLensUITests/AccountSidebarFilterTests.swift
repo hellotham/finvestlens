@@ -53,7 +53,7 @@ struct AccountSidebarFilterTests {
 
     @Test("Hiding a parent hides everything under it")
     func pruningHidden() {
-        let pruned = AccountsSidebar.pruningHidden(tree())
+        let pruned = ModeSidebar.pruningHidden(tree())
         let all = names(pruned)
         #expect(!all.contains("Assets:Closed"))
         // The child is not itself hidden, but a visible child of a hidden
@@ -102,7 +102,7 @@ struct AccountSidebarFilterTests {
     /// you typed its name.
     @Test("Filtering does not resurrect a hidden account")
     func filterRespectsHidden() {
-        let visible = AccountsSidebar.pruningHidden(tree())
+        let visible = ModeSidebar.pruningHidden(tree())
         let matches = AccountMatchPicker.matching(visible, filter: "old saver",
                                                   includingPlaceholders: true)
         #expect(matches.isEmpty)

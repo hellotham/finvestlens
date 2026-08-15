@@ -27,6 +27,7 @@ struct ScheduledView: View {
 
     var body: some View {
         NavigationStack {
+            SidebarFocusScroll(model: model) {
             List {
                 if !bills.isEmpty {
                     Section("Bills & Calendar") {
@@ -81,11 +82,13 @@ struct ScheduledView: View {
                             Text(recurrenceSummary(sx.recurrence))
                                 .scaledFont(.caption).foregroundStyle(.secondary)
                         }
+                        .sidebarInstance(.scheduledTransaction(sx.id), in: model)
                     }
                     .onDelete { offsets in
                         for index in offsets { model.deleteScheduledTransaction(scheduled[index].id) }
                     }
                 }
+            }
             }
             .navigationTitle("Scheduled")
             .toolbar {

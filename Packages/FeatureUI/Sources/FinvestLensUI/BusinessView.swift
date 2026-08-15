@@ -56,6 +56,7 @@ struct BusinessHub: View {
 
     var body: some View {
         NavigationStack {
+            SidebarFocusScroll(model: model) {
             List {
                 Section("New") {
                     Button("New Customer…", systemImage: "person.badge.plus") { editing = .customer }
@@ -82,6 +83,7 @@ struct BusinessHub: View {
                                 invoiceRow(invoice)
                             }
                             .buttonStyle(.plain)
+                            .sidebarInstance(.invoice(invoice.guid), in: model)
                         }
                     }
                 }
@@ -99,6 +101,7 @@ struct BusinessHub: View {
                                     .monospacedDigit().foregroundStyle(.secondary)
                             }
                         }
+                        .sidebarInstance(.customer(customer.guid), in: model)
                     }
                 }
                 Section("Vendors") {
@@ -115,6 +118,7 @@ struct BusinessHub: View {
                                     .monospacedDigit().foregroundStyle(.secondary)
                             }
                         }
+                        .sidebarInstance(.vendor(vendor.guid), in: model)
                     }
                 }
                 if !model.businessEmployees.isEmpty {
@@ -122,6 +126,7 @@ struct BusinessHub: View {
                         ForEach(model.businessEmployees) { employee in
                             Text(employee.address.name.isEmpty ? employee.username
                                  : employee.address.name)
+                                .sidebarInstance(.employee(employee.guid), in: model)
                         }
                     }
                 }
@@ -134,9 +139,11 @@ struct BusinessHub: View {
                                 Text(job.owner.displayName)
                                     .scaledFont(.caption).foregroundStyle(.secondary)
                             }
+                            .sidebarInstance(.job(job.guid), in: model)
                         }
                     }
                 }
+            }
             }
             .navigationTitle("Business")
             .frame(minWidth: embedded ? nil : 460, minHeight: embedded ? nil : 460)

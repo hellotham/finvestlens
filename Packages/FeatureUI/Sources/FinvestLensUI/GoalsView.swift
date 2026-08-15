@@ -45,6 +45,7 @@ struct GoalsView: View {
                         Button("New Goal") { creating = true }.buttonStyle(.borderedProminent)
                     }
                 } else {
+                    SidebarFocusScroll(model: model) {
                     List {
                         ForEach(groups, id: \.name) { group in
                             Section(group.name.isEmpty ? "Goals" : group.name) {
@@ -69,10 +70,12 @@ struct GoalsView: View {
                                             }
                                             Button("Money") { adjusting = goal }.tint(.blue)
                                         }
+                                        .sidebarInstance(.goal(goal.id), in: model)
                                 }
                             }
                         }
                         challengesSection
+                    }
                     }
                 }
             }

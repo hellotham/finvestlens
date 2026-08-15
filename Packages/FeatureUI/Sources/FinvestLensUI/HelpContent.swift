@@ -732,8 +732,9 @@ public enum HelpBook {
                 you an empty box.
                 """),
             .tip("""
-                ⌥⌘1 returns to the dashboard from anywhere. **Up Next** is the card to read \
-                first: it lists what is most worth doing in the book right now.
+                ⌘1 returns to Overview from anywhere — every mode has its own number, \
+                ⌘1 to ⌘7. **Up Next** is the card to read first: it lists what is most \
+                worth doing in the book right now.
                 """),
         ])
 
@@ -1006,9 +1007,13 @@ public enum HelpBook {
             ]),
             .heading("Moving around"),
             .table([
-                ("⌥⌘1", "Dashboard"),
-                ("⌥⌘2", "Reports"),
-                ("⌥⌘3", "All transactions"),
+                ("⌘1", "Overview"),
+                ("⌘2", "Accounts"),
+                ("⌘3", "Investments"),
+                ("⌘4", "Reports"),
+                ("⌘5", "Business"),
+                ("⌘6", "Planning"),
+                ("⌘7", "Records"),
                 ("⌘F", "Find transactions"),
                 ("⌘I", "Find an account"),
             ]),
