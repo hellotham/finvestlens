@@ -1,6 +1,7 @@
 # Navigation design — modes, sidebar, tabs
 
-Status: **proposal for decision** (15 Aug 2026). Nothing here is built yet.
+Status: **proposal for decision** (15 Aug 2026, revised same day after review).
+Nothing here is built yet.
 
 Companions: [PRD](prd.md) · [Architecture](architecture.md) ·
 [Usability review](usability-review.md) · [Register UX research](register-ux-research.md)
@@ -20,196 +21,178 @@ Companions: [PRD](prd.md) · [Architecture](architecture.md) ·
 | Favourites | pinned accounts, flat |
 | Accounts | the whole tree — 565 accounts on the reference book, 4+ levels |
 
-Thirteen functional destinations, then data. Two things worth noting because
-they are not obvious from looking at it:
+Thirteen functional destinations, then data. Two things not obvious from
+looking at it:
 
 - **The filter erases the app's navigation.** Every functional section is
   wrapped in `if trimmedFilter.isEmpty` (`Views.swift:994`), so typing one
   character into a field labelled "Filter accounts" removes Dashboard, Reports,
-  Planning and Records from the window.
-- **This shape was a deliberate fix**, not an accident. The code says so:
-  *"App areas that used to be modal sheets are now destinations shown inline in
-  the detail pane (HIG: minimise modality)"*. The Jul 2026 redesign moved
-  feature areas out of modal launchers and into the sidebar. That was the right
-  move and this proposal does not undo it — it only re-homes the navigation.
+  Planning and Records from the window. The conflation showing through as a
+  bug: one search field owning two kinds of content.
+- **This shape was a deliberate fix.** The code says so: *"App areas that used
+  to be modal sheets are now destinations shown inline in the detail pane
+  (HIG: minimise modality)"*. The Jul 2026 redesign moved feature areas out of
+  modal launchers into the sidebar. That was right, and this proposal does not
+  undo it — it re-homes the navigation and keeps the modality win.
 
-## 2 What Apple says
+## 2 Three different things, often confused
 
-Read 15 Aug 2026 from the current HIG (Sidebars and Tab bars both revised
-8 June 2026).
+Naming them separately, because the design depends on which is which:
+
+| | What it is | Platform | Job here |
+|---|---|---|---|
+| **Toolbar** | Controls along the window's top edge | macOS + iPadOS | **Mode switching** — always visible |
+| **Tab bar** | Bottom/top bar switching app areas | iOS/iPadOS only | Not used on macOS |
+| **Tabbed interface** | Document tabs inside the content area, as in a code editor | any | **Several open items** within a mode |
+
+The HIG draws the first two apart itself: *"In contrast to a toolbar, a tab bar
+is specifically for navigating between areas of an app."* The third is not a
+HIG control at all — it is an application-level pattern for holding several
+open documents in one window, and it is a separate decision from the other two.
+
+## 3 What Apple says
+
+Read 15 Aug 2026 from the current HIG.
+
+**Toolbars** — https://developer.apple.com/design/human-interface-guidelines/toolbars
+
+> "A toolbar provides convenient access to frequently used commands, controls,
+> **navigation**, and search."
+
+> "Toolbars act on content in the view, **facilitate navigation, and help orient
+> people in the app.** They include three types of content: The title of the
+> current view · **Navigation controls**, like back and forward, and search
+> fields · Actions, or bar items"
+
+> "The system automatically adds an overflow menu in macOS or iPadOS when items
+> no longer fit. Don't add an overflow menu manually, and avoid layouts that
+> cause toolbar items to overflow by default."
 
 **Sidebars** — https://developer.apple.com/design/human-interface-guidelines/sidebars
+(revised 8 June 2026)
 
-> "A sidebar appears on the leading side of a view and lets people navigate
-> between areas of your app **or** top-level collections of content, like
-> folders and playlists."
+> "A sidebar … lets people navigate between areas of your app **or** top-level
+> collections of content, like folders and playlists."
 
 > "In general, show no more than two levels of hierarchy in a sidebar. When a
 > data hierarchy is deeper than two levels, consider using a split view
 > interface that includes a content list between the sidebar items and detail
 > view."
 
-> "Avoid putting critical information or actions at the bottom of a sidebar.
-> People often relocate a window in a way that hides its bottom edge."
+> "Consider letting people hide the sidebar."
+
+> "Avoid putting critical information or actions at the bottom of a sidebar."
 
 **Tab bars** — https://developer.apple.com/design/human-interface-guidelines/tab-bars
+(revised 8 June 2026)
 
-> "A tab bar lets people navigate between top-level sections of your app…
-> They also let people quickly switch between sections of the view **while
-> preserving the current navigation state within each section**."
-
-> "Use a tab bar to support navigation, not to provide actions."
+> "Make sure the tab bar is visible when people navigate to different sections
+> of your app. **If you hide the tab bar, people can forget which area of the
+> app they're in.**"
 
 > Platform considerations: "**No additional considerations for macOS.**"
 
-**Split views** — https://developer.apple.com/design/human-interface-guidelines/split-views
-
-> "It's common to use a split view to display a sidebar for navigation, where
-> the leading pane lists the top-level items or collections in an app, and the
-> secondary and optional tertiary panes can present child collections and item
-> details."
-
-Scored against those, the present sidebar breaks three: it is areas **and**
+The current sidebar breaks three sidebar rules at once: it is areas **and**
 collections rather than either; the account tree is four levels where two is the
-guidance; and the most-used content sits at the bottom edge.
+guidance; and the most-used content sits on the bottom edge.
 
-## 3 The proposal, and where it holds up
+## 4 The design
 
-Modes (Accounts, Investments, Reports, Planning, Records), each with its own
-sidebar showing one kind of thing, each landing on a mode dashboard, each able
-to show several tabs; a mode switcher common to all of them.
+### 4.1 Modes live in the toolbar
 
-**Right, and HIG-backed:**
+Mode buttons in the window toolbar, at the leading edge with the other
+navigation controls.
 
-- One kind of thing per sidebar is exactly the "areas **or** collections" split.
-- Per-mode state that survives switching is the stated benefit of the tab-bar
-  pattern ("preserving the current navigation state within each section").
-- Mode dashboards are already proven here — Reports and the Investments hub
-  both land on one, and both work.
+The deciding argument is **persistence**, not taste. A sidebar is expected to be
+hideable — the HIG says to allow it — so anything living in a split-view column
+disappears with it. A mode selector that can vanish is the failure the tab-bar
+page names: *"If you hide the tab bar, people can forget which area of the app
+they're in."* The toolbar is the only always-visible chrome in a macOS window,
+and the HIG lists navigation and orientation among its three jobs.
 
-**Three problems the proposal does not yet solve.**
+A **mode rail as the leading split-view pane was considered and rejected** for
+exactly this reason: in `NavigationSplitView` the rail *is* the sidebar column,
+so the standard sidebar toggle would hide the mode selector.
 
-**(a) Two of the five modes have no data to put in a sidebar.** Accounts →
-accounts, Investments → securities, Reports → reports: all collections.
-But Planning is *Planner, Budgets, Scheduled, Goals* and Records is *Business,
-Time & Mileage, Rules, Emergency Records* — those are functions. Their sidebars
-would be menus, which is the thing being removed. The rule cannot be "the
-sidebar shows data"; it has to be "the sidebar shows one kind of thing, scoped
-to its mode". That is still a real improvement — a menu of four related tools is
-not a menu of thirteen unrelated ones — but it should be stated honestly rather
-than discovered during implementation.
+Watch: the HIG warns the system moves toolbar items into an overflow menu when
+they stop fitting. Modes must never overflow — so they are one segmented
+control (a single item that cannot be split up), sized for the narrowest window
+the app supports, with labels short enough to survive it.
 
-**(b) macOS has no tab bar.** The HIG's tab-bar page ends "No additional
-considerations for macOS" because it is an iOS/iPadOS control. A "mode toolbar"
-in the window toolbar also fights the toolbar's job: the same page says tab bars
-are "to support navigation, not to provide actions", and the converse holds —
-the toolbar is where actions on the current view live, and this app's toolbar
-already carries them. Putting navigation there blurs both.
+### 4.2 The sidebar shows one mode's instances, two levels deep
 
-**(c) The account tree is still four levels deep inside Accounts mode.**
-Scoping the sidebar to accounts does not by itself satisfy "no more than two
-levels"; the HIG's answer is a content list between sidebar and detail.
+The point missed on the first pass: **every mode has real instance
+collections**, so no mode's sidebar has to be a menu. Verified against the
+model:
 
-## 4 Options
+| Mode | Sidebar | Backing collection |
+|---|---|---|
+| Overview | *(none — the dashboard is the whole window)* | — |
+| Accounts | Favourites, then the account tree | `accountTree`, `favouriteAccountNodes` |
+| Investments | Securities grouped by type; portfolios | `securityAccountNodes`, commodities |
+| Reports | Standard · Custom · Favourites | report catalogue, saved reports |
+| Planning | Budgets · Goals · Scheduled | `budgets`, `savingsGoals`, `scheduledTransactions` (`AppModel.swift:609-638`) |
+| Records | Rules · Time & Mileage · Emergency Records | `ruleGroups`, `billableEntries`, `emergencyRecords` (`AppModel.swift:608-647`) |
 
-### A — Mode rail as the leading pane of a three-column split *(recommended)*
+Each is a section header plus its instances — **exactly two levels**, which is
+what the sidebar guidance asks for. Selecting a budget shows that budget;
+selecting a rule shows that rule. What used to be a destination ("Budgets")
+becomes a section heading over the things themselves.
 
-```
-┌────┬──────────────┬─────────────────────────┐
-│ ▣  │ Favourites   │                         │
-│ 📖 │ ▸ Assets     │   register / report /   │
-│ 📈 │ ▸ Liabilities│   hub / planner         │
-│ 📊 │ ▸ Income     │                         │
-│ 🗓 │ ▸ Expenses   │                         │
-│ 🗄 │              │                         │
-└────┴──────────────┴─────────────────────────┘
-  rail    mode sidebar          detail
-```
+Two places this does not fall out cleanly:
 
-A narrow icon+label rail carries the modes; the sidebar carries that mode's one
-kind of thing; the detail carries content. This is the shape the split-view page
-describes almost verbatim, it keeps the toolbar for actions, and it leaves the
-account tree room to gain a content column later without another redesign.
+- **Business** is a hub of its own — customers, vendors, invoices, jobs,
+  employees. Under Records it would need three levels. It is a mode of its own,
+  or Records is renamed and Business moves out.
+- **Accounts** is four levels deep and stays that way. GnuCash users expect the
+  tree, and the two-level rule is written "in general". If it proves unwieldy,
+  the HIG's own remedy — a content column between sidebar and detail — can be
+  added without disturbing anything else.
 
-On iPad the same structure is what `sidebarAdaptable` produces — the HIG says
-iPadOS "displays a tab bar near the top" with a button converting it to a
-sidebar — so one model gives the idiomatic control on both platforms.
+### 4.3 Tabs are a tabbed interface, not window tabs
 
-Cost: a new column of chrome (~64pt), and every destination has to declare its
-mode. Risk: with a 565-account tree the window gets wide; the rail must collapse
-to icons and the sidebar must stay hideable.
+Several open items within a mode — registers, reports, portfolios — as document
+tabs across the top of the **detail pane**, in the manner of a code editor's
+file tabs.
 
-### B — Mode switcher in the sidebar header
+**Not macOS window tabs.** A window tab carries a whole window, so each one
+would bring its own sidebar and toolbar; opening three registers would mean
+three copies of the account tree, and switching tabs would switch modes too.
+That defeats the point of a mode-scoped sidebar. In-window tabs keep **one
+sidebar serving many open items**, which is the actual requirement.
 
-Keep two columns; put a compact switcher (segmented control or pop-up menu) at
-the top of the sidebar where the filter field is now, and scope everything below
-it to the chosen mode.
+Consequences to design deliberately: what opens a tab versus replacing the
+current one (a single click replaces, ⌘-click or double-click pins, as editors
+do); how tabs are closed and reordered; whether the set survives relaunch
+(it should — it is desk state, so `UserDefaults`, never the book); and
+"All Transactions" / "All Investments" as a first, permanent tab.
 
-Cheaper — no new column, no window-width pressure — and it fixes the mixing, the
-bottom-edge problem and the filter-erases-navigation bug. Weaker on
-discoverability: a pop-up hides the other modes, and a segmented control with
-six segments in a 240pt column is cramped.
+## 5 Consequences to plan for
 
-### C — One mode per window, leaning on macOS window tabs
-
-Modes become windows. The app already does this for Reports, Help and Reconcile
-(`finvestlensApp.swift:397`), so the machinery exists. macOS then supplies
-tabbing, the tab overview, drag-a-tab-out, and ⌘⇧[ / ⌘⇧] for free.
-
-Best fit for "several registers at once" and zero custom tab chrome. Weakness:
-modes stop being switchable *in place* — the thing the tab-bar pattern is for —
-and window management becomes the user's problem.
-
-### D — Minimal: reorder and scope, no modes
-
-Move Accounts to the top, push the thirteen destinations into a collapsed
-"Go to" disclosure or the menu bar, and fix the filter so it stops hiding
-navigation. A day's work, no architecture change, and it removes the two
-concrete HIG violations without answering the "why are accounts here in Reports"
-question.
-
-## 5 Recommendation
-
-**A, with C for tabs.**
-
-- **Modes:** six — Overview, Accounts, Investments, Reports, Planning, Records.
-  Overview is the existing dashboard, which is too much work and too good to
-  demote into a mode's landing page; it is the app's front page and deserves to
-  be first.
-- **Switcher:** the rail (option A), not the toolbar. Actions stay in the
-  toolbar; navigation stays out of it.
-- **Tabs:** macOS window tabs first, because they are free, native and already
-  half-adopted. Build in-window tabs only if living with window tabs shows a
-  concrete need — specifically, wanting one sidebar shared across several open
-  registers, which window tabs cannot give.
-- **Planning and Records** keep function lists in their sidebars, and the design
-  says so out loud rather than pretending they are collections.
-- **Accounts mode** keeps its tree for now. GnuCash users expect it, and the
-  two-level guidance is "in general". If it proves unwieldy, the third column
-  from option A is already there to take a content list.
-
-## 6 Consequences to plan for
-
-- **Session state changes shape**: `SidebarSelection` (`AppModel.swift:150`) is
-  one flat enum persisted per book. It becomes *(mode, selection-within-mode)*,
-  with a migration for stored values — the same courtesy already extended to the
-  old `prices` spelling.
-- **The toolbar becomes mode-specific.** Create actions differ per mode; a
-  single global set stops making sense.
+- **Session state changes shape.** `SidebarSelection` (`AppModel.swift:150`) is
+  one flat enum persisted per book. It becomes *(mode, selection-within-mode,
+  open tabs)*, with a migration for stored values — the same courtesy already
+  given to the old `prices` spelling.
+- **The toolbar splits in two.** Mode buttons on the leading edge; the current
+  create actions become mode-specific on the trailing edge.
 - **Two search fields resolve.** The window's `.searchable` searches
-  transactions while the sidebar header filters accounts. Under modes the
-  sidebar filter is naturally "filter this mode's list", and the transaction
-  search belongs to Accounts mode.
-- **Shortcuts**: ⌥⌘1–3 currently select destinations; they become mode
-  switches, and the usability review's "no ⌥⌘n for sidebar destinations"
-  finding is answered by the rail.
-- **Timing.** This is surgery on the app's spine and 1.1 is close. Option D is
-  a strict subset of the work — reorder, scope, fix the filter — and could ship
-  first without being thrown away.
+  transactions while the sidebar header filters accounts. The sidebar filter
+  becomes "filter this mode's list"; transaction search belongs to Accounts.
+  The `if trimmedFilter.isEmpty` bug disappears with the mixing that caused it.
+- **Shortcuts.** ⌥⌘1–3 currently pick destinations; they become mode switches
+  (⌘1…⌘6 is the more usual spelling), which also answers the usability review's
+  "no ⌥⌘n for sidebar destinations" finding.
+- **Timing.** This is surgery on the app's spine and 1.1 is close. The
+  sub-parts are separable: fixing the filter bug and reordering the current
+  sidebar is a day's work, ships independently, and is not thrown away by the
+  full design.
 
-## 7 Open questions for the user
+## 6 Questions still needing an answer
 
-1. Six modes, or fold Planning + Records into one "Manage" mode (five)?
-2. Does Overview stay a mode of its own, or become the Accounts landing page?
-3. Window tabs first, or is one sidebar shared across several registers a
-   requirement rather than a nice-to-have?
+1. **Six modes or seven** — does Business come out of Records into its own mode?
+   It is the one collection that will not fit two levels under anything else.
+2. **Does Overview stay a mode**, or become the Accounts landing page? It is the
+   app's front page and a lot of work went into the tile board, which argues for
+   its own mode.
+3. **Tab behaviour on single click** — replace the current tab (editor-style
+   preview) or always open a new one?
