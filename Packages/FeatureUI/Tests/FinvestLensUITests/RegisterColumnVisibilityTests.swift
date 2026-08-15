@@ -87,3 +87,53 @@ struct RegisterColumnVisibilityTests {
 }
 
 #endif
+
+/// Column layout must fit the pane it is drawn in.
+///
+/// Reported from use, 15 Aug 2026: at a narrow window the date read "7/24" and
+/// the balance "$5,03" — the columns kept their measured widths, the content
+/// ran past the clip, and the register was cut off at both ends. A date missing
+/// its leading digits is not a tight column; it is a different date.
+@Suite("Register column fitting")
+struct RegisterColumnFitTests {
+
+    /// Every column starts inside the pane and none runs past its trailing
+    /// edge, at any width the window can reach.
+    @Test("Columns never overflow the pane")
+    func columnsFit() {
+        // 320 is narrower than the app's minimum window; 1600 is a wide
+        // display. The sum of the measured widths alone is ~636.
+        for total in stride(from: 320.0, through: 1600.0, by: 20.0) {
+            let frames = SheetMetrics.Frames(totalWidth: total)
+            let last = SheetColumn.allCases.count - 1
+            let end = frames.x[last] + frames.width[last]
+            #expect(end <= total + 0.5,
+                    "at \(total)pt the columns run \(end - total)pt past the pane")
+            #expect(frames.x[0] >= 0)
+        }
+    }
+
+    /// Date and Amount are what makes this a register rather than a list — the
+    /// two `SheetColumn.canHide` refuses — so the give comes from elsewhere.
+    @Test("Squeezing takes from the optional columns first")
+    func squeezeSparesTheEssentials() {
+        let roomy = SheetMetrics.Frames(totalWidth: 1200)
+        let tight = SheetMetrics.Frames(totalWidth: 420)
+
+        #expect(tight.width[SheetColumn.date.rawValue] == roomy.width[SheetColumn.date.rawValue])
+        #expect(tight.width[SheetColumn.amount.rawValue] == roomy.width[SheetColumn.amount.rawValue])
+        #expect(tight.width[SheetColumn.transfer.rawValue]
+                    < roomy.width[SheetColumn.transfer.rawValue])
+    }
+
+    /// A hidden column gives its space back rather than being squeezed out of
+    /// somewhere else.
+    @Test("Hiding a column widens what is left")
+    func hidingGivesSpaceBack() {
+        let all = SheetMetrics.Frames(totalWidth: 520)
+        let fewer = SheetMetrics.Frames(totalWidth: 520, hidden: [.balance, .reconcile])
+        #expect(fewer.width[SheetColumn.balance.rawValue] == 0)
+        #expect(fewer.width[SheetColumn.description.rawValue]
+                    > all.width[SheetColumn.description.rawValue])
+    }
+}

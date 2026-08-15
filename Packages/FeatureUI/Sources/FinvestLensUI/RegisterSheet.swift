@@ -291,7 +291,7 @@ private enum SheetTrace {
 /// `handle` (the edit pencil) sits immediately after `date`, so the row's two
 /// affordances read left to right as disclosure-then-edit: the caret occupies a
 /// gutter inside Date's own cell, and the pencil follows it.
-private enum SheetColumn: Int, CaseIterable {
+enum SheetColumn: Int, CaseIterable {
     case date, description, transfer, reconcile, amount, balance
 
     var title: String {
@@ -375,7 +375,7 @@ private enum SheetLine: Equatable {
     case addSplit
 }
 
-private enum SheetMetrics {
+enum SheetMetrics {
     static let headerHeight: CGFloat = 26
     static let textInset: CGFloat = 5
     /// A column may not be dragged narrower than this.
@@ -431,7 +431,37 @@ private enum SheetMetrics {
             // `column(atX:)` can never land in it because no point satisfies
             // `x >= start && x < start`, and Description takes back the space.
             for column in hidden where fixed[column] != nil { fixed[column] = 0 }
-            let flex = max(140, totalWidth - fixed.values.reduce(0, +))
+
+            // Fit the pane. Without this the columns keep their measured widths
+            // however narrow the window is, the content runs past the clip, and
+            // the register is cut off at *both* ends — a date reading "7/24"
+            // because its left is outside the view, and a balance reading
+            // "$5,03" because its right is. A date missing its leading digits
+            // is not a tight column, it is the wrong date.
+            //
+            // Description flexes first, as it always has. Below its floor the
+            // give comes from the columns the user is allowed to hide anyway —
+            // Transfer, then Balance, then Reconcile — because a column the app
+            // itself calls optional is the one to squeeze. Date and Amount are
+            // never squeezed: they are what makes this a register rather than a
+            // list (`SheetColumn.canHide`), and both are unreadable when cut.
+            var flex = max(140, totalWidth - fixed.values.reduce(0, +))
+            var overflow = fixed.values.reduce(0, +) + flex - totalWidth
+            if overflow > 0 {
+                for column in [SheetColumn.transfer, .balance, .reconcile] {
+                    guard overflow > 0, let width = fixed[column], width > 0 else { continue }
+                    let give = min(overflow, max(0, width - SheetMetrics.minColumnWidth))
+                    fixed[column] = width - give
+                    overflow -= give
+                }
+                // Still short: Description gives up the rest of its floor
+                // rather than let anything hang outside the pane.
+                if overflow > 0 {
+                    let give = min(overflow, max(0, flex - SheetMetrics.minColumnWidth))
+                    flex -= give
+                    overflow -= give
+                }
+            }
             var xs: [CGFloat] = []
             var ws: [CGFloat] = []
             var cursor: CGFloat = 0
@@ -1651,10 +1681,15 @@ private final class SheetView: NSView, NSTextFieldDelegate {
                 : middleTruncate ? Self.middlePara : Self.leftPara,
         ]
         let textHeight = ceil(font.ascender - font.descender)
+        // A cell narrower than its own insets gives a negative width, and
+        // `NSString.draw(in:)` does not treat that as "draw nothing" — it is
+        // one of the ways a date came to show its tail instead of its head.
+        let available = cell.width - 2 * SheetMetrics.textInset - leadingInset
+        guard available > 1 else { return }
         let textRect = CGRect(
             x: cell.minX + SheetMetrics.textInset + leadingInset,
             y: cell.minY + (cell.height - textHeight) / 2,
-            width: cell.width - 2 * SheetMetrics.textInset - leadingInset,
+            width: available,
             height: textHeight)
         (text as NSString).draw(in: textRect, withAttributes: attributes)
     }

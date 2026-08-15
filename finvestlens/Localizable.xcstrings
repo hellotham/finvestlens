@@ -83307,53 +83307,6 @@
         }
       }
     },
-    "Transfer from…": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Umbuchen von …"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Transferir desde…"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Virement depuis…"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Giroconto da…"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "振替元…"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Transferir de…"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "转账来源…"
-          }
-        }
-      }
-    },
     "Turn on **Use trading accounts** in the sheet and the transfer also posts to a pair of trading accounts, so the books balance in *each* currency rather than only by value. This is GnuCash's approach, and it is what captures unrealised gains when a rate moves. Leave it off and the transfer is a plain two-sided entry. The choice is remembered in the book.": {
       "extractionState": "manual",
       "localizations": {

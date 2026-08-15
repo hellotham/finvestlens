@@ -1772,14 +1772,18 @@ struct RegisterEntryBar: View {
             .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(.quaternary))
             .frame(minWidth: 160)
 
-            Picker("", selection: $transferID) {
-                Text("Transfer from…").tag(GncGUID?.none)
-                ForEach(model.postableAccounts.filter { $0.id != accountID }) { node in
-                    Text(node.fullName).tag(GncGUID?.some(node.id))
-                }
-            }
-            .labelsHidden()
-            .frame(maxWidth: 240)
+            // The same control the row editor uses, for the same reason it
+            // uses it: you type a few letters and it matches. A `Picker` over
+            // this list is a menu 565 accounts long — on the reference book,
+            // finding "Groceries" meant scrolling a popup through the whole
+            // chart of accounts, while the row directly above offered
+            // type-to-match for the identical field. Entering a transaction and
+            // editing one are the same act; they may not be two controls.
+            AccountField(prompt: "Transfer",
+                         nodes: model.postableAccounts.filter { $0.id != accountID },
+                         selection: $transferID,
+                         clearable: true)
+                .frame(maxWidth: 240)
 
             TextField("Amount", text: $amountText)
                 .textFieldStyle(.roundedBorder)
