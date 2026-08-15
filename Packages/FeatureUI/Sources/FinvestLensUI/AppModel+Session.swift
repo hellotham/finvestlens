@@ -30,18 +30,28 @@ extension AppModel {
     /// Missing means default, in both directions.
     private struct SessionNavigation: Codable {
         var mode: String
-        /// Mode raw value → encoded ``SidebarSelection``.
+        /// Mode raw value → that mode's open tabs, home excluded (it is
+        /// derived). Written since P12/N3; `selections` is the N1 spelling,
+        /// still read so a desk state written between the two is not thrown
+        /// away.
+        var tabs: [String: [String]]
+        /// Mode raw value → which tab is showing.
+        var active: [String: Int]
         var selections: [String: String]
 
-        init(mode: String, selections: [String: String]) {
+        init(mode: String, tabs: [String: [String]], active: [String: Int]) {
             self.mode = mode
-            self.selections = selections
+            self.tabs = tabs
+            self.active = active
+            self.selections = [:]
         }
 
         init(from decoder: any Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             mode = try container.decodeIfPresent(String.self, forKey: .mode)
                 ?? AppMode.overview.rawValue
+            tabs = try container.decodeIfPresent([String: [String]].self, forKey: .tabs) ?? [:]
+            active = try container.decodeIfPresent([String: Int].self, forKey: .active) ?? [:]
             selections = try container.decodeIfPresent([String: String].self, forKey: .selections)
                 ?? [:]
         }
@@ -62,11 +72,13 @@ extension AppModel {
     /// follows the window.
     func persistSessionSelection() {
         guard isOpen, let key = sessionNavigationKey else { return }
-        let (mode, selections) = navigationSnapshot
+        let (mode, tabs, active) = navigationSnapshot
         let stored = SessionNavigation(
             mode: mode.rawValue,
-            selections: Dictionary(uniqueKeysWithValues:
-                selections.map { ($0.key.rawValue, Self.encode($0.value)) }))
+            tabs: Dictionary(uniqueKeysWithValues:
+                tabs.map { ($0.key.rawValue, $0.value.map(Self.encode)) }),
+            active: Dictionary(uniqueKeysWithValues:
+                active.map { ($0.key.rawValue, $0.value) }))
         guard let data = try? JSONEncoder().encode(stored) else { return }
         UserDefaults.standard.set(String(decoding: data, as: UTF8.self), forKey: key)
     }
@@ -75,35 +87,55 @@ extension AppModel {
     /// longer exists (deleted, or the file changed outside the app) drops back
     /// to its mode's home rather than leaving a dead selection.
     func restoreSessionSelection() {
-        guard let (mode, selections) = readStoredNavigation() else { return }
-        let live = selections.filter { _, selection in
-            guard case .account(let id) = selection else { return true }
-            return book?.account(with: id) != nil
+        guard let (mode, tabs, active) = readStoredNavigation() else { return }
+        // A tab pointing at an account the book no longer has is dropped rather
+        // than restored dead — the file may have changed outside the app.
+        let live = tabs.mapValues { list in
+            list.filter { selection in
+                guard case .account(let id) = selection else { return true }
+                return book?.account(with: id) != nil
+            }
         }
-        restoreNavigation(mode: mode, selections: live)
+        restoreNavigation(mode: mode, tabs: live, active: active)
     }
 
     /// Reads the current format, falling back to the pre-P12 flat value.
-    private func readStoredNavigation() -> (AppMode, [AppMode: SidebarSelection])? {
+    private func readStoredNavigation()
+        -> (AppMode, [AppMode: [SidebarSelection]], [AppMode: Int])? {
         if let key = sessionNavigationKey,
            let raw = UserDefaults.standard.string(forKey: key),
            let stored = try? JSONDecoder().decode(SessionNavigation.self, from: Data(raw.utf8)) {
-            var selections: [AppMode: SidebarSelection] = [:]
-            for (rawMode, rawSelection) in stored.selections {
-                guard let mode = AppMode(rawValue: rawMode),
-                      let selection = Self.decodeSelection(rawSelection) else { continue }
-                selections[mode] = selection
+            var tabs: [AppMode: [SidebarSelection]] = [:]
+            for (rawMode, rawTabs) in stored.tabs {
+                guard let mode = AppMode(rawValue: rawMode) else { continue }
+                tabs[mode] = rawTabs.compactMap(Self.decodeSelection)
             }
-            return (AppMode(rawValue: stored.mode) ?? .overview, selections)
+            var active: [AppMode: Int] = [:]
+            for (rawMode, index) in stored.active {
+                guard let mode = AppMode(rawValue: rawMode) else { continue }
+                active[mode] = index
+            }
+            // A desk state written by N1, before tabs existed: one selection per
+            // mode becomes that mode's single open tab.
+            for (rawMode, rawSelection) in stored.selections {
+                guard tabs[AppMode(rawValue: rawMode) ?? .overview] == nil,
+                      let mode = AppMode(rawValue: rawMode),
+                      let selection = Self.decodeSelection(rawSelection),
+                      selection != mode.defaultSelection else { continue }
+                tabs[mode] = [selection]
+                active[mode] = 1
+            }
+            return (AppMode(rawValue: stored.mode) ?? .overview, tabs, active)
         }
-        // Migration. The old value named a destination with no mode attached, so
-        // the mode is derived from the destination — a book last left on Budgets
-        // reopens in Planning, on Budgets, which is where the user was.
+        // Migration. The pre-P12 value named a destination with no mode
+        // attached, so the mode is derived from the destination — a book last
+        // left on Budgets reopens in Planning, on Budgets, where the user was.
         guard let legacyKey = legacySelectionKey,
               let raw = UserDefaults.standard.string(forKey: legacyKey),
               let selection = Self.decodeSelection(raw) else { return nil }
         let mode = AppMode(hosting: selection)
-        return (mode, [mode: selection])
+        guard selection != mode.defaultSelection else { return (mode, [:], [:]) }
+        return (mode, [mode: [selection]], [mode: 1])
     }
 
     // MARK: The window's period (`FR-NAV-11`)

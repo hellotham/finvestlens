@@ -405,10 +405,18 @@ public struct FinvestLensRootView: View {
         if model.isSearching {
             SearchResultsView(model: model)
         } else {
-            destinationView
-                // Areas that were modal sheets suppress their Done/sheet chrome
-                // via this flag when shown inline.
-                .environment(\.isEmbeddedDestination, true)
+            VStack(spacing: 0) {
+                // The strip appears once there is something beside the home tab.
+                // A one-tab strip is chrome that says nothing, and the mode's
+                // home is already named by the mode selector and the sidebar.
+                if model.openTabs.count > 1 {
+                    ModeTabStrip(model: model)
+                }
+                destinationView
+                    // Areas that were modal sheets suppress their Done/sheet
+                    // chrome via this flag when shown inline.
+                    .environment(\.isEmbeddedDestination, true)
+            }
         }
     }
 

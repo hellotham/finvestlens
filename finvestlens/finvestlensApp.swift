@@ -158,6 +158,17 @@ struct finvestlensApp: App {
                         .disabled(!model.isOpen)
                 }
                 Divider()
+                Button("New Tab") { model.duplicateCurrentTab() }
+                    .keyboardShortcut("t", modifiers: .command)
+                    .disabled(!model.isOpen)
+                // ⌥⌘W, not ⌘W. ⌘W closes the window everywhere in macOS and
+                // ⇧⌘W already closes the book; taking ⌘W for a tab would make
+                // the most reflexive shortcut on the platform do a third thing
+                // depending on how many tabs happened to be open.
+                Button("Close Tab") { model.closeTab(model.activeTabIndex) }
+                    .keyboardShortcut("w", modifiers: [.command, .option])
+                    .disabled(!model.isOpen || model.activeTabIndex == 0)
+                Divider()
                 // HIG *Toolbars* (macOS): "Make every toolbar item available
                 // as a command in the menu bar" — people can hide or
                 // customise the toolbar, so it can never be a command's only

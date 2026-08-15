@@ -186,6 +186,17 @@ struct ModeSidebar: View {
         }
         .contextMenu(forSelectionType: SidebarSelection.self) { selection in
             sidebarMenu(for: selection)
+        } primaryAction: { selection in
+            // Double-click opens a tab, as it does in GnuCash — a register is
+            // opened from the account tree on *double*-click
+            // (`gnc-plugin-page-account-tree.cpp:987`). Single click replaces
+            // the current tab, which is this app's existing behaviour.
+            //
+            // ⌘-click is deliberately not bound: in a macOS `List` it is the
+            // extend-selection modifier, and taking it would fight the platform
+            // for a gesture the context menu and ⌘T already offer.
+            guard let target = selection.first else { return }
+            model.navigate(to: target, inNewTab: true)
         }
     }
 
@@ -373,6 +384,12 @@ struct ModeSidebar: View {
     /// for this: one definition, both paths.
     @ViewBuilder
     func sidebarMenu(for selection: Set<SidebarSelection>) -> some View {
+        // Every row can be opened in a tab; only accounts carry account
+        // actions.
+        if selection.count == 1, let target = selection.first {
+            Button("Open in New Tab") { model.navigate(to: target, inNewTab: true) }
+            Divider()
+        }
         // Account rows carry account actions. Other rows have none, and an
         // empty menu is correct — better than offering an account's Delete on
         // a row that is not an account.

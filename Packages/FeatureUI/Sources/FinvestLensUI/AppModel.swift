@@ -435,16 +435,106 @@ public final class AppModel {
 
     // MARK: Navigation — mode, and each mode's own selection
 
-    /// The current mode (`FR-NAV-01`), and each mode's destination.
+    /// The current mode (`FR-NAV-01`), each mode's open tabs, and which of them
+    /// is showing.
     ///
-    /// These are stored rather than computed so `@Observable` instruments them:
-    /// the public accessors below read them, which is what registers a view
-    /// showing the sidebar or the mode control as a dependency.
+    /// Stored rather than computed so `@Observable` instruments them: the public
+    /// accessors below read them, which is what registers a view showing the
+    /// sidebar, the tab strip or the mode control as a dependency.
+    ///
+    /// `tabsByMode` holds the tabs the user opened. The mode's **home** is not
+    /// among them — it is always tab 0, and derived rather than stored, so it
+    /// cannot be closed, reordered or lost to a stale desk state.
     private var currentMode: AppMode = .overview
-    private var selectionByMode: [AppMode: SidebarSelection] = [:]
+    private var tabsByMode: [AppMode: [SidebarSelection]] = [:]
+    private var activeTabByMode: [AppMode: Int] = [:]
+
+    /// A mode's open tabs, home first (`FR-NAV-05`).
+    public func tabs(in mode: AppMode) -> [SidebarSelection] {
+        [mode.defaultSelection] + (tabsByMode[mode] ?? [])
+    }
+
+    /// The current mode's open tabs.
+    public var openTabs: [SidebarSelection] { tabs(in: currentMode) }
+
+    /// Which tab is showing. Clamped on read: a desk state restored against a
+    /// book with fewer tabs must land somewhere real rather than out of bounds.
+    public var activeTabIndex: Int {
+        min(max(activeTabByMode[currentMode] ?? 0, 0), openTabs.count - 1)
+    }
 
     private func storedSelection(in mode: AppMode) -> SidebarSelection {
-        selectionByMode[mode] ?? mode.defaultSelection
+        let all = tabs(in: mode)
+        let index = min(max(activeTabByMode[mode] ?? 0, 0), all.count - 1)
+        return all[index]
+    }
+
+    /// Shows the tab at `index` in the current mode.
+    public func selectTab(_ index: Int) {
+        guard openTabs.indices.contains(index), index != activeTabIndex else { return }
+        let old = storedSelection(in: currentMode)
+        activeTabByMode[currentMode] = index
+        applyNavigationChange(from: old)
+    }
+
+    /// Closes a tab. The home tab (index 0) has no close button and this
+    /// refuses it anyway — a mode with no tab at all has nothing to show.
+    public func closeTab(_ index: Int) {
+        guard index > 0, openTabs.indices.contains(index) else { return }
+        let old = storedSelection(in: currentMode)
+        var extras = tabsByMode[currentMode] ?? []
+        extras.remove(at: index - 1)
+        tabsByMode[currentMode] = extras
+        // Land on the tab that took its place, or the one before it — never on
+        // the home tab merely because the arithmetic was easier.
+        activeTabByMode[currentMode] = min(activeTabIndexAfterClosing(index, of: extras.count + 1),
+                                           extras.count)
+        applyNavigationChange(from: old)
+    }
+
+    private func activeTabIndexAfterClosing(_ closed: Int, of previousCount: Int) -> Int {
+        let active = activeTabByMode[currentMode] ?? 0
+        if active == closed { return closed }   // the next tab slides into place
+        return active > closed ? active - 1 : active
+    }
+
+    /// Opens `selection` in this mode, following GnuCash's rules
+    /// (`gnc-main-window.cpp:3291`, `gnc-plugin-page-account-tree.cpp:987`):
+    ///
+    /// - **Never a duplicate.** Something already open is focused, not opened
+    ///   again — GnuCash checks `gnc_main_window_page_exists` first.
+    /// - **A single click replaces**, which is this app's existing behaviour and
+    ///   worth keeping; a new tab is a deliberate act (`inNewTab`).
+    /// - **Except from the home tab**, which is pinned: replacing it would lose
+    ///   the one tab a mode cannot be without, so the first click from home
+    ///   opens a tab beside it instead.
+    private func openTab(_ selection: SidebarSelection, inNewTab: Bool, in mode: AppMode) {
+        // A placeholder account has no register, so opening one would show an
+        // empty one. GnuCash expands or collapses the row instead; here the
+        // sidebar's disclosure already does that, so the tab simply does not
+        // open and the selection stays where it was.
+        if case .account(let id) = selection,
+           book?.account(with: id)?.isPlaceholder == true,
+           !(book?.account(with: id)?.children.isEmpty ?? true) {
+            return
+        }
+        if selection == mode.defaultSelection {
+            activeTabByMode[mode] = 0
+            return
+        }
+        var extras = tabsByMode[mode] ?? []
+        if let existing = extras.firstIndex(of: selection) {
+            activeTabByMode[mode] = existing + 1
+            return
+        }
+        let active = activeTabByMode[mode] ?? 0
+        if inNewTab || active == 0 {
+            extras.append(selection)
+            activeTabByMode[mode] = extras.count
+        } else {
+            extras[active - 1] = selection
+        }
+        tabsByMode[mode] = extras
     }
 
     /// The mode the window is in. Switching restores that mode's own selection,
@@ -475,12 +565,20 @@ public final class AppModel {
     }
 
     /// Moves to `selection`, switching mode if it lives in another one.
-    public func navigate(to selection: SidebarSelection) {
+    ///
+    /// `inNewTab` is the deliberate act: ⌘-click, double-click, the row's
+    /// context menu, or the strip's + button.
+    public func navigate(to selection: SidebarSelection, inNewTab: Bool = false) {
         let old = storedSelection(in: currentMode)
         let target = AppMode(hosting: selection)
-        selectionByMode[target] = selection
+        openTab(selection, inNewTab: inNewTab, in: target)
         currentMode = target
         applyNavigationChange(from: old)
+    }
+
+    /// Opens whatever is showing in a second tab beside it — View ▸ New Tab.
+    public func duplicateCurrentTab() {
+        navigate(to: storedSelection(in: currentMode), inNewTab: true)
     }
 
     /// Backs ``period``. `nil` means "the book's default" — so a book whose
@@ -489,8 +587,10 @@ public final class AppModel {
     var windowPeriod: ReportPeriod?
 
     /// Where every mode is, for session persistence — see `AppModel+Session`.
-    var navigationSnapshot: (mode: AppMode, selections: [AppMode: SidebarSelection]) {
-        (currentMode, selectionByMode)
+    var navigationSnapshot: (mode: AppMode,
+                             tabs: [AppMode: [SidebarSelection]],
+                             active: [AppMode: Int]) {
+        (currentMode, tabsByMode, activeTabByMode)
     }
 
     /// Re-applies a whole desk state in one step — see `AppModel+Session`.
@@ -499,10 +599,18 @@ public final class AppModel {
     /// assignment: the two-step form refreshes the register against the
     /// half-restored state, and a restore that happens to land on the mode
     /// already showing would skip the refresh altogether.
-    func restoreNavigation(mode restored: AppMode, selections: [AppMode: SidebarSelection]) {
+    func restoreNavigation(mode restored: AppMode,
+                           tabs: [AppMode: [SidebarSelection]],
+                           active: [AppMode: Int]) {
         let old = storedSelection(in: currentMode)
         currentMode = restored
-        selectionByMode = selections
+        // A stored home tab would be a duplicate of the derived one; dropping
+        // it here means a desk state written by any future build cannot
+        // produce a mode showing its home twice.
+        tabsByMode = tabs.mapValues { list in
+            list.filter { $0 != AppMode(hosting: $0).defaultSelection }
+        }
+        activeTabByMode = active
         applyNavigationChange(from: old)
     }
 
@@ -511,7 +619,8 @@ public final class AppModel {
     func resetNavigation() {
         let old = storedSelection(in: currentMode)
         currentMode = .overview
-        selectionByMode = [:]
+        tabsByMode = [:]
+        activeTabByMode = [:]
         applyNavigationChange(from: old)
     }
 
