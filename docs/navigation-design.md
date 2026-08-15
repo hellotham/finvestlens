@@ -157,7 +157,7 @@ without disturbing anything else.
 Seven modes is a lot for one segmented control. At narrow widths it must drop
 to icons only rather than let the system push it into the overflow menu.
 
-### 4.3 Overview is cross-mode, and one mode contributes nothing
+### 4.3 Overview is a board of views, not a board of tiles
 
 Overview is the app's front page: it opens there, and it reports across every
 mode rather than about accounts.
@@ -170,23 +170,68 @@ recentActivity, composition, spendingTrend — are account-centric, and
 **Business contributes no tile at all**: nothing shows receivables, payables or
 an overdue invoice.
 
-The rule that follows: **every mode must be able to contribute at least one
-tile, and the default board carries one from each.** Business needs a
-receivables/overdue tile before it can hold up its end; Records needs one
-(rules that fired, or records due for review) or it is a mode nobody is
-reminded of.
+So: **every mode must be able to contribute at least one tile**, and Business
+needs a receivables/overdue tile before it can hold up its end.
 
-### 4.4 The Accounts home page is All Transactions — repaired
+**Overview's sidebar is its list of views** — which is what the mode was
+missing. Standard views (Mix · Accounts · Investments · Business · Planning),
+the user's custom views, and favourites. A *view* is a named selection of tiles
+and their order; the board-packing algorithm already decides placement from
+window size, so a view only has to say which tiles are eligible.
+
+**Every tile can be opened full-window.** A tile is a summary at board size and
+a full page when zoomed, with a close button returning to the board. This is
+also how a tile that is *not* on the current view is reached: a toolbar button
+lists every tile, and choosing one opens it zoomed until closed. Nothing is
+unreachable merely because it did not fit.
+
+**One timescale, everywhere.** A single period selector governs the board, and
+is the same control every other mode uses — and the default period a report
+opens with. Today the dashboard has its own period and reports have their own;
+one selector removes the "which period am I looking at?" question the app
+currently asks twice.
+
+Consequences: a view is desk state (`UserDefaults`, per book, never the
+document); tiles must render at two sizes, which most already do since the board
+packs them at 1–3 columns; and "zoomed" is a state of the board rather than a
+sheet, so ⌘W does not close the window.
+
+### 4.4 The Accounts landing is All Transactions — and it is affordable
+
+The performance worry was real and unmeasured, so it was measured
+(`LiveWholeBookPerfTests`, on the reference book, release build):
+
+```
+transactions in book : 46831
+splits in book       : 104195
+whole-book rows      : 46831
+whole-book build     : 0.0205 s   (cold — cache invalidated first)
+whole-book warm      : 9.6e-07 s  (memoised hit)
+busiest account      : 9162 splits, cold build 0.0098 s
+```
+
+**20.5 ms cold, about twice the busiest single account register**, and a
+microsecond warm because `journalTransactions` memoises on `derivedRevision`.
+That is affordable for a landing tab.
+
+A caution on how that number was obtained: the first attempt looped three times
+and reported **84 nanoseconds**, because runs two and three hit the memo and the
+last assignment won. Any future measurement of a memoised derivation must
+invalidate first or it measures a dictionary lookup.
+
+What is *not* measured is the view: 20.5 ms is the model supplying rows, and the
+register is virtualised so visible-row cost should be independent of book size.
+That holds only while it stays virtualised — the same property whose loss caused
+the import sheet's attribute-graph crash.
 
 Not another card page. Investments and Reports are *reading* modes, so a hub
 suits them; Accounts is a *working* mode, and Overview already carries the
 reading layer for the whole app. A second summary page in Accounts would
 duplicate Overview and delay the thing people came for.
 
-All Transactions is the right landing because it is the ledger's inbox — the
-newest activity across every account, which is exactly what a categorise or
-reconcile session starts from. It becomes the first tab of Accounts mode, and
-is not closeable.
+All Transactions is the ledger's inbox — the newest activity across every
+account, which is where a categorise or reconcile session starts. It becomes
+the first tab of Accounts mode, and is not closeable.
 
 **But it has to stop being a journal.** It is already the same component —
 `RegisterSheet(model:wholeBook: true)` (`Views.swift:1590`) — yet `wholeBook`
@@ -266,13 +311,16 @@ of the account tree, and switching tabs would switch modes. In-window tabs keep
 - **Single click replaces the tab; a new tab is deliberate**; an already-open
   item focuses rather than duplicates.
 
+Records is no longer thin — see [records-and-rules-design.md](records-and-rules-design.md):
+assets, depreciation schedules, deductions, logbooks and timesheets are real
+collections with an external requirement behind them. Its sidebar is the
+fullest of any mode.
+
 ## 7 Still open
 
-1. **Does Records earn its place?** Rules, Emergency Records and the audit log
-   are a thin collection, and Rules arguably belong with Accounts, where
-   importing and categorising happen. Six modes with Rules under Accounts is
-   defensible. Needs a call before the mode list is fixed in code.
-2. **Does All Transactions stay fast enough as the launch-adjacent tab?** The
-   reference book holds 46,831 transactions and 104,195 splits; the register is
-   virtualised, but landing on the whole book by default is a new load pattern
-   and wants measuring before it is made the default.
+1. **Where do Rules live** — Records, or Accounts where importing and
+   categorising actually happen? They are a collection either way; the question
+   is which mode a user looks in.
+2. **How much of this ships before 1.1.** §4.4's repair of All Transactions and
+   the filter-erases-navigation bug are small and independent; the mode
+   structure is not.
