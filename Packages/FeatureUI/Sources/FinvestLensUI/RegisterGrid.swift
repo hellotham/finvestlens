@@ -135,6 +135,17 @@ public enum RegisterStyle: String, CaseIterable, Identifiable, Sendable {
 
 enum TransactionEditField: Hashable {
     case date, number, description, transfer, amount, notes, tags
+    /// The transaction's own currency, which need not be any account's.
+    ///
+    /// GnuCash keeps one currency per transaction (`xaccTransGetCurrency`) and
+    /// expresses every split's `value` in it, so a foreign purchase on a local
+    /// card is a local-account transaction denominated abroad — not two
+    /// currencies, and not a clearing account.
+    case currency
+    /// GnuCash's `RATE_CELL` (`split-register.h:211`): local units per one
+    /// unit of the transaction currency. An accelerator, not a stored field —
+    /// the rate lives in the splits as `value`/`quantity`.
+    case rate
     case splitAccount(UUID), splitMemo(UUID), splitAction(UUID), splitAmount(UUID)
     /// GnuCash's RATE_CELL — the foreign quantity on an FX or security leg.
     case splitQuantity(UUID)
@@ -511,6 +522,14 @@ struct TransactionDraft: Equatable {
     /// An FX transaction's currency is its own fact — re-deriving it from the
     /// accounts would re-save the values in the wrong unit.
     var currencyOverride: Commodity?
+    /// What is typed in the Currency cell. Kept beside the resolved commodity
+    /// so a half-typed or unknown code stays on screen instead of vanishing —
+    /// the cell can then be reported as wrong rather than silently ignored.
+    var currencyText: String = ""
+    /// What is typed in the Rate cell, while it is being typed. Empty means
+    /// "show what the splits imply" (``impliedRate``), which is the truth once
+    /// both figures exist.
+    var rateText: String = ""
     /// Whether the row is opened out. Clicking a cell edits in place (`false`);
     /// Edit Transaction opens it out (`true`).
     var isExpanded: Bool
@@ -527,6 +546,7 @@ struct TransactionDraft: Equatable {
         lines = edit.splits.map { EditableSplit($0) }
         let derived = model.transactionCurrency(for: edit.splits.compactMap(\.accountID))
         currencyOverride = edit.currency == derived ? nil : edit.currency
+        currencyText = currencyOverride?.mnemonic ?? ""
         isExpanded = expanded
     }
 
@@ -544,6 +564,7 @@ struct TransactionDraft: Equatable {
         self.tagsText = tagsText
         self.lines = lines
         self.currencyOverride = currencyOverride
+        self.currencyText = currencyOverride?.mnemonic ?? ""
         self.isExpanded = true
     }
 
@@ -569,6 +590,81 @@ struct TransactionDraft: Equatable {
     var validLineCount: Int { lines.filter { $0.accountID != nil }.count }
     var isBalanced: Bool {
         imbalance == 0 && validLineCount >= 2 && lines.allSatisfy(\.quantityIsValid)
+            && currencyIsValid
+    }
+
+    // MARK: Currency (`FR-CUR-02`, `FR-REG-07`)
+
+    /// Whether the typed currency code names a currency.
+    ///
+    /// Blank is valid and means "derive from the accounts" — the ordinary
+    /// same-currency transaction, where a code would be noise.
+    var currencyIsValid: Bool {
+        let trimmed = currencyText.trimmingCharacters(in: .whitespaces)
+        return trimmed.isEmpty || currencyOverride != nil
+    }
+
+    /// The rate the two figures imply, local units per one foreign unit.
+    ///
+    /// Derived from the splits rather than stored, so it cannot go stale:
+    /// `value` is in the transaction (foreign) currency and `quantity` in the
+    /// account's own, exactly as GnuCash defines them (`Split.h:251-265`), so
+    /// their ratio *is* the rate. `nil` when the transaction is single-currency
+    /// or no leg has been given both figures yet.
+    var impliedRate: Decimal? {
+        guard currencyOverride != nil else { return nil }
+        for line in lines where line.accountID != nil {
+            let foreign = line.amount
+            guard foreign != 0, let local = line.quantity, local != 0 else { continue }
+            return local / foreign
+        }
+        return nil
+    }
+
+    /// Takes the transaction into (or out of) a foreign currency, moving the
+    /// figures rather than reinterpreting them.
+    ///
+    /// Switching an AUD 600 transaction to MYR must not silently mean "600
+    /// MYR" — the 600 is what left the account, so it becomes each leg's
+    /// `quantity` and the `value` is cleared for the foreign figure. Clearing
+    /// the currency puts them back. This is the same move `applyFx` makes in
+    /// the editor sheet, so both routes produce one structure.
+    mutating func setCurrency(_ currency: Commodity?, text: String) {
+        currencyText = text
+        let wasForeign = currencyOverride != nil
+        let isForeign = currency != nil
+        guard wasForeign != isForeign else { currencyOverride = currency; return }
+        for index in lines.indices {
+            if isForeign {
+                // Local figures move to the quantity; value awaits the foreign.
+                if lines[index].quantityText.isEmpty {
+                    lines[index].quantityText = lines[index].amountText
+                    lines[index].amountText = ""
+                }
+            } else if !lines[index].quantityText.isEmpty {
+                lines[index].amountText = lines[index].quantityText
+                lines[index].quantityText = ""
+            }
+        }
+        currencyOverride = currency
+    }
+
+    /// Fills every foreign leg's value from its local amount at `rate` — the
+    /// accelerator GnuCash spells `RATE_CELL` (`split-register.h:211`).
+    ///
+    /// The rate is local-per-foreign (1 MYR = 0.3383 AUD), so the foreign
+    /// figure is `local / rate`. Legs already carrying a value are left alone:
+    /// a rate typed after the amounts is a check, not an overwrite.
+    mutating func applyRate(_ rate: Decimal, rounding foreign: Commodity?) {
+        guard rate != 0 else { return }
+        for index in lines.indices {
+            guard let local = lines[index].quantity, local != 0,
+                  lines[index].amountText.trimmingCharacters(in: .whitespaces).isEmpty
+            else { continue }
+            let value = local / rate
+            let rounded = foreign?.round(value) ?? value
+            lines[index].amountText = NSDecimalNumber(decimal: rounded).stringValue
+        }
     }
 
     /// Writes an amount and, on a plain two-leg transaction, mirrors the

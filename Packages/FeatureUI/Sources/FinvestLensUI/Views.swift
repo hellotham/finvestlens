@@ -2570,8 +2570,13 @@ struct TransactionEditorSheet: View {
         var description: String?
         var date: Date?
         var amount: Decimal?
-        /// A foreign currency the document names (e.g. "MYR"), when detected.
+        /// A foreign currency the document names (e.g. "MYR") — set only when
+        /// the document names exactly one, which is when the app may act
+        /// without asking.
         var currencyCode: String?
+        /// Every currency the document could be in. More than one means an
+        /// ambiguous symbol (a bare `$`), which is a question, not a dead end.
+        var currencyCandidates: [String] = []
     }
 
     @State private var loaded = false
@@ -2596,6 +2601,10 @@ struct TransactionEditorSheet: View {
     @State private var fxLocalText = ""
     @State private var fxFetching = false
     @State private var fxError: String?
+    /// Why the automatic FX restructure did not run, in the user's words —
+    /// shown above the converter so a decline is visible rather than inferred
+    /// from a transaction that quietly stayed local.
+    @State private var fxDeclined: String?
     /// A transaction currency differing from the accounts' (an FX purchase):
     /// split `value`s are in this currency, `quantity` moves each account in
     /// its own. Set by the converter's Apply, or by loading such a transaction.
@@ -2856,6 +2865,11 @@ struct TransactionEditorSheet: View {
                         fxSummary(foreign)
                     } else {
                         DisclosureGroup(isExpanded: $fxShown) {
+                            if let fxDeclined {
+                                Label(fxDeclined, systemImage: "info.circle")
+                                    .scaledFont(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
                             fxConverter
                         } label: {
                             Label("Foreign Amount", systemImage: "dollarsign.arrow.circlepath")
@@ -2941,25 +2955,56 @@ struct TransactionEditorSheet: View {
         categorising = true
         Task {
             defer { categorising = false }
-            await model.adoptDocument(url: prefill.url,
-                                      foreignAmount: prefill.amount,
-                                      currencyCode: prefill.currencyCode,
-                                      into: id)
+            let outcome = await model.adoptDocument(url: prefill.url,
+                                                    foreignAmount: prefill.amount,
+                                                    currencyCode: prefill.currencyCode,
+                                                    into: id)
             reloadFromBook(id)
-            // Amounts mismatch but the document named no currency: hand the
-            // converter every fact — the currency pick is the one human step.
-            if fxCurrencyOverride == nil, prefill.currencyCode == nil,
-               let docAmount = prefill.amount, docAmount > 0,
-               let local = lines.compactMap({ $0.amount == 0 ? nil : abs($0.amount) }).max(),
-               docAmount != local {
-                fxAmountText = NSDecimalNumber(decimal: docAmount).stringValue
-                fxLocalText = NSDecimalNumber(decimal: local).stringValue
-                let implied = local / docAmount
-                let sixDp = Decimal(NSDecimalNumber(decimal: implied * 1_000_000).intValue) / 1_000_000
-                fxRateText = NSDecimalNumber(decimal: sixDp).stringValue
-                fxShown = true
-            }
+            offerConversion(prefill, outcome: outcome)
         }
+    }
+
+    /// Puts the conversion to the user when the app could not make it itself.
+    ///
+    /// The rule the user set on 15 Aug 2026: **ask, showing the evidence**.
+    /// Every fact needed is already in hand — the document's amount, the
+    /// transaction's, and the rate they imply — so the only thing missing is
+    /// the currency, and the only honest thing to do with a decline is say it.
+    /// Before this, four separate refusals inside `restructureAsForeign` all
+    /// looked identical from outside: nothing happened.
+    private func offerConversion(_ prefill: DocumentPrefill,
+                                 outcome: AppModel.ForeignRestructureOutcome) {
+        guard !outcome.didRestructure, fxCurrencyOverride == nil else { return }
+        guard let docAmount = prefill.amount, docAmount > 0,
+              let local = lines.compactMap({ $0.amount == 0 ? nil : abs($0.amount) }).max(),
+              docAmount != local
+        else { return }
+
+        fxAmountText = NSDecimalNumber(decimal: docAmount).stringValue
+        fxLocalText = NSDecimalNumber(decimal: local).stringValue
+        let implied = local / docAmount
+        let sixDp = Decimal(NSDecimalNumber(decimal: implied * 1_000_000).intValue) / 1_000_000
+        fxRateText = NSDecimalNumber(decimal: sixDp).stringValue
+        // Preselect what the document actually said, when it said anything —
+        // an ambiguous `$` still narrows the list to six, and the first of
+        // those beats defaulting to USD by habit.
+        if let code = prefill.currencyCode ?? prefill.currencyCandidates.first,
+           model.fxCurrencyCodes.contains(code) {
+            fxCode = code
+        }
+        fxDeclined = switch outcome {
+        case .nearParity:
+            String(localized: "The two amounts are within a few percent — that is usually a surcharge rather than a foreign currency. Convert anyway if it wasn’t.")
+        case .tooComplex:
+            String(localized: "This transaction has more than two legs, so the amounts weren’t rewritten automatically. Set the conversion here.")
+        case .notForeign where prefill.currencyCandidates.count > 1:
+            String(localized: "The document’s currency symbol is used by more than one currency — choose which.")
+        case .notForeign:
+            String(localized: "The document’s total doesn’t match this transaction. If it was a foreign purchase, set the currency and rate.")
+        case .restructured:
+            nil
+        }
+        fxShown = true
     }
 
     /// One reload point: the editor's state always mirrors the book's version

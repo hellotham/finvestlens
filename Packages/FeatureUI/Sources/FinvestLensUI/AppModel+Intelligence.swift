@@ -263,7 +263,12 @@ extension AppModel {
         public var candidateAmounts: [Decimal] = []
         public var vendor: String?
         /// A foreign currency the document names (ISO code, or "RM" → MYR).
+        /// Set only when the document names exactly one — the automatic path.
         public var currencyHint: String?
+        /// Every currency the document could be in, when it is not certain —
+        /// what the editor offers so an ambiguous `$` becomes a question
+        /// instead of a shrug.
+        public var currencyCandidates: [String] = []
         /// What the receipt says it was paid with. On an unmatched document
         /// this is the difference between "no transaction exists, because it
         /// was cash" and "a transaction exists somewhere and has not been
@@ -360,6 +365,7 @@ extension AppModel {
             let spending = !doc.isIncome
             match.vendor = doc.invoice?.vendor
             match.currencyHint = doc.currencyHint
+            match.currencyCandidates = doc.currencyCandidates
             match.tender = doc.tender
             if let already = attachedByName[url.lastPathComponent.lowercased()] {
                 match.note = "This file is already attached to \(transactionSummary(already))."
@@ -468,6 +474,7 @@ extension AppModel {
         var textDates: [Date] = []
         /// A foreign currency the document names, when one is.
         var currencyHint: String?
+        var currencyCandidates: [String] = []
         /// What the receipt says it was paid with.
         var tender: DocumentClassifier.Tender = .unknown
         /// The OCR text's head — for the categorisation fallback when the
@@ -515,37 +522,92 @@ extension AppModel {
         }
         doc.fallbackAmounts = Self.amountCandidates(in: text)
         doc.textDates = Self.datesInText(text)
-        doc.currencyHint = Self.currencyHint(in: text)
+        doc.currencyCandidates = Self.currencyCandidates(in: text)
+        doc.currencyHint = doc.currencyCandidates.count == 1 ? doc.currencyCandidates.first : nil
         doc.tender = DocumentClassifier.tender(text)
         doc.textExcerpt = String(text.prefix(1600))
         return doc
     }
 
-    /// The first foreign currency the text names: an ISO code from the common
-    /// set, or an unambiguous alias/symbol ("RM" → MYR, "Rp" → IDR, "฿" → THB…).
-    /// Ambiguous symbols ($, ¥, £) are never guessed — the user picks. `nil`
-    /// when only the base currency (or none) appears.
-    nonisolated static func currencyHint(in text: String) -> String? {
+    /// Every currency the text could be naming, in the order it names them.
+    ///
+    /// One answer was not enough. This used to return the *first* token found
+    /// anywhere in the document and to refuse `$`, `¥` and `£` outright as
+    /// ambiguous — which meant a US or Singapore invoice, whose total is
+    /// almost always written with a bare `$`, produced nothing at all, and the
+    /// FX restructure downstream simply did not happen. Silently: the caller
+    /// took `nil` to mean "this document is in the local currency", which is a
+    /// different statement from "I could not tell".
+    ///
+    /// So the ambiguity is now *reported* rather than swallowed. An
+    /// unqualified `$` yields the several currencies that spell themselves
+    /// that way, and the caller asks. A qualified one (`US$`, `A$`, `NZ$`)
+    /// yields exactly one and needs no question.
+    nonisolated static func currencyCandidates(in text: String) -> [String] {
         let codes = ["MYR", "USD", "EUR", "GBP", "JPY", "SGD", "THB", "IDR",
-                     "INR", "HKD", "CNY", "NZD", "CHF", "CAD", "KRW", "VND"]
-        // Aliases whose meaning is unambiguous in practice. Regex-escaped where
-        // needed; matched case-insensitively like the codes.
+                     "INR", "HKD", "CNY", "NZD", "CHF", "CAD", "KRW", "VND",
+                     "AUD"]
+        // Aliases whose meaning is unambiguous. Longest first: `HK$` must be
+        // tried before `$`, or every qualified dollar reads as a bare one.
         let aliases: [(pattern: String, code: String)] = [
+            ("HK\\$", "HKD"), ("NZ\\$", "NZD"), ("S\\$", "SGD"),
+            ("US\\$", "USD"), ("A\\$", "AUD"), ("C\\$", "CAD"),
             ("RM", "MYR"), ("Rp", "IDR"), ("฿", "THB"), ("₹", "INR"),
             ("₩", "KRW"), ("₫", "VND"), ("€", "EUR"),
-            ("S\\$", "SGD"), ("HK\\$", "HKD"), ("NZ\\$", "NZD"),
         ]
-        let alternation = (codes + aliases.map(\.pattern)).joined(separator: "|")
-        guard let regex = try? NSRegularExpression(
-            pattern: "(?<![A-Za-z])(\(alternation))(?![A-Za-z])",
-            options: [.caseInsensitive]) else { return nil }
-        guard let match = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
-              let range = Range(match.range, in: text) else { return nil }
-        let hit = String(text[range]).uppercased()
-        if let alias = aliases.first(where: { $0.pattern.replacingOccurrences(of: "\\", with: "").uppercased() == hit }) {
-            return alias.code
+        // Symbols several currencies share. Matching one is evidence that the
+        // document is denominated *somewhere*, which is worth surfacing even
+        // though it does not say where.
+        let ambiguous: [(pattern: String, codes: [String])] = [
+            ("\\$", ["USD", "AUD", "SGD", "HKD", "NZD", "CAD"]),
+            ("¥", ["JPY", "CNY"]),
+            ("£", ["GBP"]),
+        ]
+        var found: [String] = []
+        func note(_ code: String) {
+            if !found.contains(code) { found.append(code) }
         }
-        return hit
+        /// Letter boundaries, applied only to the sides that need them.
+        ///
+        /// Without the leading one, `S$` matches the tail of `US$` and every
+        /// American invoice reads as Singaporean — which is what the test
+        /// caught. Without the trailing one, `RM` matches inside `FIRM`.
+        /// Symbols (`€`, `฿`) need neither, and a blanket wrapper would be
+        /// wrong for `$`, whose neighbours are digits.
+        func bounded(_ pattern: String) -> String {
+            var out = pattern
+            if pattern.first?.isLetter == true { out = "(?<![A-Za-z])" + out }
+            if pattern.last?.isLetter == true { out += "(?![A-Za-z])" }
+            return out
+        }
+        let patterns = aliases.map { (bounded($0.pattern), [$0.code]) }
+            + codes.map { (bounded($0), [$0]) }
+            + ambiguous.map { ($0.pattern, $0.codes) }
+        // One pass per group so a qualified dollar can claim its characters
+        // before the bare-dollar pass sees them.
+        var claimed = text
+        for (pattern, resolves) in patterns {
+            guard let regex = try? NSRegularExpression(pattern: pattern,
+                                                       options: [.caseInsensitive]),
+                  regex.firstMatch(in: claimed,
+                                   range: NSRange(claimed.startIndex..., in: claimed)) != nil
+            else { continue }
+            resolves.forEach(note)
+            claimed = regex.stringByReplacingMatches(
+                in: claimed, range: NSRange(claimed.startIndex..., in: claimed),
+                withTemplate: " ")
+        }
+        return found
+    }
+
+    /// The one currency the text names, when it names exactly one.
+    ///
+    /// The automatic FX restructure runs off this and nothing else, so it acts
+    /// only where there is no question to ask. Everything less certain reaches
+    /// the user through ``currencyCandidates(in:)``.
+    nonisolated static func currencyHint(in text: String) -> String? {
+        let candidates = currencyCandidates(in: text)
+        return candidates.count == 1 ? candidates.first : nil
     }
 
     /// Every distinct money-looking amount in the text (`1,234.56`), largest
@@ -1371,8 +1433,13 @@ extension AppModel {
     /// call: attach the file, auto-categorise from it (best effort), and — when
     /// the document's amount differs and its currency is known — restructure
     /// into the proper multi-currency form. The editor just reloads afterwards.
+    /// Returns what became of the FX step, so the editor can put the question
+    /// to the user when the automatic path declined. Discarding this is how
+    /// the decline became invisible.
+    @discardableResult
     public func adoptDocument(url: URL, foreignAmount: Decimal?,
-                              currencyCode: String?, into transactionID: GncGUID) async {
+                              currencyCode: String?,
+                              into transactionID: GncGUID) async -> ForeignRestructureOutcome {
         // Linked where it lies, not copied into the document folder.
         linkDocument(at: url, to: transactionID)
         if #available(macOS 26.0, iOS 26.0, *),
@@ -1380,10 +1447,10 @@ extension AppModel {
             applyAttachmentSuggestion(suggestion, to: transactionID)
         }
         // FX last: categorisation expects the local form.
-        if let foreignAmount, let currencyCode {
-            restructureAsForeign(transactionID: transactionID,
-                                 foreignAmount: foreignAmount, currencyCode: currencyCode)
-        }
+        guard let foreignAmount, let currencyCode else { return .notForeign }
+        return restructureAsForeign(transactionID: transactionID,
+                                    foreignAmount: foreignAmount,
+                                    currencyCode: currencyCode)
     }
 
     /// Multi-split fully-categorised transactions are refused (edit those in

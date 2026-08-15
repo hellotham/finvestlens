@@ -41,7 +41,7 @@ struct ForeignRestructureTests {
 
         #expect(model.restructureAsForeign(transactionID: txnID,
                                            foreignAmount: Decimal(string: "1773.84")!,
-                                           currencyCode: "MYR"))
+                                           currencyCode: "MYR") == .restructured)
 
         let book = try #require(model.book)
         let txn = try #require(book.transaction(with: txnID))
@@ -78,18 +78,24 @@ struct ForeignRestructureTests {
         let txnID = try #require(model.addTransfer(
             from: food, to: visa, amount: -50, date: .now, description: "Lunch"))
 
+        // Each refusal now names itself, so the editor can put the case to the
+        // user instead of leaving a transaction quietly local (15 Aug 2026).
         // Same code as the transaction currency: nothing to restructure.
         let base = model.reportCurrency.mnemonic
-        #expect(!model.restructureAsForeign(transactionID: txnID,
-                                            foreignAmount: 120, currencyCode: base))
+        #expect(model.restructureAsForeign(transactionID: txnID,
+                                           foreignAmount: 120, currencyCode: base) == .notForeign)
         // Same amount: no mismatch, no restructure.
-        #expect(!model.restructureAsForeign(transactionID: txnID,
-                                            foreignAmount: 50, currencyCode: "MYR"))
+        #expect(model.restructureAsForeign(transactionID: txnID,
+                                           foreignAmount: 50, currencyCode: "MYR") == .notForeign)
         // Near-parity difference (a surcharge, not a currency): refused. The
         // Trip A Deal case — an 87.98 invoice against an ~89.65 charge.
-        #expect(!model.restructureAsForeign(transactionID: txnID,
-                                            foreignAmount: Decimal(string: "49.10")!,
-                                            currencyCode: "USD"))
+        let parity = model.restructureAsForeign(transactionID: txnID,
+                                                foreignAmount: Decimal(string: "49.10")!,
+                                                currencyCode: "USD")
+        #expect(!parity.didRestructure)
+        if case .nearParity = parity {} else {
+            Issue.record("expected the near-parity reason, got \(parity)")
+        }
         let txn = try #require(model.book?.transaction(with: txnID))
         #expect(txn.currency.mnemonic == base)
     }

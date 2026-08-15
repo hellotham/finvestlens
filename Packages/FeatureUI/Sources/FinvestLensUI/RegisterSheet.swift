@@ -261,6 +261,8 @@ private struct SheetMainBase {
     var transferName: String
     var amount: Decimal
     var runningBalance: Decimal?
+    /// The transaction's currency when it is not the account's (`FR-CUR-02`).
+    var foreignCurrencyCode: String?
 }
 
 /// `defaults write <bundle-id> FLRegisterTrace -bool true` logs sheet timings
@@ -1327,7 +1329,9 @@ private final class SheetView: NSView, NSTextFieldDelegate {
                                         hasDocument: txn.documentLink != nil,
                                         isSimple: false,
                                         transferName: summary.accounts,
-                                        amount: summary.total, runningBalance: nil),
+                                        amount: summary.total, runningBalance: nil,
+                                        foreignCurrencyCode: model.foreignCurrencyCode(
+                                            ofTransaction: txn.guid)),
                     legs: model.legRows(ofTransaction: txn.guid)))
             }
             return out
@@ -1350,7 +1354,8 @@ private final class SheetView: NSView, NSTextFieldDelegate {
                                     isSimple: model.isSimpleTransfer(splitID: main.id),
                                     transferName: main.transfer,
                                     amount: main.amount,
-                                    runningBalance: main.runningBalance),
+                                    runningBalance: main.runningBalance,
+                                    foreignCurrencyCode: main.foreignCurrencyCode),
                 legs: model.legRows(ofTransaction: txn)))
         }
         return out
@@ -1811,6 +1816,8 @@ private final class SheetView: NSView, NSTextFieldDelegate {
         case .splitMemo: String(localized: "Memo")
         case .transfer, .splitAccount: String(localized: "Account")
         case .splitQuantity: String(localized: "Quantity")
+        case .currency: String(localized: "Currency")
+        case .rate: String(localized: "Rate")
         }
     }
 
@@ -1925,12 +1932,24 @@ private final class SheetView: NSView, NSTextFieldDelegate {
             }
 
         case .tags:
+            // Currency shares this line the way Num shares the notes line: a
+            // field that is empty on almost every transaction does not earn a
+            // line of its own. It sits under Date, beside Tags, with the rate
+            // it implies out under Amount — the two halves of one fact.
+            if !skipForCursor(row, .currency) {
+                let text = drafting
+                    ? (draft?.currencyText ?? "")
+                    : (row.base.foreignCurrencyCode ?? "")
+                drawEditableText(text, placeholder: placeholder(for: .currency),
+                                 drafting: drafting, in: cell(.date), muted: true)
+            }
             if !skipForCursor(row, .tags) {
                 let text = drafting ? (draft?.tagsText ?? "") : row.base.tags
                 drawEditableText(text, placeholder: placeholder(for: .tags),
                                  drafting: drafting,
                                  in: cell(.description), muted: true)
             }
+            drawRate(row, drafting: drafting, in: cell(.amount))
 
         case .leg(let index):
             let leg = leg(row, index, drafting: drafting)
@@ -2063,6 +2082,40 @@ private final class SheetView: NSView, NSTextFieldDelegate {
 
     private func removeHotspot(in rect: CGRect) -> CGRect {
         CGRect(x: rect.maxX - 20, y: rect.minY, width: 16, height: rect.height)
+    }
+
+    /// GnuCash's `RATE_CELL` (`split-register.h:211`), on the tags line under
+    /// Amount.
+    ///
+    /// Typing here fills the foreign values from the local amounts; leaving it
+    /// alone, it shows what the splits already imply. Nothing is drawn on a
+    /// single-currency transaction — a rate of 1 is not information, and the
+    /// cell would be one more empty box on every row in the book.
+    private func drawRate(_ row: SheetRow, drafting: Bool, in rect: CGRect) {
+        guard !skipForCursor(row, .rate) else { return }
+        if drafting, let d = draft {
+            guard d.currencyOverride != nil else { return }
+            if !d.rateText.isEmpty {
+                drawText(d.rateText, in: rect, trailing: true, mono: true)
+            } else if let rate = d.impliedRate {
+                drawText(Self.rateString(rate), in: rect, trailing: true,
+                         muted: true, mono: true)
+            } else {
+                drawText(placeholder(for: .rate), in: rect, trailing: true,
+                         color: .placeholderTextColor)
+            }
+        } else if row.base.foreignCurrencyCode != nil,
+                  let rate = model.rate(ofTransaction: row.txn) {
+            drawText(Self.rateString(rate), in: rect, trailing: true,
+                     muted: true, mono: true)
+        }
+    }
+
+    /// Six decimal places, trailing zeros trimmed: a rate is a price, and
+    /// 0.338300 says less than 0.3383 while 0.34 would lose a real difference.
+    static func rateString(_ rate: Decimal) -> String {
+        let scaled = Decimal(NSDecimalNumber(decimal: rate * 1_000_000).intValue) / 1_000_000
+        return NSDecimalNumber(decimal: scaled).stringValue
     }
 
     private func headingTransferName(_ row: SheetRow, drafting: Bool) -> String {
@@ -2308,7 +2361,9 @@ private final class SheetView: NSView, NSTextFieldDelegate {
         case (.amount, .heading): row.base.isHeadingOnly ? nil : .heading(.amount)
         case (.date, .notes): .heading(.number)
         case (.description, .notes): .heading(.notes)
+        case (.date, .tags): .heading(.currency)
         case (.description, .tags): .heading(.tags)
+        case (.amount, .tags): .heading(.rate)
         case (.date, .leg(let index)): .leg(index, .action)
         case (.description, .leg(let index)): .leg(index, .memo)
         case (.transfer, .leg(let index)): .leg(index, .account)
@@ -2481,10 +2536,10 @@ private final class SheetView: NSView, NSTextFieldDelegate {
     /// foreign or share quantity under Balance.
     private static func column(of field: TransactionEditField) -> SheetColumn {
         switch field {
-        case .date, .number, .splitAction: .date
+        case .date, .number, .splitAction, .currency: .date
         case .description, .notes, .tags, .splitMemo: .description
         case .transfer, .splitAccount: .transfer
-        case .amount, .splitAmount: .amount
+        case .amount, .splitAmount, .rate: .amount
         case .splitQuantity: .balance
         }
     }
@@ -2506,7 +2561,7 @@ private final class SheetView: NSView, NSTextFieldDelegate {
         case .date, .description, .transfer, .amount: lineIndex(.heading)
         case .number: lineIndex(.notes)
         case .notes: lineIndex(.notes)
-        case .tags: lineIndex(.tags)
+        case .tags, .currency, .rate: lineIndex(.tags)
         case .splitAction(let id), .splitMemo(let id), .splitAccount(let id),
              .splitAmount(let id), .splitQuantity(let id):
             legIndex(id).flatMap { lineIndex(.leg($0)) }
@@ -2528,7 +2583,7 @@ private final class SheetView: NSView, NSTextFieldDelegate {
     private func configureEditor(for focus: SheetFocus, in rect: CGRect) {
         let trailing: Bool
         switch focus.field {
-        case .amount, .splitAmount, .splitQuantity: trailing = true
+        case .amount, .splitAmount, .splitQuantity, .rate: trailing = true
         default: trailing = false
         }
         itemEdit.font = trailing ? monoFont : bodyFont
@@ -2590,6 +2645,12 @@ private final class SheetView: NSView, NSTextFieldDelegate {
         case .splitMemo(let id): return draftLine(id: id)?.memo ?? ""
         case .splitAmount(let id): return draftLine(id: id)?.amountText ?? ""
         case .splitQuantity(let id): return draftLine(id: id)?.quantityText ?? ""
+        case .currency: return d.currencyText
+        // Empty shows the implied rate as drawn text; clicking in offers that
+        // same number to edit rather than a blank box to retype.
+        case .rate:
+            if !d.rateText.isEmpty { return d.rateText }
+            return d.impliedRate.map(Self.rateString) ?? ""
         case .transfer, .splitAccount: return ""
         }
     }
@@ -2622,6 +2683,34 @@ private final class SheetView: NSView, NSTextFieldDelegate {
             withLineIndex(id) { d, index in d.setAmountText(text, at: index) }
         case .splitQuantity(let id):
             withLine(id) { $0.quantityText = text }
+        case .currency:
+            // Resolved here rather than in the draft, because only the view
+            // has the book to resolve against. An unresolvable code is kept as
+            // typed and reported by `blockedMessage` — never silently dropped,
+            // which would leave the cell disagreeing with the transaction.
+            let resolved = model.resolveCurrencyCode(text)
+            // The book usually already knows this pair — every earlier
+            // conversion recorded one — so naming the currency is often the
+            // whole of the work. A stored rate only fills legs that have no
+            // value yet, and the figures stay editable, so a pre-fill is a
+            // starting point rather than an assertion.
+            let stored = resolved.flatMap {
+                model.storedFxRate(code: $0.mnemonic, on: draft?.date)
+            }
+            withDraft { d in
+                d.setCurrency(resolved, text: text)
+                if let stored, d.rateText.isEmpty {
+                    d.applyRate(stored, rounding: resolved)
+                }
+            }
+        case .rate:
+            withDraft { d in
+                d.rateText = text
+                if let rate = EditableSplit.strictDecimal(
+                    text.trimmingCharacters(in: .whitespaces)) {
+                    d.applyRate(rate, rounding: d.currencyOverride)
+                }
+            }
         case .transfer, .splitAccount:
             break
         }
@@ -2867,7 +2956,9 @@ private final class SheetView: NSView, NSTextFieldDelegate {
     }
 
     private func blockedMessage(for d: TransactionDraft) -> String {
-        let what = if !d.lines.allSatisfy(\.quantityIsValid) {
+        let what = if !d.currencyIsValid {
+            String(localized: "“\(d.currencyText)” isn’t a currency code — use three letters like USD, or clear the cell.")
+        } else if !d.lines.allSatisfy(\.quantityIsValid) {
             String(localized: "A quantity isn’t a number — clear it or fix it.")
         } else if d.validLineCount < 2 {
             String(localized: "A transaction needs at least two accounts.")
@@ -3018,7 +3109,13 @@ private final class SheetView: NSView, NSTextFieldDelegate {
         }
         if legsVisible {
             order.append(SheetFocus(txn: txn, field: .notes))
+            // Visual order across the tags line: Currency (Date column), Tags
+            // (Description), then Rate (Amount).
+            order.append(SheetFocus(txn: txn, field: .currency))
             order.append(SheetFocus(txn: txn, field: .tags))
+            if d.currencyOverride != nil {
+                order.append(SheetFocus(txn: txn, field: .rate))
+            }
         }
         if legsVisible {
             for line in d.lines {

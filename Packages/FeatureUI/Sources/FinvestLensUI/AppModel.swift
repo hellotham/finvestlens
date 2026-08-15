@@ -69,6 +69,14 @@ public struct RegisterRow: Identifiable, Hashable, Sendable {
     /// Whether the transaction carries a document link (`assoc_uri`) — drawn as
     /// a paperclip on the row, and what the attachments panel opens.
     public var hasDocument = false
+    /// The transaction's own currency, when it is not this account's — the
+    /// mark of a foreign-denominated transaction (`FR-CUR-02`).
+    ///
+    /// `nil` for the ordinary case, which is nearly every row: a register that
+    /// announced "AUD" on every line of an AUD account would be saying nothing.
+    /// The row's `amount` is always the account's own commodity (the split's
+    /// `quantity`); this names the unit the transaction was *struck* in.
+    public var foreignCurrencyCode: String?
 
     /// What double-line mode shows beneath the description: the transaction's
     /// notes, then this split's own memo, then its action. Any of the three can
@@ -1236,6 +1244,9 @@ public final class AppModel {
 
     /// Per-security fetch state for the detail page's company sections.
     var fundamentalsStatus: [String: FundamentalsStatus] = [:]
+    /// A bulk company-data run in progress, or `nil`. Drives the Investments
+    /// progress strip the same way `quoteProgress` drives the price one.
+    public var fundamentalsRun: FundamentalsRun?
 
     /// Bumped when the sidecar changes. The cache is a file, not an observed
     /// object, so without this a freshly fetched profile would sit on disk
@@ -2828,7 +2839,13 @@ public final class AppModel {
                 accountName: registerIncludesSubaccounts ? (split.account?.name ?? "") : "",
                 amount: split.quantity,
                 runningBalance: balancesAreMeaningful ? running : nil,
-                hasDocument: split.transaction?.documentLink != nil
+                hasDocument: split.transaction?.documentLink != nil,
+                // Read from the two objects already in hand, so a register of
+                // 46k rows pays nothing for a fact that is nil on almost all
+                // of them.
+                foreignCurrencyCode: split.transaction.map { txn in
+                    txn.currency == split.account?.commodity ? nil : txn.currency.mnemonic
+                } ?? nil
             )
         }
         registerRows = ordered(filtered(rows))

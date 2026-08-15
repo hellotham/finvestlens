@@ -41,6 +41,54 @@ extension AppModel {
             ?? Commodity(namespace: .currency, mnemonic: code, fullName: code, smallestFraction: 100)
     }
 
+    /// Resolves a typed currency code to a commodity, or `nil` if it names no
+    /// currency — what the register's Currency cell validates against.
+    ///
+    /// Deliberately **not** `currencyCommodity(_:)`: that one invents a
+    /// commodity for any string it is handed, which is right when the caller
+    /// already knows the code is real and wrong for a cell someone is still
+    /// typing into. "MY" would silently become a currency named MY.
+    func resolveCurrencyCode(_ text: String) -> Commodity? {
+        let code = text.trimmingCharacters(in: .whitespaces).uppercased()
+        guard code.count == 3, code.allSatisfy(\.isLetter) else { return nil }
+        if let known = book?.commodities.first(where: {
+            $0.namespace == .currency && $0.mnemonic == code
+        }) { return known }
+        // A currency the book has never seen is still a currency — this is how
+        // the first foreign transaction in a book gets entered at all. The ISO
+        // list is the gate, so a typo cannot invent one.
+        guard Locale.commonISOCurrencyCodes.contains(code) else { return nil }
+        return Commodity(namespace: .currency, mnemonic: code,
+                         fullName: code, smallestFraction: 100)
+    }
+
+    /// A transaction's exchange rate: local units per one unit of its own
+    /// currency, read straight off the splits.
+    ///
+    /// GnuCash stores no rate — `value` is in the transaction's currency and
+    /// `quantity` in the account's (`Split.h:251-265`), so their ratio *is* the
+    /// rate and cannot fall out of step with the amounts. `nil` when the
+    /// transaction is single-currency or a leg is missing one of the two.
+    public func rate(ofTransaction id: GncGUID) -> Decimal? {
+        guard let txn = book?.transaction(with: id) else { return nil }
+        for split in txn.splits where split.account?.commodity != txn.currency {
+            guard split.value != 0, split.quantity != 0 else { continue }
+            return split.quantity / split.value
+        }
+        return nil
+    }
+
+    /// The currency a transaction was struck in, when that is not the currency
+    /// its accounts imply. `nil` for the ordinary single-currency transaction.
+    ///
+    /// The whole-book register has no anchoring account to compare against, so
+    /// it asks the transaction directly.
+    public func foreignCurrencyCode(ofTransaction id: GncGUID) -> String? {
+        guard let txn = book?.transaction(with: id) else { return nil }
+        let derived = transactionCurrency(for: txn.splits.compactMap { $0.account?.guid })
+        return txn.currency == derived ? nil : txn.currency.mnemonic
+    }
+
     /// The stored rate: one unit of `code` in the report currency, nearest to
     /// `date` (price DB — direct, inverse, or one indirect hop).
     public func storedFxRate(code: String, on date: Date? = nil) -> Decimal? {
@@ -77,25 +125,46 @@ extension AppModel {
     /// Only the simple shape is restructured — two legs, both in the (current)
     /// transaction currency; anything richer is left for the editor. Returns
     /// whether the restructure happened.
+    /// Why an automatic restructure did not happen.
+    ///
+    /// A `Bool` was not enough: every one of these refusals is a case where
+    /// the document plainly *is* foreign and the user is entitled to know the
+    /// app looked and declined. Silence here is what made the feature read as
+    /// working "sporadically" — it was working exactly as written, and never
+    /// saying when it hadn't.
+    public enum ForeignRestructureOutcome: Equatable, Sendable {
+        case restructured
+        /// Nothing to do: the amounts agree, or the currency is already right.
+        case notForeign
+        /// Real, but too rich for the automatic path: more than two legs, or a
+        /// leg already in another currency. The editor can still do it.
+        case tooComplex
+        /// Within a few percent of parity — a surcharge or fee, not a currency.
+        case nearParity(implied: Decimal)
+
+        public var didRestructure: Bool { self == .restructured }
+    }
+
     @discardableResult
     public func restructureAsForeign(transactionID: GncGUID,
                                      foreignAmount: Decimal,
-                                     currencyCode: String) -> Bool {
+                                     currencyCode: String) -> ForeignRestructureOutcome {
         guard let book, foreignAmount > 0,
-              let txn = book.transaction(with: transactionID),
-              txn.splits.count == 2,
-              txn.splits.allSatisfy({ $0.account?.commodity == txn.currency }),
-              currencyCode != txn.currency.mnemonic
-        else { return false }
+              let txn = book.transaction(with: transactionID)
+        else { return .notForeign }
+        guard currencyCode != txn.currency.mnemonic else { return .notForeign }
+        guard txn.splits.count == 2,
+              txn.splits.allSatisfy({ $0.account?.commodity == txn.currency })
+        else { return .tooComplex }
         let local = txn.splits.map { abs($0.value) }.max() ?? 0
-        guard local > 0, local != foreignAmount else { return false }
+        guard local > 0, local != foreignAmount else { return .notForeign }
         // A near-parity "rate" is a surcharge or fee difference, not a foreign
         // currency: a card FX margin or booking fee sits within a few percent,
         // while real currency pairs (even NZD/AUD ≈ 0.92) sit outside this
         // band. Refusing here keeps a deposit-with-surcharge local.
         let implied = local / foreignAmount
         guard implied < Decimal(string: "0.95")! || implied > Decimal(string: "1.05")!
-        else { return false }
+        else { return .nearParity(implied: implied) }
 
         let foreign = currencyCommodity(currencyCode)
         let rounded = foreign.round(foreignAmount)
@@ -115,7 +184,7 @@ extension AppModel {
         }
         recordFxRate(code: currencyCode, rate: local / rounded,
                      date: txn.datePosted, in: localCurrency)
-        return true
+        return .restructured
     }
 
     /// Records a user-confirmed rate (e.g. the implied rate of a purchase whose

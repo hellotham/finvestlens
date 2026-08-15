@@ -115,7 +115,8 @@ struct MatchAttachmentsSheet: View {
                         description: match.vendor,
                         date: match.documentDate,
                         amount: match.candidateAmounts.first,
-                        currencyCode: match.currencyHint))
+                        currencyCode: match.currencyHint,
+                        currencyCandidates: match.currencyCandidates))
                     .onDisappear { matches.removeAll { $0.id == match.id } }
             }
             .fileImporter(isPresented: $importerShown,
