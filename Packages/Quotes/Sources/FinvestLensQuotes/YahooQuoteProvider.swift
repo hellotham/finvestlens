@@ -60,6 +60,19 @@ public struct YahooQuoteProvider: QuoteProvider {
         guard let price = result.meta.regularMarketPrice else {
             throw QuoteError.malformedResponse("missing regularMarketPrice")
         }
+        // A zero is not a price, and Yahoo answers 200 with one.
+        //
+        // Measured 15 Aug 2026: asking for `WMX` — an ASX ticker without its
+        // `.AX` suffix — returns an NYSE **index** stub with
+        // `regularMarketPrice: 0.0`, `currency: null` and no name. The `guard
+        // let` above passes it (0 is not nil) and nothing downstream checks a
+        // magnitude, so the security would have been valued at zero from a
+        // successful-looking fetch. Failing here turns a silently wrong price
+        // into a message naming the symbol that produced it.
+        guard price > 0 else {
+            throw QuoteError.malformedResponse(
+                "\(result.meta.symbol ?? fallbackSymbol) priced at zero — check the ticker's exchange suffix")
+        }
         let time = result.meta.regularMarketTime.map { Date(timeIntervalSince1970: TimeInterval($0)) } ?? Date(timeIntervalSince1970: 0)
         return Quote(symbol: result.meta.symbol ?? fallbackSymbol,
                      currencyCode: result.meta.currency,

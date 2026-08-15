@@ -205,3 +205,73 @@ extension AppModel {
         }
     }
 }
+
+// MARK: - Bulk (`FR-INV-17`…`FR-INV-19`)
+
+@MainActor
+extension AppModel {
+
+    /// How a bulk fundamentals run is going, for the progress strip.
+    public struct FundamentalsRun: Equatable, Sendable {
+        public var done: Int
+        public var total: Int
+        public var current: String
+        public var filled: Int
+        public var failures: [String]
+        public var fraction: Double { total == 0 ? 0 : Double(done) / Double(total) }
+    }
+
+    /// Fetches company profile and financials for **every** security that has a
+    /// provider able to supply them.
+    ///
+    /// There was no way to do this. `fetchFundamentals(for:)` is called from
+    /// two buttons on one security's page, so filling a portfolio meant opening
+    /// every holding in turn and pressing Fetch — asked about on 15 Aug 2026
+    /// ("how do I populate security profile and financials in bulk?"), and the
+    /// honest answer was that you could not.
+    ///
+    /// Bonds are the case that makes this cheap rather than merely convenient:
+    /// FIIG's profile comes from the same one-request index the prices come
+    /// from, and every bond's `companyDescription` is already in that payload —
+    /// so a whole book of bonds costs one round trip per bond only because the
+    /// per-security call re-asks, and the TTL then keeps it that way.
+    ///
+    /// Sequential on purpose. These are the same rate-limited hosts the quote
+    /// fetch uses (Yahoo's crumb handshake in particular), and a fan-out over
+    /// fifty securities is how a provider starts refusing.
+    ///
+    /// - Parameter force: refetch every section regardless of its TTL.
+    public func fetchAllFundamentals(force: Bool = false) async {
+        let securities = pricableSecurities.filter { fundamentalsSource(for: $0) != nil }
+        guard !securities.isEmpty else {
+            fundamentalsRun = nil
+            showToast(.failure, String(localized: "No configured provider supplies company data."))
+            return
+        }
+        var run = FundamentalsRun(done: 0, total: securities.count, current: "",
+                                  filled: 0, failures: [])
+        fundamentalsRun = run
+        for commodity in securities {
+            run.current = commodity.mnemonic
+            fundamentalsRun = run
+            await fetchFundamentals(for: commodity, force: force)
+            // What the run achieved, judged by what is now on the security
+            // rather than by the call having returned: a provider that answers
+            // "no statements for this one" is a completed fetch and an empty
+            // security, and reporting it as filled would overstate the run.
+            if let facts = fundamentals(for: commodity), facts.profile != nil {
+                run.filled += 1
+            } else if case let .unavailable(reason)? = fundamentalsStatus[key(commodity)] {
+                run.failures.append("\(commodity.mnemonic): \(reason)")
+            }
+            run.done += 1
+            fundamentalsRun = run
+        }
+        fundamentalsRun = nil
+        if run.failures.isEmpty {
+            showToast(.success, String(localized: "Company data updated for \(run.filled) securities."))
+        } else {
+            showToast(.failure, String(localized: "\(run.filled) updated, \(run.failures.count) unavailable."))
+        }
+    }
+}

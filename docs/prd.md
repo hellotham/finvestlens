@@ -254,7 +254,9 @@ per security and exported, never as one book-wide table.
 | FR-INV-28 | **Flag implausible prices** (decimal slips, wrong-currency entries) against their neighbours. | Could | P11 |
 | FR-INV-29 | **Export a security's prices to CSV.** No book-wide price list is shown at any altitude. | Should | P11 |
 | FR-INV-30 | Treat **manual valuation as a first-class category** — securities no provider can price get inline entry and an expected cadence, not permanent failures. | Should | P11 |
-| FR-INV-31 | Provide a **FIIG provider** for Australian corporate bonds, matched by **ISIN**, fetched as one batch and converted from percent-of-par. | Could | P11 |
+| FR-INV-31 | Provide a **FIIG provider** for Australian corporate bonds, matched by **ISIN**, fetched as one batch, with **daily history** from its per-bond endpoint. Prices are published as percent of par and scaled to each security's own unit. | Could | P11 |
+| FR-INV-38 | Supply a security's **exchange suffix from its namespace** where the mnemonic lacks one, so a GnuCash-shaped commodity (`ASX` + `WMX`) reaches providers as `WMX.AX`. | Should | P11 |
+| FR-INV-39 | Fetch **company profile and financials for every security in one command**, not only per security. | Should | P11 |
 | FR-INV-32 | Treat **ISIN as a first-class, editable identifier** (GnuCash `cmdty:xcode`). | Should | P11 |
 | FR-INV-33 | Show **FX-rate health** alongside price health, so a foreign holding cannot be silently unvalued. | Should | P11 |
 | FR-INV-34 | Preview a refresh **before it runs** — which securities, which gaps, how many requests. | Could | P11 |
@@ -267,7 +269,7 @@ per security and exported, never as one book-wide table.
 | ID | Requirement | Pri | Phase |
 |---|---|---|---|
 | FR-CUR-01 | Support accounts and transactions in **any ISO currency** and user-defined commodities. | Must | P5 |
-| FR-CUR-02 | Handle currency-crossing transactions with explicit **exchange rates** per split. | Must | P5 |
+| FR-CUR-02 | Handle currency-crossing transactions with explicit **exchange rates** per split, enterable **in the register** — a transaction's own currency and the rate it implies. | Must | P5 |
 | FR-CUR-03 | Optionally use **trading accounts** for multi-currency balancing (GnuCash's trading-accounts model). | Could | P5 |
 | FR-CUR-04 | Retrieve **currency exchange rates** as prices. | Should | P5 |
 

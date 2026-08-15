@@ -34,6 +34,27 @@ enum RepairCommand {
         log(Fmt.row("open \(file.lastPathComponent)", Fmt.time(openSeconds)))
         guard !model.isReadOnly else { throw LabError.message("book opened read-only") }
 
+        // Bond price scale first: it is independent of the day repair, and a
+        // book can need one, the other, both or neither.
+        let rescaled = model.rescaleBondPrices(apply: apply)
+        if rescaled.isEmpty {
+            log("  every bond price is on its security's own scale.")
+        } else {
+            log("  \(rescaled.count) bond price(s) a hundredfold off their security's scale:")
+            let byBond = Dictionary(grouping: rescaled, by: \.mnemonic)
+            for mnemonic in byBond.keys.sorted() {
+                let rows = byBond[mnemonic]!
+                let sample = rows[0]
+                log("    \(mnemonic): \(rows.count) row(s), e.g. "
+                    + "\(NSDecimalNumber(decimal: sample.from).stringValue) → "
+                    + "\(NSDecimalNumber(decimal: sample.to).stringValue)")
+            }
+            if apply {
+                try model.save()
+                log("  bond prices rescaled and saved.")
+            }
+        }
+
         let moved = model.repostLinkedTransactionDays(apply: apply)
         guard !moved.isEmpty else {
             log("  every linked transaction already posts on a clean day — nothing to do.")

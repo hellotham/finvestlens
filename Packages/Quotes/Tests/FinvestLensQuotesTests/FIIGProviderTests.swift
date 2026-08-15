@@ -50,7 +50,12 @@ struct FIIGProviderTests {
 
     // MARK: The conversion that makes a bond price mean anything
 
-    @Test("A percentage of par becomes a par-relative price")
+    /// FIIG publishes percent of par and this provider now passes it through
+    /// **as published**: whether 98.5 means 98.5 or 0.985 in a book depends on
+    /// what a unit of that bond is there, which only the book knows. See
+    /// `AppModel.normalisedParPercent(_:from:)` — and `BondPricingTests`, where
+    /// the same reference book turned out to hold both conventions at once.
+    @Test("A percentage of par is passed through as published")
     func percentOfParIsDividedByOneHundred() async throws {
         // The whole point of the provider. The book stores bond prices
         // par-relative — every bond row in the reference book was exactly 1.0 —
@@ -58,7 +63,7 @@ struct FIIGProviderTests {
         // book would value an $100,000 holding at $9.85 million.
         let http = StubHTTPClient(); http.on("/api/instruments/bonds", body: indexJSON)
         let quote = try await FIIGQuoteProvider(http: http).latestQuote(symbol: "AU0EXAMPLE01")
-        #expect(quote.price == dec("0.985"))
+        #expect(quote.price == dec("98.5"))
     }
 
     @Test("The denomination currency is carried through")
@@ -108,23 +113,27 @@ struct FIIGProviderTests {
         let http = StubHTTPClient(); http.on("/api/instruments/bonds", body: indexJSON)
         let quotes = try await FIIGQuoteProvider(http: http)
             .latestQuotes(symbols: [" au0example01 "])
-        #expect(quotes[" au0example01 "]?.price == dec("0.985"),
+        #expect(quotes[" au0example01 "]?.price == dec("98.5"),
                 "the result is keyed on what the caller asked for, matched loosely")
     }
 
-    // MARK: What this provider cannot do, said plainly
+    // MARK: History
 
-    @Test("History is refused rather than faked as an empty series")
-    func historyIsUnsupported() async throws {
-        // `bondHistory` is null on all 702 live records. Returning [] would be
-        // indistinguishable from "this bond did not trade in that window", and
-        // the caller would record a gap that is really a missing capability.
+    /// A bond FIIG's index does not carry has no id to ask history for, and
+    /// saying so beats an empty series that would read as "it did not trade".
+    ///
+    /// This test used to assert that FIIG had **no** history at all, on the
+    /// evidence that `bondHistory` is null on all 703 index records. It is —
+    /// but the series lives at `/api/instruments/bonds/{georgiaId}/history`,
+    /// which the index never mentions. `FIIGHistoryTests` covers the series.
+    @Test("A bond outside the index has no history to fetch")
+    func historyNeedsTheIndex() async throws {
         let http = StubHTTPClient(); http.on("/api/instruments/bonds", body: indexJSON)
         await #expect(throws: QuoteError.self) {
             try await FIIGQuoteProvider(http: http)
-                .history(symbol: "AU0EXAMPLE01", from: .distantPast, to: .distantFuture)
+                .history(symbol: "XS0000000000", from: .distantPast, to: .distantFuture)
         }
-        #expect(!QuoteProviderKind.fiig.supportsHistory)
+        #expect(QuoteProviderKind.fiig.supportsHistory)
     }
 
     @Test("The provider is keyless, batch, and matched by identifier")
@@ -175,7 +184,7 @@ struct FIIGProviderTests {
         let quotes = try await FIIGQuoteProvider(http: http)
             .latestQuotes(symbols: ["AU0EXAMPLE01", "AU0EXAMPLE03"])
         #expect(quotes["AU0EXAMPLE01"] == nil, "a bond with no price is unpriced, not free")
-        #expect(quotes["AU0EXAMPLE03"]?.price == dec("0.5"))
+        #expect(quotes["AU0EXAMPLE03"]?.price == dec("50"))
     }
 }
 
@@ -230,7 +239,7 @@ struct BatchQuoteServiceTests {
             for: [first, second, missing], in: .aud, using: .fiig)
 
         #expect(prices.count == 2)
-        #expect(prices[first]?.value == dec("0.985"))
+        #expect(prices[first]?.value == dec("98.5"))
         #expect(prices[first]?.currency == .aud)
         #expect(prices[missing] == nil)
         #expect(http.requestedURLs.count == 1)
@@ -264,4 +273,77 @@ struct BatchQuoteServiceTests {
 private struct StubKeyStore: APIKeyStoring {
     func key(for kind: QuoteProviderKind) -> String? { nil }
     func setKey(_ key: String?, for kind: QuoteProviderKind) {}
+}
+
+/// FIIG's daily history (`FR-INV-31`).
+///
+/// The index's `bondHistory` is `null` on all 703 records, which this provider
+/// read as "no history" until 15 Aug 2026. The series lives at a second
+/// endpoint keyed by FIIG's numeric `georgiaId` — an ISIN 404s there — so a
+/// history fetch is index-then-series. Payloads below are trimmed captures of
+/// the live responses.
+@Suite("FIIG history")
+struct FIIGHistoryTests {
+
+    static let indexJSON = """
+    {"data":[
+      {"isin":"AU3CB0243764","georgiaId":18,"price":99.176,"marketRegion":"AUD"},
+      {"isin":"USQ66511AB43","georgiaId":27,"price":133.01,"marketRegion":"USD"}
+    ]}
+    """
+
+    static let historyJSON = """
+    {"data":[
+      {"georgiaId":18,"isin":"","yield":0.020432772,"priceDate":"2021-10-27","priceValue":110.082},
+      {"georgiaId":18,"isin":"","yield":0.021253863,"priceDate":"2021-10-28","priceValue":109.622},
+      {"georgiaId":18,"isin":"","yield":0.022508066,"priceDate":"2021-10-29","priceValue":108.937}
+    ]}
+    """
+
+    private func client() -> StubHTTPClient {
+        let http = StubHTTPClient()
+        http.on("/api/instruments/bonds?", body: Self.indexJSON)
+        http.on("/api/instruments/bonds/18/history", body: Self.historyJSON)
+        return http
+    }
+
+    private func day(_ text: String) -> Date {
+        FIIGQuoteProvider.day.date(from: text)!
+    }
+
+    @Test("An ISIN resolves to FIIG's id and returns the daily series")
+    func series() async throws {
+        let quotes = try await FIIGQuoteProvider(http: client())
+            .history(symbol: "AU3CB0243764", from: day("2021-01-01"), to: day("2026-12-31"))
+        #expect(quotes.count == 3)
+        #expect(quotes.first?.date == day("2021-10-27"))
+        #expect(quotes.first?.symbol == "AU3CB0243764", "the rows carry no ISIN of their own")
+        // Percent of par, as published — the book applies the unit.
+        #expect(quotes.first?.price == Decimal(string: "110.082"))
+        #expect(quotes.map(\.date) == quotes.map(\.date).sorted(), "ascending")
+    }
+
+    /// A window means a window: the endpoint returns five years whatever is
+    /// asked, so the filtering has to happen here or every fetch would rewrite
+    /// the whole series.
+    @Test("The requested window is honoured")
+    func window() async throws {
+        let quotes = try await FIIGQuoteProvider(http: client())
+            .history(symbol: "AU3CB0243764", from: day("2021-10-28"), to: day("2021-10-28"))
+        #expect(quotes.count == 1)
+        #expect(quotes.first?.price == Decimal(string: "109.622"))
+    }
+
+    @Test("A bond outside the index has no history to fetch")
+    func unknownBond() async {
+        await #expect(throws: QuoteError.self) {
+            try await FIIGQuoteProvider(http: client())
+                .history(symbol: "FR0014014MD4", from: .distantPast, to: .distantFuture)
+        }
+    }
+
+    @Test("The kind now advertises history")
+    func advertises() {
+        #expect(QuoteProviderKind.fiig.supportsHistory)
+    }
 }

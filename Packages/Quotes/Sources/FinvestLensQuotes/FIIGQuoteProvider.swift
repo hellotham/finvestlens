@@ -22,16 +22,26 @@ import Foundation
 ///    ``QuoteProviderKind/matchesByIdentifier`` is what makes the caller send
 ///    GnuCash's `cmdty:xcode` instead of the mnemonic.
 /// 3. **`price` is a percentage of par**, not a currency amount — samples run
-///    13.500 to 177.182 across the index. The book stores bond prices
-///    par-relative (every bond row in the reference book was exactly `1.0`), so
-///    the conversion is `price ÷ 100` and it happens here, at the boundary, so
-///    a ``Quote`` from FIIG means the same thing as a ``Quote`` from anywhere
-///    else: the price of one unit.
+///    13.500 to 177.182 across the index. It is passed through **as
+///    published**: which unit that has to become is a fact about the security,
+///    not about FIIG.
 ///
-/// **No history.** `bondHistory` is `null` on all 702 records, so
-/// ``QuoteProviderKind/supportsHistory`` is `false` and ``history(symbol:from:to:)``
-/// says so rather than returning an empty series that would read as "this bond
-/// did not trade".
+///    This provider used to divide by 100, on the evidence that every bond row
+///    in the reference book was `1.0`. That sample was the hand-entered rows;
+///    the *purchases* told a different story. Measured 15 Aug 2026 across the
+///    same book's eleven bonds: ten were bought at 500 or 1,000 units and
+///    ~100.5 per unit (units are $100 parcels, priced per $100), and one at
+///    60,000 units and 0.8268 (units are dollars of face, priced par-relative).
+///    Both conventions, one book. Dividing by 100 valued the ten at a hundredth
+///    of their worth. The scale is chosen against each security's own record in
+///    ``AppModel/normalisedParPercent(_:)``.
+///
+/// **History is a second endpoint.** `bondHistory` is `null` on every record
+/// in the index, which this provider first read as "FIIG has no history". It
+/// has: `/api/instruments/bonds/{georgiaId}/history` returns the daily series
+/// — 1,181 rows from 2021-10-27 for the bond measured on 15 Aug 2026. The
+/// index is still needed first, to turn an ISIN into the numeric id that path
+/// takes.
 ///
 /// **TLS.** The reference implementation
 /// ([ChristineTham/investalens](https://github.com/ChristineTham/investalens),
@@ -84,11 +94,73 @@ public struct FIIGQuoteProvider: BatchQuoteProvider, FundamentalsProvider {
         return quote
     }
 
+    /// Daily closes for one bond (`FR-INV-31`).
+    ///
+    /// Two requests, because the history endpoint is keyed by FIIG's own
+    /// numeric `georgiaId` and not by ISIN: the index resolves the id, then
+    /// `/api/instruments/bonds/{id}/history` returns the series.
+    ///
+    /// The `bondHistory` field on the index record is `null` on all 703 bonds,
+    /// which is what this provider originally read as "FIIG has no history".
+    /// It does — the list simply does not embed it. Measured 15 Aug 2026 on
+    /// `georgiaId` 18: 1,181 daily rows, 2021-10-27 → 2026-08-14, ~108 KB, no
+    /// pagination, `priceValue` on the same percent-of-par scale as the index.
     public func history(symbol: String, from: Date, to: Date) async throws -> [Quote] {
-        // Stated, not faked. An empty array here would be indistinguishable
-        // from "this bond has no prices in that window", and the caller would
-        // record a gap that is really a missing capability.
-        throw QuoteError.unsupported("FIIG publishes today's price only, with no history.")
+        let key = Self.normalise(symbol)
+        guard let id = try await identifiers()[key] else { throw QuoteError.noData }
+
+        var components = URLComponents()
+        components.scheme = "https"
+        components.host = host
+        components.path = "/api/instruments/bonds/\(id)/history"
+        guard let url = components.url else { throw QuoteError.noData }
+        let data = try await http.get(url, headers: Self.headers)
+        let decoded: HistoryResponse
+        do {
+            decoded = try JSONDecoder().decode(HistoryResponse.self, from: data)
+        } catch {
+            throw QuoteError.malformedResponse("not a FIIG bond history")
+        }
+        // The rows carry no ISIN (the field is present and always empty), so
+        // the symbol echoed back is the one that was asked for.
+        let quotes = decoded.data.compactMap { row -> Quote? in
+            guard let price = row.priceValue,
+                  let date = Self.day.date(from: row.priceDate) else { return nil }
+            guard date >= Self.startOfDay(from), date <= Self.endOfDay(to) else { return nil }
+            // As published — percent of par, like `latestQuote`. The book
+            // scales it, because only the book knows what a unit is here.
+            return Quote(symbol: symbol, currencyCode: nil, price: price, date: date)
+        }
+        guard !quotes.isEmpty else { throw QuoteError.noData }
+        return quotes.sorted { $0.date < $1.date }
+    }
+
+    /// ISIN → FIIG's numeric id, from the one index request this provider
+    /// already makes. Same payload as the quotes, so asking for history right
+    /// after a price fetch costs one extra request, not two.
+    func identifiers() async throws -> [String: Int] {
+        let data = try await http.get(indexURL(), headers: Self.headers)
+        return try Self.parseRecords(data).compactMapValues(\.georgiaId)
+    }
+
+    /// `priceDate` is a plain `yyyy-MM-dd`; parsed in UTC so a price dated the
+    /// 14th is the 14th everywhere, matching how the book stamps price days.
+    static let day: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(identifier: "UTC")
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }()
+
+    private static func startOfDay(_ date: Date) -> Date {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")!
+        return calendar.startOfDay(for: date)
+    }
+
+    private static func endOfDay(_ date: Date) -> Date {
+        startOfDay(date).addingTimeInterval(86_399)
     }
 
     // MARK: The bond's own profile (`FR-INV-17`)
@@ -192,7 +264,10 @@ public struct FIIGQuoteProvider: BatchQuoteProvider, FundamentalsProvider {
                                // a visible trace rather than being silently
                                // recorded in the book's own currency.
                                currencyCode: bond.marketRegion,
-                               price: price / 100,
+                               // As published: percent of par. Scaling to the
+                               // book's own unit happens where the book is —
+                               // see `AppModel.normalisedParPercent`.
+                               price: price,
                                date: observed)
         }
         guard !index.isEmpty else { throw QuoteError.noData }
@@ -210,8 +285,25 @@ public struct FIIGQuoteProvider: BatchQuoteProvider, FundamentalsProvider {
         let data: [Bond]
     }
 
+    private struct HistoryResponse: Decodable {
+        let data: [HistoryRow]
+    }
+
+    struct HistoryRow: Decodable {
+        let priceDate: String
+        /// Percent of par, as everywhere in this API.
+        let priceValue: Decimal?
+        /// Yield to maturity as a fraction (0.0204 = 2.04%). Carried by the
+        /// endpoint; not yet stored, because the price DB has one value per
+        /// day per commodity and the price is the one reports need.
+        let yield: Decimal?
+    }
+
     struct Bond: Decodable {
         let isin: String
+        /// FIIG's own row id, and the key its history endpoint takes — the
+        /// ISIN gets a 404 there.
+        let georgiaId: Int?
         /// Clean capital price as a percentage of par. Nullable in the schema's
         /// shape even though every record carried one when measured.
         let price: Decimal?

@@ -52,10 +52,13 @@ public enum QuoteProviderKind: String, CaseIterable, Codable, Sendable, Identifi
     public var supportsHistory: Bool {
         switch self {
         case .yahoo, .eodhd, .alphaVantage, .twelveData, .stooq: return true
-        // FIIG's list endpoint returns `bondHistory: null` on every one of the
-        // 702 bonds it serves (measured 15 Aug 2026), so there is no series to
-        // ask for. History accrues from daily fetches going forward.
-        case .finnhub, .fiig: return false
+        // FIIG serves history from a second endpoint keyed by its own numeric
+        // id — `/api/instruments/bonds/{georgiaId}/history`. The `bondHistory`
+        // field on the *index* is null on all 703 records, which is why this
+        // said `false` until 15 Aug 2026; the list simply does not embed the
+        // series. Measured: 1,181 daily rows from 2021-10-27.
+        case .fiig: return true
+        case .finnhub: return false
         }
     }
 
@@ -67,6 +70,15 @@ public enum QuoteProviderKind: String, CaseIterable, Codable, Sendable, Identifi
     /// takes a symbol, so a caller that assumed one would silently ask FIIG
     /// about a mnemonic it has never heard of and report "not found" forever.
     public var matchesByIdentifier: Bool { self == .fiig }
+
+    /// Whether this provider publishes prices as a **percentage of par**
+    /// rather than as a price per unit.
+    ///
+    /// Bond markets quote per 100 of face value. Whether that becomes `98.345`
+    /// or `0.98345` in a book depends on what a "unit" is there — $100 parcels
+    /// or dollars of face — which only the book knows, so the conversion
+    /// cannot happen in a provider.
+    public var reportsParPercent: Bool { self == .fiig }
 
     /// Whether one request serves the whole market rather than one security.
     ///

@@ -120,6 +120,8 @@ public enum Lab {
                 try await DocumentsCommand.run(options, log: log)
             case "repair":
                 try await RepairCommand.run(options, log: log)
+            case "foreign", "fx":
+                try await ForeignCommand.run(options, log: log)
             case "relink":
                 try await RelinkCommand.run(options, log: log)
             case "help", "--help", "-h":

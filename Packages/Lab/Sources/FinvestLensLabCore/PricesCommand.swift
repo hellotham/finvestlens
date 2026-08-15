@@ -172,8 +172,12 @@ enum PricesCommand {
         case "alphavantage", "alpha": .alphaVantage
         case "finnhub": .finnhub
         case "twelvedata", "twelve": .twelveData
+        // Added 15 Aug 2026: this list predated the FIIG provider, so the one
+        // provider that can price a corporate bond was the one the tool could
+        // not be pointed at.
+        case "fiig": .fiig
         default: throw LabError.message("unknown provider '\(name ?? "")' — "
-                                        + "yahoo, stooq, eodhd, alphavantage, finnhub, twelvedata")
+                                        + "yahoo, stooq, eodhd, alphavantage, finnhub, twelvedata, fiig")
         }
     }
 

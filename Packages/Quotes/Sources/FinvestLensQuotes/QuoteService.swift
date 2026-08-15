@@ -60,8 +60,61 @@ public struct QuoteService: Sendable {
            !code.trimmingCharacters(in: .whitespaces).isEmpty {
             return code
         }
-        return commodity.mnemonic
+        return canonicalTicker(for: commodity)
     }
+
+    /// The commodity's ticker in canonical (Yahoo) form, with its exchange
+    /// suffix supplied from the namespace when the mnemonic lacks one.
+    ///
+    /// GnuCash puts the exchange in the **namespace** (`ASX`, `NASDAQ`) and the
+    /// bare ticker in the mnemonic, while every provider here expects the
+    /// Yahoo spelling `WMX.AX`. Books that came through GnuCash's own quote
+    /// setup carry the suffix in the mnemonic already (`BHP.AX`) and are left
+    /// exactly as they are; ones added by hand, or by an importer that kept
+    /// GnuCash's split, were sent bare.
+    ///
+    /// Measured on 15 Aug 2026: `WMX` returns an NYSE **index** stub priced at
+    /// zero, `WMX.AX` returns WAM Income Maximiser on the ASX at 1.685. The
+    /// request succeeded either way, which is why this failed silently — 20 of
+    /// one reference book's 49 ASX securities were in the bare form and none
+    /// of them had ever been priced.
+    ///
+    /// Only namespaces that genuinely name an exchange are mapped. `Bond`,
+    /// `Super` and `FIIG` describe what a security *is*, not where it trades,
+    /// and inventing a suffix for those would turn a security no ticker
+    /// provider can price into one it silently mis-prices.
+    public static func canonicalTicker(for commodity: Commodity) -> String {
+        let mnemonic = commodity.mnemonic.trimmingCharacters(in: .whitespaces)
+        // Already qualified, or nothing to qualify.
+        guard !mnemonic.isEmpty, !mnemonic.contains(".") else { return mnemonic }
+        // Only a security namespace names an exchange; a currency never does.
+        guard case let .security(exchange) = commodity.namespace else { return mnemonic }
+        guard let suffix = yahooSuffix[exchange.uppercased()] else { return mnemonic }
+        return suffix.isEmpty ? mnemonic : "\(mnemonic).\(suffix)"
+    }
+
+    /// Whether a lookup key has an ISIN's shape (ISO 6166): two country
+    /// letters, nine alphanumerics, a check digit. Shape only — enough to say
+    /// "this is not a ticker", which is all it is used for.
+    static func looksLikeISIN(_ key: String) -> Bool {
+        let trimmed = key.trimmingCharacters(in: .whitespaces).uppercased()
+        guard trimmed.count == 12 else { return false }
+        let characters = Array(trimmed)
+        return characters[0...1].allSatisfy(\.isLetter)
+            && characters[2...10].allSatisfy { $0.isLetter || $0.isNumber }
+            && characters[11].isNumber
+    }
+
+    /// Exchange namespace → Yahoo suffix. An empty string means "US, no
+    /// suffix" — recorded rather than omitted so the mapping states that those
+    /// exchanges were considered and need nothing.
+    static let yahooSuffix: [String: String] = [
+        "ASX": "AX", "NZX": "NZ", "LSE": "L", "TSX": "TO", "TSXV": "V",
+        "HKEX": "HK", "SGX": "SI", "TSE": "T", "XETRA": "DE", "EURONEXT": "PA",
+        "AMS": "AS", "SIX": "SW",
+        // US venues carry no suffix on Yahoo.
+        "NASDAQ": "", "NYSE": "", "NYQ": "", "NMS": "", "AMEX": "", "ARCA": "",
+    ]
 
     /// Fetches the latest quote and returns a `Price` of `commodity` in
     /// `currency`.
@@ -72,9 +125,20 @@ public struct QuoteService: Sendable {
         symbolOverride: String? = nil
     ) async throws -> Price {
         let provider = try provider(kind)
-        let symbol = kind.providerSymbol(
-            for: Self.lookupKey(for: commodity, override: symbolOverride, kind: kind))
-        let quote = try await provider.latestQuote(symbol: symbol)
+        let key = Self.lookupKey(for: commodity, override: symbolOverride, kind: kind)
+        // An ISIN is not a ticker, and a ticker provider will not say so.
+        //
+        // A bond whose mnemonic is its ISIN, asked of Yahoo, returns a plain
+        // "no data" indistinguishable from a delisted share or a typo — which
+        // is how a BNP bond looked broken when the real answer was "this needs
+        // an identifier-keyed provider". Caught before the request, because
+        // the request cannot succeed and its failure is less informative than
+        // this one.
+        if !kind.matchesByIdentifier, symbolOverride == nil, Self.looksLikeISIN(key) {
+            throw QuoteError.malformedResponse(
+                "\(key) is an ISIN — \(kind.rawValue) is keyed by ticker. Choose an identifier-keyed provider for this security, or set its quote symbol.")
+        }
+        let quote = try await provider.latestQuote(symbol: kind.providerSymbol(for: key))
         return Self.price(from: quote, commodity: commodity, currency: currency, kind: kind)
     }
 

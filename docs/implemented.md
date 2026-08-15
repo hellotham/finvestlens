@@ -2804,3 +2804,120 @@ now, which is what both the drag and the menu mean.
 **Move Up and Move Down** are in the row's menu whenever manual order is on.
 Dragging is the pointer's way to reorder; under VoiceOver a drag is not a
 gesture at all, and `.onMove`'s edit mode was never a route either.
+
+## FX in the register, and four investment defects (15 Aug 2026)
+
+### FX entry moved to the register (`FR-CUR-02`, `FR-REG-07`)
+
+The machinery existed on three surfaces and none of them was the register row
+where editing now happens: the converter behind a collapsed "Foreign Amount"
+disclosure in the editor sheet, the guided **Currency Transfer** sheet, and the
+automatic restructure after a document match. The register could only *show*
+FX — its Quantity cell appeared when a transaction was already foreign, and
+nothing in the register could make it so.
+
+Verified against the GnuCash source, not its documentation:
+
+- `libgnucash/engine/Split.h:251-265` — `xaccSplitSetAmount` is "the amount of
+  the split in the **account's** commodity", `xaccSplitSetValue` "the value of
+  this split in the **transaction's** commodity". Both currencies live on the
+  split; the ratio is the rate (`xaccSplitGetSharePrice`, `:285`).
+- `libgnucash/engine/Transaction.cpp:983-986` — `xaccTransUseTradingAccounts`
+  just returns `qof_book_use_trading_accounts`. Trading accounts are an
+  **optional book flag** that makes currency gain/loss explicit
+  (`Scrub.cpp:715+`); with it off, `gnc_transaction_balance_no_trading` handles
+  the transaction (`Scrub.cpp:864`). They are **not** how the two amounts are
+  recorded — a correction to the assumption that a foreign purchase needs FX
+  clearing accounts.
+- `gnucash/register/ledger-core/split-register.h:211` — the register carries one
+  `RATE_CELL`, not a per-split currency picker, and asks for a rate only when
+  the transfer account's commodity differs from the transaction currency
+  (`split-register-control.cpp:1436`), requiring the row to be expanded first
+  (`:1487-1490`).
+
+`Engine.Split` already matched this (`value` / `quantity`), so **no model change
+was needed**. What was added is the way in:
+
+- `TransactionEditField.currency` and `.rate`, drawn on the tags line — Currency
+  under Date beside Tags, Rate under Amount. Reachable only when the row is
+  disclosed, as GnuCash requires.
+- `TransactionDraft.setCurrency(_:text:)` **moves** the figures rather than
+  redenominating them: naming MYR on an AUD 600 transaction puts 600 into each
+  leg's `quantity` and clears the value for the foreign figure. Clearing the
+  currency puts them back.
+- `TransactionDraft.applyRate(_:rounding:)` fills every foreign leg's value from
+  its local amount, leaving legs that already carry one alone.
+- `impliedRate` is derived from the splits, never stored, so it cannot disagree
+  with the amounts.
+- A stored rate pre-fills on naming the currency; an unresolvable code blocks the
+  save with a message rather than being dropped.
+- `RegisterRow.foreignCurrencyCode` marks rows struck in another currency;
+  `AppModel.rate(ofTransaction:)` reads the rate back off the splits.
+
+### Document currency: ask, showing the evidence
+
+`currencyHint(in:)` returned the first token found anywhere and refused `$`, `¥`
+and `£` outright, so a US or Singapore invoice yielded `nil` — which the caller
+read as "domestic". Four further refusals inside `restructureAsForeign` were
+silent. Together, the whole of the reported "sporadic" FX on attachment
+matching.
+
+- `currencyCandidates(in:)` returns every currency the text could name, with
+  per-side letter boundaries (`S$` was matching inside `US$`; `RM` inside
+  `FIRM`). Qualified dollars resolve to one; a bare `$` returns its six.
+- `restructureAsForeign` returns `ForeignRestructureOutcome` —
+  `.restructured` / `.notForeign` / `.tooComplex` / `.nearParity(implied:)` —
+  and `adoptDocument` passes it back.
+- The editor's `offerConversion(_:outcome:)` opens the converter with the
+  amounts, the implied rate and the document's own currency preselected, above a
+  sentence saying why the app declined.
+
+### Investment defects
+
+1. **Exchange suffix from the namespace** (`FR-INV-38`). GnuCash keeps the
+   exchange in the namespace and the bare ticker in the mnemonic; providers want
+   Yahoo's `WMX.AX`. Measured 15 Aug 2026: `WMX` returns an NYSE **index** stub,
+   `currency: null`, `regularMarketPrice: 0.0`; `WMX.AX` returns WAM Income
+   Maximiser on the ASX at 1.685. Both are HTTP 200, which is why it failed
+   silently — 20 of the reference book's 49 ASX securities were in the bare form
+   and none had ever been priced. `QuoteService.canonicalTicker(for:)` supplies
+   the suffix from exchange namespaces only; `Bond`, `Super` and `FIIG` say what
+   a security *is* and are left alone.
+2. **A zero is not a price.** `YahooQuoteProvider.parseLatest` guarded only
+   against `nil`, so the stub above would have recorded a real security at 0.00
+   from a successful-looking fetch. Now refused, naming the symbol.
+3. **An ISIN sent to a ticker provider** fails before the request with the
+   reason, instead of a generic "no data" indistinguishable from a delisted
+   security.
+4. **Bond price scale** (`FR-INV-31`). The FIIG provider divided by 100 on the
+   evidence that every bond row in the reference book was `1.0` — that sample was
+   the hand-entered rows. The *purchases* disagree: ten of the eleven bonds were
+   bought at 500 or 1,000 units and ~100.5 per unit ($100 parcels, priced per
+   $100), one at 60,000 units and 0.8268 (dollars of face, par-relative). Both
+   conventions, one book; dividing valued the ten at a hundredth of their worth.
+   The provider now passes FIIG's number through as published and
+   `AppModel.normalisedParPercent(_:from:)` picks the scale nearest what that
+   security has actually cost, from its own postings.
+5. **FIIG history exists** and is now fetched. `bondHistory` is `null` on all 703
+   index records, which had been read as "no history"; the series lives at
+   `/api/instruments/bonds/{georgiaId}/history` — 1,181 daily rows from
+   2021-10-27 for the bond measured. An ISIN 404s there, so a history fetch
+   resolves the id from the index first. `QuoteProviderKind.fiig.supportsHistory`
+   is now `true`.
+6. **Get Info** on a security's context menu (`SecurityDetailView` carries the
+   name, ticker override, ISIN and per-security provider). Clicking the row was
+   the only route, and a row that navigates on click gives no sign that it will.
+7. **Bulk company data** (`FR-INV-39`). `fetchAllFundamentals(force:)` walks
+   every security a provider covers, sequentially (the same rate-limited hosts),
+   reporting progress and naming what came back empty. Reachable from
+   Investments ▸ More. Per-security Fetch buttons had been the only route.
+
+### Not done, and why
+
+`FR0014014MD4` (BNP 7.00% 02Jun31c) cannot be priced by FIIG: its index carries
+703 bonds including **eight** BNP Paribas lines (3.695% Feb-28, BBSW+1.50%
+Feb-28, 4.80% Aug-31, BBSW+1.55% Dec-31, 4.875% Oct-33, 5.83% Aug-34,
+BBSW+2.15% Aug-34, 6.198% Dec-36) and not this one. The security's description
+follows FIIG's own naming, so it came from there and has since left the
+tradeable index. No code can conjure the price; the book-side remedy (mark it
+hand-valued, or No Longer Trading if it was called) is the owner's decision.

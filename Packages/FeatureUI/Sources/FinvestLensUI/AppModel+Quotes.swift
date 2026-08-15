@@ -208,7 +208,10 @@ extension AppModel {
                     let prices = try await service.latestPrices(
                         for: group, in: reportCurrency, using: provider,
                         symbolOverrides: overrides(for: group))
-                    fetched.append(contentsOf: prices.values)
+                    // A bond price arrives as percent of par; which unit that
+                    // becomes is a fact about the security, not the provider.
+                    fetched.append(contentsOf: normalisedParPercent(Array(prices.values),
+                                                                    from: provider))
                     // A batch reports absences by omission, so the securities
                     // it did not cover are named here rather than lost — being
                     // absent from an index is the one thing a person can fix,
@@ -226,9 +229,10 @@ extension AppModel {
             }
             for commodity in group {
                 do {
-                    fetched.append(try await service.latestPrice(
+                    let price = try await service.latestPrice(
                         for: commodity, in: reportCurrency, using: provider,
-                        symbolOverride: quoteSymbol(for: commodity)))
+                        symbolOverride: quoteSymbol(for: commodity))
+                    fetched.append(contentsOf: normalisedParPercent([price], from: provider))
                 } catch {
                     failures.append("\(commodity.mnemonic): \(Self.describe(error))")
                 }
@@ -380,17 +384,22 @@ extension AppModel {
             let provider = effectiveProvider(for: commodity, in: kind)
 
             do {
-                let fetched: [Price]
+                let raw: [Price]
                 if provider.supportsHistory {
-                    fetched = try await service.historicalPrices(
+                    raw = try await service.historicalPrices(
                         for: commodity, in: reportCurrency, from: start, to: today, using: provider,
                         symbolOverride: quoteSymbol(for: commodity))
                 } else {
                     // No history endpoint: at least bring the latest price current.
-                    fetched = [try await service.latestPrice(
+                    raw = [try await service.latestPrice(
                         for: commodity, in: reportCurrency, using: provider,
                         symbolOverride: quoteSymbol(for: commodity))]
                 }
+                // Bond history arrives as percent of par, exactly like the
+                // latest price, so it takes the same scaling — otherwise a
+                // rebuilt series would sit a hundredfold away from the row the
+                // daily fetch writes for the same bond.
+                let fetched = normalisedParPercent(raw, from: provider)
                 // Refetch only overwrites when the fetch actually returned data.
                 // Never in the no-history case: replacing a series with the one
                 // price a latest-only provider can give would delete a whole

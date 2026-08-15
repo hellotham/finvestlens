@@ -6301,6 +6301,53 @@
         }
       }
     },
+    "%lld updated, %lld unavailable.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld aktualisiert, %lld nicht verfügbar."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld actualizados, %lld no disponibles."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld mis à jour, %lld indisponibles."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld aggiornati, %lld non disponibili."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld件更新、%lld件は取得不可。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld atualizados, %lld indisponíveis."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已更新 %lld 项，%lld 项不可用。"
+          }
+        }
+      }
+    },
     "%lld with gaps while held": {
       "extractionState": "manual",
       "localizations": {
@@ -25088,6 +25135,53 @@
         }
       }
     },
+    "Company data updated for %lld securities.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unternehmensdaten für %lld Wertpapiere aktualisiert."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Datos de empresa actualizados para %lld valores."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Données d’entreprise mises à jour pour %lld titres."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dati societari aggiornati per %lld titoli."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld銘柄の企業データを更新しました。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dados da empresa atualizados para %lld títulos."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已更新 %lld 只证券的公司数据。"
+          }
+        }
+      }
+    },
     "Company name": {
       "extractionState": "manual",
       "localizations": {
@@ -36111,6 +36205,53 @@
         }
       }
     },
+    "Fetch the profile and financials for every security a provider covers": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Profil und Finanzdaten für jedes von einem Anbieter abgedeckte Wertpapier laden"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obtener el perfil y los datos financieros de cada valor que cubra un proveedor"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Récupérer le profil et les données financières de chaque titre couvert par un fournisseur"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scarica profilo e dati finanziari per ogni titolo coperto da un fornitore"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プロバイダが対応するすべての銘柄のプロフィールと財務データを取得"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buscar o perfil e os dados financeiros de cada título coberto por um provedor"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "获取提供商覆盖的每只证券的简介与财务数据"
+          }
+        }
+      }
+    },
     "Fetching %@…": {
       "extractionState": "manual",
       "localizations": {
@@ -39693,6 +39834,53 @@
         }
       }
     },
+    "Get Info": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Informationen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obtener información"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lire les informations"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ottieni informazioni"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "情報を見る"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obter informações"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "显示简介"
+          }
+        }
+      }
+    },
     "Get key": {
       "extractionState": "manual",
       "localizations": {
@@ -41505,6 +41693,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "如果发现异常"
+          }
+        }
+      }
+    },
+    "Ignore how recently each was fetched and ask again": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unabhängig vom letzten Abruf erneut anfragen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ignorar cuándo se obtuvo cada uno y volver a preguntar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ignorer la date du dernier appel et redemander"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ignora quando è stato scaricato e richiedi"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "前回の取得時期を無視して再取得"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ignorar quando cada um foi buscado e perguntar de novo"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "忽略上次获取时间并重新请求"
           }
         }
       }
@@ -66752,6 +66987,53 @@
         }
       }
     },
+    "Refetch All Company Data": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Unternehmensdaten neu laden"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Volver a obtener todos los datos de empresa"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recharger toutes les données d’entreprise"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riscarica tutti i dati societari"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべての企業データを再取得"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rebuscar todos os dados da empresa"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重新获取所有公司数据"
+          }
+        }
+      }
+    },
     "Refetch Selected (Replace History)": {
       "extractionState": "manual",
       "localizations": {
@@ -80153,6 +80435,100 @@
         }
       }
     },
+    "The document’s currency symbol is used by more than one currency — choose which.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Währungssymbol im Dokument wird von mehreren Währungen verwendet – bitte auswählen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El símbolo de moneda del documento lo usan varias monedas: elige cuál."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le symbole monétaire du document est utilisé par plusieurs devises — choisissez laquelle."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il simbolo di valuta del documento è usato da più valute — scegli quale."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この書類の通貨記号は複数の通貨で使われています。どれかを選んでください。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O símbolo de moeda do documento é usado por mais de uma moeda — escolha qual."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "该文件的货币符号有多种货币在使用 — 请选择其一。"
+          }
+        }
+      }
+    },
+    "The document’s total doesn’t match this transaction. If it was a foreign purchase, set the currency and rate.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Summe im Dokument stimmt nicht mit dieser Buchung überein. War es ein Auslandskauf, Währung und Kurs angeben."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El total del documento no coincide con esta transacción. Si fue una compra en el extranjero, indica la moneda y el tipo de cambio."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le total du document ne correspond pas à cette transaction. S’il s’agissait d’un achat à l’étranger, indiquez la devise et le taux."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il totale del documento non corrisponde a questa transazione. Se era un acquisto estero, imposta valuta e tasso."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "書類の合計がこの取引と一致しません。海外での購入なら通貨とレートを設定してください。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O total do documento não corresponde a esta transação. Se foi uma compra no exterior, defina a moeda e a taxa."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文件总额与此交易不符。若为境外消费，请设置货币与汇率。"
+          }
+        }
+      }
+    },
     "The filter box at the top of the sidebar narrows the tree as you type.": {
       "extractionState": "manual",
       "localizations": {
@@ -81186,6 +81562,53 @@
         }
       }
     },
+    "The two amounts are within a few percent — that is usually a surcharge rather than a foreign currency. Convert anyway if it wasn’t.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die beiden Beträge liegen nur wenige Prozent auseinander – meist ein Zuschlag und keine Fremdwährung. Trotzdem umrechnen, wenn nicht."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los dos importes difieren en pocos puntos porcentuales: suele ser un recargo, no una moneda extranjera. Conviértelo igualmente si no lo era."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les deux montants diffèrent de quelques pour cent — c’est en général un supplément, pas une devise étrangère. Convertissez quand même si ce n’en était pas un."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I due importi differiscono di pochi punti percentuali: di solito è un supplemento, non una valuta estera. Converti comunque se non lo era."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2つの金額の差は数パーセントです。多くの場合これは外貨ではなく手数料です。違う場合はそのまま変換してください。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Os dois valores diferem em poucos por cento — normalmente é uma taxa, não moeda estrangeira. Converta mesmo assim se não for."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "两个金额相差仅几个百分点 — 这通常是附加费而非外币。若确非如此，仍可换算。"
+          }
+        }
+      }
+    },
     "The working copy is written back to the document on this interval while there are unsaved changes. Save (⌘S) and save-on-close still apply.": {
       "extractionState": "manual",
       "localizations": {
@@ -82122,6 +82545,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "该证券由人工估值，因此不会自动获取。频率只决定“投资”何时向你索取新数值，绝不是截止期限。"
+          }
+        }
+      }
+    },
+    "This transaction has more than two legs, so the amounts weren’t rewritten automatically. Set the conversion here.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Buchung hat mehr als zwei Positionen, daher wurden die Beträge nicht automatisch umgeschrieben. Umrechnung hier festlegen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esta transacción tiene más de dos partidas, así que los importes no se reescribieron automáticamente. Define aquí la conversión."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cette transaction comporte plus de deux lignes ; les montants n’ont pas été réécrits automatiquement. Définissez la conversion ici."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questa transazione ha più di due righe, quindi gli importi non sono stati riscritti automaticamente. Imposta qui la conversione."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この取引は3つ以上の明細があるため、金額は自動で書き換えられませんでした。ここで換算を設定してください。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esta transação tem mais de duas partidas, então os valores não foram reescritos automaticamente. Defina a conversão aqui."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此交易有两条以上分录，金额未自动改写。请在此设置换算。"
           }
         }
       }
@@ -84907,6 +85377,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "更新"
+          }
+        }
+      }
+    },
+    "Update Company Data": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unternehmensdaten aktualisieren"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Actualizar datos de empresa"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mettre à jour les données d’entreprise"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiorna dati societari"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "企業データを更新"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Atualizar dados da empresa"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更新公司数据"
           }
         }
       }
@@ -90278,6 +90795,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "「%@」为空，可以删除。"
+          }
+        }
+      }
+    },
+    "“%@” isn’t a currency code — use three letters like USD, or clear the cell.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„%@“ ist kein Währungscode – drei Buchstaben wie USD verwenden oder das Feld leeren."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "«%@» no es un código de moneda: usa tres letras como USD o vacía la celda."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "« %@ » n’est pas un code de devise — utilisez trois lettres comme USD, ou videz la cellule."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” non è un codice valuta — usa tre lettere come USD, oppure svuota la cella."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」は通貨コードではありません。USD のような3文字を入力するか、セルを空にしてください。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” não é um código de moeda — use três letras como USD, ou limpe a célula."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@”不是货币代码 — 请输入 USD 之类的三个字母，或清空该单元格。"
           }
         }
       }

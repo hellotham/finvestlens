@@ -34,6 +34,36 @@ struct YahooProviderTests {
         #expect(quote.date == Date(timeIntervalSince1970: 1_700_000_000))
     }
 
+    /// The exact payload Yahoo returns for an ASX ticker sent without its
+    /// `.AX` suffix, captured live on 15 Aug 2026: a 200, an NYSE **index**
+    /// stub, no currency, no name — and a price of zero.
+    static let zeroPriceJSON = """
+    {"chart":{"result":[{"meta":{"symbol":"WMX","exchangeName":"NYS",
+    "fullExchangeName":"NYSE","instrumentType":"INDEX","currency":null,
+    "regularMarketPrice":0.0,"regularMarketTime":1700000000},
+    "timestamp":[],"indicators":{"quote":[{"close":[]}]}}],"error":null}}
+    """
+
+    /// A zero has to fail, not parse. Nothing downstream checks a magnitude,
+    /// so accepting this recorded a real security at 0.00 from a fetch that
+    /// looked successful — and a holding valued at zero is worse than one that
+    /// was never priced, because it reads as a fact.
+    @Test("A zero price is refused rather than recorded")
+    func zeroPriceIsRefused() async throws {
+        let http = StubHTTPClient()
+        http.on("chart", body: Self.zeroPriceJSON)
+        await #expect(throws: QuoteError.self) {
+            try await YahooQuoteProvider(http: http).latestQuote(symbol: "WMX")
+        }
+        // And the message names the symbol, so the cause is findable.
+        do {
+            _ = try await YahooQuoteProvider(http: http).latestQuote(symbol: "WMX")
+            Issue.record("expected a throw")
+        } catch {
+            #expect("\(error)".contains("WMX"))
+        }
+    }
+
     @Test("Decimal price is exact (no binary-float drift)")
     func exactDecimal() async throws {
         let http = StubHTTPClient()

@@ -91,7 +91,7 @@ struct APIKeyStoreTests {
         #expect(QuoteProviderKind.stooq.requiresAPIKey == false)
         #expect(QuoteProviderKind.twelveData.supportsHistory)
         #expect(QuoteProviderKind.fiig.requiresAPIKey == false)
-        #expect(QuoteProviderKind.fiig.supportsHistory == false)
+        #expect(QuoteProviderKind.fiig.supportsHistory)
         #expect(QuoteProviderKind.allCases.count == 7)
     }
 
@@ -165,4 +165,92 @@ struct ProviderSymbolTests {
         #expect(QuoteProviderKind.eodhd.providerSymbol(for: "ABC.XY") == "ABC.XY")
         #expect(QuoteProviderKind.stooq.providerSymbol(for: "ABC.XY") == "abc.xy")
     }
+}
+
+/// Supplying the exchange suffix a GnuCash-shaped commodity does not carry.
+///
+/// GnuCash keeps the exchange in the namespace and the bare ticker in the
+/// mnemonic; every provider here wants Yahoo's `TICKER.EXCHANGE`. Sending the
+/// bare form does not fail — Yahoo answers 200 with an index stub priced at
+/// zero — so this was invisible until a security was found never to have been
+/// priced at all (WMX, 15 Aug 2026).
+@Suite("Canonical tickers")
+struct CanonicalTickerTests {
+
+    private func security(_ namespace: String, _ mnemonic: String) -> Commodity {
+        Commodity(namespace: .security(namespace), mnemonic: mnemonic,
+                  fullName: mnemonic, smallestFraction: 10_000)
+    }
+
+    @Test("An ASX namespace supplies the .AX Yahoo needs")
+    func asxSuffix() {
+        #expect(QuoteService.canonicalTicker(for: security("ASX", "WMX")) == "WMX.AX")
+        #expect(QuoteService.canonicalTicker(for: security("ASX", "WMX")) == "WMX.AX")
+    }
+
+    /// The 29 securities that were already working must not become `BHP.AX.AX`.
+    @Test("A mnemonic that already carries its suffix is untouched")
+    func alreadyQualified() {
+        #expect(QuoteService.canonicalTicker(for: security("ASX", "BHP.AX")) == "BHP.AX")
+        #expect(QuoteService.canonicalTicker(for: security("ASX", "NABPF.AX")) == "NABPF.AX")
+    }
+
+    @Test("US venues take no suffix")
+    func usVenues() {
+        #expect(QuoteService.canonicalTicker(for: security("NYQ", "F")) == "F")
+        #expect(QuoteService.canonicalTicker(for: security("NASDAQ", "AAPL")) == "AAPL")
+    }
+
+    /// Namespaces that say what a security *is* rather than where it trades.
+    /// Inventing a suffix here would turn "no ticker provider can price this"
+    /// into "a ticker provider prices it wrongly".
+    @Test("Non-exchange namespaces are left alone")
+    func nonExchangeNamespaces() {
+        #expect(QuoteService.canonicalTicker(for: security("Bond", "FR0014014MD4"))
+                == "FR0014014MD4")
+        #expect(QuoteService.canonicalTicker(for: security("Super", "AUSSUPER-BAL"))
+                == "AUSSUPER-BAL")
+        #expect(QuoteService.canonicalTicker(for: security("FIIG", "SOMEBOND"))
+                == "SOMEBOND")
+    }
+
+    /// An ISIN reaching a ticker provider is a routing mistake, and the
+    /// message has to say which — "no data" from Yahoo reads as "this security
+    /// is dead", which is what made a live BNP bond look broken.
+    @Test("An ISIN sent to a ticker provider fails with the reason")
+    func isinToTickerProvider() async {
+        var bond = security("Bond", "FR0014014MD4")
+        bond.exchangeCode = "FR0014014MD4"
+        let service = QuoteService(keys: CanonicalKeyStore(), http: StubHTTPClient())
+        await #expect(throws: QuoteError.self) {
+            try await service.latestPrice(for: bond, in: .aud, using: .yahoo)
+        }
+        do {
+            _ = try await service.latestPrice(for: bond, in: .aud, using: .yahoo)
+            Issue.record("expected a throw")
+        } catch {
+            let text = "\(error)"
+            #expect(text.contains("ISIN"))
+            #expect(text.contains("FR0014014MD4"))
+        }
+    }
+
+    /// The user's own override is the last word — it is how a security whose
+    /// exchange this table does not know gets fixed without a code change.
+    @Test("An explicit override still wins")
+    func overrideWins() {
+        let wmx = security("ASX", "WMX")
+        #expect(QuoteService.lookupKey(for: wmx, override: "WMX.AX", kind: .yahoo) == "WMX.AX")
+        #expect(QuoteService.lookupKey(for: wmx, override: nil, kind: .yahoo) == "WMX.AX")
+        // And a bond still answers with its ISIN for the provider keyed on one.
+        var bond = security("Bond", "BNP-7.00%-02Jun31c")
+        bond.exchangeCode = "FR0014014MD4"
+        #expect(QuoteService.lookupKey(for: bond, kind: .fiig) == "FR0014014MD4")
+    }
+}
+
+/// Keyless: every provider these tests touch needs no key.
+private struct CanonicalKeyStore: APIKeyStoring {
+    func key(for kind: QuoteProviderKind) -> String? { nil }
+    func setKey(_ key: String?, for kind: QuoteProviderKind) {}
 }

@@ -29,6 +29,15 @@ struct InvestmentsView: View {
     @State private var showingPreview = false
     @State private var targeting: CommodityTarget?
     @State private var cadenceFor: CommodityTarget?
+    /// The stack's own path, so a command can open a security's page.
+    ///
+    /// Clicking the row was the only way in, and a row that navigates on click
+    /// gives no sign that it will — so the ticker override, the ISIN and the
+    /// per-security provider (`SecurityDetailView`, the Identifiers section)
+    /// were unreachable to anyone who looked for them where they belong: on
+    /// the security's context menu. Reported 15 Aug 2026 as "right click does
+    /// not allow a security to be edited", which was exactly right.
+    @State private var path = NavigationPath()
 
     private var rows: [InvestmentRow] { model.investmentRows() }
     private var issues: [InvestmentIssue] { model.investmentIssues() }
@@ -37,7 +46,7 @@ struct InvestmentsView: View {
         // A stack, so a holding can open its own page (`FR-INV-15`). One level
         // deep and no further: the design's L1 → L2 → sheets, with no tab bar
         // anywhere.
-        NavigationStack {
+        NavigationStack(path: $path) {
             Group {
                 if model.securityCommodities.isEmpty && model.watchlist.isEmpty {
                     ContentUnavailableView(
@@ -133,6 +142,21 @@ struct InvestmentsView: View {
         }
         ToolbarItem {
             Menu("More", systemImage: "ellipsis.circle") {
+                // Company data for the whole book in one command. Per-security
+                // Fetch buttons on each holding's page were the only route,
+                // which made filling a portfolio a matter of opening every
+                // security in turn.
+                Button("Update Company Data", systemImage: "building.columns") {
+                    Task { await model.fetchAllFundamentals() }
+                }
+                .disabled(model.pricableSecurities.isEmpty || model.fundamentalsRun != nil)
+                .help("Fetch the profile and financials for every security a provider covers")
+                Button("Refetch All Company Data", systemImage: "arrow.clockwise") {
+                    Task { await model.fetchAllFundamentals(force: true) }
+                }
+                .disabled(model.pricableSecurities.isEmpty || model.fundamentalsRun != nil)
+                .help("Ignore how recently each was fetched and ask again")
+                Divider()
                 Button("Watch Security…", systemImage: "eye") { showingAddWatch = true }
                 Button("Enter a Price…", systemImage: "plus") { showingAddPrice = true }
                     .disabled(model.pricableSecurities.isEmpty)
@@ -213,7 +237,8 @@ struct InvestmentsView: View {
                                 InvestmentRowView(
                                     row: row, model: model, sparkWindow: sparkWindow,
                                     onTarget: { targeting = CommodityTarget(commodity: row.commodity) },
-                                    onCadence: { cadenceFor = CommodityTarget(commodity: row.commodity) })
+                                    onCadence: { cadenceFor = CommodityTarget(commodity: row.commodity) },
+                                    onOpen: { path.append(row.commodity) })
                             }
                         }
                     }
@@ -374,6 +399,7 @@ private struct InvestmentRowView: View {
     let sparkWindow: ClosedRange<Date>
     let onTarget: () -> Void
     let onCadence: () -> Void
+    let onOpen: () -> Void
     @Environment(\.appDateFormat) private var dateFormat
 
     var body: some View {
@@ -421,6 +447,11 @@ private struct InvestmentRowView: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel(voiceOver)
         .contextMenu {
+            // First, and separated: this is the way to the security's own page,
+            // where its name, ticker override, ISIN and price provider are
+            // edited. Everything below it is a single setting.
+            Button("Get Info", action: onOpen)
+            Divider()
             Button("Set Price Target…", action: onTarget)
             // Only where it means something: a security a provider prices is
             // never waiting on a person to value it (`FR-INV-30`).

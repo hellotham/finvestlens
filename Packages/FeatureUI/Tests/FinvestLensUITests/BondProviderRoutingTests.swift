@@ -30,8 +30,8 @@ private let chartJSON = """
 """
 
 private let bondIndexJSON = """
-{"data":[{"isin":"AU0EXAMPLE01","price":98.5,"marketRegion":"AUD"},
-         {"isin":"AU0EXAMPLE02","price":72.25,"marketRegion":"AUD"}],
+{"data":[{"isin":"AU0EXAMPLE01","georgiaId":18,"price":98.5,"marketRegion":"AUD"},
+         {"isin":"AU0EXAMPLE02","georgiaId":27,"price":72.25,"marketRegion":"AUD"}],
  "pagination":{"pageNo":1,"pageSize":2000,"pageCount":1}}
 """
 
@@ -47,6 +47,9 @@ private final class RoutingHTTP: HTTPFetching, @unchecked Sendable {
         let url = request.url!.absoluteString
         let isFIIG = url.contains("fiig")
         hits.withLock { $0[isFIIG ? "fiig" : "yahoo", default: 0] += 1 }
+        // FIIG's history is a second endpoint keyed by its numeric id, so the
+        // stub has to answer two shapes on the one host.
+        if isFIIG && url.contains("/history") { return Data(bondHistoryJSON.utf8) }
         return Data((isFIIG ? bondIndexJSON : chartJSON).utf8)
     }
 
@@ -205,30 +208,65 @@ struct BondProviderRoutingTests {
         #expect(reopened.quoteProvider(for: again!) == .fiig)
     }
 
-    // MARK: History, where FIIG has none
+    // MARK: History
 
-    @Test("Rebuilding a bond's history never deletes it to install one price")
-    func rebuildDoesNotWipeAHistoryForOnePoint() async throws {
-        // FIIG serves today's price and no history. "Rebuild from scratch" on a
-        // latest-only provider must not mean "replace six years with one dot",
-        // which is what the replace path did before it checked.
+    /// FIIG publishes a daily series after all — from a second endpoint keyed
+    /// by its own numeric id (`/api/instruments/bonds/{georgiaId}/history`).
+    ///
+    /// This suite previously asserted the opposite, on the evidence that the
+    /// index's `bondHistory` field is null on every record. It is; the list
+    /// just does not embed the series. The invariant the old test protected —
+    /// a rebuild must never replace years of prices with one dot — still holds
+    /// and is now tested against a provider that really is latest-only.
+    @Test("A bond's history rebuilds from FIIG's daily series")
+    func rebuildUsesTheSeries() async throws {
         let http = RoutingHTTP()
         let (model, url) = try book(http)
         defer { model.close(); try? FileManager.default.removeItem(at: url) }
         let held = bond(model, "BOND1", isin: "AU0EXAMPLE01")
         model.setQuoteProvider(.fiig, for: held)
 
-        for day in 1...5 {
-            model.addPrice(commodity: held, currency: model.reportCurrency,
-                           date: Date(timeIntervalSince1970: TimeInterval(day) * 86_400),
-                           value: dec("1.0"))
-        }
-        #expect(model.book?.prices.filter { $0.commodity == held }.count == 5)
-
         await model.refetchPriceHistory(for: [held], using: .fiig)
 
         let after = model.book?.prices.filter { $0.commodity == held } ?? []
-        #expect(after.count == 6, "the five stored prices survive; today's is added")
+        #expect(after.count == 3, "one row per published day")
+        // Par-relative here: this security has no purchase to learn a scale
+        // from, so 98.5 reads as 0.985 (`AppModel.parPercentScaled`).
         #expect(after.contains { $0.value == dec("0.985") })
+        #expect(after.contains { $0.value == dec("0.99") })
+    }
+
+    /// The invariant the FIIG case used to carry: a provider with no history
+    /// must not be allowed to wipe a series and leave a single point.
+    @Test("Rebuilding never deletes a history to install one price")
+    func rebuildDoesNotWipeAHistoryForOnePoint() async throws {
+        let http = RoutingHTTP()
+        let (model, url) = try book(http)
+        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        let cba = share(model)
+        model.setQuoteProvider(.finnhub, for: cba)
+        #expect(!QuoteProviderKind.finnhub.supportsHistory)
+
+        for day in 1...5 {
+            model.addPrice(commodity: cba, currency: model.reportCurrency,
+                           date: Date(timeIntervalSince1970: TimeInterval(day) * 86_400),
+                           value: dec("1.0"))
+        }
+        #expect(model.book?.prices.filter { $0.commodity == cba }.count == 5)
+
+        await model.refetchPriceHistory(for: [cba], using: .finnhub)
+
+        let after = model.book?.prices.filter { $0.commodity == cba } ?? []
+        #expect(after.count >= 5, "the five stored prices survive a latest-only refetch")
     }
 }
+
+/// Three days of FIIG history, in the live shape: no ISIN on the rows, price
+/// as percent of par.
+private let bondHistoryJSON = """
+{"data":[
+  {"georgiaId":18,"isin":"","yield":0.05,"priceDate":"2021-10-27","priceValue":98.5},
+  {"georgiaId":18,"isin":"","yield":0.05,"priceDate":"2021-10-28","priceValue":99.0},
+  {"georgiaId":18,"isin":"","yield":0.05,"priceDate":"2021-10-29","priceValue":99.5}
+]}
+"""
