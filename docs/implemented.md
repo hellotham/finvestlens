@@ -93,6 +93,57 @@ Checked against the reference book (81 accounts a statement can post to):
 (Institution names in docs and fixtures are formats, not holdings — the
 deliberate call recorded above under the source-grounding pass.)
 
+### CSV: the tokenizer bug that made most bank exports unimportable
+
+Raised from a real Wise export that would not import. The mapping was part of
+it, but underneath sat something worse.
+
+**Swift groups CR+LF into one `Character`.** Its scalars are `[13, 10]`, so it
+matches neither `"\r"` nor `"\n"` — it matches `"\r\n"`. The tokenizer had cases
+for the first two, so a CRLF line break fell through to the default branch and
+was appended *into the field*: the whole file became a single row. Measured on
+the real export — 44 lines tokenized as **one row of 925 fields**, importing
+nothing. RFC 4180 specifies CRLF and most bank exports use it, so this was not
+an edge case; it hid because every fixture in the suite was LF-only. The
+tokenizer's own doc comment claimed CRLF support. A bare CR now ends a row too
+(a CR inside a quoted field arrives through the quoted branch, so this cannot
+split one), and three tests pin all three endings.
+
+### CSV shape detection (FR-XIO-13)
+
+The app now works a bank CSV out from its own header instead of asking for
+column numbers. `CSVFormatDetector` scans the first 20 rows, scores each by how
+many cells are recognisable column names, maps by name, infers the date format,
+and records the preamble depth.
+
+Two things keep it safe to apply unasked. The header is **found, never
+assumed** — exports carry title lines, account blocks and blank rows above it,
+and Excel adds more — and a candidate is **accepted only if the rows beneath it
+actually parse** (60% of them). A preamble line containing the word "Date"
+cannot survive that second test, and a file the app has not understood falls
+back to the manual mapping rather than importing something wrong.
+
+Date-format inference has its own trap: `DateFormatter` accepts `05/01/2026`
+for `dd-MM-yyyy`, so counting successful parses alone picks whichever separator
+came first in the candidate list and reports a format the file does not use.
+The punctuation between the parts must line up before the count is trusted.
+
+Verified against the real export: recognised as **Wise**, one preamble row,
+`dd-MM-yyyy`, columns date 1 / amount 3 / payee 14 (Merchant) / memo 5
+(Description) / reference 0 (TransferWise ID), **43 of 43 rows imported**. The
+`Total fees` column is deliberately *not* mapped: Wise books each fee as its own
+`FEE-` row, and the running balance confirms it — reversing the file (it is
+newest-first) makes all 42 balance steps equal their row's amount exactly, so
+folding the column in would double-count all 19 fees.
+
+**The manual mapping is complete too.** `memo` and `reference` were on
+`CSVColumnMapping` from the start with no control in the sheet, so no
+hand-mapped import could carry a narrative or a statement reference; both now
+have one, as does the preamble depth (`skipRows`), which previously could not
+be expressed at all — `hasHeader` drops exactly one row. Saved CSV profiles
+carry the three new fields, decoding as absent from profiles written before
+they existed.
+
 ### The bank's own account id, remembered (FR-XIO-12)
 
 Raised immediately after, and the better mechanism: a file name is a guess,

@@ -10,6 +10,14 @@ import Foundation
 
 /// A minimal RFC-4180 CSV tokenizer (handles quoting, escaped quotes, and
 /// CRLF/LF line endings).
+///
+/// **CRLF is one `Character`, not two.** Swift groups CR+LF into a single
+/// grapheme cluster whose scalars are `[13, 10]`, so it matches neither `"\r"`
+/// nor `"\n"` — it matches `"\r\n"`. Without that case a CRLF file falls
+/// through to the default branch, the line break is appended *into the field*,
+/// and the entire file collapses into one row: a 44-line bank export tokenized
+/// as a single row of 925 fields and imported nothing. RFC 4180 specifies CRLF,
+/// so this was most bank exports, and the bug hid behind LF-only fixtures.
 enum CSV {
     static func parse(_ text: String) -> [[String]] {
         var rows: [[String]] = []
@@ -36,7 +44,11 @@ enum CSV {
                 switch c {
                 case "\"": inQuotes = true; i += 1
                 case ",": endField(); i += 1
-                case "\r": i += 1
+                case "\r\n": endRow(); i += 1     // one Character — see above
+                // A bare CR outside quotes is a classic-Mac line ending; a CR
+                // *inside* a field arrives through the quoted branch, which
+                // appends it, so ending the row here cannot split one.
+                case "\r": endRow(); i += 1
                 case "\n": endRow(); i += 1
                 default: field.append(c); i += 1
                 }
@@ -48,7 +60,7 @@ enum CSV {
 }
 
 /// Maps CSV columns (0-based) to transaction fields.
-public struct CSVColumnMapping: Sendable {
+public struct CSVColumnMapping: Sendable, Equatable {
     public var date: Int
     /// A single signed-amount column, or use ``debit``/``credit``.
     public var amount: Int?
@@ -59,10 +71,17 @@ public struct CSVColumnMapping: Sendable {
     public var reference: Int?
     public var dateFormat: String
     public var hasHeader: Bool
+    /// Rows discarded *before* the header — the title line, account summary or
+    /// blank row that banks and Excel put above it. `hasHeader` then drops the
+    /// header itself, so a file whose real header is the third line is
+    /// `skipRows: 2, hasHeader: true`.
+    public var skipRows: Int = 0
 
     public init(date: Int, amount: Int? = nil, debit: Int? = nil, credit: Int? = nil,
                 payee: Int? = nil, memo: Int? = nil, reference: Int? = nil,
-                dateFormat: String = "yyyy-MM-dd", hasHeader: Bool = true) {
+                dateFormat: String = "yyyy-MM-dd", hasHeader: Bool = true,
+                skipRows: Int = 0) {
+        self.skipRows = skipRows
         self.date = date
         self.amount = amount
         self.debit = debit
@@ -90,6 +109,7 @@ public enum CSVTransactionImporter {
         formatter.dateFormat = mapping.dateFormat
 
         var rows = CSV.parse(text)
+        if mapping.skipRows > 0 { rows.removeFirst(min(mapping.skipRows, rows.count)) }
         if mapping.hasHeader, !rows.isEmpty { rows.removeFirst() }
 
         var result: [StagedTransaction] = []

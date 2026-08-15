@@ -67,8 +67,15 @@ struct ImportView: View {
     @State private var dateCol = 0
     @State private var amountCol = 1
     @State private var payeeCol = 2
+    @State private var memoCol = -1
+    @State private var refCol = -1
+    @State private var skipRows = 0
     @State private var dateFormat = "yyyy-MM-dd"
     @State private var hasHeader = true
+    /// The shape worked out from the file's own header, and whether the user
+    /// asked to set the columns themselves anyway.
+    @State private var csvDetection: CSVFormatDetection?
+    @State private var csvManualOverride = false
     @State private var showingSaveProfile = false
     @State private var newProfileName = ""
 
@@ -132,7 +139,25 @@ struct ImportView: View {
                     Text("Import into")
                 }
 
-                if payload.format == .csv {
+                if payload.format == .csv, let csvDetection, !csvManualOverride {
+                    Section {
+                        if let name = csvDetection.name {
+                            Label("Recognised a \(name) export.", systemImage: "checkmark.seal")
+                                .foregroundStyle(.secondary)
+                        } else {
+                            Label("Columns read from the file's own header.",
+                                  systemImage: "tablecells")
+                                .foregroundStyle(.secondary)
+                        }
+                        if csvDetection.preambleRows > 0 {
+                            Text("Skipping \(csvDetection.preambleRows) rows above the header.")
+                                .scaledFont(.caption).foregroundStyle(.secondary)
+                        }
+                        Button("Set Columns Manually") { csvManualOverride = true }
+                    } header: {
+                        Text("CSV columns")
+                    }
+                } else if payload.format == .csv {
                     Section("CSV columns (0-based)") {
                         if !model.csvImportProfiles.isEmpty {
                             Menu("Load Profile") {
@@ -147,11 +172,21 @@ struct ImportView: View {
                                 }
                             }
                         }
-                        Stepper("Date column: \(dateCol)", value: $dateCol, in: 0...20)
-                        Stepper("Amount column: \(amountCol)", value: $amountCol, in: 0...20)
-                        Stepper("Payee column: \(payeeCol)", value: $payeeCol, in: 0...20)
+                        Stepper("Date column: \(dateCol)", value: $dateCol, in: 0...40)
+                        Stepper("Amount column: \(amountCol)", value: $amountCol, in: 0...40)
+                        Stepper("Payee column: \(payeeCol)", value: $payeeCol, in: 0...40)
+                        // Memo and reference were on the mapping all along and
+                        // had no control, so no hand-mapped import could carry
+                        // a narrative or a statement reference. −1 is "none".
+                        Stepper(memoCol < 0 ? "Memo column: none" : "Memo column: \(memoCol)",
+                                value: $memoCol, in: -1...40)
+                        Stepper(refCol < 0 ? "Reference column: none" : "Reference column: \(refCol)",
+                                value: $refCol, in: -1...40)
                         TextField("Date format", text: $dateFormat)
                         Toggle("Has header row", isOn: $hasHeader)
+                        // Exports routinely put a title or account block above
+                        // the header; without this there was no way to say so.
+                        Stepper("Rows above the header: \(skipRows)", value: $skipRows, in: 0...20)
                         Button("Save as Profile…") { newProfileName = ""; showingSaveProfile = true }
                     }
                 }
@@ -210,6 +245,21 @@ struct ImportView: View {
                 // needed after the import too, to remember the mapping.
                 let identifier = model.bankFileAccountID(payload.data, format: payload.format)
                 fileAccountID = identifier
+                if payload.format == .csv, csvDetection == nil,
+                   let found = CSVFormatDetector.detect(payload.data) {
+                    csvDetection = found
+                    // Seed the manual controls from it, so "Set Columns
+                    // Manually" starts from what was found rather than from
+                    // zeros the user then has to rediscover.
+                    dateCol = found.mapping.date
+                    amountCol = found.mapping.amount ?? amountCol
+                    payeeCol = found.mapping.payee ?? payeeCol
+                    memoCol = found.mapping.memo ?? -1
+                    refCol = found.mapping.reference ?? -1
+                    skipRows = found.mapping.skipRows
+                    dateFormat = found.mapping.dateFormat
+                    hasHeader = found.mapping.hasHeader
+                }
                 // Only ever fills an empty field, so re-entering the sheet
                 // never overrides a choice the user already made.
                 guard targetID == nil,
@@ -258,7 +308,9 @@ struct ImportView: View {
                 guard !name.isEmpty else { return }
                 model.saveCSVImportProfile(CSVImportProfile(
                     name: name, dateColumn: dateCol, amountColumn: amountCol,
-                    payeeColumn: payeeCol, dateFormat: dateFormat, hasHeader: hasHeader))
+                    payeeColumn: payeeCol, dateFormat: dateFormat, hasHeader: hasHeader,
+                    memoColumn: memoCol < 0 ? nil : memoCol,
+                    referenceColumn: refCol < 0 ? nil : refCol, skipRows: skipRows))
             }
             Button("Cancel", role: .cancel) {}
         } message: {
@@ -270,8 +322,14 @@ struct ImportView: View {
         dateCol = profile.dateColumn
         amountCol = profile.amountColumn
         payeeCol = profile.payeeColumn
+        memoCol = profile.memoColumn ?? -1
+        refCol = profile.referenceColumn ?? -1
+        skipRows = profile.skipRows ?? 0
         dateFormat = profile.dateFormat
         hasHeader = profile.hasHeader
+        // Choosing a profile is choosing a mapping, so it outranks whatever
+        // the file's header suggested.
+        csvManualOverride = true
     }
 
     // MARK: Row
@@ -338,8 +396,13 @@ struct ImportView: View {
 
     private func preview() {
         guard let targetID else { return }
-        let mapping = CSVColumnMapping(date: dateCol, amount: amountCol, payee: payeeCol,
-                                       dateFormat: dateFormat, hasHeader: hasHeader)
+        // The detected shape wins unless the user asked to set the columns.
+        let mapping = (csvManualOverride ? nil : csvDetection?.mapping)
+            ?? CSVColumnMapping(date: dateCol, amount: amountCol, payee: payeeCol,
+                                memo: memoCol < 0 ? nil : memoCol,
+                                reference: refCol < 0 ? nil : refCol,
+                                dateFormat: dateFormat, hasHeader: hasHeader,
+                                skipRows: skipRows)
         let staged = payload.prestaged
             ?? model.parseBankFile(payload.data, format: payload.format, csvMapping: mapping)
         results = model.matchStaged(staged, intoAccountID: targetID)
