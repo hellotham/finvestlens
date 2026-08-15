@@ -49,11 +49,11 @@ public enum SidebarSort: String, CaseIterable, Identifiable, Sendable {
     /// Whether rows may be dragged under this order.
     public var allowsDragging: Bool { self == .manual }
 
-    /// Criteria that mean something outside Accounts. Balance, code and the
-    /// first transaction are facts about an account; offering them over a list
-    /// of rules would be offering a sort that cannot run.
+    /// The criteria Accounts offers — all of them. Balance, code and the first
+    /// transaction are facts about an *account*, so the other modes' lists keep
+    /// the order their collections already have; a sort control over them would
+    /// mostly offer criteria that cannot run.
     public static let accountCases: [SidebarSort] = allCases
-    public static let generalCases: [SidebarSort] = [.manual, .name]
 }
 
 @MainActor

@@ -60,11 +60,20 @@ struct ModeTabStrip: View {
     @ViewBuilder
     private func tab(index: Int, selection: SidebarSelection) -> some View {
         let isActive = index == model.activeTabIndex
+        // A `Button`, not an `HStack` with `.onTapGesture`. A tap gesture is
+        // activatable by VoiceOver but reachable by nothing else — no Tab stop,
+        // no keyboard at all — so switching tabs would have been mouse-only.
+        // ⌃⇥ and ⌃⇧⇥ cycle them from the View menu for the same reason.
         HStack(spacing: 4) {
-            Text(model.tabTitle(for: selection))
-                .scaledFont(.callout)
-                .lineLimit(1)
-                .foregroundStyle(isActive ? .primary : .secondary)
+            Button {
+                model.selectTab(index)
+            } label: {
+                Text(model.tabTitle(for: selection))
+                    .scaledFont(.callout)
+                    .lineLimit(1)
+                    .foregroundStyle(isActive ? .primary : .secondary)
+            }
+            .buttonStyle(.plain)
             // The home tab has no close button because it cannot be closed —
             // absent rather than disabled, so nothing invites a click that
             // will not work.
@@ -86,7 +95,6 @@ struct ModeTabStrip: View {
                 .fill(isActive ? AnyShapeStyle(.selection) : AnyShapeStyle(.clear))
         }
         .contentShape(Rectangle())
-        .onTapGesture { model.selectTab(index) }
         .contextMenu {
             if index > 0 {
                 Button("Close Tab") { model.closeTab(index) }
@@ -95,7 +103,7 @@ struct ModeTabStrip: View {
                 .disabled(model.openTabs.count < 2)
         }
         .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(isActive ? [.isButton, .isSelected] : .isButton)
+        .accessibilityAddTraits(isActive ? .isSelected : [])
         .help(model.tabTitle(for: selection))
     }
 }
@@ -160,6 +168,14 @@ extension AppModel {
             emergencyRecords.first { $0.id == id }?.title ?? String(localized: "Record")
         case .auditLog: String(localized: "Audit Log")
         }
+    }
+
+    /// Moves to the next tab, wrapping — ⌃⇥, the shortcut macOS uses for this
+    /// everywhere. `offset` of -1 is ⌃⇧⇥.
+    public func cycleTab(by offset: Int) {
+        let count = openTabs.count
+        guard count > 1 else { return }
+        selectTab(((activeTabIndex + offset) % count + count) % count)
     }
 
     /// Closes everything in this mode except `index` — and the home tab, which

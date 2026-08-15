@@ -168,6 +168,15 @@ struct finvestlensApp: App {
                 Button("Close Tab") { model.closeTab(model.activeTabIndex) }
                     .keyboardShortcut("w", modifiers: [.command, .option])
                     .disabled(!model.isOpen || model.activeTabIndex == 0)
+                // Everything the mouse can do must be reachable from the
+                // keyboard. ⌃⇥ is what macOS uses to cycle tabs everywhere
+                // else, so it is what this uses.
+                Button("Next Tab") { model.cycleTab(by: 1) }
+                    .keyboardShortcut(.tab, modifiers: .control)
+                    .disabled(!model.isOpen || model.openTabs.count < 2)
+                Button("Previous Tab") { model.cycleTab(by: -1) }
+                    .keyboardShortcut(.tab, modifiers: [.control, .shift])
+                    .disabled(!model.isOpen || model.openTabs.count < 2)
                 Divider()
                 // HIG *Toolbars* (macOS): "Make every toolbar item available
                 // as a command in the menu bar" — people can hide or
