@@ -79,6 +79,10 @@ struct AttachmentsSplitter: View {
 
 struct AttachmentsPanel: View {
     @Bindable var model: AppModel
+    /// What the register can spare. The panel takes the smaller of this and the
+    /// width the user dragged, so a narrow window shrinks the pane rather than
+    /// pushing the ledger off its own leading edge.
+    var available: CGFloat = .greatestFiniteMagnitude
     /// Persisted so the pane is the width you left it at, the way a Finder
     /// sidebar is. Clamped on read, so a value dragged on a wide display can
     /// never strand the panel off the side of a narrow one.
@@ -148,7 +152,9 @@ struct AttachmentsPanel: View {
         // panel could not be resized at all, on a screen where width is the
         // scarce resource and a long account path is exactly what you want
         // more room for.
-        .frame(width: width, alignment: .topLeading)
+        // Capped by what the register can spare. `width` is what the user
+        // dragged; `available` is what is actually there, and the smaller wins.
+        .frame(width: min(width, max(0, available)), alignment: .topLeading)
         // One size for every control — mixed large/small/icon-only buttons made
         // the panel read as three different UIs.
         .controlSize(.small)

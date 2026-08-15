@@ -539,6 +539,14 @@ public struct FinvestLensRootView: View {
             // off the side of the display, where the editor could not be seen.
             detailPane
         }
+        // The sidebar gets a column of its own, never a layer over the detail.
+        // `.automatic` overlays it on a narrow window, and the register was
+        // underneath: at 952pt the date read "0/7/24" because its leading
+        // digits were behind the sidebar, while the columns themselves fitted
+        // the pane perfectly. Content that can be *covered* is worse than
+        // content that is narrow — a partial date is a different date, and this
+        // is a ledger.
+        .navigationSplitViewStyle(.balanced)
         .overlay(alignment: .bottom) { StatusOverlay(model: model) }
         .searchable(text: $model.searchQuery, prompt: "Search transactions")
         .searchSuggestions { searchSuggestions }
@@ -1221,11 +1229,40 @@ struct RegisterView: View {
     #endif
     /// Whether the attachments sidebar is shown (persisted like Double Line).
     @AppStorage("registerAttachmentsShown") private var attachmentsShown = false
+
+    /// How much width the attachments panel may take here.
+    ///
+    /// The register keeps a floor first — 420pt is its narrowest honest form
+    /// (Date 100, Description 140, Transfer and Balance at the 28pt column
+    /// minimum, R 24, Amount 100) — and the panel gets what is left, up to the
+    /// width the user dragged. Below what a panel can usefully show, it takes
+    /// nothing and folds away rather than squeezing the ledger into an
+    /// unreadable strip.
+    private func panelRoom(in width: CGFloat) -> CGFloat {
+        // Enough for every column at a readable width — Date ~95, Description
+        // 110, Transfer 70, R 24, Amount 100, Balance 80, and room to breathe.
+        // At 420 the register still had to drop columns at the window sizes
+        // people actually use; the panel is the pane that should be narrow.
+        let registerFloor: CGFloat = 540
+        let seam: CGFloat = 10
+        let room = width - registerFloor - seam
+        // Below what a panel can usefully show it folds away rather than
+        // taking width the ledger needs.
+        return room >= 180 ? room : 0
+    }
     /// Set by the ⌘↑/⌘↓ shortcuts; the table consumes and clears it.
     @State private var jump: RegisterEnd?
 
     var body: some View {
         VStack(spacing: 0) {
+            // The register is the document; the attachments panel is a pane
+            // beside it. Width is the scarce resource, so the panel yields
+            // first — it used to take a flat 290pt however narrow the window
+            // was, which starved the register and pushed its content past the
+            // pane's leading edge: at 986pt the date read "0/7/24" and the
+            // Date heading was not on screen at all. Closing the panel made it
+            // whole again, which is what named the cause.
+            GeometryReader { geo in
             HStack(spacing: 0) {
                 content
                     // The entry bar belongs to every single-account style, not just
@@ -1253,8 +1290,9 @@ struct RegisterView: View {
                     // wider than the line it draws — a 1pt target is a target
                     // you miss.
                     AttachmentsSplitter()
-                    AttachmentsPanel(model: model)
+                    AttachmentsPanel(model: model, available: panelRoom(in: geo.size.width))
                 }
+            }
             }
             if let summary = model.registerSummary {
                 Divider()

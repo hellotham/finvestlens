@@ -416,8 +416,16 @@ enum SheetMetrics {
         init(totalWidth: CGFloat, natural: [SheetColumn: CGFloat] = [:],
              overrides: [SheetColumn: CGFloat] = [:],
              hidden: Set<SheetColumn> = []) {
+            // Date's fallback is 100, not 80. Measured at the system font,
+            // 13pt: "05/07/24" is 54.5pt of text, and the Date cell also holds
+            // the disclosure gutter (14), the edit gutter (20) and two insets
+            // (10) — 98.5pt in total. At 80 the date lost characters before
+            // anything else in the register did, which is how it came to read
+            // "0/7/24": not a tight column, a different date. The real width
+            // still comes from `measureNaturalWidths`; this is the floor for
+            // the frames built before the first measurement lands.
             var fixed: [SheetColumn: CGFloat] = [
-                .date: 80, .transfer: 180,
+                .date: 100, .transfer: 180,
                 .reconcile: 24, .amount: 100, .balance: 112,
             ]
             for (column, width) in natural where fixed[column] != nil {
@@ -432,35 +440,51 @@ enum SheetMetrics {
             // `x >= start && x < start`, and Description takes back the space.
             for column in hidden where fixed[column] != nil { fixed[column] = 0 }
 
-            // Fit the pane. Without this the columns keep their measured widths
-            // however narrow the window is, the content runs past the clip, and
-            // the register is cut off at *both* ends — a date reading "7/24"
-            // because its left is outside the view, and a balance reading
-            // "$5,03" because its right is. A date missing its leading digits
-            // is not a tight column, it is the wrong date.
+            // Fit the pane, in the order that costs the reader least.
             //
-            // Description flexes first, as it always has. Below its floor the
-            // give comes from the columns the user is allowed to hide anyway —
-            // Transfer, then Balance, then Reconcile — because a column the app
-            // itself calls optional is the one to squeeze. Date and Amount are
-            // never squeezed: they are what makes this a register rather than a
-            // list (`SheetColumn.canHide`), and both are unreadable when cut.
+            // The register already shortens the *date form* first
+            // (`relayoutColumns` walks the ladder), which is the cheapest give
+            // there is: "24/12/2026" → "24/12/26" loses nothing. What follows
+            // is for when even the tersest date does not fit.
+            //
+            // Description gives next, down to a floor that still shows a payee.
+            // Then Transfer and Balance shrink — both truncate gracefully, an
+            // account path in the middle and an amount at the end — but never
+            // below what can be read. Dropping a column is the last resort, not
+            // the first: an earlier version squeezed the optional columns to
+            // the 28pt minimum and then removed them, and a register with no
+            // Transfer and no Balance is not a register.
             var flex = max(140, totalWidth - fixed.values.reduce(0, +))
             var overflow = fixed.values.reduce(0, +) + flex - totalWidth
             if overflow > 0 {
-                for column in [SheetColumn.transfer, .balance, .reconcile] {
-                    guard overflow > 0, let width = fixed[column], width > 0 else { continue }
-                    let give = min(overflow, max(0, width - SheetMetrics.minColumnWidth))
+                // Description first, to a floor that still holds a payee name.
+                let descriptionFloor: CGFloat = 110
+                let give = min(overflow, max(0, flex - descriptionFloor))
+                flex -= give
+                overflow -= give
+            }
+            if overflow > 0 {
+                // Then the two that truncate gracefully, to readable minimums.
+                for (column, minimum) in [(SheetColumn.transfer, CGFloat(70)),
+                                          (SheetColumn.balance, CGFloat(80))] {
+                    guard overflow > 0, let width = fixed[column], width > minimum else { continue }
+                    let give = min(overflow, width - minimum)
                     fixed[column] = width - give
                     overflow -= give
                 }
-                // Still short: Description gives up the rest of its floor
-                // rather than let anything hang outside the pane.
-                if overflow > 0 {
-                    let give = min(overflow, max(0, flex - SheetMetrics.minColumnWidth))
-                    flex -= give
-                    overflow -= give
+            }
+            if overflow > 0 {
+                // Only now does anything leave, and R goes first — a single
+                // glyph, and the one column whose absence costs least.
+                for column in [SheetColumn.reconcile, .balance, .transfer] {
+                    guard overflow > 0, let width = fixed[column], width > 0 else { continue }
+                    fixed[column] = 0
+                    overflow -= width
                 }
+                overflow = max(0, overflow)
+                // Nothing left to give: Description takes the remainder rather
+                // than let a column hang outside the pane.
+                flex = max(SheetMetrics.minColumnWidth, flex - overflow)
             }
             var xs: [CGFloat] = []
             var ws: [CGFloat] = []
@@ -1434,7 +1458,14 @@ private final class SheetView: NSView, NSTextFieldDelegate {
     /// order, by Text Size, and by how wide the amounts in this particular
     /// account happen to run.
     private func relayoutColumns() {
-        guard !rows.isEmpty, dateFormat != nil else { return }
+        // No rows yet still needs a Date width: `rebuildFrames` can run first,
+        // and a frame built from the literal fallback is what the user sees
+        // until the first row arrives.
+        guard dateFormat != nil else { return }
+        guard !rows.isEmpty else {
+            naturalWidths[.date] = measuredDateWidth()
+            return
+        }
         let floor = 220 * fontScale
 
         // Walk the ladder from the richest form this context allows down to the
@@ -1459,6 +1490,15 @@ private final class SheetView: NSView, NSTextFieldDelegate {
         columnWidths[column] = width
         ColumnWidths.save(columnWidths)
         rebuildFrames()
+    }
+
+    /// What a date needs in this font, including the two gutters the Date cell
+    /// carries and its insets. The one column whose content has a knowable
+    /// width before any rows exist.
+    private func measuredDateWidth() -> CGFloat {
+        let sample = dateText(Date(timeIntervalSince1970: 1_764_547_200))  // 31/12/2025
+        let text = ceil((sample as NSString).size(withAttributes: [.font: bodyFont]).width)
+        return text + caretGutter + editGutter + 2 * SheetMetrics.textInset
     }
 
     /// What each fixed column needs for the content actually in it.

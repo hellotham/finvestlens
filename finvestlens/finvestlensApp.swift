@@ -63,6 +63,14 @@ struct finvestlensApp: App {
     var body: some Scene {
         WindowGroup {
             RootHost(model: model)
+                // A floor under the whole layout, from the parts: the sidebar's
+                // own minimum (240), the register squeezed to its narrowest
+                // honest form (420 — Date 100, Description 140, Transfer and
+                // Balance at the 28pt column minimum, R 24, Amount 100), the
+                // attachments seam (10) and that panel (180). Below this the
+                // register starves, and a starved register is one that hides
+                // parts of dates and balances.
+                .frame(minWidth: 860, minHeight: 520)
                 .onOpenURL { url in
                     // Opened from Finder / another app via the .finvestlens type.
                     guard url.pathExtension == "finvestlens" else { return }
@@ -91,6 +99,10 @@ struct finvestlensApp: App {
                 }
             #endif
         }
+        // Room for the register at its comfortable widths rather than its
+        // minimum ones: sidebar 240 + Date 100 + Description 280 + Transfer 180
+        // + R 24 + Amount 100 + Balance 112 + seam 10 + attachments 200.
+        .defaultSize(width: 1280, height: 820)
         .commands {
             #if os(macOS)
             // File ▸ New/Open/Open Recent (replaces the stock New Window item).
