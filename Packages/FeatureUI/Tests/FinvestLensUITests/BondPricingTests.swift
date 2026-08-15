@@ -190,12 +190,12 @@ struct NarrativeFXTests {
     func implausibleFee() {
         let believable = NarrativeFX(transactionID: .random(), date: day(0), narrative: "",
                                      foreignAmount: dec("1773.84"), currencyCode: "MYR",
-                                     fee: dec("22.68"), localAmount: dec("670.59"))
+                                     fee: dec("22.68"), localAmount: dec("670.59"), alreadyForeign: false)
         #expect(believable.plausibleFee == dec("22.68"))
 
         let nonsense = NarrativeFX(transactionID: .random(), date: day(0), narrative: "",
                                    foreignAmount: dec("12.90"), currencyCode: "NZD",
-                                   fee: dec("390.39"), localAmount: dec("11.51"))
+                                   fee: dec("390.39"), localAmount: dec("11.51"), alreadyForeign: false)
         #expect(nonsense.plausibleFee == nil)
     }
 
@@ -203,13 +203,18 @@ struct NarrativeFXTests {
     func impliedRate() {
         let row = NarrativeFX(transactionID: .random(), date: day(0), narrative: "",
                               foreignAmount: dec("1773.84"), currencyCode: "MYR",
-                              fee: nil, localAmount: dec("670.59"))
+                              fee: nil, localAmount: dec("670.59"), alreadyForeign: false)
         #expect(row.impliedRate > dec("0.378") && row.impliedRate < dec("0.379"))
     }
 
-    /// The whole point of the scan: a transaction the book already holds as
-    /// multi-currency has nothing left to recover.
-    @Test("A transaction already in its own currency is not a candidate")
+    /// A converted transaction stays in the list, **flagged** rather than
+    /// filtered.
+    ///
+    /// Dropping it was the first design and it was wrong: the card fee still
+    /// has to come out, and that pass needs the rate the conversion
+    /// established — so a second run over an already-converted book found
+    /// nothing at all to do, and the fees stayed merged.
+    @Test("A converted transaction stays in the list, marked as converted")
     func alreadyForeign() throws {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
@@ -240,7 +245,195 @@ struct NarrativeFXTests {
                 "a narrative naming the account's own currency is not a conversion")
         #expect(model.restructureAsForeign(transactionID: id, foreignAmount: dec("1773.84"),
                                            currencyCode: "MYR") == .restructured)
-        #expect(model.narrativeForeignCandidates(accountName: "Card").isEmpty,
-                "recovered once, and not offered again")
+        let after = try #require(model.narrativeForeignCandidates(accountName: "Card").first)
+        #expect(after.alreadyForeign, "still listed, and known to be done")
+        #expect(after.localAmount == dec("670.59"),
+                "read from the quantity — `value` is the foreign figure now")
+        // Asked to convert again, it declines rather than double-converting.
+        #expect(model.restructureAsForeign(transactionID: id, foreignAmount: dec("1773.84"),
+                                           currencyCode: "MYR") != .restructured)
+    }
+}
+
+/// Separating a card's international transaction fee, and correcting a
+/// transfer into an account already held in the foreign currency.
+@MainActor
+@Suite("Card fees and foreign accounts")
+struct CardFeeTests {
+
+    private func book() throws -> (AppModel, URL) {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
+        let model = AppModel()
+        try model.newDocument(at: url)
+        return (model, url)
+    }
+
+    /// The Kuala Lumpur hotel, to the cent: 1,773.84 MYR charged as 670.59 AUD
+    /// of which 22.68 was the fee.
+    @Test("The fee leaves the goods leg and lands on its own, in both units")
+    func feeSplit() throws {
+        let (model, url) = try book()
+        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+
+        let card = try #require(model.addAccount(name: "Card", type: .credit, commodity: .aud))
+        let lodging = try #require(model.addAccount(name: "Lodging", type: .expense, commodity: .aud))
+        let fees = try #require(model.addAccount(name: "Bank", type: .expense, commodity: .aud))
+        let myr = try #require(model.resolveCurrencyCode("MYR"))
+        try model.addTransaction(date: day(0), description: "Hotel", currency: myr, splits: [
+            SplitInput(accountID: card, value: dec("-1773.84"), quantity: dec("-670.59")),
+            SplitInput(accountID: lodging, value: dec("1773.84"), quantity: dec("670.59")),
+        ])
+        let id = try #require(model.book?.transactions.last?.guid)
+
+        let outcome = model.splitCardFee(transactionID: id, feeLocal: dec("22.68"),
+                                         feeAccountID: fees)
+        #expect(outcome.didSplit)
+
+        let txn = try #require(model.book?.transaction(with: id))
+        #expect(txn.splits.count == 3)
+        #expect(txn.isBalanced, "the values still sum to zero in MYR")
+
+        let feeLeg = try #require(txn.splits.first { $0.account?.name == "Bank" })
+        #expect(feeLeg.quantity == dec("22.68"), "charged in AUD")
+        // 22.68 AUD at 0.378042 is 59.99 MYR.
+        #expect(feeLeg.value > dec("59") && feeLeg.value < dec("61"))
+
+        let goods = try #require(txn.splits.first { $0.account?.name == "Lodging" })
+        #expect(goods.quantity == dec("647.91"), "670.59 less the fee")
+        // The card keeps the whole charge: that is what the statement says.
+        let cardLeg = try #require(txn.splits.first { $0.account?.name == "Card" })
+        #expect(cardLeg.quantity == dec("-670.59"))
+    }
+
+    /// Running twice must not charge the fee twice.
+    @Test("A transaction that already has its fee out is left alone")
+    func idempotent() throws {
+        let (model, url) = try book()
+        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+
+        let card = try #require(model.addAccount(name: "Card", type: .credit, commodity: .aud))
+        let lodging = try #require(model.addAccount(name: "Lodging", type: .expense, commodity: .aud))
+        let fees = try #require(model.addAccount(name: "Bank", type: .expense, commodity: .aud))
+        let myr = try #require(model.resolveCurrencyCode("MYR"))
+        try model.addTransaction(date: day(0), description: "Hotel", currency: myr, splits: [
+            SplitInput(accountID: card, value: dec("-1773.84"), quantity: dec("-670.59")),
+            SplitInput(accountID: lodging, value: dec("1773.84"), quantity: dec("670.59")),
+        ])
+        let id = try #require(model.book?.transactions.last?.guid)
+
+        #expect(model.splitCardFee(transactionID: id, feeLocal: dec("22.68"), feeAccountID: fees).didSplit)
+        #expect(model.splitCardFee(transactionID: id, feeLocal: dec("22.68"), feeAccountID: fees)
+                == .notSimple)
+        #expect(model.book?.transaction(with: id)?.splits.count == 3)
+    }
+
+    /// A dry run may not promise more than the write delivers.
+    @Test("Asking without applying writes nothing")
+    func dryRunWritesNothing() throws {
+        let (model, url) = try book()
+        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+
+        let card = try #require(model.addAccount(name: "Card", type: .credit, commodity: .aud))
+        let lodging = try #require(model.addAccount(name: "Lodging", type: .expense, commodity: .aud))
+        let fees = try #require(model.addAccount(name: "Bank", type: .expense, commodity: .aud))
+        let myr = try #require(model.resolveCurrencyCode("MYR"))
+        try model.addTransaction(date: day(0), description: "Hotel", currency: myr, splits: [
+            SplitInput(accountID: card, value: dec("-1773.84"), quantity: dec("-670.59")),
+            SplitInput(accountID: lodging, value: dec("1773.84"), quantity: dec("670.59")),
+        ])
+        let id = try #require(model.book?.transactions.last?.guid)
+
+        #expect(model.splitCardFee(transactionID: id, feeLocal: dec("22.68"),
+                                   feeAccountID: fees, apply: false).didSplit)
+        #expect(model.book?.transaction(with: id)?.splits.count == 2, "still two legs")
+    }
+
+    /// Not every foreign row is a purchase. Eight of the reference book's were
+    /// cash into a MYR account, credited with the **AUD** figure — so a 249.30
+    /// MYR deposit read as 91.69 MYR and the account's balance was a third of
+    /// the truth.
+    @Test("A transfer into a foreign account is credited in that currency")
+    func foreignAccountQuantity() throws {
+        let (model, url) = try book()
+        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+
+        let card = try #require(model.addAccount(name: "Card", type: .credit, commodity: .aud))
+        let myr = try #require(model.resolveCurrencyCode("MYR"))
+        let wallet = try #require(model.addAccount(name: "MYR", type: .cash, commodity: myr))
+        // As imported: the AUD figure copied into both fields.
+        try model.addTransaction(date: day(0), description: "Cash", currency: .aud, splits: [
+            SplitInput(accountID: card, value: dec("-91.69")),
+            SplitInput(accountID: wallet, value: dec("91.69"), quantity: dec("91.69")),
+        ])
+        let id = try #require(model.book?.transactions.last?.guid)
+
+        #expect(model.alignForeignAccountQuantity(transactionID: id,
+                                                  foreignAmount: dec("249.30"),
+                                                  currencyCode: "MYR"))
+        let txn = try #require(model.book?.transaction(with: id))
+        let leg = try #require(txn.splits.first { $0.account?.name == "MYR" })
+        #expect(leg.value == dec("91.69"), "the card was charged in AUD, and still is")
+        #expect(leg.quantity == dec("249.30"), "and that many ringgit arrived")
+        #expect(txn.currency == .aud, "the transaction's own currency was never wrong")
+        // The conversion the bank performed is a rate worth keeping.
+        #expect(model.storedFxRate(code: "MYR", on: day(0)) != nil)
+
+        // Idempotent: asked again, there is nothing left to correct.
+        #expect(!model.alignForeignAccountQuantity(transactionID: id,
+                                                   foreignAmount: dec("249.30"),
+                                                   currencyCode: "MYR"))
+    }
+}
+
+/// Where a security's company text is fetched from.
+@MainActor
+@Suite("Fundamentals routing")
+struct FundamentalsRoutingTests {
+
+    private func book() throws -> (AppModel, URL) {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
+        let model = AppModel()
+        try model.newDocument(at: url)
+        return (model, url)
+    }
+
+    /// A bond is described only by the service that indexes bonds. Falling
+    /// through to a ticker provider with an ISIN is why a bulk run over the
+    /// reference book left all fifteen bonds without a word of company text.
+    @Test("A security identified by ISIN asks FIIG for its profile")
+    func bondsGoToFIIG() throws {
+        let (model, url) = try book()
+        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+
+        var bond = Commodity(namespace: .security("Bond"), mnemonic: "BNP-7.00%-02Jun31c",
+                             fullName: "BNP", smallestFraction: 10_000)
+        bond.exchangeCode = "FR0014014MD4"
+        #expect(model.fundamentalsSource(for: bond)?.kind == .fiig)
+    }
+
+    /// And a share still goes to a ticker provider.
+    @Test("A share is not sent to the bond index")
+    func sharesDoNot() throws {
+        let (model, url) = try book()
+        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+
+        let share = Commodity(namespace: .security("ASX"), mnemonic: "BHP.AX",
+                              fullName: "BHP", smallestFraction: 10_000)
+        #expect(model.fundamentalsSource(for: share)?.kind != .fiig)
+    }
+
+    /// An explicit per-security choice still wins over both.
+    @Test("The user's own choice outranks the ISIN shortcut")
+    func explicitChoiceWins() throws {
+        let (model, url) = try book()
+        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+
+        var bond = Commodity(namespace: .security("Bond"), mnemonic: "SOMEBOND",
+                             fullName: "Some Bond", smallestFraction: 10_000)
+        bond.exchangeCode = "AU3CB0327641"
+        model.setQuoteProvider(.yahoo, for: bond)
+        #expect(model.fundamentalsSource(for: bond)?.kind == .yahoo)
     }
 }

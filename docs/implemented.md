@@ -2921,3 +2921,44 @@ BBSW+2.15% Aug-34, 6.198% Dec-36) and not this one. The security's description
 follows FIIG's own naming, so it came from there and has since left the
 tradeable index. No code can conjure the price; the book-side remedy (mark it
 hand-valued, or No Longer Trading if it was called) is the owner's decision.
+
+## Card fees, foreign accounts and bulk company data (16 Aug 2026)
+
+Three follow-ons from the ANZ VISA repair, each found by running the tool over
+the real book rather than by reading it.
+
+**The fee gets its own leg.** A card states its international transaction fee
+inside the charge, so a foreign purchase arrives as one figure that is really
+two — the goods, and ~3.4% for having bought them abroad. Merged, every foreign
+purchase overstates its category and the year's card fees cannot be reported.
+`AppModel.splitCardFee(transactionID:feeLocal:feeAccountID:apply:)` moves it,
+in both units: the new leg's `quantity` is the fee as charged and its `value`
+is that fee at the transaction's own rate, so the transaction still balances in
+the currency it was struck in and the card leg keeps the whole charge — which
+is what the statement says left the account. `finlab foreign --fee-account`
+drives it. Applied to the reference book: **54 fees, $118.31, into
+`Expenses:Fees:Bank`**.
+
+**Not every foreign row is a purchase.** Eight of the same book's were cash
+moved into an account *already denominated* in MYR, and they had arrived with
+the AUD figure copied into both fields — a 249.30 MYR deposit recorded as 91.69
+MYR, leaving that account's balance a third of the truth. The transaction's own
+currency was never wrong here (the card was charged in AUD); one `quantity`
+was. `alignForeignAccountQuantity(…)` corrects it and records the rate the bank
+actually gave.
+
+**Company data in bulk** (`FR-INV-39`). `finlab fundamentals` drives the same
+`fetchAllFundamentals` as Investments ▸ More, so a headless fill and an in-app
+one produce the same book.
+
+### Two lessons the dry runs taught
+
+- **A dry run must share the write's code path.** The fee counter was written
+  separately and promised "62 would move" when 54 could; `splitCardFee` now
+  takes `apply:` and answers the same question both ways.
+- **Converted rows must stay in the scan, flagged.** Filtering them out was the
+  first design, and it meant a second run over an already-converted book found
+  nothing to do — so the fees would never have come out. `NarrativeFX` carries
+  `alreadyForeign`, and `localAmount` reads the split's **quantity**, because on
+  a converted transaction `value` is the foreign figure and reading it made the
+  fee's rate a hundredfold out.

@@ -122,6 +122,8 @@ public enum Lab {
                 try await RepairCommand.run(options, log: log)
             case "foreign", "fx":
                 try await ForeignCommand.run(options, log: log)
+            case "fundamentals", "company":
+                try await FundamentalsCommand.run(options, log: log)
             case "relink":
                 try await RelinkCommand.run(options, log: log)
             case "help", "--help", "-h":

@@ -27,6 +27,13 @@ public struct NarrativeFX: Sendable, Equatable {
     public let fee: Decimal?
     /// What left the account, in the account's own currency.
     public let localAmount: Decimal
+    /// Whether the book already holds this as a multi-currency transaction.
+    ///
+    /// Converted rows stay in the list rather than being filtered out, because
+    /// the fee still has to be separated and that pass needs the rate the
+    /// conversion established. Excluding them meant a second run over an
+    /// already-converted book found nothing at all to do.
+    public let alreadyForeign: Bool
 
     public var impliedRate: Decimal {
         foreignAmount == 0 ? 0 : localAmount / foreignAmount
@@ -62,19 +69,25 @@ extension AppModel {
         var out: [NarrativeFX] = []
         for txn in book.transactions {
             if let since, txn.datePosted < since { continue }
-            // Already multi-currency: the fact is recorded, nothing to recover.
-            guard txn.splits.allSatisfy({ $0.account?.commodity == txn.currency }) else { continue }
+            let isForeign = txn.splits.contains { $0.account?.commodity != txn.currency }
             for split in txn.splits {
                 guard let account = split.account else { continue }
                 if let accountName, account.name != accountName { continue }
-                guard account.commodity == txn.currency else { continue }
-                guard let found = Self.parseNarrativeFX(split.memo),
-                      found.code != txn.currency.mnemonic else { continue }
+                guard let found = Self.parseNarrativeFX(split.memo) else { continue }
+                // A narrative naming the account's own currency is a domestic
+                // purchase whose address happened to end in a figure.
+                guard found.code != account.commodity.mnemonic else { continue }
                 out.append(NarrativeFX(
                     transactionID: txn.guid, date: txn.datePosted,
                     narrative: txn.transactionDescription,
                     foreignAmount: found.amount, currencyCode: found.code,
-                    fee: found.fee, localAmount: abs(split.value)))
+                    fee: found.fee,
+                    // The account's own money is always the **quantity**: on a
+                    // converted transaction `value` has become the foreign
+                    // figure, and reading it here made the fee's rate a
+                    // hundredfold out on the second run.
+                    localAmount: abs(split.quantity),
+                    alreadyForeign: isForeign))
                 break
             }
         }
@@ -130,5 +143,127 @@ extension AppModel {
             fee = Decimal(string: String(tail[feeRange]))
         }
         return (amount, code, fee)
+    }
+}
+
+@MainActor
+extension AppModel {
+
+    /// Why a fee could not be moved to its own leg.
+    public enum FeeSplitOutcome: Equatable, Sendable {
+        case split(foreign: Decimal, local: Decimal)
+        /// Already has more than the two legs a card charge starts with — the
+        /// fee may well be out already, and guessing would double it.
+        case notSimple
+        /// No fee stated, or one too large to believe.
+        case noFee
+        /// The transaction is not foreign-denominated, so there is no rate to
+        /// convert the fee at.
+        case notForeign
+
+        public var didSplit: Bool { if case .split = self { return true }; return false }
+    }
+
+    /// Moves a card's international transaction fee onto its own expense leg.
+    ///
+    /// The bank charges one amount and states the fee inside it, so a foreign
+    /// purchase arrives as a single figure that is really two: the goods, and
+    /// roughly 3.4% for having bought them abroad. Left merged, every foreign
+    /// purchase overstates its category and the year's card fees are
+    /// unreportable.
+    ///
+    /// The fee is quoted in the **account's** currency while the transaction is
+    /// denominated in the foreign one, so the new leg needs both figures, like
+    /// every other split here: `quantity` is the fee as charged, and `value` is
+    /// that fee at this transaction's own rate. The goods leg gives up exactly
+    /// what the fee leg takes, in both units, so the transaction still balances
+    /// in the currency it was struck in and each account still moves by what
+    /// really moved it.
+    /// - Parameter apply: `false` answers what *would* happen and writes
+    ///   nothing. One code path for both, so a dry run cannot promise more than
+    ///   the real thing delivers — the first version counted every candidate
+    ///   with a readable fee and said "62 would move" when 54 could.
+    @discardableResult
+    public func splitCardFee(transactionID: GncGUID, feeLocal: Decimal,
+                             feeAccountID: GncGUID, apply: Bool = true) -> FeeSplitOutcome {
+        guard let book, let txn = book.transaction(with: transactionID),
+              let feeAccount = book.account(with: feeAccountID)
+        else { return .notForeign }
+        guard feeLocal > 0 else { return .noFee }
+        guard txn.splits.count == 2 else { return .notSimple }
+        // Foreign-denominated: no split's account is in the transaction's own
+        // currency, which is what gives us a rate to convert the fee at.
+        guard txn.splits.allSatisfy({ $0.account?.commodity != txn.currency })
+        else { return .notForeign }
+
+        // The leg the fee comes out of is the one the money went *to* — the
+        // card leg is what was charged and must keep its full amount, because
+        // that is what the statement says left the account.
+        guard let goods = txn.splits.first(where: { $0.value > 0 }),
+              let anchor = txn.splits.first(where: { $0.value != 0 && $0.quantity != 0 }),
+              anchor.value != 0
+        else { return .notSimple }
+        let rate = abs(anchor.quantity) / abs(anchor.value)   // local per foreign
+        guard rate > 0 else { return .notForeign }
+        guard feeLocal < abs(goods.quantity) else { return .noFee }
+
+        let feeForeign = txn.currency.round(feeLocal / rate)
+        guard feeForeign > 0, feeForeign < goods.value else { return .noFee }
+
+        guard apply else { return .split(foreign: feeForeign, local: feeLocal) }
+        editing([transactionID], named: "Separate Card Fee") {
+            goods.value -= feeForeign
+            goods.quantity -= feeLocal
+            txn.addSplit(account: feeAccount, value: feeForeign, quantity: feeLocal,
+                         memo: String(localized: "International transaction fee"))
+        }
+        return .split(foreign: feeForeign, local: feeLocal)
+    }
+}
+
+@MainActor
+extension AppModel {
+
+    /// Corrects a transfer into an account that is *already* denominated in the
+    /// narrative's currency.
+    ///
+    /// Not every foreign row on a card is a purchase. Eight of the reference
+    /// book's were cash moved into a MYR account, and they arrived with the AUD
+    /// figure copied into both fields — so the MYR account was credited 21.91
+    /// MYR when 59.50 MYR had actually landed in it, and its balance was a
+    /// third of the truth.
+    ///
+    /// The fix is not to redenominate the transaction: the card was charged in
+    /// AUD and the transaction's currency is right. What is wrong is one
+    /// `quantity`. GnuCash's split already says how to hold this — `value` in
+    /// the transaction's currency, `quantity` in the account's own
+    /// (`Split.h:251-265`) — so the AUD leg keeps its value and the MYR leg's
+    /// quantity becomes the money that reached it.
+    @discardableResult
+    public func alignForeignAccountQuantity(transactionID: GncGUID,
+                                            foreignAmount: Decimal,
+                                            currencyCode: String,
+                                            apply: Bool = true) -> Bool {
+        guard let book, let txn = book.transaction(with: transactionID),
+              foreignAmount > 0
+        else { return false }
+        // The leg whose account is held in the narrative's currency.
+        guard let leg = txn.splits.first(where: {
+            $0.account?.commodity.mnemonic == currencyCode
+                && $0.account?.commodity != txn.currency
+        }) else { return false }
+        let signed = leg.value < 0 ? -foreignAmount : foreignAmount
+        guard leg.quantity != signed else { return false }
+        guard apply else { return true }
+        editing([transactionID], named: "Correct Foreign Quantity") {
+            leg.quantity = signed
+        }
+        // The rate this proves is worth keeping: it is a real conversion the
+        // bank performed, dated.
+        if leg.value != 0 {
+            recordFxRate(code: currencyCode, rate: abs(leg.value) / foreignAmount,
+                         date: txn.datePosted, in: txn.currency)
+        }
+        return true
     }
 }

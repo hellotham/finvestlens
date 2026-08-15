@@ -36,6 +36,10 @@ enum ForeignCommand {
         let file = try options.existingURL("file")
         let apply = options.flag("apply")
         let accountName = options.string("account")
+        // Where a stated card fee should go. Absent, the fee stays inside the
+        // charge and is only reported — which expense account it belongs to is
+        // not something this tool should decide.
+        let feeAccountName = options.string("fee-account")
         let since = try options.string("since").map { text -> Date in
             guard let date = Self.day.date(from: text) else {
                 throw LabError.message("--since wants yyyy-MM-dd, got '\(text)'")
@@ -51,14 +55,30 @@ enum ForeignCommand {
         log(Fmt.row("open \(file.lastPathComponent)", Fmt.time(openSeconds)))
         guard !model.isReadOnly else { throw LabError.message("book opened read-only") }
 
+        let feeAccountID = try feeAccountName.map { name -> GncGUID in
+            let matches = model.postableAccounts.filter {
+                $0.fullName == name || $0.name == name
+            }
+            guard let only = matches.first, matches.count == 1 else {
+                throw LabError.message(matches.isEmpty
+                    ? "no account named '\(name)'"
+                    : "'\(name)' matches \(matches.count) accounts — use the full path")
+            }
+            return only.id
+        }
+
         let candidates = model.narrativeForeignCandidates(accountName: accountName, since: since)
         guard !candidates.isEmpty else {
             log("  no transaction carries a foreign amount in its narrative — nothing to do.")
             return
         }
 
+        if let feeAccountName {
+            log("  card fees → \(feeAccountName)")
+        }
         log("  \(candidates.count) transaction(s) the bank recorded in another currency:")
         var applied = 0
+        var aligned = 0
         var refused: [String] = []
         for candidate in candidates {
             let line = Self.line(candidate)
@@ -70,6 +90,19 @@ enum ForeignCommand {
             if outcome.didRestructure {
                 applied += 1
                 log(line)
+            } else if model.alignForeignAccountQuantity(
+                        transactionID: candidate.transactionID,
+                        foreignAmount: candidate.foreignAmount,
+                        currencyCode: candidate.currencyCode, apply: apply) {
+                // Not a purchase abroad but money moved into an account already
+                // held in that currency, carrying the wrong quantity.
+                aligned += 1
+                log(line + "  [quantity corrected]")
+            } else if outcome == .notForeign, feeAccountID != nil {
+                // Already converted on an earlier run — still a candidate for
+                // having its fee separated, which is the whole point of being
+                // able to run this twice.
+                log(line)
             } else {
                 refused.append("\(Self.day.string(from: candidate.date)) "
                                + "\(candidate.currencyCode): \(outcome)")
@@ -77,15 +110,38 @@ enum ForeignCommand {
         }
         for reason in refused { log("    refused: \(reason)") }
 
+        // The fee pass runs over the same list, after the conversions, because
+        // it needs the rate the conversion establishes.
+        var feesSplit = 0
+        if let feeAccountID {
+            for candidate in candidates {
+                guard let fee = candidate.plausibleFee else { continue }
+                let outcome = model.splitCardFee(transactionID: candidate.transactionID,
+                                                 feeLocal: fee, feeAccountID: feeAccountID,
+                                                 apply: apply)
+                if outcome.didSplit {
+                    feesSplit += 1
+                } else if outcome != .notSimple {
+                    // `.notSimple` is the already-done case on a second run,
+                    // which is not worth a line every time.
+                    refused.append("\(Self.day.string(from: candidate.date)) fee: \(outcome)")
+                }
+            }
+        }
+
         guard apply else {
+            if feeAccountID != nil { log("  \(feesSplit) fee(s) would move to their own leg.") }
             log("  dry run — pass --apply to write.")
             return
         }
         try model.save()
-        log("  restructured \(applied), saved.")
+        log("  restructured \(applied), \(aligned) foreign-account quantity/ies corrected, saved.")
         let withFees = candidates.filter { $0.plausibleFee != nil }
         let total = withFees.compactMap(\.plausibleFee).reduce(Decimal(0), +)
-        if !withFees.isEmpty {
+        if feeAccountID != nil {
+            log("  \(feesSplit) card fee(s) totalling \(Self.money(total)) "
+                + "moved to \(feeAccountName ?? "").")
+        } else if !withFees.isEmpty {
             log("  \(withFees.count) carried a stated card fee totalling "
                 + "\(Self.money(total)) — left inside the charge, because which "
                 + "expense account it belongs to is yours to say.")

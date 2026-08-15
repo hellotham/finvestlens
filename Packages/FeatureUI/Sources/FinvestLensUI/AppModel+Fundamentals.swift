@@ -140,6 +140,18 @@ extension AppModel {
 
         if let chosen = quoteProvider(for: commodity), let made = build(chosen) { return made }
 
+        // A bond is only described by the service that indexes bonds. Its
+        // identifier is an ISIN, which every ticker provider answers "no data"
+        // to, so a book full of corporate bonds got no company text at all —
+        // measured 16 Aug 2026: all fifteen bonds were among the 56 securities
+        // a bulk run left empty.
+        //
+        // This is not the silent re-pointing `fiigCandidates` refuses. That one
+        // would *persist* a provider choice for prices, where being wrong
+        // writes a wrong number; this only chooses where to ask for text, for
+        // this lookup, and a miss costs one shared index request.
+        if Self.looksLikeISIN(commodity.exchangeCode), let made = build(.fiig) { return made }
+
         // Deterministic order, so the same book asks the same service every
         // time rather than whichever the key store happened to list first.
         for kind in QuoteProviderKind.allCases.sorted(by: { $0.rawValue < $1.rawValue })
@@ -221,6 +233,13 @@ extension AppModel {
         public var fraction: Double { total == 0 ? 0 : Double(done) / Double(total) }
     }
 
+    /// The securities a bulk run would actually ask about — everything a
+    /// configured provider covers. Public so a headless run can report the
+    /// scope before spending the requests.
+    public var fundamentalsCoveredSecurities: [Commodity] {
+        pricableSecurities.filter { fundamentalsSource(for: $0) != nil }
+    }
+
     /// Fetches company profile and financials for **every** security that has a
     /// provider able to supply them.
     ///
@@ -242,7 +261,7 @@ extension AppModel {
     ///
     /// - Parameter force: refetch every section regardless of its TTL.
     public func fetchAllFundamentals(force: Bool = false) async {
-        let securities = pricableSecurities.filter { fundamentalsSource(for: $0) != nil }
+        let securities = fundamentalsCoveredSecurities
         guard !securities.isEmpty else {
             fundamentalsRun = nil
             showToast(.failure, String(localized: "No configured provider supplies company data."))
