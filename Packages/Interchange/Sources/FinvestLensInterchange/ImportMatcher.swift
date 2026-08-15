@@ -136,8 +136,25 @@ public enum ImportMatcher {
         return !shared.isEmpty && (lhs.isSubset(of: rhs) || rhs.isSubset(of: lhs))
     }
 
+    /// - Parameter dayWindow: how far a book entry's date may drift from the
+    ///   statement's before it stops being the same event. **Two, not four**
+    ///   (narrowed 15 Aug 2026). Four days reached back into the *previous*
+    ///   period: a recurring amount — a standing order, a subscription, a large
+    ///   movement chunked by a daily payment limit — sat within four days of a
+    ///   new statement's row and was flagged, hiding a real transaction behind
+    ///   a duplicate claim. A hand-entry drifts a day or two from the bank's
+    ///   posting date, not four.
+    ///
+    ///   Both directions were measured before changing it, because a false
+    ///   *negative* here duplicates money in the ledger and is the worse error.
+    ///   The first attempt — refusing the window whenever the amount recurred —
+    ///   did exactly that: on the real book one CMA row stopped matching and
+    ///   double-imported, giving seven boundary legs where six belong. Two days
+    ///   keeps every true positive on the four real statements (39/39, 58/58,
+    ///   3/3, 145 of 220 in both import orders) while dropping the synthetic
+    ///   four-days-apart false positive.
     public static func match(_ staged: [StagedTransaction], into target: Account,
-                             book: Book, dayWindow: Int = 4) -> [MatchResult] {
+                             book: Book, dayWindow: Int = 2) -> [MatchResult] {
         let targetSplits = book.splits(for: target)
         let calendar = utcCalendar
 

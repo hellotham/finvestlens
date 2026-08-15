@@ -123,6 +123,20 @@ a shared narrative token. The review sheet now shows the matched entry's date
 and description in the flag's tooltip, so the claim can be checked rather than
 taken on trust.
 
+**The drift window is two days, not four.** The narrative veto does not help
+when the payee genuinely repeats, which is the commonest case of all: a standing
+order, a subscription, a large movement chunked by a daily payment limit. Four
+days reached back into the *previous* period and flagged those. A hand-entry
+drifts a day or two from the bank's posting date, not four.
+
+Both directions were measured, because a false *negative* here duplicates money
+in the ledger and is the worse error. The first attempt — refusing the window
+whenever the amount recurred — did exactly that: on the real book one CMA row
+stopped matching and double-imported, giving seven boundary legs where six
+belong. Two days keeps every true positive on the four real statements (39/39,
+58/58, 3/3, 145 of 220, both import orders) and drops the four-days-apart false
+positive, which is now a synthetic test rather than a property of one book.
+
 **The acceptance harness had stopped running**, which is why this needed
 repairing before it could validate anything. Two stale assumptions: the book's
 `Everyday Card` account is now `CDIA`, and the book has no `Imbalance` account,

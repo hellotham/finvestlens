@@ -235,6 +235,65 @@ struct ImportMatcherTests {
         #expect(ImportMatcher.match([silent], into: bank, book: book)[0].isDuplicate)
     }
 
+    /// A statement none of whose rows exist in the book must flag nothing —
+    /// even when a daily payment limit chunks one large movement into identical
+    /// amounts on consecutive days, which is precisely when amount-and-date
+    /// matching goes wrong.
+    ///
+    /// This is the property the live harness asserted against a real disjoint
+    /// statement. That premise is gone for good: the book has since had all
+    /// four statements imported, the QIF files carry no reference to identify
+    /// their rows by (`N` is empty, so only the matcher's own heuristic could
+    /// find them — circular), and the Aug 12 backup contains three of the four
+    /// statements too. Synthetic data reproduces the shape exactly and cannot
+    /// rot the way a book snapshot does.
+    @Test("A disjoint statement flags nothing, even with daily-limit chunking")
+    func disjointStatementFlagsNothing() {
+        let book = Book(baseCurrency: .aud)
+        let bank = book.addAccount(Account(name: "Everyday", type: .bank, commodity: .aud))
+        let expense = book.addAccount(Account(name: "Contributions", type: .expense, commodity: .aud))
+        // Two earlier chunks of the same round amount already in the book.
+        for d in [26, 27] {
+            let txn = Transaction(currency: .aud, datePosted: day(2026, 4, d),
+                                  description: "Transfer To Smsf")
+            txn.addSplit(account: expense, value: Decimal(20000))
+            txn.addSplit(account: bank, value: Decimal(-20000))
+            book.addTransaction(txn)
+        }
+
+        // A later statement: four more chunks of the same amount on consecutive
+        // days, none of them the April pair.
+        let staged = [1, 2, 4, 5].map {
+            StagedTransaction(date: day(2026, 5, $0), amount: Decimal(-20000),
+                              payee: "Transfer To Smsf")
+        }
+        let results = ImportMatcher.match(staged, into: bank, book: book)
+        #expect(results.allSatisfy { !$0.isDuplicate },
+                "flagged \(results.filter(\.isDuplicate).count) rows of a disjoint statement")
+    }
+
+    @Test("Re-importing that same statement flags every row")
+    func reimportFlagsEveryRow() {
+        let book = Book(baseCurrency: .aud)
+        let bank = book.addAccount(Account(name: "Everyday", type: .bank, commodity: .aud))
+        let expense = book.addAccount(Account(name: "Contributions", type: .expense, commodity: .aud))
+        for d in [1, 2, 4, 5] {
+            let txn = Transaction(currency: .aud, datePosted: day(2026, 5, d),
+                                  description: "Transfer To Smsf")
+            txn.addSplit(account: expense, value: Decimal(20000))
+            txn.addSplit(account: bank, value: Decimal(-20000))
+            book.addTransaction(txn)
+        }
+        let staged = [1, 2, 4, 5].map {
+            StagedTransaction(date: day(2026, 5, $0), amount: Decimal(-20000),
+                              payee: "Transfer To Smsf")
+        }
+        let results = ImportMatcher.match(staged, into: bank, book: book)
+        // One-to-one: four rows claim four legs, none doubling up.
+        #expect(results.allSatisfy { $0.isDuplicate })
+        #expect(Set(results.compactMap(\.matchedSplitID)).count == 4)
+    }
+
     @Test("A matching FITID in a split's online_id is a definitive duplicate")
     func onlineIDDedup() {
         let (book, bank, _) = makeBook()
