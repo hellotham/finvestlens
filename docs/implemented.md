@@ -3501,11 +3501,18 @@ the ring is a `strokeBorder`, never a fill, so a field occupies the same box in
 both states; 3.3.2 — every other `TextField` carries a title argument; 1.4.1 —
 no figure relies on colour alone.
 
-**Open, and it is a decision rather than a defect.** Apple's own
-`secondaryLabelColor` measures **3.95:1** on a light row — under AA for body
-text, and most of its uses here are `.caption` or smaller, where AA is stricter
-rather than looser. The same holds for `tertiaryLabelColor` at 1.88:1. Both are
-platform semantic colours used as the platform intends; overriding them would
-meet WCAG and make the app stop looking like a Mac app, at several hundred call
-sites. That trade is the owner's to make, not this review's, so it is recorded
-here rather than quietly taken either way.
+**One finding was a decision rather than a defect, and it has been taken.**
+Apple's own `secondaryLabelColor` measures **3.95:1** on a light row — under AA
+for body text, and most of its uses here are `.caption` or smaller, where AA is
+stricter rather than looser. The same holds for `tertiaryLabelColor` at 1.88:1.
+Both are platform semantic colours used as the platform intends; overriding
+them would meet WCAG and make the app stop looking like a Mac app, at several
+hundred call sites.
+
+Put to the owner on 16 Aug 2026 with those measurements and three alternatives
+— leave them, darken only under Increase Contrast, or darken always — and the
+answer was **leave them**. Filed in [deferred.md](deferred.md) ▸ Accepted
+divergences so it is not re-raised as a bug. The places where the shortfall
+genuinely bit were not left: a figure coloured by its sign and the planning
+disclaimer are both fixed above, because those carry meaning that nothing else
+on the row repeats.

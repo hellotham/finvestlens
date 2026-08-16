@@ -79,6 +79,19 @@ won't-fix. It stays recorded here so the reasoning survives.
 Not open work — recorded so they aren't re-raised as bugs. Detail in
 [implemented.md](implemented.md).
 
+- **Apple's `secondaryLabelColor` / `tertiaryLabelColor` below WCAG AA in light
+  mode** — measured 16 Aug 2026: 3.95:1 and 1.88:1 on a white row, against the
+  4.5:1 body text needs (dark mode passes at 5.89:1). macOS's Increase Contrast
+  does not change them: all three of `secondaryLabelColor`, `tertiaryLabelColor`
+  and `systemRed` resolve to identical components under
+  `accessibilityHighContrastAqua`, which was checked rather than assumed.
+  **Kept, by the owner's decision on 16 Aug 2026**, over darkening them app-wide
+  or only under Increase Contrast: they are platform semantic colours used as
+  the platform intends, at several hundred call sites, and nothing they carry is
+  the only place a fact appears. The places where the shortfall *did* matter
+  were fixed rather than accepted — a figure coloured by its sign
+  (`Color.negativeAmount` / `.positiveAmount`) and the planning disclaimer;
+  see [implemented.md](implemented.md) ▸ Accessibility review.
 - Currency-commodity export emits `cmdty:fraction`/`name` that GnuCash omits for
   ISO currencies — within FR-EXP-02 tolerance, round-trip byte-verified.
 - `isBalanced` treats a sub-minor-unit residual as balanced (ADR-1).
