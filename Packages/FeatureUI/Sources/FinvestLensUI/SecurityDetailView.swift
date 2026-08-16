@@ -195,7 +195,7 @@ struct SecurityDetailView: View {
                         Label(change.formatted(.percent.precision(.fractionLength(2))),
                               systemImage: change < 0 ? "arrow.down.right" : "arrow.up.right")
                             .scaledFont(.callout).monospacedDigit()
-                            .foregroundStyle(change < 0 ? .red : .green)
+                            .foregroundStyle(change < 0 ? Color.negativeAmount : Color.positiveAmount)
                             .labelStyle(.titleAndIcon)
                     }
                 }
@@ -270,11 +270,11 @@ struct SecurityDetailView: View {
                               detail.returnFraction.map {
                                   $0.formatted(.percent.precision(.fractionLength(1)))
                               },
-                              tint: detail.returnFraction.map { $0 < 0 ? Color.red : .green })
+                              tint: detail.returnFraction.map { $0 < 0 ? Color.negativeAmount : Color.positiveAmount })
                     figureRow("Unrealised", detail.unrealizedGain.map { AmountFormat.string($0, code: code) },
-                              tint: detail.unrealizedGain.map { $0 < 0 ? Color.red : .green })
+                              tint: detail.unrealizedGain.map { $0 < 0 ? Color.negativeAmount : Color.positiveAmount })
                     figureRow("Realised", AmountFormat.string(detail.realizedGain, code: code),
-                              tint: detail.realizedGain < 0 ? .red : nil)
+                              tint: detail.realizedGain < 0 ? Color.negativeAmount : nil)
                     figureRow("Income", AmountFormat.string(detail.income, code: code))
                     figureRow("Yield on cost",
                               detail.yieldOnCost.map { $0.formatted(.percent.precision(.fractionLength(2))) })
@@ -697,7 +697,7 @@ struct SecurityDetailView: View {
                             if let gain = lot.unrealizedGain {
                                 Text(AmountFormat.string(gain, code: code))
                                     .scaledFont(.caption).monospacedDigit()
-                                    .foregroundStyle(gain < 0 ? .red : .green)
+                                    .foregroundStyle(gain < 0 ? Color.negativeAmount : Color.positiveAmount)
                             }
                         }
                     }
@@ -1149,6 +1149,9 @@ private struct IdentifierField: View {
                 TextField("", text: $draft)
                     .textFieldStyle(.plain)
                     .multilineTextAlignment(.trailing)
+                    // `LabeledContent` associates the label visually; the field
+                    // itself still reaches the accessibility API unnamed.
+                    .accessibilityLabel(label)
                     .focused($editing)
                     .overlay {
                         if editing {

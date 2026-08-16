@@ -3438,3 +3438,74 @@ what a title says, not whether a control exists.
   `ModeTabStrip` gives it, so `.combine` here merges the title without
   flattening the action. The modifier stays as it is; the worry was unfounded
   and is recorded so it is not re-raised.
+
+# Accessibility review — WCAG 2.1 AA (16 Aug 2026)
+
+A `/accessibility-review` over the app, audited against WCAG 2.1 AA with the
+criteria mapped onto Apple's accessibility API. Contrast was **computed, not
+judged**: `NSColor` resolved under `aqua` and `darkAqua`, composited over the
+backgrounds this app actually draws on (`textBackgroundColor` and both
+`alternatingContentBackgroundColors`), and put through WCAG's own luminance and
+ratio formulae.
+
+**1.4.3 Contrast — the worst thing on the screen was a profit.** A figure
+coloured by its sign used `.red` and `.green`, which resolve to `systemRed` and
+`systemGreen`:
+
+| painted with | light row | light alternating row |
+|---|---|---|
+| `systemRed` | 3.57:1 | 3.27:1 |
+| `systemGreen` | **2.22:1** | **2.03:1** |
+
+Body text needs 4.5:1. A positive return, in a report, was at less than half of
+it. `Color.negativeAmount` and `Color.positiveAmount` replace both at all 28
+sites that colour a figure — balances, gains, percentages, budget variances,
+KPI deltas — and measure 4.93–8.74:1 on every row in both appearances.
+Destructive *buttons* keep the system red: that is a control's platform
+semantics, not a number's. Colour was never the only carrier (every figure
+keeps its sign and its label, per 1.4.1); this makes the second cue legible.
+
+`ContrastTests` now computes all of it — the two tokens against four
+backgrounds, every one of the nine accents against six, and an assertion that
+`systemGreen`/`systemRed` still *fail*, so nobody deletes the tokens as
+redundant without re-measuring.
+
+**1.4.3, again — the disclaimer nobody could read.** `PlanningDisclaimer` — the
+line that says a projection is "not financial or tax advice" — was `.caption2`
+in `.tertiary`: **1.88:1** light, 2.26:1 dark. It is `.caption` in `.secondary`
+now. `NSColor`'s Increase Contrast appearance was checked rather than assumed:
+`secondaryLabelColor`, `tertiaryLabelColor` and `systemRed` resolve to
+identical components under `accessibilityHighContrastAqua`, so the platform
+does not rescue any of them.
+
+**1.4.11 Non-text contrast — passes, and now says so.** Every accent as a
+control clears 3:1 on every background including the 15% wash
+`View.sidebarInstance` paints behind a focused row; the worst case is blue at
+3.29:1 there. The comment claiming "at least 3.2:1" was accurate and is now a
+test.
+
+**4.1.2 Name, role, value — the Find sheet was five unnamed controls.** Every
+control in a criterion row is `labelsHidden` so the row reads as one sentence
+left to right; to VoiceOver it was a field picker, a comparator and a value
+with no names at all. Each now says what it is, using the field's own label
+("How to compare Description", "Description to match"). The inline editor in
+the security page was unnamed inside its `LabeledContent`.
+
+**2.5.5 Target size.** The accent swatches in Appearance were a 30pt circle
+that was also the whole hit area. The circle stays 30; padding and
+`contentShape` make the target 44.
+
+**Checked, nothing found**: 2.1.1 keyboard — every mouse action has a menu or
+context-menu equivalent, and the 38 shortcuts carry no collision; 2.4.7 focus —
+the ring is a `strokeBorder`, never a fill, so a field occupies the same box in
+both states; 3.3.2 — every other `TextField` carries a title argument; 1.4.1 —
+no figure relies on colour alone.
+
+**Open, and it is a decision rather than a defect.** Apple's own
+`secondaryLabelColor` measures **3.95:1** on a light row — under AA for body
+text, and most of its uses here are `.caption` or smaller, where AA is stricter
+rather than looser. The same holds for `tertiaryLabelColor` at 1.88:1. Both are
+platform semantic colours used as the platform intends; overriding them would
+meet WCAG and make the app stop looking like a Mac app, at several hundred call
+sites. That trade is the owner's to make, not this review's, so it is recorded
+here rather than quietly taken either way.

@@ -83,7 +83,13 @@ public struct AppearanceSettingsView: View {
                 } label: {
                     Circle()
                         .fill(option.color)
+                        // The swatch stays 30pt; the *target* is 44, which is
+                        // what WCAG 2.5.5 and the HIG both ask for and what a
+                        // finger needs on iPad. `contentShape` below makes the
+                        // padded box the hit area rather than just the circle.
                         .frame(width: 30, height: 30)
+                        .padding(7)
+                        .contentShape(Rectangle())
                         .overlay {
                             if option == accent {
                                 Image(systemName: "checkmark")

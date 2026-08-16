@@ -152,7 +152,7 @@ struct ReportDocumentView: View {
                         .scaledFont(.title2)
                         .fontWeight(.semibold)
                         .monospacedDigit()
-                        .foregroundStyle(kpi.signed && kpi.amount < 0 ? .red : .primary)
+                        .foregroundStyle(kpi.signed && kpi.amount < 0 ? Color.negativeAmount : Color.primary)
                 }
                 .padding(12)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -398,7 +398,7 @@ struct ReportTableView: View {
         if let amount {
             Text(AmountFormat.string(amount, code: code))
                 .monospacedDigit()
-                .foregroundStyle(amount < 0 ? .red : .primary)
+                .foregroundStyle(amount < 0 ? Color.negativeAmount : Color.primary)
         } else {
             Text("")
         }

@@ -520,7 +520,7 @@ private struct InvestmentRowView: View {
                 if let fraction = row.returnFraction {
                     Text(fraction.formatted(.percent.precision(.fractionLength(1))))
                         .scaledFont(.caption).monospacedDigit()
-                        .foregroundStyle(fraction < 0 ? .red : .green)
+                        .foregroundStyle(fraction < 0 ? Color.negativeAmount : Color.positiveAmount)
                 }
             }
 

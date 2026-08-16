@@ -873,7 +873,7 @@ struct AccountSidebarRow: View {
             Text(AmountFormat.string(node.balance, code: node.currencyCode))
                 .scaledFont(.body)
                 .monospacedDigit()
-                .foregroundStyle(node.balance < 0 ? .red : .secondary)
+                .foregroundStyle(node.balance < 0 ? Color.negativeAmount : Color.secondary)
         }
         .tag(SidebarSelection.account(node.id))
         .accessibilityElement(children: .ignore)

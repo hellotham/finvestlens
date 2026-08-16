@@ -238,11 +238,11 @@ struct SlideCard: View {
                     Text(callout.value)
                         .scaledFont(.title2, weight: .semibold)
                         .monospacedDigit()
-                        .foregroundStyle(callout.deltaPositive == false ? .red : .primary)
+                        .foregroundStyle(callout.deltaPositive == false ? Color.negativeAmount : Color.primary)
                     if let delta = callout.delta {
                         Text(delta)
                             .scaledFont(.caption)
-                            .foregroundStyle(callout.deltaPositive == true ? .green : .red)
+                            .foregroundStyle(callout.deltaPositive == true ? Color.positiveAmount : Color.negativeAmount)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -277,7 +277,7 @@ struct SlideCard: View {
             Chart(bars) { bar in
                 BarMark(x: .value("Amount", asDouble(bar.current)),
                         y: .value("Category", bar.label))
-                    .foregroundStyle(asDouble(bar.current) < 0 ? Color.red.opacity(0.75)
+                    .foregroundStyle(asDouble(bar.current) < 0 ? Color.negativeAmount.opacity(0.75)
                                                                : Color.appAccent)
                     .cornerRadius(3)
                 if let prior = bar.prior {

@@ -248,6 +248,10 @@ struct FindCriterionRow: View {
             }
             .labelsHidden()
             .frame(width: 220)
+            // Every control on this row is `labelsHidden` — visually the row
+            // reads left to right as one sentence, but VoiceOver got three
+            // unnamed controls in a row. Each says what it is.
+            .accessibilityLabel("Field to search")
 
             editor
 
@@ -273,12 +277,14 @@ struct FindCriterionRow: View {
             }
             .labelsHidden()
             .frame(width: 170)
+            .accessibilityLabel("How to compare \(field.label)")
 
             TextField("", text: Binding(
                 get: { needle },
                 set: { criterion.test = .text(field, comparator, $0, matchCase: matchCase) }))
                 .textFieldStyle(.roundedBorder)
                 .frame(minWidth: 140)
+                .accessibilityLabel("\(field.label) to match")
 
             Toggle("Match case", isOn: Binding(
                 get: { matchCase },
@@ -293,12 +299,14 @@ struct FindCriterionRow: View {
             }
             .labelsHidden()
             .frame(width: 170)
+            .accessibilityLabel("How to compare \(field.label)")
 
             DatePicker("", selection: Binding(
                 get: { value },
                 set: { criterion.test = .date(field, comparator, $0) }),
                 displayedComponents: .date)
                 .labelsHidden()
+                .accessibilityLabel("\(field.label) to match")
 
         case .number(let field, let comparator, let value):
             Picker("", selection: Binding(
@@ -309,6 +317,7 @@ struct FindCriterionRow: View {
             }
             .labelsHidden()
             .frame(width: 210)
+            .accessibilityLabel("How to compare \(field.label)")
 
             TextField("", value: Binding(
                 get: { value },
@@ -317,6 +326,7 @@ struct FindCriterionRow: View {
                 .textFieldStyle(.roundedBorder)
                 .frame(width: 120)
                 .monospacedDigit()
+                .accessibilityLabel("\(field.label) to match")
 
         case .reconcile(let comparator, let states):
             Picker("", selection: Binding(

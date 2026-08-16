@@ -254,7 +254,7 @@ struct AutoCategorizeSheet: View {
                 Spacer()
                 Text(AmountFormat.string(-item.amount, code: item.currencyCode))
                     .monospacedDigit()
-                    .foregroundStyle(item.amount > 0 ? .red : .primary)
+                    .foregroundStyle(item.amount > 0 ? Color.negativeAmount : Color.primary)
             }
             AccountField(prompt: "Search category…",
                          nodes: model.postableAccounts,

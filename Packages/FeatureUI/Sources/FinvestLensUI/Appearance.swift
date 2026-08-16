@@ -51,6 +51,46 @@ public extension Color {
         let raw = UserDefaults.standard.string(forKey: AppearanceKey.accent)
         return (AppAccent(rawValue: raw ?? "") ?? .lavender).color
     }
+
+    // MARK: Money that is coloured by its sign
+    //
+    // **Never `.red` and `.green` for a figure.** Measured 16 Aug 2026 against
+    // the backgrounds this app actually draws on — `NSColor` resolved under
+    // both appearances, contrast computed to WCAG 2.1's formula:
+    //
+    // | painted with | light, white row | light, alternating row |
+    // |---|---|---|
+    // | `systemRed`   | 3.57:1 | 3.27:1 |
+    // | `systemGreen` | **2.22:1** | **2.03:1** |
+    //
+    // WCAG 1.4.3 asks 4.5:1 of body text, and these are body text: a balance,
+    // a gain, a percentage. Green was the worst thing on the screen — a
+    // positive return, in a report, at half the required contrast. Increase
+    // Contrast does not rescue either one; `secondaryLabelColor` and
+    // `systemRed` resolve to identical components under
+    // `accessibilityHighContrastAqua`, which was checked rather than assumed.
+    //
+    // The replacements are the palette's own red and a green darkened to match
+    // it, and they clear 4.5:1 on every row this app draws:
+    //
+    // | | light white | light alt | dark | dark alt |
+    // |---|---|---|---|---|
+    // | `negativeAmount` | 5.39 | 4.93 | 6.20 | 5.44 |
+    // | `positiveAmount` | 5.57 | 5.10 | 8.74 | 7.67 |
+    //
+    // Colour is never the only carrier — every figure keeps its minus sign and
+    // its own label, per WCAG 1.4.1. These make the second cue legible too.
+    //
+    // For a *destructive control* keep the system red (`role: .destructive`):
+    // that is a button's platform semantics, not a number's.
+
+    /// A figure that is negative — a debit balance, a loss, a fall.
+    static let negativeAmount = Color.dynamic(light: Color(.sRGB, red: 0.78, green: 0.19, blue: 0.19, opacity: 1),
+                                              dark: Color(.sRGB, red: 1.00, green: 0.44, blue: 0.44, opacity: 1))
+
+    /// A figure that is positive — a gain, a rise, a surplus.
+    static let positiveAmount = Color.dynamic(light: Color(.sRGB, red: 0.09, green: 0.47, blue: 0.22, opacity: 1),
+                                              dark: Color(.sRGB, red: 0.40, green: 0.82, blue: 0.50, opacity: 1))
 }
 
 public enum AppAccent: String, CaseIterable, Identifiable, Sendable {

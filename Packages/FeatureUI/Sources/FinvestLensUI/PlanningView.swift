@@ -100,11 +100,20 @@ struct PlanningView: View {
 
 
 /// The standing footnote every planning surface carries.
+///
+/// **`.secondary` at `.caption`, not `.tertiary` at `.caption2`.** Measured
+/// 16 Aug 2026: `tertiaryLabelColor` composites to **1.88:1** on a white row
+/// and 2.26:1 in dark — under half of WCAG 1.4.3's 4.5:1, and this is the one
+/// line on the screen that says the numbers above it are not advice. A
+/// disclaimer nobody can read is not a disclaimer. `.secondary` measures
+/// 3.95:1 light and 5.89:1 dark, which is still short of AA for small text in
+/// light mode; that shortfall is Apple's own `secondaryLabelColor` and is
+/// noted with the rest of them in `Color.negativeAmount`'s neighbourhood.
 struct PlanningDisclaimer: View {
     var body: some View {
         Text("An estimate from your own figures and assumptions — not financial or tax advice.")
-            .scaledFont(.caption2)
-            .foregroundStyle(.tertiary)
+            .scaledFont(.caption)
+            .foregroundStyle(.secondary)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
@@ -446,7 +455,7 @@ struct LifetimePlannerView: View {
                     Text(String(event.year)).foregroundStyle(.secondary)
                     Text(AmountFormat.string(event.amount, code: code))
                         .monospacedDigit()
-                        .foregroundStyle(event.amount < 0 ? .red : .primary)
+                        .foregroundStyle(event.amount < 0 ? Color.negativeAmount : Color.primary)
                     Button(role: .destructive) {
                         update { $0.events.removeAll { $0.id == event.id } }
                         persist()

@@ -360,7 +360,7 @@ struct ImportView: View {
                 Spacer()
                 Text(AmountFormat.string(staged.amount, code: targetCode))
                     .monospacedDigit()
-                    .foregroundStyle(staged.amount < 0 ? .red : .primary)
+                    .foregroundStyle(staged.amount < 0 ? Color.negativeAmount : Color.primary)
             }
             // A searchable field, not a Picker: a Picker builds one menu item
             // per account per row, which is the fan-out that overflowed the

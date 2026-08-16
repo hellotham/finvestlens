@@ -133,11 +133,11 @@ struct ForecastView: View {
                             Spacer()
                             Text(AmountFormat.string(event.change, code: model.reportCurrency.mnemonic))
                                 .monospacedDigit()
-                                .foregroundStyle(event.change < 0 ? .red : .green)
+                                .foregroundStyle(event.change < 0 ? Color.negativeAmount : Color.positiveAmount)
                             Text(AmountFormat.string(event.balance, code: model.reportCurrency.mnemonic))
                                 .monospacedDigit()
                                 .frame(width: balanceWidth, alignment: .trailing)
-                                .foregroundStyle(event.balance < 0 ? .red : .primary)
+                                .foregroundStyle(event.balance < 0 ? Color.negativeAmount : Color.primary)
                         }
                     }
                 }

@@ -171,14 +171,14 @@ private struct BudgetRow: View {
                     .foregroundStyle(.secondary)
             }
             ProgressView(value: min(1.0, max(0, actual.fractionUsed ?? 0)))
-                .tint(actual.isOverBudget ? (isIncome ? .green : .red) : .appAccent)
+                .tint(actual.isOverBudget ? (isIncome ? Color.positiveAmount : Color.negativeAmount) : .appAccent)
             if actual.isOverBudget {
                 // Income landing above its plan is favourable — "over budget"
                 // is overspending language, wrong for earning more than planned.
                 Text(isIncome
                      ? "Ahead by \(AmountFormat.string(-actual.remaining, code: code))"
                      : "Over by \(AmountFormat.string(-actual.remaining, code: code))")
-                    .scaledFont(.caption).foregroundStyle(isIncome ? .green : .red)
+                    .scaledFont(.caption).foregroundStyle(isIncome ? Color.positiveAmount : Color.negativeAmount)
             } else {
                 Text("\(AmountFormat.string(actual.remaining, code: code)) remaining")
                     .scaledFont(.caption).foregroundStyle(.secondary)

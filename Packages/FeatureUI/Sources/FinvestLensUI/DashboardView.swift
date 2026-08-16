@@ -530,7 +530,7 @@ struct DashboardView: View {
                         Text(AmountFormat.string(overdue, code: code))
                             .scaledFont(.title3).monospacedDigit()
                             // Red only when there is something to be red about.
-                            .foregroundStyle(overdue > 0 ? Color.red : .primary)
+                            .foregroundStyle(overdue > 0 ? Color.negativeAmount : Color.primary)
                     }
                 }
                 // The worst payers first — the list someone opens this to see.
@@ -706,7 +706,7 @@ struct DashboardView: View {
         return Card("Net Worth", systemImage: "chart.line.uptrend.xyaxis") {
             Text(AmountFormat.string(current, code: code))
                 .scaledFont(.largeTitle, weight: .bold, design: .rounded).monospacedDigit()
-                .foregroundStyle(current < 0 ? .red : .primary)
+                .foregroundStyle(current < 0 ? Color.negativeAmount : Color.primary)
                 .accessibilityLabel("Net worth")
                 .accessibilityValue(AmountFormat.spoken(current, code: code))
             if series.count >= 2 {
@@ -1088,7 +1088,7 @@ struct DashboardView: View {
                     Text(entry.series).foregroundStyle(.secondary)
                     Text(entry.pct, format: .percent.precision(.fractionLength(1)))
                         .monospacedDigit()
-                        .foregroundStyle(entry.pct < 0 ? .red : .green)
+                        .foregroundStyle(entry.pct < 0 ? Color.negativeAmount : Color.positiveAmount)
                 }
             }
             Spacer(minLength: 0)
@@ -1109,7 +1109,7 @@ struct DashboardView: View {
             Text(pct, format: .percent.precision(.fractionLength(1)))
                 .fontWeight(bold ? .bold : .regular)
                 .monospacedDigit()
-                .foregroundStyle(pct < 0 ? .red : .green)
+                .foregroundStyle(pct < 0 ? Color.negativeAmount : Color.positiveAmount)
         }
         .frame(minWidth: 96)
     }
@@ -1129,10 +1129,10 @@ struct DashboardView: View {
                     EmptyView()
                 } currentValueLabel: {
                     Text(rate, format: .percent.precision(.fractionLength(0)))
-                        .foregroundStyle(rate < 0 ? .red : .primary)
+                        .foregroundStyle(rate < 0 ? Color.negativeAmount : Color.primary)
                 }
                 .gaugeStyle(.accessoryCircularCapacity)
-                .tint(rate < 0 ? .red : .green)
+                .tint(rate < 0 ? Color.negativeAmount : Color.positiveAmount)
                 .frame(maxWidth: .infinity)
                 Text("Kept \(AmountFormat.string(net, code: code)) of \(AmountFormat.string(income, code: code))")
                     .scaledFont(.caption).foregroundStyle(.secondary).monospacedDigit()
@@ -1190,11 +1190,11 @@ struct DashboardView: View {
     private func moverRow(_ name: String, _ amount: Decimal, isIncome: Bool) -> some View {
         HStack(spacing: 6) {
             Image(systemName: isIncome ? "arrow.down.left" : "arrow.up.right")
-                .foregroundStyle(isIncome ? .green : .red).imageScale(.small)
+                .foregroundStyle(isIncome ? Color.positiveAmount : Color.negativeAmount).imageScale(.small)
             Text(name).lineLimit(1)
             Spacer()
             Text(AmountFormat.string(amount, code: code))
-                .monospacedDigit().foregroundStyle(isIncome ? .green : .primary)
+                .monospacedDigit().foregroundStyle(isIncome ? Color.positiveAmount : Color.primary)
         }
     }
 
@@ -1361,7 +1361,7 @@ struct DashboardView: View {
                             Spacer()
                             Text(AmountFormat.string(node.balance, code: node.currencyCode))
                                 .monospacedDigit()
-                                .foregroundStyle(node.balance < 0 ? .red : .primary)
+                                .foregroundStyle(node.balance < 0 ? Color.negativeAmount : Color.primary)
                         }
                     }
                     .buttonStyle(.plain)
