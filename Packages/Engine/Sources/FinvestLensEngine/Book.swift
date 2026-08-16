@@ -156,6 +156,27 @@ public final class Book {
         return price
     }
 
+    /// Adds every price in `incoming` that the book does not already hold,
+    /// under GnuCash's own duplicate rule (see ``Price/Identity``), and returns
+    /// the ones actually added.
+    ///
+    /// One pass, one hash set: a caller that tested each candidate against
+    /// `prices` itself would be O(n·m) over a database that reaches six figures
+    /// on a real book. Duplicates *within* `incoming` are collapsed too — a
+    /// fallback sweep can legitimately fetch the same day twice from two
+    /// providers.
+    @discardableResult
+    public func addPrices(deduplicating incoming: [Price]) -> [Price] {
+        guard !incoming.isEmpty else { return [] }
+        var seen = Set(prices.map(\.identity))
+        var added: [Price] = []
+        for price in incoming where seen.insert(price.identity).inserted {
+            addPrice(price)
+            added.append(price)
+        }
+        return added
+    }
+
     /// Replaces the whole price database — the undo primitive for scoped
     /// price edits (a snapshot of `prices` is cheap: value types).
     public func replaceAllPrices(_ newPrices: [Price]) {
@@ -199,10 +220,10 @@ public final class Book {
         commodityIndex = nil
     }
 
-    /// Sorts a bucket by date, keeping insertion order within a date. The scan
-    /// this replaces took the *first* price of the winning date in `prices`
-    /// order, so ties must not be reordered or a duplicate-dated import would
-    /// silently change a balance.
+    /// Sorts a bucket by date, keeping insertion order within a date — so
+    /// "which of a day's prices is newest" stays answerable, since every price
+    /// on a day carries the identical day-neutral instant and cannot be ranked
+    /// by timestamp.
     private static func sortedByDate(_ bucket: [Price]) -> [Price] {
         bucket.enumerated()
             .sorted { $0.element.date == $1.element.date ? $0.offset < $1.offset
@@ -223,8 +244,20 @@ public final class Book {
         commodityIndex = byCommodity.mapValues(Self.sortedByDate)
     }
 
-    /// The latest price in a date-sorted `bucket` on or before `date`, matching
-    /// the linear scan it replaces: the first price of the winning date.
+    /// The latest price in a date-sorted `bucket` on or before `date`: the
+    /// **last** price recorded for the winning day.
+    ///
+    /// Every price is stored day-neutral, so a day's prices all share one
+    /// instant and nothing can order them by time. This used to rewind to the
+    /// *first* of them, which made the earliest row of a day permanently
+    /// authoritative: the 06:00 auto-refresh valued the portfolio for the whole
+    /// day, and the evening close — correctly stored, plainly newer — could
+    /// never be read. Later arrival is the only evidence of recency there is,
+    /// so it decides.
+    ///
+    /// GnuCash breaks the same tie by GUID (`compare_prices_by_date`,
+    /// `libgnucash/engine/gnc-pricedb.cpp`), which is arbitrary rather than
+    /// wrong; insertion order is at least the answer a person would predict.
     private static func latest(in bucket: [Price], on date: Date?) -> Price? {
         // First index past the cut-off, by binary search.
         var low = 0, high = bucket.count
@@ -237,11 +270,7 @@ public final class Book {
             low = bucket.count
         }
         guard low > 0 else { return nil }
-        // Rewind to the first price sharing the winning date.
-        let winning = bucket[low - 1].date
-        var first = low - 1
-        while first > 0, bucket[first - 1].date == winning { first -= 1 }
-        return bucket[first]
+        return bucket[low - 1]
     }
 
     /// The most recent price of `commodity` in `currency` on or before `date`

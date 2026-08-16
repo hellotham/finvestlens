@@ -96,21 +96,44 @@ extension AppModel {
         return book.exchangeRate(from: currencyCommodity(code), to: reportCurrency, on: date)
     }
 
-    /// Fetches a live rate for one unit of `code` in the report currency
-    /// (Yahoo `MYRAUD=X`, keyless) and stores it in the price DB so future
-    /// lookups — and reports — can use it. Throws with the provider's reason
-    /// so the UI can say why a fetch failed rather than doing nothing.
+    /// Fetches a live rate for one unit of `code` in the report currency and
+    /// stores it in the price DB so future lookups — and reports — can use it.
+    /// Throws with the provider's reason so the UI can say why a fetch failed
+    /// rather than doing nothing.
+    ///
+    /// Routed through the book's configured provider like every other fetch
+    /// (`FR-INV-22`). It used to name Yahoo outright, which is the same
+    /// hardcoding that had ⌘⇧U and the six-hourly refresh ignoring a
+    /// configured provider — a book set up for EODHD still had its rates
+    /// fetched by Yahoo, with nothing on screen saying so.
+    ///
+    /// The preferred provider is used only when its FX spelling is known
+    /// (``QuoteProviderKind/fxSymbol(from:to:)``); otherwise this falls back to
+    /// Yahoo, which is keyless and always available. Falling back is right
+    /// here: an unverified symbol would return "no data", and reporting "there
+    /// is no MYR/AUD rate" would be worse than fetching a correct one from a
+    /// provider whose name the row still records.
+    @discardableResult
     public func fetchLiveFxRate(code: String) async throws -> Decimal {
         let foreign = currencyCommodity(code)
-        let symbol = "\(code)\(reportCurrency.mnemonic)=X"
-        let service = QuoteService(keys: apiKeys, http: quoteHTTP)
-        let price = try await service.latestPrice(
-            for: foreign, in: reportCurrency, using: .yahoo, symbolOverride: symbol)
-        guard price.value > 0 else {
-            throw QuoteError.noData
+        let preferred = preferredQuoteProvider
+        let kind = preferred.fxSymbol(from: code, to: reportCurrency.mnemonic) == nil
+            ? .yahoo : preferred
+        guard let symbol = kind.fxSymbol(from: code, to: reportCurrency.mnemonic) else {
+            throw QuoteError.unsupported("No exchange-rate source is configured.")
         }
+        let service = QuoteService(keys: apiKeys, http: quoteHTTP)
+        // Every plausibility check a security price gets — a zero, a 1970 date,
+        // a currency that is not the one asked for — applies to a rate too, and
+        // they all live in `QuoteService.price(from:)`, so this needs no
+        // guard of its own beyond what that throws.
+        let price = try await service.latestPrice(
+            for: foreign, in: reportCurrency, using: kind, symbolOverride: symbol)
         editingPrices(named: "Fetch Exchange Rate") {
-            book?.addPrice(price)
+            // Deduplicated like every other price write: this used to append
+            // unconditionally, so pressing the button twice in a day left two
+            // identical rows and `latestPrice` picked between them.
+            book?.addPrices(deduplicating: [price])
         }
         return price.value
     }

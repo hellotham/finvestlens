@@ -314,7 +314,7 @@ struct FIIGHistoryTests {
     }
 
     private func day(_ text: String) -> Date {
-        FIIGQuoteProvider.day.date(from: text)!
+        FIIGQuoteProvider.priceDay(from: text)!
     }
 
     @Test("An ISIN resolves to FIIG's id and returns the daily series")

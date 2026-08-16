@@ -47,6 +47,18 @@ extension AppModel {
         }
     }
 
+    /// Whether this security is one the market quotes per 100 of face value.
+    ///
+    /// The book's own namespace is the only signal available for a price that
+    /// arrived without a provider — a hand-typed row. Shared with
+    /// ``rescaleBondPrices(apply:)``, which had this test inline and was
+    /// therefore the only thing that knew it.
+    func isParQuoted(_ commodity: Commodity) -> Bool {
+        guard case let .security(name) = commodity.namespace else { return false }
+        return name.localizedCaseInsensitiveContains("bond")
+            || name.localizedCaseInsensitiveContains("fiig")
+    }
+
     /// One published par-percent figure, in this security's unit.
     func parPercentScaled(_ published: Decimal, for commodity: Commodity) -> Decimal {
         let perHundred = published
@@ -115,13 +127,7 @@ extension AppModel {
         var found: [MisscaledPrice] = []
         var corrections: [(Price, Decimal)] = []
 
-        let bonds = Set(book.prices.map(\.commodity).filter {
-            if case let .security(name) = $0.namespace {
-                return name.localizedCaseInsensitiveContains("bond")
-                    || name.localizedCaseInsensitiveContains("fiig")
-            }
-            return false
-        })
+        let bonds = Set(book.prices.map(\.commodity).filter(isParQuoted))
 
         for commodity in bonds {
             let rows = book.prices.filter { $0.commodity == commodity }

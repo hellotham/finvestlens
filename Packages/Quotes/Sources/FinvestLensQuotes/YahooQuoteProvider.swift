@@ -63,24 +63,23 @@ public struct YahooQuoteProvider: QuoteProvider {
         guard let price = result.meta.regularMarketPrice else {
             throw QuoteError.malformedResponse("missing regularMarketPrice")
         }
-        // A zero is not a price, and Yahoo answers 200 with one.
+        // A zero, a missing timestamp and a foreign currency are all refused —
+        // but in `QuoteService.price(from:)`, not here.
         //
-        // Measured 15 Aug 2026: asking for `WMX` — an ASX ticker without its
-        // `.AX` suffix — returns an NYSE **index** stub with
-        // `regularMarketPrice: 0.0`, `currency: null` and no name. The `guard
-        // let` above passes it (0 is not nil) and nothing downstream checks a
-        // magnitude, so the security would have been valued at zero from a
-        // successful-looking fetch. Failing here turns a silently wrong price
-        // into a message naming the symbol that produced it.
-        guard price > 0 else {
-            throw QuoteError.malformedResponse(
-                "\(result.meta.symbol ?? fallbackSymbol) priced at zero — check the ticker's exchange suffix")
-        }
+        // This guard used to live in this method, and only in this method: the
+        // zero Yahoo answers 200 with (measured 15 Aug 2026: `WMX`, an ASX
+        // ticker without its `.AX` suffix, returns an NYSE **index** stub
+        // priced 0.0) was caught, while the identical zero from EODHD, Stooq,
+        // Alpha Vantage, Finnhub or Yahoo's own *history* went straight into
+        // the book. One provider's parser is the wrong altitude for a rule
+        // about what may become a price; the service every path funnels
+        // through is the right one.
         let time = result.meta.regularMarketTime.map { Date(timeIntervalSince1970: TimeInterval($0)) } ?? Date(timeIntervalSince1970: 0)
         return Quote(symbol: result.meta.symbol ?? fallbackSymbol,
                      currencyCode: result.meta.currency,
                      price: price,
-                     date: time)
+                     date: time,
+                     exchangeOffsetFromGMT: result.meta.gmtoffset)
     }
 
     static func parseHistory(_ data: Data, fallbackSymbol: String) throws -> [Quote] {
@@ -96,7 +95,8 @@ public struct YahooQuoteProvider: QuoteProvider {
             guard index < closes.count, let close = closes[index] else { continue }
             quotes.append(Quote(symbol: symbol, currencyCode: currency,
                                 price: close,
-                                date: Date(timeIntervalSince1970: TimeInterval(epoch))))
+                                date: Date(timeIntervalSince1970: TimeInterval(epoch)),
+                                exchangeOffsetFromGMT: result.meta.gmtoffset))
         }
         guard !quotes.isEmpty else { throw QuoteError.noData }
         return quotes
@@ -136,6 +136,9 @@ public struct YahooQuoteProvider: QuoteProvider {
             let symbol: String?
             let regularMarketPrice: Decimal?
             let regularMarketTime: Int?
+            /// The exchange's offset from GMT in seconds — how an instant
+            /// becomes the trading day it belongs to.
+            let gmtoffset: Int?
         }
         struct Indicators: Decodable {
             let quote: [QuoteSeries]

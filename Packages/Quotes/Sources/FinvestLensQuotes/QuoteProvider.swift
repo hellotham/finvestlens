@@ -78,6 +78,28 @@ public enum QuoteProviderKind: String, CaseIterable, Codable, Sendable, Identifi
     /// about a mnemonic it has never heard of and report "not found" forever.
     public var matchesByIdentifier: Bool { self == .fiig }
 
+    /// Whether the provider states the currency its prices are in.
+    ///
+    /// Four do not — EODHD, Alpha Vantage, Finnhub and Stooq all answer with a
+    /// number and no denomination — so for those the currency guard has only
+    /// the security's own exchange to go on
+    /// (`QuoteService.impliedCurrency(for:symbol:)`), which a bare mnemonic
+    /// does not supply. That makes this a **preference order**, not a filter:
+    /// when several providers could serve the same security, ask one that will
+    /// say what currency it is answering in first.
+    ///
+    /// The cross-provider fallback sweep used to order candidates by
+    /// `rawValue`, which is alphabetical and therefore meaningless — it put
+    /// `alphaVantage`, `eodhd` and `finnhub` ahead of `yahoo` for every
+    /// security, so the recovery path preferred exactly the providers whose
+    /// answers cannot be checked.
+    public var reportsCurrency: Bool {
+        switch self {
+        case .yahoo, .twelveData, .fiig, .wilson: return true
+        case .eodhd, .alphaVantage, .finnhub, .stooq: return false
+        }
+    }
+
     /// Whether this provider publishes prices as a **percentage of par**
     /// rather than as a price per unit.
     ///
@@ -94,6 +116,22 @@ public enum QuoteProviderKind: String, CaseIterable, Codable, Sendable, Identifi
     /// lookups. Asking per security would be eleven full downloads of the same
     /// payload.
     public var isBatch: Bool { self == .fiig }
+
+    /// How this provider spells the currency pair `base`→`quote`, or `nil`
+    /// when it is not known to serve FX in a form that has been checked.
+    ///
+    /// Deliberately sparse. Yahoo's `MYRAUD=X` is here because it is the form
+    /// the app has been fetching rates with; the others are left out **because
+    /// their spelling has not been verified against the live API**, and a
+    /// guessed symbol does not fail loudly — it returns "no data", which reads
+    /// as "there is no rate for this pair". A caller that gets `nil` should
+    /// fall back to a provider that answers rather than report a failure.
+    public func fxSymbol(from base: String, to quote: String) -> String? {
+        switch self {
+        case .yahoo: return "\(base.uppercased())\(quote.uppercased())=X"
+        case .eodhd, .alphaVantage, .finnhub, .twelveData, .stooq, .fiig, .wilson: return nil
+        }
+    }
 
     /// Where the user can obtain an API key.
     public var signupURL: URL? {

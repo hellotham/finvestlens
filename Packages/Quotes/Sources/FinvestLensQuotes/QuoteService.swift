@@ -243,26 +243,142 @@ public struct QuoteService: Sendable {
     /// something a silent relabel can fix.
     struct CurrencyMismatch: Error, CustomStringConvertible {
         let symbol: String, reported: String, expected: String
+        /// Whether `reported` came from the provider or was inferred from the
+        /// security's exchange. Worth saying: an inference can be wrong in a
+        /// way a provider's own answer cannot, and the person reading the
+        /// message is the one who can correct the namespace.
+        var inferred = false
         var description: String {
-            "\(symbol) priced in \(reported), not \(expected) — check the ticker's exchange suffix"
+            inferred
+                ? "\(symbol) trades in \(reported), not \(expected) — \(reported) is what its exchange settles in; set the security's quote symbol or currency"
+                : "\(symbol) priced in \(reported), not \(expected) — check the ticker's exchange suffix"
         }
     }
 
+    /// A provider answered, but with something that cannot be a price.
+    struct ImplausibleQuote: Error, CustomStringConvertible {
+        let symbol: String, reason: String
+        var description: String { "\(symbol) \(reason)" }
+    }
+
+    /// What an exchange settles in, keyed by the suffix a provider spells it
+    /// with — Yahoo's (`AX`, `L`, `T`), EODHD's (`AU`, `LSE`, `TSE`) and
+    /// Stooq's (`au`, `uk`, `jp`) alike, because the symbol reaching this
+    /// point is in whichever provider's spelling answered.
+    ///
+    /// This exists so the currency guard can fire on the providers that
+    /// **cannot report a currency at all**. EODHD, Alpha Vantage, Finnhub and
+    /// Stooq all return `currencyCode: nil`, so the mismatch check below was
+    /// unreachable for four of the seven — the exact hole through which a
+    /// USD close is stored as an AUD unit price.
+    static let suffixCurrency: [String: String] = [
+        "AX": "AUD", "AU": "AUD",
+        "NZ": "NZD",
+        "L": "GBP", "LSE": "GBP", "UK": "GBP",
+        "TO": "CAD", "V": "CAD", "CA": "CAD",
+        "HK": "HKD",
+        "SI": "SGD", "SG": "SGD",
+        "T": "JPY", "TSE": "JPY", "JP": "JPY",
+        "DE": "EUR", "XETRA": "EUR", "PA": "EUR", "AS": "EUR", "MI": "EUR", "MC": "EUR",
+        "SW": "CHF",
+        "US": "USD",
+    ]
+
+    /// The currency this security's own exchange implies, or `nil` when
+    /// nothing names an exchange.
+    ///
+    /// Two sources, in order of how much they prove. A **namespace** is an
+    /// explicit statement about where the security trades, so `NASDAQ` implies
+    /// USD even though its Yahoo tickers carry no suffix. A **suffix on the
+    /// symbol** is nearly as good. The absence of a suffix implies nothing at
+    /// all and must not be read as "US" — a managed fund, a super option or a
+    /// bond carries a bare code and is not American; guessing USD for those
+    /// would refuse prices that are perfectly correct.
+    static func impliedCurrency(for commodity: Commodity, symbol: String) -> String? {
+        if case let .security(exchange) = commodity.namespace {
+            let name = exchange.uppercased()
+            // A US venue's Yahoo suffix is the empty string, so it cannot come
+            // through the suffix table; the namespace is what states it.
+            if let suffix = yahooSuffix[name] {
+                return suffix.isEmpty ? "USD" : suffixCurrency[suffix]
+            }
+            if let direct = suffixCurrency[name] { return direct }
+        }
+        let parts = symbol.trimmingCharacters(in: .whitespaces).split(separator: ".", maxSplits: 1)
+        guard parts.count == 2 else { return nil }
+        return suffixCurrency[parts[1].uppercased()]
+    }
+
+    /// The one gate between a provider's answer and a stored price.
+    ///
+    /// Every fetch in this file — latest, batch and history — funnels through
+    /// here, which is the point: the checks below were previously scattered or
+    /// absent. The zero check existed in `YahooQuoteProvider.parseLatest` and
+    /// nowhere else, so Yahoo's own *history* and every other provider could
+    /// write a zero; the currency check could not fire on the four providers
+    /// that report no currency. A rule about what may become a price belongs
+    /// where all prices are made, not in one parser.
     static func price(from quote: Quote, commodity: Commodity, currency: Commodity,
                       kind: QuoteProviderKind) throws -> Price {
-        let source = "Finance::Quote:\(kind.rawValue)"
-        if let reported = quote.currencyCode, !reported.isEmpty,
-           reported.caseInsensitiveCompare(currency.mnemonic) != .orderedSame {
-            throw CurrencyMismatch(symbol: quote.symbol, reported: reported,
-                                   expected: currency.mnemonic)
+        // 1. A number that is not a price. Yahoo answers 200 with `0.0` for a
+        //    ticker that resolves to an index stub (measured 15 Aug 2026: bare
+        //    `WMX` instead of `WMX.AX`); a negative close is malformed data.
+        guard quote.price > 0 else {
+            throw ImplausibleQuote(symbol: quote.symbol,
+                                   reason: "priced at \(quote.price) — check the ticker's exchange suffix")
         }
+
+        // 2. A date that is not a date. Providers fall back to
+        //    `Date(timeIntervalSince1970: 0)` when a response carries no
+        //    timestamp, and a price dated 1970 outranks nothing but pollutes
+        //    every series it lands in. A year ahead is equally impossible and
+        //    would win `latestPrice` forever.
+        guard quote.date > Self.earliestPlausible else {
+            throw ImplausibleQuote(symbol: quote.symbol, reason: "returned no observation date")
+        }
+        guard quote.date < Date(timeIntervalSinceNow: 366 * 24 * 3600) else {
+            throw ImplausibleQuote(symbol: quote.symbol, reason: "is dated more than a year ahead")
+        }
+
+        // 3. A price of something else. A quote whose currency is not the one
+        //    asked for is not a price of this security — see the type's own
+        //    note for the 1,205 rows that taught this.
+        let expected = currency.mnemonic
+        if let reported = quote.currencyCode?.trimmingCharacters(in: .whitespaces), !reported.isEmpty {
+            guard reported.caseInsensitiveCompare(expected) == .orderedSame else {
+                throw CurrencyMismatch(symbol: quote.symbol, reported: reported, expected: expected)
+            }
+        } else if let implied = impliedCurrency(for: commodity, symbol: quote.symbol) {
+            guard implied.caseInsensitiveCompare(expected) == .orderedSame else {
+                throw CurrencyMismatch(symbol: quote.symbol, reported: implied,
+                                       expected: expected, inferred: true)
+            }
+        }
+
+        // 4. The day it belongs to. A close is a fact about a trading day, so
+        //    the instant is reduced to the civil day of the **exchange** when
+        //    the provider says which one — Yahoo's 16:00 New York close is the
+        //    14th in New York and 06:00 on the 15th in Sydney, and reading it
+        //    in the reader's calendar dated every US close a day late.
+        //    Date-only providers send no offset and are already neutral.
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = quote.exchangeOffsetFromGMT
+            .flatMap { TimeZone(secondsFromGMT: $0) } ?? .current
+        let day = Price.dayNeutral(quote.date, calendar: calendar)
+
         return Price(
             commodity: commodity,
             currency: currency,
-            date: quote.date,
+            date: day,
             value: quote.price,
-            source: source,
-            type: "last"
+            source: "Finance::Quote:\(kind.rawValue)",
+            type: "last",
+            preservingTime: true
         )
     }
+
+    /// Before this, a "date" is a provider's missing-value sentinel rather than
+    /// an observation. Epoch plus a day, so a genuine 1970-01-01 in a fixture
+    /// is still refused but nothing real is near the line.
+    static let earliestPlausible = Date(timeIntervalSince1970: 86_400)
 }

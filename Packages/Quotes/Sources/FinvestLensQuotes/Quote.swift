@@ -23,12 +23,25 @@ public struct Quote: Sendable, Hashable {
     public var price: Decimal
     /// The observation date/time.
     public var date: Date
+    /// Seconds from GMT of the **exchange** the price was struck on, when the
+    /// provider discloses it (Yahoo's `meta.gmtoffset`).
+    ///
+    /// A daily close belongs to the trading day of its own exchange, not of
+    /// whoever is reading. Yahoo reports the close of a US session as an
+    /// instant — 16:00 New York — which in Sydney is 06:00 the *next* morning,
+    /// so stamping it in the reader's calendar dated every US close a day
+    /// late while the same security's date-only providers dated it correctly.
+    /// `nil` means the provider published a civil date rather than an instant,
+    /// and ``QuoteDate`` has already put it on neutral ground.
+    public var exchangeOffsetFromGMT: Int?
 
-    public init(symbol: String, currencyCode: String? = nil, price: Decimal, date: Date) {
+    public init(symbol: String, currencyCode: String? = nil, price: Decimal, date: Date,
+                exchangeOffsetFromGMT: Int? = nil) {
         self.symbol = symbol
         self.currencyCode = currencyCode
         self.price = price
         self.date = date
+        self.exchangeOffsetFromGMT = exchangeOffsetFromGMT
     }
 }
 

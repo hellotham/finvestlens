@@ -107,7 +107,17 @@ public struct FIIGQuoteProvider: BatchQuoteProvider, FundamentalsProvider {
     /// pagination, `priceValue` on the same percent-of-par scale as the index.
     public func history(symbol: String, from: Date, to: Date) async throws -> [Quote] {
         let key = Self.normalise(symbol)
-        guard let id = try await identifiers()[key] else { throw QuoteError.noData }
+        // The index is fetched for the numeric id anyway, so the denomination
+        // comes free — and it has to come from somewhere. The history rows
+        // carry no currency of their own, so this used to send `nil` while the
+        // *latest* price for the same bond carried `marketRegion`. A GBP bond's
+        // daily fetch was therefore refused as a mismatch while its rebuilt
+        // history was accepted as AUD: the same instrument, two answers,
+        // decided by which button was pressed.
+        guard let record = try await record(for: key), let id = record.georgiaId else {
+            throw QuoteError.noData
+        }
+        let currency = record.marketRegion
 
         var components = URLComponents()
         components.scheme = "https"
@@ -125,11 +135,11 @@ public struct FIIGQuoteProvider: BatchQuoteProvider, FundamentalsProvider {
         // the symbol echoed back is the one that was asked for.
         let quotes = decoded.data.compactMap { row -> Quote? in
             guard let price = row.priceValue,
-                  let date = Self.day.date(from: row.priceDate) else { return nil }
+                  let date = Self.priceDay(from: row.priceDate) else { return nil }
             guard date >= Self.startOfDay(from), date <= Self.endOfDay(to) else { return nil }
             // As published — percent of par, like `latestQuote`. The book
             // scales it, because only the book knows what a unit is here.
-            return Quote(symbol: symbol, currencyCode: nil, price: price, date: date)
+            return Quote(symbol: symbol, currencyCode: currency, price: price, date: date)
         }
         guard !quotes.isEmpty else { throw QuoteError.noData }
         return quotes.sorted { $0.date < $1.date }
@@ -143,15 +153,17 @@ public struct FIIGQuoteProvider: BatchQuoteProvider, FundamentalsProvider {
         return try Self.parseRecords(data).compactMapValues(\.georgiaId)
     }
 
-    /// `priceDate` is a plain `yyyy-MM-dd`; parsed in UTC so a price dated the
-    /// 14th is the 14th everywhere, matching how the book stamps price days.
-    static let day: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = TimeZone(identifier: "UTC")
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter
-    }()
+    /// One bond's whole index record — the id *and* the denomination, from the
+    /// same request `identifiers()` makes.
+    func record(for normalisedISIN: String) async throws -> Bond? {
+        let data = try await http.get(indexURL(), headers: Self.headers)
+        return try Self.parseRecords(data)[normalisedISIN]
+    }
+
+    /// `priceDate` is a plain `yyyy-MM-dd`. Parsed through ``QuoteDate``, which
+    /// lands it on 10:59Z — the one instant that names the same civil day for
+    /// every reader, and the time the book stamps prices with anyway.
+    static func priceDay(from string: String) -> Date? { QuoteDate.date(from: string) }
 
     private static func startOfDay(_ date: Date) -> Date {
         var calendar = Calendar(identifier: .gregorian)

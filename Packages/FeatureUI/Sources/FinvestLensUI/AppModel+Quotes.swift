@@ -236,6 +236,82 @@ extension AppModel {
         return out
     }
 
+    // MARK: The cross-provider sweep (`FR-INV-22`)
+
+    /// The providers worth trying for a security `tried` could not serve, best
+    /// first.
+    ///
+    /// **Best** means "most checkable". A provider that reports the currency it
+    /// is answering in can be caught pricing the wrong instrument; one that
+    /// does not cannot, and its answer is accepted on the strength of the
+    /// ticker alone. This used to sort by `rawValue` — alphabetical, so
+    /// `alphaVantage`, `eodhd` and `finnhub` were all tried before `yahoo`,
+    /// meaning the recovery path systematically preferred the four providers
+    /// whose answers nothing can verify.
+    ///
+    /// FIIG is excluded: one request downloads its entire 510 KB index, so
+    /// probing it per security would cost that once per unpriced holding. A
+    /// bond reaches FIIG through its own per-security provider, which
+    /// ``fiigCandidates`` exists to offer.
+    func fallbackProviders(after tried: QuoteProviderKind) -> [QuoteProviderKind] {
+        availableProviders
+            .filter { $0 != tried && !$0.matchesByIdentifier }
+            .sorted { a, b in
+                a.reportsCurrency == b.reportsCurrency
+                    ? a.rawValue < b.rawValue
+                    : a.reportsCurrency
+            }
+    }
+
+    /// Offers each security the run could not price to the book's **other**
+    /// configured providers, and reports what that recovered.
+    ///
+    /// Until this existed, a security the chosen provider could not serve was
+    /// reported and left unpriced, so which securities got prices depended on
+    /// which provider happened to run. Measured on the reference book: EODHD
+    /// priced 30 securities a day to 11 Aug, Yahoo took over on the 12th and
+    /// priced 21, and eleven holdings quietly stopped being valued — AMP, COL,
+    /// IAG, LLC, PL8, PPT, VAP, VDHG, YMAX, MG, WMX. Nothing was wrong with
+    /// those securities; the run had changed underneath them.
+    ///
+    /// It lives here, taking the fetch as a parameter, because it must serve
+    /// **both** write paths. It was first written inside `fetchLatestQuotes`,
+    /// which no button calls — only the six-hourly auto-refresh does — so ⌘⇧U,
+    /// the Quotes sheet and per-security update, all of which go through
+    /// `fetchHistory`, never got the coverage it was added for.
+    private func recoverMissing(
+        _ missing: [Commodity],
+        using kind: QuoteProviderKind,
+        fetch: (Commodity, QuoteProviderKind) async throws -> [Price]
+    ) async -> (prices: [Price], recovered: Set<Commodity>) {
+        guard !missing.isEmpty else { return ([], []) }
+        var prices: [Price] = []
+        var recovered: Set<Commodity> = []
+        for commodity in missing {
+            let tried = effectiveProvider(for: commodity, in: kind)
+            for alternate in fallbackProviders(after: tried) {
+                quoteStatus = .fetching("\(commodity.mnemonic) via \(alternate.displayName)")
+                guard let found = try? await fetch(commodity, alternate), !found.isEmpty else {
+                    continue
+                }
+                prices.append(contentsOf: normalisedParPercent(found, from: alternate))
+                recovered.insert(commodity)
+                break
+            }
+        }
+        return (prices, recovered)
+    }
+
+    /// A security recovered elsewhere is not a failure, so its first provider's
+    /// complaint comes off the list — otherwise every run would report problems
+    /// it had already solved.
+    private static func dropRecoveredFailures(_ failures: inout [String],
+                                              _ recovered: Set<Commodity>) {
+        guard !recovered.isEmpty else { return }
+        let names = Set(recovered.map(\.mnemonic))
+        failures.removeAll { line in names.contains { line.hasPrefix("\($0):") } }
+    }
+
     /// Fetches the latest quote for every held security using `kind` and adds a
     /// price for each success. Failures for individual symbols are collected but
     /// do not abort the run (`FR-INV-03`).
@@ -301,67 +377,22 @@ extension AppModel {
                 quoteProgress = Double(done) / Double(commodities.count)
             }
         }
-        // **The sweep that makes coverage provider-independent.**
-        //
-        // Until now a security the chosen provider could not serve was simply
-        // reported and left unpriced, so which securities got prices depended
-        // on which provider happened to run. Measured on the reference book:
-        // EODHD priced 30 securities a day to 11 Aug, Yahoo took over on the
-        // 12th and priced 21, and eleven holdings quietly stopped being valued
-        // — AMP, COL, IAG, LLC, PL8, PPT, VAP, VDHG, YMAX, MG, WMX. Nothing was
-        // wrong with those securities; the run had changed underneath them.
-        //
-        // So anything still unpriced is offered to every *other* configured
-        // provider before being called a failure. The priced set becomes the
-        // union of what the book's providers can do between them, which is the
-        // same set whichever one leads — and `Price.source` still records who
-        // actually served each row, so the book never loses that.
         let servedSoFar = Set(fetched.map(\.commodity))
-        let stillMissing = commodities.filter { !servedSoFar.contains($0) }
-        if !stillMissing.isEmpty {
-            var recovered: Set<Commodity> = []
-            for commodity in stillMissing {
-                let tried = effectiveProvider(for: commodity, in: kind)
-                for alternate in availableProviders.sorted(by: { $0.rawValue < $1.rawValue })
-                where alternate != tried && !alternate.matchesByIdentifier {
-                    quoteStatus = .fetching("\(commodity.mnemonic) via \(alternate.displayName)")
-                    if let price = try? await service.latestPrice(
-                        for: commodity, in: reportCurrency, using: alternate,
-                        symbolOverride: quoteSymbol(for: commodity)) {
-                        fetched.append(contentsOf: normalisedParPercent([price], from: alternate))
-                        recovered.insert(commodity)
-                        break
-                    }
-                }
-            }
-            // A security recovered elsewhere is not a failure, so its first
-            // provider's complaint comes off the list — otherwise every run
-            // would report problems it had already solved.
-            if !recovered.isEmpty {
-                let names = Set(recovered.map(\.mnemonic))
-                failures.removeAll { line in
-                    names.contains(where: { line.hasPrefix("\($0):") })
-                }
-            }
+        let sweep = await recoverMissing(commodities.filter { !servedSoFar.contains($0) },
+                                          using: kind) { commodity, alternate in
+            [try await service.latestPrice(
+                for: commodity, in: reportCurrency, using: alternate,
+                symbolOverride: self.quoteSymbol(for: commodity))]
         }
+        fetched.append(contentsOf: sweep.prices)
+        Self.dropRecoveredFailures(&failures, sweep.recovered)
 
         // Collected first, then applied in one go: the fetches await, and an
         // edit has to snapshot and mutate without suspending in between.
-        // Identical same-day rows are skipped: the auto-refresh runs on every
-        // book open, and over a closed-market weekend each run returned the
-        // same Friday close — plain appends accumulated duplicate price rows
-        // forever (and made the "already current" toast unreachable).
-        let calendar = Calendar.current
-        func rowKey(_ price: Price) -> String {
-            let day = calendar.startOfDay(for: price.date).timeIntervalSinceReferenceDate
-            return "\(price.commodity.namespace):\(price.commodity.mnemonic):\(day):\(price.value)"
-        }
-        var seen = Set((book?.prices ?? []).map(rowKey))
-        let novel = fetched.filter { seen.insert(rowKey($0)).inserted }
-        let added = novel.count
-        if added > 0 {
+        var added = 0
+        if !fetched.isEmpty {
             editingPrices(named: "Fetch Quotes") {
-                for price in novel { book?.addPrice(price) }
+                added = book?.addPrices(deduplicating: fetched).count ?? 0
             }
         }
         quoteStatus = failures.isEmpty
@@ -467,20 +498,24 @@ extension AppModel {
         var toReplace: Set<Commodity> = []
         var toAdd: [Price] = []
         var failures: [String] = []
+        var unserved: [Commodity] = []
 
         quoteProgress = 0
         defer { quoteProgress = nil }
 
-        for (index, commodity) in commodities.enumerated() {
-            quoteStatus = .fetching("\(commodity.mnemonic) (\(index + 1) of \(commodities.count))")
-            let have = replacing ? [] : (existing[commodity] ?? [])
-
-            // Span the whole holding period so interior gaps get filled, not just
-            // the tail. In replace mode we always rebuild from the first holding.
+        // Span the whole holding period so interior gaps get filled, not just
+        // the tail. In replace mode we always rebuild from the first holding.
+        // Named because the fallback sweep below has to ask the same question.
+        func startDate(for commodity: Commodity) -> Date {
             let anchors = [replacing ? nil : existing[commodity]?.min(),
                            firstHoldingDate(for: commodity)].compactMap { $0 }
-            let start = anchors.min()
+            return anchors.min()
                 ?? calendar.date(byAdding: .year, value: -5, to: today) ?? today
+        }
+
+        for (index, commodity) in commodities.enumerated() {
+            quoteStatus = .fetching("\(commodity.mnemonic) (\(index + 1) of \(commodities.count))")
+            let start = startDate(for: commodity)
 
             // The security's own provider when it has one (`FR-INV-22`): a
             // bond's history request must reach FIIG, not the run's Yahoo.
@@ -511,21 +546,47 @@ extension AppModel {
                 if replacing && !fetched.isEmpty && provider.supportsHistory {
                     toReplace.insert(commodity)
                 }
-                let novel = fetched.filter { !have.contains(calendar.startOfDay(for: $0.date)) }
-                toAdd.append(contentsOf: novel)
+                if fetched.isEmpty { unserved.append(commodity) }
+                // Everything fetched is staged; which rows are new is decided
+                // once, by `Book.addPrices(deduplicating:)`, under GnuCash's own
+                // rule. This used to drop any date the book already held —
+                // stricter than a duplicate test, and it meant a corrected close
+                // could never replace the morning's provisional one.
+                toAdd.append(contentsOf: fetched)
             } catch {
                 failures.append("\(commodity.mnemonic): \(Self.describe(error))")
+                unserved.append(commodity)
             }
             quoteProgress = Double(index + 1) / Double(commodities.count)
         }
 
-        let added = toAdd.count
-        if !toReplace.isEmpty || added > 0 {
+        // The same coverage sweep the latest-quote path gets: a security this
+        // run's provider could not serve is offered to the book's others before
+        // being called a failure. Replace mode deliberately does **not** sweep —
+        // "rebuild this series" names a provider on purpose, and quietly
+        // rebuilding it from a different one is not what was asked.
+        if !replacing {
+            let sweep = await recoverMissing(unserved, using: kind) { commodity, alternate in
+                alternate.supportsHistory
+                    ? try await service.historicalPrices(
+                        for: commodity, in: self.reportCurrency, from: startDate(for: commodity),
+                        to: today, using: alternate,
+                        symbolOverride: self.quoteSymbol(for: commodity))
+                    : [try await service.latestPrice(
+                        for: commodity, in: self.reportCurrency, using: alternate,
+                        symbolOverride: self.quoteSymbol(for: commodity))]
+            }
+            toAdd.append(contentsOf: sweep.prices)
+            Self.dropRecoveredFailures(&failures, sweep.recovered)
+        }
+
+        var added = 0
+        if !toReplace.isEmpty || !toAdd.isEmpty {
             editingPrices(named: label) {
                 if !toReplace.isEmpty {
                     book?.removePrices { toReplace.contains($0.commodity) }
                 }
-                for price in toAdd { book?.addPrice(price) }
+                added = book?.addPrices(deduplicating: toAdd).count ?? 0
             }
         }
         if failures.isEmpty {

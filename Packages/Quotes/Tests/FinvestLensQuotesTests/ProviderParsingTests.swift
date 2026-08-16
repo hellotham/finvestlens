@@ -44,24 +44,21 @@ struct YahooProviderTests {
     "timestamp":[],"indicators":{"quote":[{"close":[]}]}}],"error":null}}
     """
 
-    /// A zero has to fail, not parse. Nothing downstream checks a magnitude,
-    /// so accepting this recorded a real security at 0.00 from a fetch that
-    /// looked successful — and a holding valued at zero is worse than one that
-    /// was never priced, because it reads as a fact.
-    @Test("A zero price is refused rather than recorded")
-    func zeroPriceIsRefused() async throws {
+    /// The parser's job is to report what Yahoo said; deciding whether that may
+    /// become a price is `QuoteService`'s, and is exercised in
+    /// ``QuoteGuardTests``. This pins the split: the zero still arrives intact,
+    /// carrying the symbol that produced it, so the guard can name it.
+    ///
+    /// It used to be refused here and *only* here, which is why the identical
+    /// zero from EODHD, Stooq, Alpha Vantage, Finnhub or Yahoo's own history
+    /// went straight into a book.
+    @Test("A zero parses, carrying the symbol that produced it")
+    func zeroPriceReachesTheGuard() async throws {
         let http = StubHTTPClient()
         http.on("chart", body: Self.zeroPriceJSON)
-        await #expect(throws: QuoteError.self) {
-            try await YahooQuoteProvider(http: http).latestQuote(symbol: "WMX")
-        }
-        // And the message names the symbol, so the cause is findable.
-        do {
-            _ = try await YahooQuoteProvider(http: http).latestQuote(symbol: "WMX")
-            Issue.record("expected a throw")
-        } catch {
-            #expect("\(error)".contains("WMX"))
-        }
+        let quote = try await YahooQuoteProvider(http: http).latestQuote(symbol: "WMX")
+        #expect(quote.price == 0)
+        #expect(quote.symbol == "WMX")
     }
 
     @Test("Decimal price is exact (no binary-float drift)")

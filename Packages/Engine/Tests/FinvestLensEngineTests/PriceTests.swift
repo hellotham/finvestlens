@@ -68,7 +68,10 @@ struct PriceIndexEquivalenceTests {
         for price in book.prices {
             guard price.commodity == commodity, price.currency == currency else { continue }
             if let date, price.date > date { continue }
-            if best == nil || price.date > best!.date { best = price }
+            // `>=`: the LAST price of the winning day wins, which is what
+            // `Book.latest(in:on:)` now returns — later arrival is the only
+            // evidence of recency there is once every price is day-neutral.
+            if best == nil || price.date >= best!.date { best = price }
         }
         return best
     }
@@ -78,7 +81,10 @@ struct PriceIndexEquivalenceTests {
         for price in book.prices {
             guard price.commodity == commodity else { continue }
             if let date, price.date > date { continue }
-            if best == nil || price.date > best!.date { best = price }
+            // `>=`: the LAST price of the winning day wins, which is what
+            // `Book.latest(in:on:)` now returns — later arrival is the only
+            // evidence of recency there is once every price is day-neutral.
+            if best == nil || price.date >= best!.date { best = price }
         }
         return best
     }

@@ -66,6 +66,34 @@ public struct Price: Identifiable, Codable, Hashable, Sendable {
                                              hour: 10, minute: 59, second: 0)) ?? date
     }
 
+    /// What makes two price rows the same row.
+    ///
+    /// GnuCash's rule, verbatim from `libgnucash/engine/gnc-pricedb.cpp`
+    /// (`price_is_duplicate`): *"If the date, currency, commodity and price
+    /// match, it's a duplicate"* — and the date it compares is
+    /// `time64CanonicalDayTime`, the **day**, not the instant. So a second
+    /// observation of the same value on the same day is the same row, while a
+    /// *different* value on that day is a new one.
+    ///
+    /// That distinction is the whole point. Two rules were in use here: the
+    /// latest-quote path skipped a row only when day **and value** matched,
+    /// while the history path skipped any day it already held at all. The
+    /// second is stricter than it looks — it means a correction can never land,
+    /// and that the 06:00 auto-refresh's price is the only one a day can ever
+    /// have. One rule, GnuCash's, on both paths.
+    public struct Identity: Hashable, Sendable {
+        public let commodity: Commodity
+        public let currency: Commodity
+        public let day: Date
+        public let value: Decimal
+    }
+
+    /// This row's identity under the rule above.
+    public var identity: Identity {
+        Identity(commodity: commodity, currency: currency,
+                 day: Self.dayNeutral(date), value: value)
+    }
+
     /// Whether this price already carries the canonical time.
     public var isDayNeutral: Bool {
         var utc = Calendar(identifier: .gregorian)

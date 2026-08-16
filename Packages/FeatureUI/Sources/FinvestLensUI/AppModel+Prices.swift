@@ -36,10 +36,20 @@ extension AppModel {
     }
 
     /// Adds a price to the database (`FR-INV-02`).
+    ///
+    /// A bond typed by hand takes the same par scaling a fetched one does. The
+    /// market quotes 98.345 whether the number arrives from FIIG or from the
+    /// keyboard, and only fetched rows were being put onto the security's own
+    /// unit — so a book priced by both routes held both readings of the same
+    /// figure, a hundredfold apart, and a chart drew a cliff between them.
+    /// ``parPercentScaled(_:for:)`` picks whichever reading sits beside what
+    /// the security has actually cost, so someone who types the already-scaled
+    /// value is left alone.
     public func addPrice(commodity: Commodity, currency: Commodity, date: Date, value: Decimal) {
         guard let book else { return }
+        let scaled = isParQuoted(commodity) ? parPercentScaled(value, for: commodity) : value
         editingPrices(named: "Add Price") {
-            book.addPrice(Price(commodity: commodity, currency: currency, date: date, value: value))
+            book.addPrice(Price(commodity: commodity, currency: currency, date: date, value: scaled))
         }
     }
 
@@ -55,6 +65,14 @@ extension AppModel {
         public var imported = 0
         /// Symbols in the file that matched no known commodity (skipped).
         public var unmatchedSymbols: [String] = []
+        /// Currency codes the file named that the book does not know (skipped).
+        ///
+        /// These used to be silently replaced by the book's base currency, so a
+        /// file of USD closes imported into an AUD book became AUD closes — the
+        /// same mislabel that `QuoteService` now refuses on the fetch path, and
+        /// the one that wrote 1,205 wrong rows. A currency nobody can resolve
+        /// is a reason to skip the row and say so.
+        public var unknownCurrencies: [String] = []
         /// True when the file's header couldn't be recognised.
         public var unrecognisedFormat = false
     }
@@ -80,24 +98,35 @@ extension AppModel {
 
         var toAdd: [Price] = []
         var unmatched = Set<String>()
+        var unknownCurrency = Set<String>()
         for row in staged {
             guard let commodity = byMnemonic[row.commoditySymbol.uppercased()] else {
                 unmatched.insert(row.commoditySymbol); continue
             }
-            let currency = row.currencyCode.isEmpty
-                ? base
-                : (byMnemonic[row.currencyCode.uppercased()] ?? base)
+            // A named currency must resolve. Falling back to the base currency
+            // would relabel the number rather than reject it.
+            let currency: Commodity
+            if row.currencyCode.isEmpty {
+                currency = base
+            } else if let named = byMnemonic[row.currencyCode.uppercased()] {
+                currency = named
+            } else {
+                unknownCurrency.insert(row.currencyCode); continue
+            }
+            guard row.value > 0 else { continue }
             toAdd.append(Price(commodity: commodity, currency: currency, date: row.date,
                                value: row.value, source: "user:price"))
         }
 
+        var added = 0
         if !toAdd.isEmpty {
             editingPrices(named: "Import Prices") {
-                for price in toAdd { book.addPrice(price) }
+                added = book.addPrices(deduplicating: toAdd).count
             }
         }
-        outcome.imported = toAdd.count
+        outcome.imported = added
         outcome.unmatchedSymbols = unmatched.sorted()
+        outcome.unknownCurrencies = unknownCurrency.sorted()
         return outcome
     }
 
