@@ -149,16 +149,23 @@ extension AppModel {
 
     /// Records a transaction from `splits`, validating that it balances
     /// (`FR-REG-02`). Throws ``TransactionEntryError`` otherwise.
+    ///
+    /// - Parameter number: the transaction's Num (cheque number, reference).
+    ///   It had **no parameter at all**, so a new transaction could never be
+    ///   given one however it was created — the field was editable on an
+    ///   existing transaction and unreachable on a new one, so the New
+    ///   Transaction sheet had nowhere to send what was typed into it.
     @discardableResult
     public func addTransaction(date: Date, description: String, currency: Commodity,
                                splits: [SplitInput], tags: [String] = [],
-                               notes: String = "") throws -> GncGUID {
+                               notes: String = "", number: String = "") throws -> GncGUID {
         guard let book else { throw TransactionEntryError.noBook }
         let realSplits = splits.filter { $0.accountID != nil }
         guard realSplits.count >= 2 else { throw TransactionEntryError.tooFewSplits }
 
         let txn = Transaction(currency: currency, datePosted: date,
                               description: description, notes: notes)
+        txn.number = number.trimmingCharacters(in: .whitespaces)
         for input in realSplits {
             guard let id = input.accountID, let account = book.account(with: id) else {
                 throw TransactionEntryError.unknownAccount
@@ -721,6 +728,12 @@ extension AppModel {
         book?.split(with: splitID)?.transaction?.guid
     }
 
+    /// The account a split posts to — what All Transactions' entry bar anchors
+    /// to, since the whole book has no account of its own.
+    public func accountID(ofSplit splitID: GncGUID) -> GncGUID? {
+        book?.split(with: splitID)?.account?.guid
+    }
+
     /// A split's current reconcile state, for a menu that has to show a tick
     /// against it.
     public func reconcileState(ofSplit splitID: GncGUID) -> ReconcileState? {
@@ -731,7 +744,22 @@ extension AppModel {
     /// rather than one of its legs — a journal heading, say. The per-transaction
     /// operations do not care which leg they are reached through.
     public func anySplitID(ofTransaction id: GncGUID) -> GncGUID? {
-        book?.transaction(with: id)?.splits.first?.guid
+        guard let txn = book?.transaction(with: id) else { return nil }
+        // The **debit** leg, not `splits.first`.
+        //
+        // Storage order is whatever the importer or the editor happened to
+        // produce, so the same All Transactions row could hand a command a
+        // different leg after a round trip through GnuCash XML — and the
+        // consumers are leg-sensitive: Bulk Edit's Transfer rewrite takes "the
+        // other split" relative to this one, and Reconcile marks the one it is
+        // given. Picking the debit side makes the answer stable *and* the one
+        // the row is displaying: `wholeBookRowSummary` puts the debit total in
+        // the Amount cell, following `split-register-model.c:1650-1657`.
+        //
+        // A transaction with no positive leg (all zeros, a corporate action)
+        // falls back to the first, which is no worse than before and is the
+        // only remaining case where order decides.
+        return (txn.splits.first { $0.value > 0 } ?? txn.splits.first)?.guid
     }
 
     /// The leg of `id` that the **register currently on screen** is showing.

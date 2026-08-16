@@ -371,6 +371,21 @@ public struct WholeBookRowSummary: Sendable {
 @MainActor
 extension AppModel {
 
+    /// What the All Transactions summary bar can honestly say.
+    ///
+    /// Not a balance: the book has none, because every account nets against
+    /// the others. The count moves with the Filter sheet — which is the point
+    /// of showing it, now that All Transactions honours that filter at all —
+    /// and the debit total is what the Amount column adds up, on the same
+    /// definition the rows use.
+    public func wholeBookRegisterSummary() -> (count: Int, debits: Decimal) {
+        let transactions = journalTransactions(forAccountID: nil)
+        let debits = transactions.reduce(Decimal(0)) { running, txn in
+            running + txn.splits.filter { $0.value > 0 }.reduce(0) { $0 + $1.value }
+        }
+        return (transactions.count, debits)
+    }
+
     public func wholeBookRowSummary(ofTransaction id: GncGUID) -> WholeBookRowSummary {
         guard let txn = book?.transaction(with: id) else {
             return WholeBookRowSummary(reconcile: "", accounts: "", total: 0)

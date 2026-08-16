@@ -1204,7 +1204,17 @@ private final class SheetView: NSView, NSTextFieldDelegate {
         }
         updateMetrics()
 
-        let hidden = RegisterColumnVisibility.hidden(from: hiddenColumns)
+        var hidden = RegisterColumnVisibility.hidden(from: hiddenColumns)
+        // **The whole book has no running balance**, so it does not draw the
+        // column.
+        //
+        // Every whole-book row was built with `runningBalance: nil` — correctly,
+        // because the balance of a book is zero by construction and a running
+        // total of debits is not a balance — but the column was still drawn,
+        // headed "Balance", permanently blank down the whole register. An empty
+        // column reads as missing data rather than as a question with no answer,
+        // and it was taking 112pt from the columns that do have one.
+        if wholeBook { hidden.insert(.balance) }
         if hidden != self.hiddenColumns {
             self.hiddenColumns = hidden
             // A field in a column that just went away must not keep the
@@ -1853,7 +1863,16 @@ private final class SheetView: NSView, NSTextFieldDelegate {
     }
 
     private func drawLine(_ row: SheetRow, line: SheetLine, y: CGFloat, drafting: Bool) {
-        let code = currencyCode
+        // **This row's** currency, not the window's.
+        //
+        // `currencyCode` answers from the selected account, and All
+        // Transactions has none — so it fell through to the report currency and
+        // labelled every row AUD, including the USD invoices and the GBP bond
+        // interest. A single-account register is right to use one code, because
+        // every row in it posts to that one account; a whole-book register is
+        // exactly the case where that assumption does not hold, and the row
+        // already carries the answer.
+        let code = row.base.foreignCurrencyCode ?? currencyCode
 
         func cell(_ column: SheetColumn) -> CGRect {
             frames.rect(column, y: y, height: lineHeight)

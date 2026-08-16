@@ -1399,6 +1399,15 @@ struct ReconcileBadge: View {
 
 struct RegisterView: View {
     @Bindable var model: AppModel
+    /// Whether this is All Transactions rather than one account's register.
+    ///
+    /// The same view, because the chrome is the same job. `GeneralLedgerView`
+    /// used to render the bare sheet with nothing around it: no toolbar, so no
+    /// view-style menu, no filter button, no actions menu; no ⌘↑/⌘↓; no
+    /// attachments panel; no summary bar. Every one of those is a register
+    /// control, and All Transactions is a register — the fork was in the
+    /// wrapper, not in anything either of them needed.
+    var wholeBook = false
     @State private var filterShown = false
     @State private var goToDateShown = false
     /// GnuCash's View ▸ Double Line, renamed Show Details. A preference
@@ -1444,6 +1453,26 @@ struct RegisterView: View {
     /// Set by the ⌘↑/⌘↓ shortcuts; the table consumes and clears it.
     @State private var jump: RegisterEnd?
 
+    /// Which account the entry bar posts to.
+    ///
+    /// A single-account register answers this by being one; All Transactions
+    /// cannot, because GnuCash's general journal has no anchoring split
+    /// (`gnc-split-reg.c:894`) and neither does ours. So it borrows the account
+    /// of the **selected row** — which is precisely when a person knows where
+    /// the next entry goes, and is why the bar appears there at all rather than
+    /// being absent as it was.
+    ///
+    /// Subaccount registers still have none: the rows come from several
+    /// accounts and picking one of them silently would post to an account
+    /// nobody named.
+    private var entryAccountID: GncGUID? {
+        if wholeBook {
+            return model.selectedSplitID.flatMap { model.accountID(ofSplit: $0) }
+        }
+        guard !model.registerIncludesSubaccounts else { return nil }
+        return model.selectedAccountID
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             // The register is the document; the attachments panel is a pane
@@ -1459,8 +1488,7 @@ struct RegisterView: View {
                     // The entry bar belongs to every single-account style, not just
                     // Basic — same reason as the summary bar.
                     .safeAreaInset(edge: .bottom, spacing: 0) {
-                        if let accountID = model.selectedAccountID,
-                           !model.registerIncludesSubaccounts {
+                        if let accountID = entryAccountID {
                             VStack(spacing: 0) {
                                 Divider()
                                 RegisterEntryBar(model: model, accountID: accountID)
@@ -1485,7 +1513,10 @@ struct RegisterView: View {
                 }
             }
             }
-            if let summary = model.registerSummary {
+            if wholeBook {
+                Divider()
+                wholeBookSummaryBar
+            } else if let summary = model.registerSummary {
                 Divider()
                 summaryBar(summary)
             }
@@ -1703,7 +1734,13 @@ struct RegisterView: View {
 
     @ViewBuilder
     private var content: some View {
-        if model.selectedAccountID == nil {
+        if wholeBook {
+            #if os(macOS)
+            RegisterSheet(model: model, wholeBook: true, jump: $jump)
+            #else
+            RegisterTableView(model: model, wholeBook: true, jump: $jump)
+            #endif
+        } else if model.selectedAccountID == nil {
             ContentUnavailableView("Select an account", systemImage: "list.bullet.rectangle",
                                    description: Text("Choose an account to see its transactions."))
         } else if model.registerRows.isEmpty {
@@ -1762,6 +1799,35 @@ struct RegisterView: View {
         .background(.quaternary.opacity(0.4))
     }
 
+    /// What is true of the whole book, where a balance is not.
+    ///
+    /// The account summary's four cells are balances of one account, and the
+    /// book has none — every account nets to zero against the others, which is
+    /// the point of double entry. So this states the two facts the general
+    /// journal does have: how many transactions are showing (the filter is
+    /// live, so this moves when it does), and the total debits, which is the
+    /// figure the Amount column adds up.
+    private var wholeBookSummaryBar: some View {
+        let summary = model.wholeBookRegisterSummary()
+        let code = model.reportCurrency.mnemonic
+        return HStack(spacing: 16) {
+            HStack(spacing: 4) {
+                Text("Transactions:").foregroundStyle(.secondary)
+                Text("\(summary.count)").monospacedDigit()
+            }
+            HStack(spacing: 4) {
+                Text("Total debits:").foregroundStyle(.secondary)
+                Text(AmountFormat.string(summary.debits, code: code)).monospacedDigit()
+            }
+            Spacer()
+        }
+        .scaledFont(.caption)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .background(.quaternary.opacity(0.4))
+        .accessibilityElement(children: .combine)
+    }
+
     private var currencyCode: String {
         model.postableAccounts.first { $0.id == model.selectedAccountID }?.currencyCode
             ?? model.reportCurrency.mnemonic
@@ -1787,13 +1853,7 @@ struct GeneralLedgerView: View {
     var body: some View {
         // The same register as the accounts, over the whole book (FR-REG-09)
         // — one editing dialect everywhere.
-        #if os(macOS)
-        RegisterSheet(model: model, wholeBook: true, jump: $jump)
-            .navigationTitle("All Transactions")
-        #else
-        RegisterTableView(model: model, wholeBook: true, jump: $jump)
-            .navigationTitle("All Transactions")
-        #endif
+        RegisterView(model: model, wholeBook: true)
     }
 }
 
@@ -2813,6 +2873,14 @@ struct TransactionEditorSheet: View {
     @State private var loaded = false
     @State private var date = Date()
     @State private var description = ""
+    /// GnuCash's Num — a cheque number or an imported reference.
+    ///
+    /// The row editor this sheet hosts has always drawn the field; the sheet
+    /// simply never passed a value in or read one back, and `commit()` had
+    /// nowhere to send it because `addTransaction` had no `number:` parameter
+    /// at all. So Num was editable on an existing transaction, editable-looking
+    /// on a new one, and discarded on save.
+    @State private var number = ""
     @State private var notes = ""
     @State private var tagsText = ""
     @State private var lines: [EditableSplit] = [EditableSplit(), EditableSplit()]
@@ -2870,13 +2938,14 @@ struct TransactionEditorSheet: View {
         Binding(
             get: {
                 TransactionDraft(transactionID: editingID ?? hostRowID,
-                                 date: date, description: description,
+                                 date: date, number: number, description: description,
                                  notes: notes, tagsText: tagsText, lines: lines,
                                  currencyOverride: fxCurrencyOverride)
             },
             set: { new in
                 guard let new else { return }
                 date = new.date
+                number = new.number
                 description = new.description
                 notes = new.notes
                 tagsText = new.tagsText
@@ -2915,9 +2984,15 @@ struct TransactionEditorSheet: View {
         fxCurrencyOverride ?? model.transactionCurrency(for: lines.compactMap(\.accountID))
     }
     private var validLineCount: Int { lines.filter { $0.accountID != nil }.count }
-    private var isBalanced: Bool {
-        imbalance == 0 && validLineCount >= 2 && lines.allSatisfy(\.quantityIsValid)
-    }
+    /// The **draft's** answer, not a second copy of the arithmetic.
+    ///
+    /// This was a byte-identical restatement of `TransactionDraft.isBalanced`,
+    /// sitting beside the row editor that reads the draft's own — so the Save
+    /// button and the Balance cell in the row below it were two independent
+    /// opinions that happened to agree. They cannot drift if there is only one
+    /// of them, and the draft's is the one the register itself already uses in
+    /// all three of its save paths.
+    private var isBalanced: Bool { rowDraft.wrappedValue?.isBalanced ?? false }
     private var isEditing: Bool { editingID != nil }
 
     /// The document to show beside the editor: the prefill's, or the edited
@@ -3243,6 +3318,7 @@ struct TransactionEditorSheet: View {
     private func reloadFromBook(_ id: GncGUID) {
         guard let edit = model.editData(forTransaction: id) else { return }
         date = edit.date
+        number = edit.number
         description = edit.description
         notes = edit.notes
         lines = edit.splits.map { EditableSplit($0) }
@@ -3487,6 +3563,7 @@ struct TransactionEditorSheet: View {
         loaded = true
         if let editingID, let edit = model.editData(forTransaction: editingID) {
             date = edit.date
+            number = edit.number
             description = edit.description
             notes = edit.notes
             lines = edit.splits.map { EditableSplit($0) }
@@ -3535,11 +3612,12 @@ struct TransactionEditorSheet: View {
             if let targetID {
                 try model.updateTransaction(id: targetID, date: date, description: description,
                                             currency: currency, splits: inputs,
-                                            tags: parsedTags, notes: notes)
+                                            tags: parsedTags, notes: notes, number: number)
             } else {
                 let newID = try model.addTransaction(date: date, description: description,
                                                      currency: currency, splits: inputs,
-                                                     tags: parsedTags, notes: notes)
+                                                     tags: parsedTags, notes: notes,
+                                                     number: number)
                 // Recording a document: copy it into the folder and link it.
                 if let prefill = documentPrefill,
                    let data = try? Data(contentsOf: prefill.url) {

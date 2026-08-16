@@ -182,6 +182,65 @@ struct WholeBookRegisterTests {
     /// summing every leg gives zero on a balanced transaction. The debit total
     /// is what the row displays (`split-register-model.c:1650-1657`), so it is
     /// what the column sorts by.
+    // MARK: Parity with a single-account register (P13.4)
+
+    /// A balance is a fact about an account, and the book is not one. What All
+    /// Transactions can say is how many transactions are showing — which moves
+    /// with the Filter sheet, now that it honours one — and the debit total the
+    /// Amount column adds up.
+    @Test("The whole-book summary counts what is showing and totals the debits")
+    func wholeBookSummary() throws {
+        let f = try makeDatedBook()
+        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+
+        let all = f.model.wholeBookRegisterSummary()
+        #expect(all.count == 3)
+        #expect(all.debits == 135)          // 10 + 80 + 45
+
+        var filter = RegisterFilter.showAll
+        filter.startDate = Date(timeIntervalSince1970: 4_000_000)
+        f.model.registerFilter = filter
+        let filtered = f.model.wholeBookRegisterSummary()
+        #expect(filtered.count == 2)
+        #expect(filtered.debits == 125)     // 80 + 45
+    }
+
+    /// The row stands for a transaction, so the leg a command reaches through
+    /// it must not be decided by storage order — which a round trip through
+    /// GnuCash XML can change under a book that was never edited.
+    @Test("A whole-book row anchors on the debit leg, deterministically")
+    func anchorIsTheDebitLeg() throws {
+        let f = try makeFixture()
+        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+
+        let txn = try #require(f.model.addTransfer(from: f.bank, to: f.groceries,
+                                                   amount: 25, date: Date(),
+                                                   description: "Milk"))
+        let split = try #require(f.model.anySplitID(ofTransaction: txn))
+        // The debit is the expense side — where the money went.
+        #expect(f.model.accountID(ofSplit: split) == f.groceries)
+        // And it is the leg whose value the row displays.
+        let book = try #require(f.model.book)
+        #expect(try #require(book.split(with: split)).value == 25)
+    }
+
+    /// Num had no way in. `addTransaction` took no `number:` at all, so a
+    /// cheque number was editable on an existing transaction and impossible on
+    /// a new one.
+    @Test("A new transaction can be given a Num")
+    func newTransactionTakesANumber() throws {
+        let f = try makeFixture()
+        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+
+        let id = try f.model.addTransaction(
+            date: Date(), description: "Rent", currency: .aud,
+            splits: [SplitInput(accountID: f.bank, value: -900),
+                     SplitInput(accountID: f.groceries, value: 900)],
+            number: "  10421 ")
+        #expect(f.model.editData(forTransaction: id)?.number == "10421",
+                "trimmed, and actually stored")
+    }
+
     @Test("Sorting by amount uses the debit total the row shows")
     func wholeBookSortsByDisplayedTotal() throws {
         let f = try makeDatedBook()
