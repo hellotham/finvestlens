@@ -48,9 +48,14 @@ public enum SidebarSort: String, CaseIterable, Identifiable, Sendable {
 
     /// Whether rows may be dragged under this order.
     ///
-    /// Nothing reads this yet: the drag is off until the between-siblings
-    /// reorder exists (see `ModeSidebar.draggableAccountRow`). It stays because
-    /// it is the rule that gates it, not because it is wired.
+    /// Read in two places (`ModeSidebar`: the row's `canReorder`, and the
+    /// context menu's Move Up / Move Down). This said "nothing reads this yet"
+    /// while both call sites existed — written when the between-siblings
+    /// reorder was still missing and left behind when it landed.
+    ///
+    /// Dropping something *between* two rows of a sorted list is a promise the
+    /// sort would break on the next redraw, which is why only `manual` allows
+    /// it.
     public var allowsDragging: Bool { self == .manual }
 
     /// The one definition of where a mode's sort is stored. The sidebar reads

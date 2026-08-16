@@ -495,7 +495,7 @@ width than stacking the mode labels had saved, putting Reports and Business back
 in the overflow menu. Also corrected a claim that Wilson serves fundamentals
 while its factory returns `nil`.
 
-### P13.1 — Stop bad data entering the book
+### P13.1 — Stop bad data entering the book ✅ (16 Aug 2026, `60c3e19`)
 
 One guard layer between every provider and `addPrice`. Exit criteria:
 
@@ -518,7 +518,7 @@ One guard layer between every provider and `addPrice`. Exit criteria:
 - CSV price import validates currency, or is removed (it is unreachable today).
 - Typed bond prices are par-scaled like fetched ones.
 
-### P13.2 — Controls that do nothing
+### P13.2 — Controls that do nothing ✅ (16 Aug 2026, `40ebaec`)
 
 Wire or remove: the period selector (inert in 5 of 7 modes), the sort menu
 (inert in 3), All Transactions' filter and sort (ignored — and its sort header
@@ -530,7 +530,7 @@ Restore the unreachable: **`deleteBudget`** (a budget can never be removed),
 `renameSecurity`, `clearFundamentals(for:)`, and either wire or delete
 `importPrices(csv:)` and the eleven dead `inlineSet*` wrappers.
 
-### P13.3 — The owner's outstanding asks
+### P13.3 — The owner's outstanding asks ✅ (16 Aug 2026, `6b2ebba`)
 
 - **Investments tabs: All Holdings, then one per portfolio.** `securityAccountNodes`
   exists and the sidebar never reads it.
@@ -544,7 +544,7 @@ Restore the unreachable: **`deleteBudget`** (a budget can never be removed),
 - The stacked mode labels: read `ModeLabelFit` again (nothing does), and lift the
   label off the selected pill's bottom edge.
 
-### P13.4 — Register parity
+### P13.4 — Register parity ✅ (16 Aug 2026, `b2e20dc`)
 
 All Transactions gets a toolbar, entry bar, summary bar, a Balance that is not
 permanently blank, and amounts labelled in the transaction's currency rather than
@@ -554,7 +554,7 @@ everywhere (`addTransaction` has no `number:` parameter at all), description
 autocomplete everywhere, one `isBalanced` — the sheet's Save button and its own
 Balance cell currently disagree.
 
-### P13.5 — Documentation, then the gates
+### P13.5 — Documentation, then the gates ✅ (16 Aug 2026)
 
 `deferred.md:118` still files the wrong-currency stamping as an **accepted
 won't-fix**; that is the behaviour that wrote 1,205 bad rows. `FR-NAV-02` demands

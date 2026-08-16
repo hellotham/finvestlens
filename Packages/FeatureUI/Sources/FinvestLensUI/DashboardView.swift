@@ -556,6 +556,9 @@ struct DashboardView: View {
                             Spacer()
                             Image(systemName: "chevron.right")
                                 .scaledFont(.caption2).foregroundStyle(.tertiary)
+                                // Decoration: the row's name is its label, and
+                                // "chevron right" after every one is noise.
+                                .accessibilityHidden(true)
                         }
                         .contentShape(Rectangle())
                     }

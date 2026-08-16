@@ -115,10 +115,19 @@ Not open work — recorded so they aren't re-raised as bugs. Detail in
   imported day-only date can appear on the adjacent local day at a period edge;
   aligning would be a project-wide canonical-timezone decision, not a local fix,
   and changing only reports would be the regression.
-- **Quotes record the caller-specified currency** (production review) — a fetched
-  `Price` is stamped with the currency the caller asked for, not the provider's
-  reported `currencyCode` (which rides in `source` for provenance). Multi-currency
-  FX valuation is a higher layer by design.
+- ~~**Quotes record the caller-specified currency**~~ (production review) —
+  **reversed 16 Aug 2026. This was not a deferral, it was the bug.** The entry
+  read: "a fetched `Price` is stamped with the currency the caller asked for,
+  not the provider's reported `currencyCode` (which rides in `source` for
+  provenance)". Stamping a USD number as AUD is not a missing feature that a
+  higher layer could add later; it is a wrong price, and the provenance note in
+  `source` was legible to nothing that valued a holding. Measured on the
+  reference book: **1,205 rows across two securities**, including 836 USD closes
+  of a US-listed namesake recorded as an Australian super fund's AUD unit price.
+  `QuoteService.price(from:)` now refuses the mismatch outright (`FR-INV-40`),
+  and infers the currency from the security's own exchange for the four
+  providers that report none. Filed here as a won't-fix for three weeks, which
+  is why it is left visible rather than deleted.
 - **GnuCash-XML element text is whitespace-trimmed on import** (production review) —
   leading/trailing whitespace in memos/descriptions/notes/names is dropped so XML
   indentation can't leak into values; byte-for-byte text fidelity is sacrificed by

@@ -41,8 +41,10 @@ accounts get an empty menu deliberately — offering an account's Delete on a
 destination row would be worse than offering nothing.
 
 The wider sidebar design this belongs to — modes, per-mode collections, sorting
-and drag semantics — is in [navigation-design.md](navigation-design.md), which
-is still a proposal. This fix stands on its own and survives it.
+and drag semantics — is in [navigation-design.md](navigation-design.md). It
+**shipped** as phase P12 (§"Navigation redesign", below); this note pre-dates
+that and said "still a proposal" for a fortnight after it was not one. This fix
+stands on its own either way.
 
 ## Import review sheet — the crash on a real statement (15 Aug 2026)
 
@@ -2751,9 +2753,12 @@ says so. Dragging is offered only under manual order.
 **Deviations, recorded rather than hidden.** The sort control ships for Accounts
 only — balance, code and first-transaction are facts about an account. ⌘-click
 is not bound to "open in new tab": in a macOS `List` it is the extend-selection
-modifier. **Sidebar dragging is off**: `reorderAccount` and the kvp slot exist
-and are tested, but with no between-siblings drop target every drag re-parented,
-so a gesture that looked like sorting was quietly editing the chart of accounts.
+modifier. **Sidebar dragging was off** at this point in the phase: `reorderAccount` and
+the kvp slot existed and were tested, but with no between-siblings drop target
+every drag re-parented, so a gesture that looked like sorting was quietly
+editing the chart of accounts. That was fixed later in the same phase — see
+"Both halves of the sidebar drag are built" below, which is the current state.
+The two paragraphs contradicted each other for a fortnight.
 
 **What the review caught (15 Aug 2026).** A ten-angle review of the phase found
 fourteen real defects; the ones that mattered are fixed and pinned by test:
@@ -3164,8 +3169,140 @@ The window title is gone (HIG *Toolbars*: "If titling a toolbar seems redundant,
 you can leave the title area empty"), the tab strip names what is open, and the
 sidebar header names the mode.
 
-**Wilson Asset Management (`FR-INV-42`) is a price provider only for now.** Its
-fund pages carry a profile — inception, asset class, benchmark, fees, APIR,
-ARSN — but no parser reads it, so `servesFundamentals` says `false`: claiming
-otherwise puts a Refetch on screen that fails every time, which is the invariant
-`factoryMatchesTheClaim` exists to hold.
+**Wilson Asset Management (`FR-INV-42`) serves prices and a profile.** It was a
+price provider only for a day — the fund pages carry inception, asset class,
+benchmark, timeframe, APIR, ARSN and fees, and no parser read them, so
+`servesFundamentals` said `false` rather than putting a Refetch on screen that
+fails every time. The parser landed in P13.3; see below.
+
+---
+
+# P13 — Remediation: the five-angle scan (16 Aug 2026)
+
+Ordered after a run of defects surfaced one complaint at a time. Five read-only
+subagents audited the tree in parallel — reachability, surface parity, P12
+spec-vs-build, docs-vs-code, and price-data consistency — and returned **47
+issues**. The plan is [plan.md](plan.md) §13e.
+
+**The scan's own lesson.** Three of its findings were in fixes reported complete
+the same day: the cross-provider sweep had been added to `fetchLatestQuotes`,
+which no button calls; the currency guard could not fire on the four providers
+that report no currency, and the sweep tried those first; the zero guard lived
+in Yahoo's `latestQuote` alone. A fix is not done because its diff looks right.
+
+## P13.1 — One gate decides what may become a price
+
+Every fetch funnels through `QuoteService.price(from:)`, so that is where the
+rules live now: non-positive, epoch-0 sentinel dates, dates more than a year
+ahead, and a currency that is not the one asked for. The currency check reaches
+the four currency-blind providers through the security's own exchange —
+namespace first (NASDAQ implies USD though its tickers carry no suffix), then a
+suffix on the symbol in whatever spelling answered. A bare mnemonic implies
+nothing: reading "no suffix" as American would refuse every correctly-priced
+managed fund and super option.
+
+**One dedup rule, GnuCash's** (`gnc-pricedb.cpp`, `price_is_duplicate`):
+canonical day, value, commodity, currency. Two were in use — the latest path
+compared day and value, the history path refused any day it already held, which
+meant a correction could never land. `Book.addPrices(deduplicating:)` is the
+only spelling now, and `Book.latest` returns the **last** row of a day, so an
+evening close can outrank the 06:00 refresh that used to own the whole day.
+
+**One day convention.** `Price.init` already normalised to GnuCash's day-neutral
+10:59Z; the defect was upstream. Date-only providers parsed at midnight UTC,
+which day-neutral then re-read in the *local* calendar — the day before, west of
+UTC. `QuoteDate` lands them on 10:59Z directly. Yahoo's instants go the other
+way: a 16:00 New York close is 06:00 next morning in Sydney, so quotes now carry
+their exchange's GMT offset and the civil day is taken in the exchange's
+calendar.
+
+The cross-provider sweep moved into a helper **both** write paths use, and
+prefers providers that report a currency — it sorted by `rawValue`, which is
+alphabetical, so it tried exactly the four whose answers nothing can check.
+
+## P13.2 — Controls that do nothing
+
+All Transactions ignored its Filter sheet and its own column headers: both sat
+inside `if !focusSet.isEmpty`, and the general ledger's focus set is empty by
+definition. The headers still wrote the shared `registerSort`, so sorting All
+Transactions silently re-sorted every single-account register instead.
+
+"Filter Transactions…" was a **latch**: chosen from a mode with no register, it
+set a flag with nothing on screen to clear it, and every later press wrote
+`true` over `true` — no change, no callback, dead in every mode for the session.
+
+The period selector appeared in seven modes and governed two. `AppMode.usesPeriod`
+records which, and why each of the other five is excluded rather than wired.
+
+Four capabilities existed with no way to reach them: `deleteBudget`,
+`renameSecurity` (its sheet was written and presented from nowhere),
+`clearFundamentals(for:)`, and `importPrices(csv:)` — `FR-XIO-03` with no caller
+at all, the export half of the pair wired and the import half not. The ten
+`inlineSet*` methods went the other way and were **deleted**: superseded by the
+register sheet's whole-draft `updateTransaction`, with only their own tests
+keeping them alive.
+
+Two of the scan's findings did not survive checking and are recorded as such:
+the sidebar is single-selection, so its context menu can never see a
+multi-selection, and the sort menu already offers each mode only the criteria
+that mean something in it.
+
+## P13.3 — Investments tabs, and the rest of the owner's list
+
+**All Holdings, then one tab per portfolio.** A portfolio is not a type GnuCash
+has, so it is derived from the shape a book already keeps — the parent account
+of security accounts — and listed in the Investments sidebar, which is where
+every tab comes from. None at all when a book has one, because a lone portfolio
+row says what All Holdings says.
+
+The tab strip's `+` made a tab you could not keep: `openNewTab()` appended
+`mode.defaultSelection`, which *is* the derived home tab, so ⌘T produced a
+duplicate that `restoreNavigation` filtered out on reopen. It offers the mode's
+unopened destinations now, capped at twelve and saying so.
+
+`ModeLabelFit` measured which mode labels fit and **nothing read it**; the
+stacked style was applied unconditionally, so the documented degradation could
+not happen.
+
+**Wilson end to end.** Its price table and key-fact block were read from the live
+Founders Fund page: the dates confirm the inconsistency the parser works around
+— `13/08/2026` then `08/12/2026`, `08/11/2026`, day-first above the 12th and
+month-first below — and the profile arrives as eight
+`<p class="leader">`/`<p class="details">` pairs, APIR `ETL5957AU` among them.
+
+`FR-NAV-07` is a Must and was unmet. Business held a deliberately empty view;
+Reports and Records had no view at all. All three have cards, and the test
+asserts the property rather than the three names.
+
+## P13.4 — Register parity
+
+`GeneralLedgerView` rendered the bare sheet: no toolbar, no view-style menu, no
+filter button, no ⌘↑/⌘↓, no attachments panel, no summary bar. It is
+`RegisterView(wholeBook: true)` now — the fork was in the wrapper, not in
+anything either side needed. The entry bar borrows the selected row's account,
+since the general journal has no anchoring split (`gnc-split-reg.c:894`); the
+summary bar states what a book *has* — how many transactions are showing, and
+the debit total the Amount column adds up — rather than a balance it does not.
+
+The Balance column was drawn, headed and permanently blank, taking 112pt from
+columns that have an answer; it is hidden for the whole book. Amounts were
+labelled in the report currency because `currencyCode` answers from the selected
+account and there is none, so every row read AUD including the USD invoices.
+`anySplitID` returned `splits.first` — storage order, which a round trip through
+GnuCash XML can change — and returns the debit leg now: stable, and the one the
+row displays. `addTransaction` gained the `number:` parameter it never had, so a
+Num can be set on a new transaction and not only edited on an old one.
+
+## P13.5 — Documentation
+
+`deferred.md` filed the wrong-currency stamping as an accepted won't-fix for
+three weeks; that entry is struck through rather than deleted, because it is the
+behaviour that wrote 1,205 bad rows. `FR-NAV-02` asked for "one segmented
+control" the build deliberately is not — the requirement was describing an
+implementation that could not satisfy `FR-NAV-03` beside it. Six `FR-*` ids
+cited in shipped code existed in no document (`FR-ACC-02/03/04`,
+`FR-FIND-02/03`, `FR-SEC-01`) and now have rows. This file called the navigation
+design "still a proposal" 2,700 lines above the section describing it as
+shipped, and said "sidebar dragging is off" 35 lines above "both halves of the
+sidebar drag are built"; `SidebarSort.allowsDragging` said "nothing reads this
+yet" with two call sites.
