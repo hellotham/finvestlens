@@ -97,6 +97,34 @@ enum PricesCommand {
         // — a retail super option, a managed-fund unit — is still trading, so
         // it must not be marked delisted. Both stop the fetching; only one of
         // them is true.
+        // The quote symbol a provider is actually sent (`FR-INV-22`). A book
+        // whose mnemonic lacks its exchange suffix — `WMX` for an ASX listing —
+        // needs this or every fetch finds a US namesake.
+        if let symbol = options.string("set-symbol") {
+            guard securities.count == 1, let only = securities.first else {
+                throw LabError.message("--set-symbol needs exactly one --symbol")
+            }
+            model.setQuoteSymbol(symbol.isEmpty ? nil : symbol, for: only)
+            log("  \(only.mnemonic) → \(symbol.isEmpty ? "(cleared)" : symbol)")
+            let (_, saveSeconds) = try Stopwatch.measure { try model.save() }
+            log(Fmt.row("save", Fmt.time(saveSeconds)))
+            return
+        }
+
+        // Removing price rows a provider should never have written. Destructive
+        // and therefore explicit: it names what it will delete and refuses to
+        // guess the scope.
+        if options.flag("prune-wrong-currency") {
+            guard !wanted.isEmpty else {
+                throw LabError.message("--prune-wrong-currency needs --symbol")
+            }
+            let removed = model.pruneWrongCurrencyPrices(for: securities)
+            log("  removed \(removed) price row(s) whose provider reported another currency")
+            let (_, saveSeconds) = try Stopwatch.measure { try model.save() }
+            log(Fmt.row("save", Fmt.time(saveSeconds)))
+            return
+        }
+
         if options.flag("set-unquoted") || options.flag("set-quoted") {
             guard !wanted.isEmpty else {
                 throw LabError.message("--set-unquoted / --set-quoted need --symbol")

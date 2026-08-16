@@ -24,6 +24,9 @@ public enum QuoteProviderKind: String, CaseIterable, Codable, Sendable, Identifi
     case stooq
     /// FIIG — Australian corporate bonds, matched by ISIN (`FR-INV-31`).
     case fiig
+    /// Wilson Asset Management's own unit prices for its unlisted trusts —
+    /// keyless, keyed by the fund's page slug (`FR-INV-42`).
+    case wilson
 
     public var id: String { rawValue }
 
@@ -37,13 +40,14 @@ public enum QuoteProviderKind: String, CaseIterable, Codable, Sendable, Identifi
         case .twelveData: return "Twelve Data"
         case .stooq: return "Stooq"
         case .fiig: return "FIIG"
+        case .wilson: return "Wilson Asset Management"
         }
     }
 
     /// Whether the provider needs a user-supplied API key.
     public var requiresAPIKey: Bool {
         switch self {
-        case .yahoo, .stooq, .fiig: return false
+        case .yahoo, .stooq, .fiig, .wilson: return false
         case .eodhd, .alphaVantage, .finnhub, .twelveData: return true
         }
     }
@@ -52,6 +56,9 @@ public enum QuoteProviderKind: String, CaseIterable, Codable, Sendable, Identifi
     public var supportsHistory: Bool {
         switch self {
         case .yahoo, .eodhd, .alphaVantage, .twelveData, .stooq: return true
+        // The manager publishes the whole series on the fund page, so one
+        // request is both the latest price and the history.
+        case .wilson: return true
         // FIIG serves history from a second endpoint keyed by its own numeric
         // id — `/api/instruments/bonds/{georgiaId}/history`. The `bondHistory`
         // field on the *index* is null on all 703 records, which is why this
@@ -95,7 +102,7 @@ public enum QuoteProviderKind: String, CaseIterable, Codable, Sendable, Identifi
         // settings row renders it as "Get key" — pointing a keyless provider at
         // an information page would offer the user a key they neither need nor
         // can get.
-        case .yahoo, .stooq, .fiig: return nil
+        case .yahoo, .stooq, .fiig, .wilson: return nil
         case .eodhd: return URL(string: "https://eodhd.com/register")
         case .alphaVantage: return URL(string: "https://www.alphavantage.co/support/#api-key")
         case .finnhub: return URL(string: "https://finnhub.io/register")
@@ -126,6 +133,9 @@ public enum QuoteProviderKind: String, CaseIterable, Codable, Sendable, Identifi
             // splitting on "." would corrupt one. Upper-cased because ISINs are
             // defined upper-case and the index is matched exactly.
             return trimmed.uppercased()
+        case .wilson:
+            // A URL slug, which is lower-case and contains hyphens, not dots.
+            return trimmed.lowercased()
         case .eodhd:
             // EODHD always exchange-qualifies, incl. US: AAPL.US, CBA.AU.
             let exchange = suffix.map { Self.eodhdExchange[$0] ?? $0 } ?? "US"
@@ -211,6 +221,8 @@ public enum QuoteProviderFactory {
             return StooqQuoteProvider(http: http)
         case .fiig:
             return FIIGQuoteProvider(http: http)
+        case .wilson:
+            return WilsonQuoteProvider(http: http)
         }
     }
 }

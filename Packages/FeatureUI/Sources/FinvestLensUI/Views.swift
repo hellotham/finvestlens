@@ -405,19 +405,24 @@ public struct FinvestLensRootView: View {
         if model.isSearching {
             SearchResultsView(model: model)
         } else {
-            VStack(spacing: 0) {
-                // **Always**, in every mode. It used to appear only once a
-                // second tab existed — and the strip is where the `+` lives, so
-                // the control that makes a tab was hidden until you had one.
-                // Reported 16 Aug 2026: "I am not seeing the tab in accounts
-                // etc, nor the ability to create a tab." The one-tab strip is
-                // not chrome that says nothing; it is the affordance.
-                ModeTabStrip(model: model)
-                destinationView
-                    // Areas that were modal sheets suppress their Done/sheet
-                    // chrome via this flag when shown inline.
-                    .environment(\.isEmbeddedDestination, true)
-            }
+            destinationView
+                // Areas that were modal sheets suppress their Done/sheet
+                // chrome via this flag when shown inline.
+                .environment(\.isEmbeddedDestination, true)
+                // **The strip, always, in every mode** — as a safe-area inset
+                // rather than a `VStack` sibling.
+                //
+                // As a sibling it did not draw at all: the register's body is a
+                // `GeometryReader` filling the pane, and stacked above one the
+                // strip was measured away to nothing. Observed on screen at
+                // 986pt — register column headers directly under the toolbar,
+                // no strip — after confirming the running binary post-dated the
+                // change. An inset is chrome the child's layout cannot consume,
+                // which is what this needs to be: it carries the only control
+                // that creates a tab.
+                .safeAreaInset(edge: .top, spacing: 0) {
+                    ModeTabStrip(model: model)
+                }
         }
     }
 
@@ -486,39 +491,10 @@ public struct FinvestLensRootView: View {
             }
             .help("Create a transaction or account")
         }
-        // One timescale, in every mode (`FR-NAV-11`). In the toolbar rather than
-        // inside a view, because it governs all of them — the board, the
-        // reports, and the default a fresh report opens on.
+        // Search over the period selector, in two short rows beside the tall
+        // mode buttons — the height the modes set, spent rather than padded.
         ToolbarItem {
-            PeriodSelector(model: model, period: $model.period)
-        }
-    }
-
-    /// Saved searches, or the offer to save this one.
-    ///
-    /// Lifted out of `body` because the type-checker gave up on it: P12 added
-    /// the mode toolbar, the period selector and the tab strip to the same
-    /// expression, and this closure was what tipped it past the solver's
-    /// budget. Nothing about the content changed.
-    @ViewBuilder
-    private var searchSuggestions: some View {
-        let trimmed = model.searchQuery.trimmingCharacters(in: .whitespaces)
-        if trimmed.isEmpty {
-            ForEach(model.savedSearches) { search in
-                Label(search.name, systemImage: "bookmark")
-                    .searchCompletion(search.query)
-                    .contextMenu {
-                        Button("Delete Saved Search", role: .destructive) {
-                            model.deleteSavedSearch(search.id)
-                        }
-                    }
-            }
-        } else {
-            Button {
-                model.presentedPanel = .saveSearch
-            } label: {
-                Label("Save This Search…", systemImage: "bookmark.badge.plus")
-            }
+            StackedTrailingControls(model: model)
         }
     }
 
@@ -567,8 +543,6 @@ public struct FinvestLensRootView: View {
         // is a ledger.
         .navigationSplitViewStyle(.balanced)
         .overlay(alignment: .bottom) { StatusOverlay(model: model) }
-        .searchable(text: $model.searchQuery, prompt: "Search transactions")
-        .searchSuggestions { searchSuggestions }
         .safeAreaInset(edge: .top) {
             if model.externalChangePending {
                 ExternalChangeBanner(model: model)
@@ -840,26 +814,165 @@ struct ModeButton: View {
             Label(mode.title, systemImage: mode.symbol)
         }
         .toggleStyle(.button)
-        // Words while they fit, symbols when they do not.
+        // **The name under the symbol**, not beside it.
         //
-        // The label was always here; macOS draws a bordered toggle icon-only,
-        // so what shipped was seven unlabelled glyphs — "completely opaque for
-        // the beginner", and against *Toolbars*: "Don't make people guess or
-        // experiment to figure out what a toolbar item does." Always labelling
-        // is not open either: seven labelled modes measure 669pt against an
-        // 860pt minimum window, and that is the overflow the same page tells us
-        // to avoid. So it is measured per window, in the language on screen.
-        .modeLabelStyle(showing: model.modeLabelsFit)
+        // Beside it, five labelled modes measure 488pt and at a 986pt window
+        // that was enough to push Reports and Business into the system overflow
+        // menu — seen on screen, and the exact outcome HIG *Toolbars* warns
+        // about: "avoid layouts that cause toolbar items to overflow by
+        // default." Stacked they measure 329pt, because the width becomes the
+        // word rather than symbol-plus-gap-plus-word, and all seven then fit
+        // inside the narrowest window the app allows.
+        //
+        // The cost is vertical, and it is the cheap direction here: the toolbar
+        // grows once, for the window, while horizontal space is what every
+        // register column competes for.
+        .labelStyle(StackedModeLabelStyle())
         .help(mode.title)
     }
 }
 
-private extension View {
-    /// The two label styles are different *types*, so they cannot meet in a
-    /// ternary — the branch has to be in the view tree.
+/// Symbol above, name below — and **twice the height of an ordinary toolbar
+/// button**, because the modes are the app's primary navigation.
+///
+/// Not `.titleAndIcon`, which lays them in a row and makes each button as wide
+/// as its word *plus* its symbol: five of those measured 488pt and pushed
+/// Reports and Business into the system overflow menu at a 986pt window.
+/// Stacked, the word is the whole width — 329pt for five, 452pt for all seven,
+/// inside the 860pt minimum.
+///
+/// The height that buys is then spent deliberately rather than left as
+/// padding: the trailing controls sit in two short rows beside these, search
+/// above and the small buttons below (`StackedTrailingControls`), so the
+/// toolbar is one band with the modes as its tallest, most legible element.
+struct StackedModeLabelStyle: LabelStyle {
+    /// The symbol's own square. Large enough to read as the primary control on
+    /// the window rather than as one more small button among many.
+    static let iconSide: CGFloat = 22
+    /// The whole button, which sets the toolbar's height.
+    static let height: CGFloat = 46
+
+    func makeBody(configuration: Configuration) -> some View {
+        VStack(spacing: 2) {
+            configuration.icon
+                .font(.system(size: Self.iconSide))
+                .frame(height: Self.iconSide)
+            configuration.title
+                .scaledFont(.caption)
+                .lineLimit(1)
+                // The descenders in "Accounts" and "Business" sat on the
+                // selected pill's bottom edge and read as clipped.
+                .padding(.bottom, 1)
+        }
+        .frame(minWidth: 58)
+        .frame(height: Self.height)
+        .padding(.horizontal, 2)
+    }
+}
+
+/// Search above, the small actions below — the two short rows that fill the
+/// height the tall mode buttons set.
+///
+/// Asked for on 16 Aug 2026: "rearrange the toolbar to take advantage of
+/// greater height. I even said the search bar can appear on top of the smaller
+/// toolbar buttons." Stacking them means the extra height costs nothing: the
+/// band is as tall as the modes either way, and this fills it with the two
+/// controls that were competing with them for width.
+struct StackedTrailingControls: View {
+    @Bindable var model: AppModel
+    /// Whether the field is open. Collapsed it is a magnifier and nothing more.
+    ///
+    /// `.searchable` was cheap because the system collapsed it until clicked; a
+    /// plain `TextField` is its full width always, and at 150pt that pushed
+    /// Reports and Business back into the overflow menu — seen on screen at
+    /// 986pt, the very failure stacking the mode labels had just fixed. So the
+    /// field earns its width only while it is being used.
+    @State private var expanded = false
+    @FocusState private var searchFocused: Bool
+
+    private var isOpen: Bool {
+        expanded || searchFocused || !model.searchQuery.isEmpty
+    }
+
+    var body: some View {
+        VStack(alignment: .trailing, spacing: 2) {
+            HStack(spacing: 4) {
+                Button {
+                    expanded = true
+                    searchFocused = true
+                } label: {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Search transactions")
+                if isOpen {
+                    TextField("Search transactions", text: $model.searchQuery)
+                        .textFieldStyle(.plain)
+                        .frame(width: 150)
+                        .focused($searchFocused)
+                        .accessibilityLabel("Search transactions")
+                        // ⎋ closes the field and clears the query, through the
+                        // project's own wrapper — SwiftUI's `onExitCommand` is
+                        // unavailable on iOS and broke that build.
+                        .onEscapeCommand {
+                            model.searchQuery = ""
+                            expanded = false
+                            searchFocused = false
+                        }
+                    // Saved searches, which `.searchable`'s suggestion list
+                    // used to carry. Replacing that field with this one
+                    // orphaned `searchSuggestions` and took Save This Search
+                    // and the saved list with it — a regression found by
+                    // reading the call graph before shipping, not after.
+                    savedSearchMenu
+                }
+            }
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(isOpen ? AnyShapeStyle(.quaternary) : AnyShapeStyle(.clear),
+                        in: RoundedRectangle(cornerRadius: 6))
+
+            HStack(spacing: 6) {
+                PeriodSelector(model: model, period: $model.period)
+                    .controlSize(.small)
+            }
+        }
+        .frame(height: StackedModeLabelStyle.height)
+    }
+
+    /// The saved searches, and the offer to save this one.
     @ViewBuilder
-    func modeLabelStyle(showing labels: Bool) -> some View {
-        if labels { labelStyle(.titleAndIcon) } else { labelStyle(.iconOnly) }
+    private var savedSearchMenu: some View {
+        let trimmed = model.searchQuery.trimmingCharacters(in: .whitespaces)
+        Menu {
+            if trimmed.isEmpty {
+                if model.savedSearches.isEmpty {
+                    Text("No saved searches")
+                } else {
+                    ForEach(model.savedSearches) { search in
+                        Button(search.name) { model.searchQuery = search.query }
+                    }
+                    Divider()
+                    Menu("Delete") {
+                        ForEach(model.savedSearches) { search in
+                            Button(search.name, role: .destructive) {
+                                model.deleteSavedSearch(search.id)
+                            }
+                        }
+                    }
+                }
+            } else {
+                Button("Save This Search…") { model.presentedPanel = .saveSearch }
+            }
+        } label: {
+            Image(systemName: "bookmark")
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help("Saved searches")
+        .accessibilityLabel("Saved searches")
     }
 }
 
@@ -1338,7 +1451,11 @@ struct RegisterView: View {
                 summaryBar(summary)
             }
         }
-        .navigationTitle(selectedName)
+        // **No window title.** `selectedName` put "ANZ VISA" in the toolbar,
+        // where it cost width the mode buttons needed and repeated what the
+        // tab strip already says. HIG *Toolbars*: "If titling a toolbar seems
+        // redundant, you can leave the title area empty."
+        .navigationTitle("")
         .background { jumpShortcuts }
         .onChange(of: model.registerFilterRequested) { _, now in
             if now {

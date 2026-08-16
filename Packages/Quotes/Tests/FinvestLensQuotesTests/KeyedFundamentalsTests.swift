@@ -360,6 +360,9 @@ struct FundamentalsSelectionTests {
                 == ["alphaVantage", "eodhd", "fiig", "twelveData", "yahoo"])
         #expect(!QuoteProviderKind.stooq.servesFundamentals)
         #expect(!QuoteProviderKind.finnhub.servesFundamentals)
+        // Wilson publishes a profile on its fund pages but no parser reads it
+        // yet, so it says `false` rather than offering a Refetch that fails.
+        #expect(!QuoteProviderKind.wilson.servesFundamentals)
     }
 
     @Test("A keyed provider is preferred over the keyless default (D5)")

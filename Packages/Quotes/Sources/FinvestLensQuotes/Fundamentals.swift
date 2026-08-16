@@ -253,7 +253,11 @@ public extension QuoteProviderKind {
     var servesFundamentals: Bool {
         switch self {
         case .yahoo, .fiig, .eodhd, .alphaVantage, .twelveData: true
-        case .finnhub, .stooq: false
+        // The fund page *does* carry a profile — inception, asset class,
+        // benchmark, fees, APIR, ARSN — but no parser reads it yet, and
+        // claiming otherwise puts a Refetch on screen that fails every time.
+        // This flips to `true` when the profile parser lands.
+        case .wilson, .finnhub, .stooq: false
         }
     }
 
@@ -285,6 +289,7 @@ public enum FundamentalsProviderFactory {
         switch kind {
         case .yahoo: return YahooFundamentalsProvider(http: http, crumbs: crumbs)
         case .fiig: return FIIGQuoteProvider(http: http)
+        case .wilson: return nil   // no profile parser yet — see servesFundamentals
         case .eodhd: return keyed { EODHDFundamentalsProvider(apiKey: $0, http: http) }
         case .alphaVantage: return keyed { AlphaVantageFundamentalsProvider(apiKey: $0, http: http) }
         case .twelveData: return keyed { TwelveDataFundamentalsProvider(apiKey: $0, http: http) }

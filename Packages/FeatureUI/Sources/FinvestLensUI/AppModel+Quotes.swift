@@ -70,6 +70,28 @@ extension AppModel {
         }
     }
 
+    /// Removes price rows a provider wrote in a currency other than the one
+    /// asked for (`FR-INV-40`).
+    ///
+    /// Those rows carry the provider's number stamped with the wrong currency —
+    /// the mismatch was only ever noted in the `source` string, so nothing
+    /// downstream could tell. `QuoteService` refuses to write them now; this
+    /// clears the ones already in a book. Destructive, so it is explicit about
+    /// scope and returns what it removed.
+    @discardableResult
+    public func pruneWrongCurrencyPrices(for commodities: [Commodity]) -> Int {
+        let doomed = Set(commodities)
+        var removed = 0
+        editingPrices(named: "Remove Wrong-Currency Prices") {
+            removed = book?.removePrices { price in
+                doomed.contains(price.commodity)
+                    && price.source.contains("Finance::Quote")
+                    && price.source.contains("(")
+            } ?? 0
+        }
+        return removed
+    }
+
     // MARK: Symbol overrides
 
     private func symbolKey(_ commodity: Commodity) -> String {

@@ -92,7 +92,8 @@ struct APIKeyStoreTests {
         #expect(QuoteProviderKind.twelveData.supportsHistory)
         #expect(QuoteProviderKind.fiig.requiresAPIKey == false)
         #expect(QuoteProviderKind.fiig.supportsHistory)
-        #expect(QuoteProviderKind.allCases.count == 7)
+        // Eight since the Wilson Asset Management provider (`FR-INV-42`).
+        #expect(QuoteProviderKind.allCases.count == 8)
     }
 
     @Test("Only a batch provider claims to be one, and it really implements it")

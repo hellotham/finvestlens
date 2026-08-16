@@ -20,12 +20,14 @@ import AppKit
 /// experiment to figure out what a toolbar item does." And, on the same page:
 /// "avoid layouts that cause toolbar items to overflow by default."
 ///
-/// Measured in the system font on 16 Aug 2026: the five default modes labelled
-/// come to 488pt and all seven to 669pt, against a window whose minimum is
-/// 860pt. With the toolbar's other 380pt that puts the default five at 868pt —
-/// so they show from a little above the minimum window upwards (the 986pt
-/// window this was reported from, and the 1280pt default), and a window
-/// squeezed to its floor gets symbols. A fully customised seven never fits —
+/// Measured on 16 Aug 2026, both ways. **Beside** the symbol the five default
+/// modes come to 488pt and all seven to 669pt — and at a 986pt window that was
+/// enough to push Reports and Business into the system overflow menu, seen on
+/// screen. **Under** it they come to 329pt and 452pt, which fits all seven
+/// inside the 860pt minimum window with room to spare. So the stacked layout is
+/// what the app uses and this measurement is the guard rather than the
+/// deciding factor — it still drops to symbols if a future language or an
+/// accessibility text size makes even the stacked words too wide.
 /// which is why this is a measurement rather than a preference. Unlabelled
 /// icons were never a decision; they are what shipped when
 /// `navigation-design.md` §4.1 (one labelled control) lost to §4.1a (system
@@ -35,22 +37,31 @@ import AppKit
 /// and German in particular is longer than the English these numbers came from.
 enum ModeLabelFit {
 
-    /// What one mode's button occupies with its label showing: the symbol, the
-    /// gap, the text, and the button's own padding.
+    /// What one mode's button occupies with its name **under** its symbol: the
+    /// wider of the two, plus the button's own padding.
+    ///
+    /// Stacked, the label is set in the small system font and the symbol is
+    /// narrower than any of the words, so the word is the width. Beside the
+    /// symbol it was symbol + gap + word, which is what made five modes 488pt
+    /// and pushed two of them into the overflow menu at a 986pt window.
     static func width(of title: String) -> CGFloat {
         #if canImport(AppKit)
-        let font = NSFont.systemFont(ofSize: NSFont.systemFontSize)
+        let font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
         let text = (title as NSString).size(withAttributes: [.font: font]).width
         #else
         // A serviceable estimate off-platform; the toolbar this governs is
         // macOS-only, so this branch exists to keep the type building.
-        let text = CGFloat(title.count) * 7
+        let text = CGFloat(title.count) * 6
         #endif
-        return ceil(text) + symbolAndPadding
+        return max(symbolWidth, ceil(text)) + horizontalPadding
     }
 
-    /// Symbol (16) + gap (4) + the bordered button's horizontal padding (20).
-    static let symbolAndPadding: CGFloat = 40
+    /// The symbol at `.large` image scale.
+    static let symbolWidth: CGFloat = 18
+    /// The button's own horizontal padding.
+    static let horizontalPadding: CGFloat = 16
+    /// Kept for callers that still name it.
+    static var symbolAndPadding: CGFloat { symbolWidth + horizontalPadding }
 
     /// Everything else the toolbar has to hold: the sidebar toggle and the
     /// trailing group (search, create, inspector). Deliberately generous —

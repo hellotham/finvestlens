@@ -1491,7 +1491,7 @@ public final class AppModel {
     /// Scoped undo for edits that touch only the **price database**. The
     /// whole-book variant snapshots via a full GnuCash-XML export — seconds on
     /// a large book — where copying the `prices` value array is milliseconds.
-    func editingPrices(named: String, _ body: () -> Void) {
+    public func editingPrices(named: String, _ body: () -> Void) {
         if isReadOnly { return }
         auditLog(named)
         let before = book?.prices ?? []

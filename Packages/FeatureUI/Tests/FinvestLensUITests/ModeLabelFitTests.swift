@@ -33,10 +33,9 @@ struct ModeLabelFitTests {
     /// there up, including the 986pt window this was reported from and the
     /// 1280pt default. Someone who squeezes the window to its floor gets
     /// symbols, which is the documented degradation and not a failure.
-    /// Updated 16 Aug 2026: emptying the title area returned about 120pt, so
-    /// the default five now keep their words at **every** width the window can
-    /// take, the 860pt minimum included. The degradation stays for a
-    /// customised toolbar, which is what it was for.
+    /// Updated 16 Aug 2026: emptying the title area returned about 120pt, and
+    /// stacking the names under the symbols saved another 159pt, so the words
+    /// survive at every width the window can take.
     @Test("The default five fit every window the app allows")
     func defaultsFit() {
         #expect(ModeLabelFit.labelsFit(defaults, in: 860), "the minimum window")
@@ -44,17 +43,25 @@ struct ModeLabelFitTests {
         #expect(ModeLabelFit.labelsFit(defaults, in: 1_280))
     }
 
-    /// The reason this is a measurement and not a preference: labelling every
-    /// mode is the overflow HIG *Toolbars* tells us to avoid.
-    @Test("All seven do not fit, and are not pretended to")
-    func allSevenDoNot() {
-        #expect(!ModeLabelFit.labelsFit(AppMode.allCases, in: 860))
+    /// Stacked, **all seven** fit the minimum window — 452pt of labels against
+    /// 860pt. Beside the symbol they were 669pt and two of them ended up in the
+    /// system overflow menu at 986pt, seen on screen 16 Aug 2026. This is the
+    /// measurement that made the layout worth changing.
+    @Test("All seven fit once the names sit under the symbols")
+    func allSevenFitStacked() {
+        #expect(ModeLabelFit.labelsFit(AppMode.allCases, in: 860))
+        // And the saving is real, not rounding: the stacked five are well
+        // under the side-by-side five's 488pt.
+        let five = AppMode.toolbarDefault.reduce(CGFloat(0)) { $0 + ModeLabelFit.width(of: $1.name) }
+        #expect(five < 400, "measured 329pt stacked, against 488pt beside")
     }
 
-    /// Narrow windows drop to symbols rather than overflowing.
-    @Test("A narrow window gives up the labels")
+    /// The guard still exists, for a language or an accessibility text size
+    /// that makes even the stacked words too wide. It simply no longer fires at
+    /// any width this window can take.
+    @Test("The degradation is still there for a window too small to hold them")
     func narrowWindowDropsLabels() {
-        #expect(!ModeLabelFit.labelsFit(defaults, in: 600))
+        #expect(!ModeLabelFit.labelsFit(defaults, in: 400))
         #expect(!ModeLabelFit.labelsFit(defaults, in: 0), "no measurement yet is not a licence")
     }
 
@@ -81,7 +88,9 @@ struct ModeLabelFitTests {
         #expect(!model.modeLabelsFit, "nothing measured yet")
         model.windowWidth = 1_280
         #expect(model.modeLabelsFit)
-        model.windowWidth = 640
+        model.windowWidth = 986
+        #expect(model.modeLabelsFit, "the window this was reported from")
+        model.windowWidth = 400
         #expect(!model.modeLabelsFit)
     }
 

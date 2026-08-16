@@ -3131,3 +3131,41 @@ stored instance, never a freshly built copy — two commodities differing only i
 `fullName` or fraction are two securities, and that is the other way a book ends
 up holding `WMX` twice. Add stays disabled until a security is picked; before,
 an account could be added against an empty ticker.
+
+## The modes are the hero (16 Aug 2026)
+
+The mode buttons carry their names **under** their symbols, at roughly twice an
+ordinary toolbar button's height, and the trailing controls sit in two short
+rows beside them — search above, the period selector below — so the height the
+modes claim is spent rather than padded.
+
+Three measurements decided the shape, each taken on screen at a 986pt window
+rather than argued:
+
+- Names **beside** the symbols: five modes = 488pt, and Reports and Business
+  went into the system overflow menu.
+- Names **under**: 329pt for five, 452pt for all seven — inside the 860pt
+  minimum window.
+- A plain 150pt `TextField` where `.searchable` used to be: Reports and Business
+  went back into the overflow. `.searchable` was cheap because the system
+  collapsed it to a magnifier until clicked, so this one collapses too, and
+  earns its width only while it is being used.
+
+Two regressions this introduced, both caught before shipping and both worth
+recording because neither was visible in a test run:
+
+- **Replacing `.searchable` orphaned `searchSuggestions`**, and with it Save
+  This Search and the saved-search list — the only route to either. They are now
+  a bookmark menu inside the field, and the dead helper is deleted.
+- **`onExitCommand` is unavailable on iOS** and broke that build. The project's
+  own `onEscapeCommand` wrapper is cross-platform and is what the field uses.
+
+The window title is gone (HIG *Toolbars*: "If titling a toolbar seems redundant,
+you can leave the title area empty"), the tab strip names what is open, and the
+sidebar header names the mode.
+
+**Wilson Asset Management (`FR-INV-42`) is a price provider only for now.** Its
+fund pages carry a profile — inception, asset class, benchmark, fees, APIR,
+ARSN — but no parser reads it, so `servesFundamentals` says `false`: claiming
+otherwise puts a Refetch on screen that fails every time, which is the invariant
+`factoryMatchesTheClaim` exists to hold.
