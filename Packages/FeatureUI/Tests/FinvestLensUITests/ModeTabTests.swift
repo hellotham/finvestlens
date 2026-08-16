@@ -268,21 +268,52 @@ struct ModeTabRegressionTests {
         return (model, url)
     }
 
-    /// ⌘T and the strip's + button did nothing in every state: they asked for a
-    /// second tab on *what is showing*, and the never-a-duplicate rule fires
-    /// before the new-tab branch.
-    @Test("New Tab opens a tab")
-    func newTabOpensATab() throws {
+    /// ⌘T and the strip's `+` opened a **duplicate of the home tab**.
+    ///
+    /// They first did nothing at all — asking for a second tab on what is
+    /// showing, where the never-a-duplicate rule fires before the new-tab
+    /// branch. The fix for that appended `mode.defaultSelection` directly,
+    /// bypassing the dedupe — but that selection *is* the home tab, derived as
+    /// index 0 and never stored, so the result was a second copy of it that
+    /// `restoreNavigation` filtered out again on reopen: a tab you could make
+    /// but not keep.
+    ///
+    /// The contract now: New Tab opens one of the mode's **other**
+    /// destinations, and each one only once.
+    @Test("New Tab opens a destination that is not already open")
+    func newTabOpensADestination() throws {
+        let (model, url) = try book()
+        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        let bank = try #require(model.addAccount(name: "Everyday", type: .bank))
+        let savings = try #require(model.addAccount(name: "Savings", type: .bank))
+
+        model.showMode(.accounts)
+        #expect(model.openTabs.count == 1)
+
+        model.openNewTab()
+        #expect(model.openTabs.count == 2)
+        #expect(model.activeTabIndex == 1)
+        #expect(model.openTabs[1] != model.openTabs[0], "New Tab duplicated the home tab")
+
+        model.openNewTab()
+        #expect(model.openTabs.count == 3, "a second New Tab did nothing")
+        #expect(Set(model.openTabs).count == 3, "New Tab opened something already open")
+        #expect(Set(model.openTabs).isSuperset(of: [.account(bank), .account(savings)]))
+    }
+
+    /// Nothing left to open is a no-op, not a duplicate. A book with no
+    /// accounts has exactly one thing Accounts can show, and it is already tab
+    /// 0 — which is the state the old implementation turned into a second copy
+    /// of it.
+    @Test("New Tab does nothing when the mode has nothing else to show")
+    func newTabIsANoOpWhenExhausted() throws {
         let (model, url) = try book()
         defer { model.close(); try? FileManager.default.removeItem(at: url) }
 
         model.showMode(.accounts)
+        model.openNewTab()
         #expect(model.openTabs.count == 1)
-        model.openNewTab()
-        #expect(model.openTabs.count == 2)
-        #expect(model.activeTabIndex == 1)
-        model.openNewTab()
-        #expect(model.openTabs.count == 3, "a second New Tab did nothing")
+        #expect(model.unopenedTabDestinations.isEmpty)
     }
 
     /// A stored active index that outruns its tab list used to crash the next

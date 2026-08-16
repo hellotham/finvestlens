@@ -20,6 +20,14 @@ import FinvestLensReports
 /// numbers built on them can be trusted.
 struct InvestmentsView: View {
     @Bindable var model: AppModel
+    /// The portfolio this tab is scoped to — the parent account whose security
+    /// accounts it shows — or `nil` for All Holdings.
+    ///
+    /// One view serves both because "the holdings of this broker" is the same
+    /// question as "the holdings" with a narrower answer. A second view would
+    /// have to repeat the groups, the sparklines, the worklist and the context
+    /// menus, and would drift from them.
+    var portfolio: GncGUID?
     @Environment(\.appDateFormat) private var dateFormat
     @State private var expanded: Set<InvestmentGroup> = [.held, .manual]
     @State private var showingQuotes = false
@@ -39,7 +47,21 @@ struct InvestmentsView: View {
     /// not allow a security to be edited", which was exactly right.
     @State private var path = NavigationPath()
 
-    private var rows: [InvestmentRow] { model.investmentRows() }
+    /// The holdings shown, narrowed to the portfolio when this tab has one.
+    ///
+    /// Filtered here rather than in `investmentRows()` so the memoised build —
+    /// lots, returns, allocations, sparkline windows — is done once for the
+    /// book and shared by every portfolio tab, instead of once per tab.
+    private var rows: [InvestmentRow] {
+        let all = model.investmentRows()
+        guard let portfolio else { return all }
+        let held = model.securityCommodities(inPortfolio: portfolio)
+        return all.filter { held.contains($0.commodity) }
+    }
+
+    /// The worklist stays book-wide. A stale price or a missing rate is a
+    /// problem with the book, not with the broker you happen to be looking at,
+    /// and hiding it behind a tab is how it goes unfixed.
     private var issues: [InvestmentIssue] { model.investmentIssues() }
 
     var body: some View {

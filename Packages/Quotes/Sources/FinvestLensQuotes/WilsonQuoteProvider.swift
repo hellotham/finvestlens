@@ -25,7 +25,7 @@ import Foundation
 /// The page carries the whole series server-rendered — 69 rows for the Founders
 /// Fund on 16 Aug 2026, from inception at $1.0000 on 28/02/2025 — so one
 /// request yields both the latest price and the history.
-public struct WilsonQuoteProvider: QuoteProvider {
+public struct WilsonQuoteProvider: QuoteProvider, FundamentalsProvider {
     public let kind: QuoteProviderKind = .wilson
     private let http: HTTPFetching
     private let host: String
@@ -52,19 +52,51 @@ public struct WilsonQuoteProvider: QuoteProvider {
     }
 
     private func allQuotes(symbol: String) async throws -> [Quote] {
-        let slug = symbol.trimmingCharacters(in: .whitespaces)
-            .trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-        guard !slug.isEmpty else { throw QuoteError.noData }
+        try Self.parse(html: try await page(symbol: symbol), symbol: Self.slug(symbol))
+    }
+
+    /// The fund page's URL for a slug — the one place the path is spelled.
+    static func url(host: String, symbol: String) -> URL? {
         var components = URLComponents()
         components.scheme = "https"
         components.host = host
-        components.path = "/trusts/\(slug)/"
-        guard let url = components.url else { throw QuoteError.noData }
+        components.path = "/trusts/\(slug(symbol))/"
+        return components.url
+    }
+
+    static func slug(_ symbol: String) -> String {
+        symbol.trimmingCharacters(in: .whitespaces)
+            .trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+    }
+
+    private func page(symbol: String) async throws -> String {
+        guard !Self.slug(symbol).isEmpty,
+              let url = Self.url(host: host, symbol: symbol) else { throw QuoteError.noData }
         let data = try await http.get(url, headers: ["User-Agent": HTTPDefaults.userAgent])
         guard let html = String(data: data, encoding: .utf8) else {
             throw QuoteError.malformedResponse("not UTF-8")
         }
-        return try Self.parse(html: html, symbol: slug)
+        return html
+    }
+
+    // MARK: The fund's own profile (`FR-INV-17`)
+
+    /// The page's key facts, read from the same request the prices come from.
+    ///
+    /// A fund is not a company: there is no sector, no market cap, no P/E, and
+    /// asking an equity service for those about `WAMFF` is what returns a US
+    /// namesake's. What the manager publishes instead — asset class, benchmark,
+    /// timeframe, APIR, ARSN, fees, inception — is the profile that actually
+    /// describes this instrument, so that is what this returns.
+    public func fundamentals(symbol: String,
+                             kinds: Set<FundamentalsKind>) async throws -> SecurityFundamentals {
+        // Profile only. A trust publishes no per-security income statement here,
+        // and its distributions are not dividends per share; returning nothing
+        // for those beats returning something misleading.
+        guard kinds.contains(.profile) else { return SecurityFundamentals() }
+        let profile = Self.parseProfile(html: try await page(symbol: symbol),
+                                        url: Self.url(host: host, symbol: symbol))
+        return SecurityFundamentals(profile: Stamped(profile, source: "Wilson Asset Management"))
     }
 
     // MARK: Parsing
@@ -91,6 +123,92 @@ public struct WilsonQuoteProvider: QuoteProvider {
         return resolveDates(raw, symbol: symbol)
     }
 
+    /// The page's key-fact block, read from its own markup.
+    ///
+    /// Verified against the live Founders Fund page on 16 Aug 2026, which
+    /// renders each fact as a pair inside one `div.right-content`:
+    ///
+    /// ```html
+    /// <p class="leader" style="color:#d0af79">Asset class</p>
+    /// <p class="details">Equity</p>
+    /// ```
+    ///
+    /// Eight pairs that day — Inception date, Asset class, Benchmark index,
+    /// Investment timeframe, APIR code (`ETL5957AU`), ARSN, Management fee,
+    /// Performance fee. Read as pairs rather than by position, so a fund with
+    /// more or fewer of them still parses and a reordering does not silently
+    /// swap two values.
+    ///
+    /// The name comes from `<title>` rather than `<h1>`: the page carries three
+    /// `h1`s and two of them run the words together
+    /// ("Wilson AssetManagementFounders Fund") because of the styling spans
+    /// inside.
+    static func parseProfile(html: String, url: URL?) -> SecurityProfile {
+        var profile = SecurityProfile()
+        profile.currencyCode = "AUD"
+        profile.website = url?.absoluteString
+
+        if let title = firstMatch(#"<title[^>]*>(.*?)</title>"#, in: html) {
+            let cleaned = plainText(title)
+            // The site appends its own name; the fund's is what is wanted.
+            profile.name = cleaned
+                .replacingOccurrences(of: " - Wilson Asset Management", with: "")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
+        let pairs = keyFacts(in: html)
+        profile.sector = pairs.first { $0.label.caseInsensitiveCompare("Asset class") == .orderedSame }?.value
+        // Everything the manager states, in the order the page states it —
+        // which is the fund's profile. Deliberately not squeezed into the
+        // equity fields above: a benchmark is not a sector and an APIR code is
+        // not a ticker, and putting them there would make the security page
+        // draw a company's shape around a trust.
+        let summary = pairs
+            .filter { $0.label.caseInsensitiveCompare("Asset class") != .orderedSame }
+            .map { "\($0.label): \($0.value)" }
+            .joined(separator: " · ")
+        profile.summary = summary.isEmpty ? nil : summary
+        return profile
+    }
+
+    /// The `leader`/`details` pairs, in page order.
+    static func keyFacts(in html: String) -> [(label: String, value: String)] {
+        let pattern = #"<p[^>]*class="[^"]*\bleader\b[^"]*"[^>]*>(.*?)</p>\s*"#
+            + #"<p[^>]*class="[^"]*\bdetails\b[^"]*"[^>]*>(.*?)</p>"#
+        guard let regex = try? NSRegularExpression(pattern: pattern,
+                                                   options: [.caseInsensitive, .dotMatchesLineSeparators])
+        else { return [] }
+        return regex.matches(in: html, range: NSRange(html.startIndex..., in: html))
+            .compactMap { match in
+                guard let l = Range(match.range(at: 1), in: html),
+                      let v = Range(match.range(at: 2), in: html) else { return nil }
+                let label = plainText(String(html[l])), value = plainText(String(html[v]))
+                guard !label.isEmpty, !value.isEmpty else { return nil }
+                return (label, value)
+            }
+    }
+
+    private static func firstMatch(_ pattern: String, in html: String) -> String? {
+        guard let regex = try? NSRegularExpression(pattern: pattern,
+                                                   options: [.caseInsensitive, .dotMatchesLineSeparators]),
+              let match = regex.firstMatch(in: html, range: NSRange(html.startIndex..., in: html)),
+              let range = Range(match.range(at: 1), in: html) else { return nil }
+        return String(html[range])
+    }
+
+    /// Inner markup as readable text: tags dropped, the handful of entities the
+    /// page actually uses decoded, whitespace collapsed.
+    static func plainText(_ fragment: String) -> String {
+        var text = fragment.replacingOccurrences(of: "<[^>]+>", with: "",
+                                                 options: [.regularExpression])
+        for (entity, character) in [("&amp;", "&"), ("&nbsp;", " "), ("&quot;", "\""),
+                                    ("&#039;", "'"), ("&apos;", "'"), ("&lt;", "<"), ("&gt;", ">")] {
+            text = text.replacingOccurrences(of: entity, with: character)
+        }
+        return text.replacingOccurrences(of: "\\s+", with: " ", options: [.regularExpression])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     /// Reads the dates, working around a source that is **not consistent about
     /// its own format**.
     ///
@@ -110,11 +228,24 @@ public struct WilsonQuoteProvider: QuoteProvider {
     /// because it silently misvalues a holding on both days.
     static func resolveDates(_ raw: [(day: Int, other: Int, year: Int, price: Decimal)],
                              symbol: String) -> [Quote] {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(identifier: "Australia/Sydney") ?? .current
+        // The page prints a civil date, so the instant that represents it must
+        // name that same day for every reader: 10:59Z, like every other
+        // date-only provider here (see ``QuoteDate``). It used to build Sydney
+        // midnight, which a reader west of UTC re-reads as the day before —
+        // and `Price.dayNeutral` would then store it one day early.
+        var utc = Calendar(identifier: .gregorian)
+        utc.timeZone = TimeZone(secondsFromGMT: 0)!
         func date(day: Int, month: Int, year: Int) -> Date? {
             guard (1...31).contains(day), (1...12).contains(month) else { return nil }
-            return calendar.date(from: DateComponents(year: year, month: month, day: day))
+            let parts = DateComponents(year: year, month: month, day: day,
+                                       hour: 10, minute: 59, second: 0)
+            // `date(from:)` rolls 31 April forward to 1 May; the page never
+            // prints one, but a rolled date would be silently wrong rather than
+            // absent.
+            guard let candidate = utc.date(from: parts),
+                  utc.component(.day, from: candidate) == day,
+                  utc.component(.month, from: candidate) == month else { return nil }
+            return candidate
         }
 
         var quotes: [Quote] = []

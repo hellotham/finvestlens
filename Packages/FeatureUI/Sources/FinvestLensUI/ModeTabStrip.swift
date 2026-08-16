@@ -44,15 +44,42 @@ struct ModeTabStrip: View {
                 // rectangles say which kind of new thing this makes, and the
                 // divider says it is not one of the tabs.
                 Divider().frame(height: 14).padding(.horizontal, 4)
-                Button {
-                    model.openNewTab()
+                // A menu, because a bare press had nothing honest to open.
+                //
+                // `openNewTab()` appended `mode.defaultSelection` — which *is*
+                // the home tab, derived as tab 0 and never stored — so ⌘T made
+                // a duplicate of it that `restoreNavigation` then filtered out
+                // on reopen: a tab you could make but not keep. There is no
+                // "blank tab" in this app to open instead; every tab shows one
+                // of the mode's destinations. So the button offers them.
+                Menu {
+                    let candidates = model.unopenedTabDestinations
+                    if candidates.isEmpty {
+                        Text("Everything in this mode is already open")
+                    } else {
+                        ForEach(Array(candidates.prefix(AppModel.unopenedTabLimit)
+                                          .enumerated()), id: \.offset) { _, selection in
+                            Button(model.tabTitle(for: selection)) {
+                                model.navigate(to: selection, inNewTab: true)
+                            }
+                        }
+                        // Never a silent truncation: a menu that stops at
+                        // twelve without saying so reads as "that is all there
+                        // is", which in a 565-account book is badly wrong.
+                        if candidates.count > AppModel.unopenedTabLimit {
+                            Divider()
+                            Text("More in the sidebar — double-click to open in a tab")
+                        }
+                    }
                 } label: {
                     Image(systemName: "plus.rectangle.on.rectangle")
                         .scaledFont(.callout)
                 }
-                .buttonStyle(.plain)
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .fixedSize()
                 .padding(.trailing, 6)
-                .help("New Tab (⌘T) — opens what is showing in a second tab")
+                .help("New Tab (⌘T) — open another of this mode's items")
                 .accessibilityLabel("New Tab")
                 Spacer(minLength: 0)
             }
@@ -150,7 +177,9 @@ extension AppModel {
         case .report(let kind): kind.rawValue
         case .savedReport(let id):
             savedReports.first { $0.id == id }?.name ?? String(localized: "Report")
-        case .investments: String(localized: "Portfolio")
+        case .investments: String(localized: "All Holdings")
+        case .portfolio(let id):
+            portfolioAccounts.first { $0.id == id }?.name ?? String(localized: "Portfolio")
         case .security(let key):
             securityCommodity(forKey: key)?.mnemonic ?? String(localized: "Security")
         case .business: String(localized: "Business")

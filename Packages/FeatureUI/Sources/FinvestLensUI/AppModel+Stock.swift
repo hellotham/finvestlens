@@ -26,6 +26,53 @@ extension AppModel {
         postableAccounts.filter { $0.typeName == "Stock" || $0.typeName == "Mutual" }
     }
 
+    /// The **portfolios**: every account that directly parents a security
+    /// account — a broker, a super fund, a self-managed pool.
+    ///
+    /// A portfolio is not a type in the book, because GnuCash has no such type.
+    /// It is a shape: someone who holds shares through two brokers files them
+    /// under two parents, and those parents are the grouping they already think
+    /// in. Derived rather than configured for exactly that reason — there is
+    /// nothing to set up, and a book that keeps every holding under one parent
+    /// simply has one portfolio.
+    ///
+    /// Sorted by the name shown, so the tabs and the sidebar agree on order.
+    public var portfolioAccounts: [AccountNode] {
+        guard let book else { return [] }
+        var seen = Set<GncGUID>()
+        var out: [AccountNode] = []
+        for node in securityAccountNodes {
+            guard let parent = book.account(with: node.id)?.parent,
+                  let parentNode = accountNode(for: parent.guid),
+                  seen.insert(parent.guid).inserted else { continue }
+            out.append(parentNode)
+        }
+        return out.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+    }
+
+    /// The securities held in one portfolio — the commodities of the security
+    /// accounts directly beneath it.
+    public func securityCommodities(inPortfolio id: GncGUID) -> Set<Commodity> {
+        guard let book, let parent = book.account(with: id) else { return [] }
+        return Set(parent.children
+            .filter { $0.type.isSecurityType }
+            .map(\.commodity))
+    }
+
+    /// The `AccountNode` for one account, found in the same tree the pickers
+    /// read so a portfolio row carries the balance and colour the rest of the
+    /// app shows for it.
+    private func accountNode(for id: GncGUID) -> AccountNode? {
+        func find(_ nodes: [AccountNode]) -> AccountNode? {
+            for node in nodes {
+                if node.id == id { return node }
+                if let children = node.children, let hit = find(children) { return hit }
+            }
+            return nil
+        }
+        return find(accountTree)
+    }
+
     /// Cash / settlement accounts (bank, cash, other assets).
     public var settlementAccountNodes: [AccountNode] {
         postableAccounts.filter { ["Bank", "Cash", "Asset"].contains($0.typeName) }

@@ -444,6 +444,10 @@ public struct FinvestLensRootView: View {
         case .rules, .ruleGroup: RulesView(model: model)
         case .goals, .goal: GoalsView(model: model)
         case .investments: InvestmentsView(model: model)
+        // The same table, scoped to one portfolio's holdings. One view, because
+        // "the holdings of this broker" is the same question as "the holdings"
+        // with a narrower answer — a second view would drift from it.
+        case .portfolio(let id): InvestmentsView(model: model, portfolio: id)
         case .security(let key):
             if let commodity = model.securityCommodity(forKey: key) {
                 SecurityDetailView(model: model, commodity: commodity)
@@ -827,8 +831,38 @@ struct ModeButton: View {
         // The cost is vertical, and it is the cheap direction here: the toolbar
         // grows once, for the window, while horizontal space is what every
         // register column competes for.
-        .labelStyle(StackedModeLabelStyle())
+        // …and the symbol alone when even stacked words will not fit.
+        //
+        // `ModeLabelFit` measured this from the start and **nothing read it**:
+        // the style was applied unconditionally, so the documented degradation
+        // — drop to symbols rather than overflow — could not happen, and a
+        // window narrow enough (or a language long enough, or an accessibility
+        // text size large enough) would have put modes back in the overflow
+        // menu that this whole layout exists to keep them out of. The
+        // measurement had tests; the behaviour it describes had no caller.
+        .labelStyle(ModeLabelStyle(stacked: model.modeLabelsFit))
         .help(mode.title)
+    }
+}
+
+/// Stacked when the names fit, the symbol alone when they do not.
+///
+/// One style rather than a branch at the call site, because a `LabelStyle` is
+/// what `Toggle`'s button style consults and swapping between two of them in a
+/// conditional changes the view's identity — which is how a toolbar item loses
+/// its place in the customisation order.
+struct ModeLabelStyle: LabelStyle {
+    let stacked: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        if stacked {
+            StackedModeLabelStyle().makeBody(configuration: configuration)
+        } else {
+            configuration.icon
+                .font(.system(size: StackedModeLabelStyle.iconSide))
+                .frame(width: StackedModeLabelStyle.iconSide + 12,
+                       height: StackedModeLabelStyle.height)
+        }
     }
 }
 

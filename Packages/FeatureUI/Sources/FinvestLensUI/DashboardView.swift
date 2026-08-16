@@ -391,6 +391,14 @@ struct DashboardView: View {
         case .wellbeing:
             // Meaningful once the book has recent income to measure against.
             return model.wellbeingScore() != nil && !model.accountTree.isEmpty
+        case .receivables:
+            // Only for a book that actually invoices. A personal book has no
+            // receivables and should not be told it is owed nothing.
+            return !model.businessInvoices.isEmpty
+        case .reportsShortcut:
+            return !model.savedReports.isEmpty
+        case .recordsShortcut:
+            return !model.ruleGroups.isEmpty || !model.emergencyRecords.isEmpty
         }
     }
 
@@ -479,6 +487,101 @@ struct DashboardView: View {
         case .bills: billsCard
         case .accounts: accountsCard
         case .wellbeing: wellbeingCard
+        case .receivables: receivablesCard
+        case .reportsShortcut: reportsCard
+        case .recordsShortcut: recordsCard
+        }
+    }
+
+    // MARK: The three modes that contributed nothing (`FR-NAV-07`)
+
+    /// What is owed, and how late it is.
+    ///
+    /// `FR-NAV-07` names this card specifically — "which requires a Business
+    /// card (receivables/overdue), the one mode that contributes none today".
+    /// Aging by owner is already computed for the Business hub's own report, so
+    /// this reads the same numbers rather than a second opinion about them.
+    private var receivablesCard: some View {
+        Card("Receivables", systemImage: "tray.and.arrow.down") {
+            let rows = model.aging(receivable: true, asOf: todayCap)
+            let code = model.reportCurrency.mnemonic
+            let outstanding = rows.reduce(Decimal(0)) { $0 + $1.buckets.total }
+            let overdue = rows.reduce(Decimal(0)) {
+                $0 + $1.buckets.days31to60 + $1.buckets.days61to90 + $1.buckets.over90
+            }
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(alignment: .firstTextBaseline, spacing: 16) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Outstanding").scaledFont(.caption).foregroundStyle(.secondary)
+                        Text(AmountFormat.string(outstanding, code: code))
+                            .scaledFont(.title3).monospacedDigit()
+                    }
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Overdue").scaledFont(.caption).foregroundStyle(.secondary)
+                        Text(AmountFormat.string(overdue, code: code))
+                            .scaledFont(.title3).monospacedDigit()
+                            // Red only when there is something to be red about.
+                            .foregroundStyle(overdue > 0 ? Color.red : .primary)
+                    }
+                }
+                // The worst payers first — the list someone opens this to see.
+                let worst = rows
+                    .filter { $0.buckets.total > 0 }
+                    .sorted { $0.buckets.total > $1.buckets.total }
+                    .prefix(4)
+                ForEach(Array(worst.enumerated()), id: \.offset) { _, row in
+                    HStack {
+                        Text(row.name).lineLimit(1)
+                        Spacer()
+                        Text(AmountFormat.string(row.buckets.total, code: code))
+                            .monospacedDigit().foregroundStyle(.secondary)
+                    }
+                    .scaledFont(.callout)
+                }
+            }
+            .accessibilityElement(children: .combine)
+        }
+    }
+
+    /// The saved reports, one click from the board.
+    private var reportsCard: some View {
+        Card("Reports", systemImage: "doc.text.magnifyingglass") {
+            VStack(alignment: .leading, spacing: 6) {
+                ForEach(model.savedReports.prefix(5)) { saved in
+                    Button {
+                        model.navigate(to: .savedReport(saved.id))
+                    } label: {
+                        HStack {
+                            Text(saved.name).lineLimit(1)
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .scaledFont(.caption2).foregroundStyle(.tertiary)
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .scaledFont(.callout)
+                }
+            }
+        }
+    }
+
+    /// Rules and emergency records — what Records holds, counted.
+    private var recordsCard: some View {
+        Card("Records", systemImage: "folder") {
+            VStack(alignment: .leading, spacing: 6) {
+                Button { model.navigate(to: .rules) } label: {
+                    LabeledContent("Rule groups", value: "\(model.ruleGroups.count)")
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                Button { model.navigate(to: .emergencyRecords) } label: {
+                    LabeledContent("Emergency records", value: "\(model.emergencyRecords.count)")
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+            .scaledFont(.callout).monospacedDigit()
         }
     }
 

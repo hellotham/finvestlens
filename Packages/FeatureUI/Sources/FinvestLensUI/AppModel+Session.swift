@@ -193,6 +193,7 @@ extension AppModel {
     /// GnuCash-GUID instances: prefix, constructor, and the id to encode.
     private static let guidCases: [(String, (GncGUID) -> SidebarSelection)] = [
         ("account:", SidebarSelection.account),
+        ("portfolio:", SidebarSelection.portfolio),
         ("budget:", SidebarSelection.budget),
         ("goal:", SidebarSelection.goal),
         ("scheduledTransaction:", SidebarSelection.scheduledTransaction),
@@ -217,6 +218,7 @@ extension AppModel {
     static func encode(_ selection: SidebarSelection) -> String {
         switch selection {
         case .account(let id): "account:\(id.hexString)"
+        case .portfolio(let id): "portfolio:\(id.hexString)"
         case .budget(let id): "budget:\(id.hexString)"
         case .goal(let id): "goal:\(id.hexString)"
         case .scheduledTransaction(let id): "scheduledTransaction:\(id.hexString)"

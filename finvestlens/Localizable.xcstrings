@@ -14632,6 +14632,53 @@
         }
       }
     },
+    "All Holdings": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Bestände"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todas las participaciones"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tous les avoirs"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tutte le posizioni"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべての保有"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todas as posições"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全部持仓"
+          }
+        }
+      }
+    },
     "All Linked Documents…": {
       "extractionState": "manual",
       "localizations": {
@@ -35155,6 +35202,53 @@
         }
       }
     },
+    "Everything in this mode is already open": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In diesem Bereich ist bereits alles geöffnet"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todo en este modo ya está abierto"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tout est déjà ouvert dans ce mode"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In questa modalità è già tutto aperto"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このモードの項目はすべて開いています"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tudo neste modo já está aberto"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此模式中的项目已全部打开"
+          }
+        }
+      }
+    },
     "Everything tagged holiday": {
       "extractionState": "manual",
       "localizations": {
@@ -50268,6 +50362,53 @@
         }
       }
     },
+    "More in the sidebar — double-click to open in a tab": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mehr in der Seitenleiste – Doppelklick öffnet einen Tab"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Más en la barra lateral: doble clic para abrir en una pestaña"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plus dans la barre latérale – double-cliquez pour ouvrir dans un onglet"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Altro nella barra laterale: doppio clic per aprire in una scheda"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ほかはサイドバーに – ダブルクリックでタブに開きます"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mais na barra lateral — clique duplo para abrir em uma aba"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更多项目在边栏 — 双击可在标签页中打开"
+          }
+        }
+      }
+    },
     "Move Down": {
       "extractionState": "manual",
       "localizations": {
@@ -52871,49 +53012,49 @@
         }
       }
     },
-    "New Tab (⌘T) — opens what is showing in a second tab": {
+    "New Tab (⌘T) — open another of this mode's items": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Neuer Tab (⌘T) – öffnet das Angezeigte in einem zweiten Tab"
+            "value": "Neuer Tab (⌘T) – ein weiteres Element dieses Bereichs öffnen"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nueva pestaña (⌘T): abre lo mostrado en una segunda pestaña"
+            "value": "Nueva pestaña (⌘T): abrir otro elemento de este modo"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nouvel onglet (⌘T) — ouvre l’affichage actuel dans un second onglet"
+            "value": "Nouvel onglet (⌘T) – ouvrir un autre élément de ce mode"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nuova scheda (⌘T) — apre ciò che è visibile in una seconda scheda"
+            "value": "Nuova scheda (⌘T): apri un altro elemento di questa modalità"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "新規タブ（⌘T）— 表示中の内容を2つ目のタブで開きます"
+            "value": "新規タブ（⌘T）– このモードの別の項目を開く"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nova aba (⌘T) — abre o que está exibido em uma segunda aba"
+            "value": "Nova aba (⌘T) — abrir outro item deste modo"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "新建标签页（⌘T）— 在第二个标签页中打开当前内容"
+            "value": "新建标签页（⌘T）— 打开此模式的另一项"
           }
         }
       }
@@ -60002,6 +60143,53 @@
         }
       }
     },
+    "Overdue": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Überfällig"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vencido"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En retard"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scaduto"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "延滞"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vencido"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "逾期"
+          }
+        }
+      }
+    },
     "Overrides the ticker sent to the price provider.": {
       "extractionState": "manual",
       "localizations": {
@@ -61547,6 +61735,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "Carteira"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "投资组合"
+          }
+        }
+      }
+    },
+    "Portfolios": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Portfolios"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carteras"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Portefeuilles"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Portafogli"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ポートフォリオ"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carteiras"
           }
         },
         "zh-Hans": {
@@ -66638,6 +66873,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "应收账款账龄表…"
+          }
+        }
+      }
+    },
+    "Receivables": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Forderungen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cuentas por cobrar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Créances"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crediti"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "売掛金"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contas a receber"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "应收账款"
           }
         }
       }
@@ -72237,6 +72519,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "规则分组操作"
+          }
+        }
+      }
+    },
+    "Rule groups": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Regelgruppen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grupos de reglas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Groupes de règles"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gruppi di regole"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ルールグループ"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grupos de regras"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "规则组"
           }
         }
       }

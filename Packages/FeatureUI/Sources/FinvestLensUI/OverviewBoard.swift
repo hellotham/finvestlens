@@ -27,11 +27,19 @@ enum OverviewCard: String, Hashable, CaseIterable {
     case netWorth, income, expenses, cashflow, savingsRate, allocation, performance
     case spendingTrend, topMovers, goals, recentActivity, composition
     case alerts, bills, accounts, wellbeing
+    /// The three modes that contributed nothing to the board (`FR-NAV-07`:
+    /// "Every mode must be able to contribute at least one card, and the
+    /// default board carries one from each"). Business was the one the
+    /// requirement named outright; Reports and Records had no view at all, so
+    /// their absence did not even show as an empty board.
+    case receivables, reportsShortcut, recordsShortcut
 
     var minColumns: Int {
         switch self {
         case .upNext, .netWorth, .income, .expenses, .cashflow, .savingsRate, .alerts, .wellbeing: 1
+        case .reportsShortcut, .recordsShortcut: 1
         case .allocation, .performance, .spendingTrend, .topMovers, .goals, .recentActivity, .bills: 2
+        case .receivables: 2
         case .composition, .accounts: 3
         }
     }
@@ -69,6 +77,9 @@ enum OverviewCard: String, Hashable, CaseIterable {
         case .bills: String(localized: "Upcoming Bills")
         case .accounts: String(localized: "Accounts")
         case .wellbeing: String(localized: "Wellbeing")
+        case .receivables: String(localized: "Receivables")
+        case .reportsShortcut: String(localized: "Reports")
+        case .recordsShortcut: String(localized: "Records")
         }
     }
 }
@@ -86,6 +97,12 @@ extension OverviewCard {
             .investments
         case .goals, .bills, .wellbeing:
             .planning
+        case .receivables:
+            .business
+        case .reportsShortcut:
+            .reports
+        case .recordsShortcut:
+            .records
         case .upNext, .alerts:
             nil
         }
@@ -118,6 +135,8 @@ struct OverviewView: Identifiable, Hashable, Codable, Sendable {
         case "investments": return "Investments"
         case "business": return "Business"
         case "planning": return "Planning"
+        case "reports": return "Reports"
+        case "records": return "Records"
         default: return nil
         }
     }
@@ -144,6 +163,8 @@ struct OverviewView: Identifiable, Hashable, Codable, Sendable {
         case "investments": return String(localized: "Investments")
         case "business": return String(localized: "Business")
         case "planning": return String(localized: "Planning")
+        case "reports": return String(localized: "Reports")
+        case "records": return String(localized: "Records")
         default: return name
         }
     }
@@ -168,10 +189,15 @@ struct OverviewView: Identifiable, Hashable, Codable, Sendable {
                  OverviewCard.allCases.filter { $0.mode == .investments }),
         standard("planning", "Planning",
                  OverviewCard.allCases.filter { $0.mode == .planning }),
-        // Business contributes no card yet — nothing shows receivables,
-        // payables or an overdue invoice. The view exists so the gap is visible
-        // rather than silently absent; §4.3 records it as work, not a decision.
-        standard("business", "Business", []),
+        // Business held an empty view for a while — "so the gap is visible
+        // rather than silently absent". `FR-NAV-07` calls the receivables card
+        // a **Must**, so the gap is closed rather than displayed.
+        standard("business", "Business",
+                 OverviewCard.allCases.filter { $0.mode == .business }),
+        standard("reports", "Reports",
+                 OverviewCard.allCases.filter { $0.mode == .reports }),
+        standard("records", "Records",
+                 OverviewCard.allCases.filter { $0.mode == .records }),
     ]
 }
 

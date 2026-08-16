@@ -353,16 +353,28 @@ struct TwelveDataFundamentalsTests {
 @Suite("Fundamentals provider selection")
 struct FundamentalsSelectionTests {
 
-    @Test("Five providers serve company data; Stooq and Finnhub say so plainly")
+    @Test("Six providers serve company data; Stooq and Finnhub say so plainly")
     func whoServes() {
+        // Wilson joined the list when its profile parser landed: the fund page
+        // states asset class, benchmark, timeframe, APIR, ARSN and fees, and
+        // they arrive in the same request the prices do.
         #expect(QuoteProviderKind.allCases.filter(\.servesFundamentals)
                 .map(\.rawValue).sorted()
-                == ["alphaVantage", "eodhd", "fiig", "twelveData", "yahoo"])
+                == ["alphaVantage", "eodhd", "fiig", "twelveData", "wilson", "yahoo"])
         #expect(!QuoteProviderKind.stooq.servesFundamentals)
         #expect(!QuoteProviderKind.finnhub.servesFundamentals)
-        // Wilson publishes a profile on its fund pages but no parser reads it
-        // yet, so it says `false` rather than offering a Refetch that fails.
-        #expect(!QuoteProviderKind.wilson.servesFundamentals)
+    }
+
+    /// The claim and the factory must agree in **both** directions. Wilson once
+    /// said `true` with a factory that returned `nil` — a Refetch that could
+    /// only fail — and then said `false` after the factory was fixed.
+    @Test("Every provider that claims fundamentals can build one")
+    func claimMatchesFactory() {
+        for kind in QuoteProviderKind.allCases where !kind.requiresAPIKey {
+            let built = FundamentalsProviderFactory.make(kind, crumbs: YahooCrumbStore()) != nil
+            #expect(built == kind.servesFundamentals,
+                    "\(kind.rawValue): claims \(kind.servesFundamentals), factory built \(built)")
+        }
     }
 
     @Test("A keyed provider is preferred over the keyless default (D5)")

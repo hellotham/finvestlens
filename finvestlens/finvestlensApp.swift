@@ -265,6 +265,13 @@ struct finvestlensApp: App {
                     .disabled(!model.isOpen || model.postableAccounts.count < 2)
                 Button("New Account…") { model.presentedPanel = .newAccount }
                     .disabled(!model.isOpen)
+                // An account holds a security; it does not define one. The
+                // sheet has existed since that separation, reachable only from
+                // the Investments sidebar's `+` and from New Account's "create
+                // one" escape — so someone who thought to look in the File menu,
+                // where every other New… lives, found nothing.
+                Button("New Security…") { model.presentedPanel = .newSecurity }
+                    .disabled(!model.isOpen)
                 Button("Stock Transaction…") { model.presentedPanel = .stockTransaction }
                     .disabled(!model.isOpen || model.securityAccountNodes.isEmpty)
                 Button("Currency Transfer…") { model.presentedPanel = .currencyTransfer }

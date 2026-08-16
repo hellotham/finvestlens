@@ -179,6 +179,15 @@ public enum SidebarSelection: Hashable, Sendable {
     /// detail. Replaced `case prices`, which named a database rather than a
     /// subject; session restore still accepts the old spelling.
     case investments
+    /// One **portfolio** — a parent account that holds security accounts, so
+    /// the holdings table can be scoped to a broker, a super fund or a
+    /// self-managed pool rather than always showing every security in the book.
+    ///
+    /// Asked for on 16 Aug 2026: "tabs in the investment mode (All Holdings,
+    /// and then each portfolio)". The tabs are the same mechanism every other
+    /// mode uses — a sidebar row opened in a tab — so this is a selection, not
+    /// a second kind of tab.
+    case portfolio(GncGUID)
     case business
     case timeMileage
 
@@ -609,13 +618,55 @@ public final class AppModel {
     /// new-tab branch, so ⌘T and the + button did nothing in every state. A
     /// new tab has to name something not already open, and the mode's home is
     /// the one destination that is always meaningful.
+    /// What ⌘T and the tab strip's `+` can open: this mode's destinations that
+    /// are not already showing in a tab, in sidebar order.
+    ///
+    /// The home tab is excluded because it is derived rather than stored —
+    /// `tabs(in:)` puts `mode.defaultSelection` at index 0 and `openTab`
+    /// refuses to add a second copy — which is what made the old `openNewTab()`
+    /// wrong: it appended exactly that selection, so ⌘T produced a duplicate
+    /// home tab that `restoreNavigation` filtered out again on reopen.
+    public var unopenedTabDestinations: [SidebarSelection] {
+        let open = Set(openTabs)
+        var seen = Set<SidebarSelection>()
+        var out: [SidebarSelection] = []
+        func consider(_ rows: [SidebarRow]) {
+            for row in rows {
+                if !open.contains(row.id), seen.insert(row.id).inserted { out.append(row.id) }
+                if let children = row.children { consider(children) }
+            }
+        }
+        if currentMode == .accounts {
+            // Accounts builds its sidebar in the view (a tree, not a list), so
+            // its destinations come from the account list the pickers use —
+            // favourites first, because a book with 565 accounts has no useful
+            // "first" one and the starred handful is exactly the shortlist
+            // someone keeps for this. The sidebar remains the way to reach any
+            // other; `unopenedTabLimit` is what says so on screen.
+            for id in favouriteAccountIDs where !open.contains(.account(id)) {
+                if seen.insert(.account(id)).inserted { out.append(.account(id)) }
+            }
+            for node in postableAccounts where !open.contains(.account(node.id)) {
+                if seen.insert(.account(node.id)).inserted { out.append(.account(node.id)) }
+            }
+        } else {
+            for group in ModeSidebarRows.groups(for: currentMode, model: self) {
+                consider(group.rows)
+            }
+        }
+        return out
+    }
+
+    /// How many the `+` menu shows before deferring to the sidebar. A menu is a
+    /// shortcut, not a browser: 565 accounts in one would be worse than the
+    /// list they are already in.
+    public static let unopenedTabLimit = 12
+
+    /// Opens the first destination this mode has left, for ⌘T. The strip's `+`
+    /// offers the whole list instead — a menu can, a keystroke cannot.
     public func openNewTab() {
-        let old = storedSelection(in: currentMode)
-        var extras = tabsByMode[currentMode] ?? []
-        extras.append(currentMode.defaultSelection)
-        tabsByMode[currentMode] = extras
-        activeTabByMode[currentMode] = extras.count
-        applyNavigationChange(from: old)
+        guard let next = unopenedTabDestinations.first else { return }
+        navigate(to: next, inNewTab: true)
     }
 
     /// The pruned, sorted account tree the sidebar draws, and the per-account
@@ -2481,7 +2532,10 @@ public final class AppModel {
 
     /// Whether the book still has what a selection names. Collection
     /// destinations always do — they are areas, not instances.
-    private func exists(_ selection: SidebarSelection) -> Bool {
+    /// Internal, not private, for the same reason the desk-state codec is: this
+    /// is the filter that decides whether a restored tab survives, and a case
+    /// missing from it drops that tab on every reopen without a word.
+    func exists(_ selection: SidebarSelection) -> Bool {
         switch selection {
         case .account(let id): book?.account(with: id) != nil
         case .budget(let id): budgets.contains { $0.id == id }
@@ -2491,6 +2545,7 @@ public final class AppModel {
         case .emergencyRecord(let id): emergencyRecords.contains { $0.id == id }
         case .savedReport(let id): savedReports.contains { $0.id == id }
         case .security(let key): securityCommodity(forKey: key) != nil
+        case .portfolio(let id): portfolioAccounts.contains { $0.id == id }
         case .invoice(let id): businessInvoices.contains { $0.guid == id }
         case .customer(let id): businessCustomers.contains { $0.guid == id }
         case .vendor(let id): businessVendors.contains { $0.guid == id }

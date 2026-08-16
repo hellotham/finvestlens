@@ -649,8 +649,22 @@ enum ModeSidebarRows {
 
     private static func investments(_ model: AppModel) -> [SidebarGroup] {
         var groups: [SidebarGroup] = [
-            .untitled([.collection(.investments, "Portfolio", in: model, symbol: "chart.pie")]),
+            .untitled([.collection(.investments, "All Holdings", in: model, symbol: "chart.pie")]),
         ]
+        // One row per portfolio — the parent accounts that hold securities.
+        // These are what make "All Holdings, and then each portfolio" a set of
+        // tabs: a tab here is a sidebar row opened in one, the same mechanism
+        // every other mode uses, so nothing new had to be invented for it.
+        //
+        // Only when there is more than one. A book whose holdings all sit under
+        // a single parent would get one portfolio row saying exactly what All
+        // Holdings already says.
+        let portfolios = model.portfolioAccounts
+        if portfolios.count > 1 {
+            groups.append(.titled("portfolios", "Portfolios", portfolios.map {
+                .instance(.portfolio($0.id), in: model, symbol: "briefcase")
+            }))
+        }
         // Securities by type, using the grouping the book already carries:
         // GnuCash's commodity namespace (ASX, NASDAQ, FUND…). The exchange is
         // data, so its name is shown verbatim rather than looked up.

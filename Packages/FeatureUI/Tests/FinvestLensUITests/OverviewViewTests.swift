@@ -90,13 +90,33 @@ struct OverviewViewTests {
         }
     }
 
-    /// Business contributes no card yet. The view exists so the gap is visible
-    /// rather than silently absent — and the empty board says so.
-    @Test("Business is an empty view, not a missing one")
-    func businessIsVisiblyEmpty() {
-        let business = OverviewView.standards.first { $0.id == "business" }
-        #expect(business != nil)
-        #expect(business?.overviewCards.isEmpty == true)
+    /// `FR-NAV-07`, in its own words: "Every mode must be able to contribute at
+    /// least one card, and the default board carries one from each — which
+    /// requires a Business card (receivables/overdue), the one mode that
+    /// contributes none today."
+    ///
+    /// Business held a deliberately **empty** view for a while, so the gap was
+    /// visible rather than silently absent — the right call while the card did
+    /// not exist, and the wrong test to keep once it did. Reports and Records
+    /// had no view at all, so their absence did not even show as an empty
+    /// board.
+    @Test("Every mode contributes at least one card")
+    func everyModeContributesACard() {
+        for mode in AppMode.allCases where mode != .overview {
+            let cards = OverviewCard.allCases.filter { $0.mode == mode }
+            #expect(!cards.isEmpty, "\(mode.rawValue) contributes no Overview card")
+            let view = OverviewView.standards.first { $0.id == mode.rawValue }
+            #expect(view != nil, "\(mode.rawValue) has no standard view")
+            #expect(view?.overviewCards.isEmpty == false,
+                    "\(mode.rawValue)'s view lists no cards")
+        }
+    }
+
+    /// Every card is on the "Mix" view, which is defined as all of them — so a
+    /// new card cannot be added and left unreachable.
+    @Test("A new card lands on the Mix board")
+    func mixCarriesEveryCard() {
+        #expect(Set(OverviewView.mix.overviewCards) == Set(OverviewCard.allCases))
     }
 
     /// A favourite *is* a saved custom view — one concept, not two.

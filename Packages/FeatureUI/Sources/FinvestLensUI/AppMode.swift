@@ -147,7 +147,7 @@ public enum AppMode: String, CaseIterable, Identifiable, Hashable, Sendable {
         // what you see; it never changes where you are (navigation-design §4.3).
         case .dashboard, .overviewView, .overviewCard: self = .overview
         case .account, .generalLedger: self = .accounts
-        case .investments, .security: self = .investments
+        case .investments, .security, .portfolio: self = .investments
         case .reports, .savedReport, .report: self = .reports
         // Billable time and mileage exist to be invoiced, so they belong beside
         // the invoices rather than in Records (navigation-design §4.2).

@@ -330,7 +330,7 @@ struct SessionCodecTests {
         .dashboard, .generalLedger, .reports, .investments, .business,
         .timeMileage, .planner, .budgets, .goals, .scheduled, .rules,
         .emergencyRecords, .auditLog,
-        .account(.random()), .budget(.random()), .goal(.random()),
+        .account(.random()), .portfolio(.random()), .budget(.random()), .goal(.random()),
         .scheduledTransaction(.random()), .invoice(.random()), .customer(.random()),
         .vendor(.random()), .job(.random()), .employee(.random()),
         .ruleGroup(UUID()), .emergencyRecord(UUID()), .savedReport(UUID()),
