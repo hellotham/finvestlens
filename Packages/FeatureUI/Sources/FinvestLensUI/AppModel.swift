@@ -136,7 +136,7 @@ public enum RootPanel: String, Identifiable, Sendable {
     // Short, focused tasks that remain modal sheets (HIG). App *areas* (reports,
     // rules, scheduled, budgets, goals, prices, business, time & mileage) are now
     // sidebar destinations — see ``SidebarSelection``.
-    case newAccount, newTransaction, stockTransaction, currencyTransfer
+    case newAccount, newSecurity, newTransaction, stockTransaction, currencyTransfer
     case saveSearch, onboarding
     case reconcile
     case autoCategorize
@@ -741,8 +741,15 @@ public final class AppModel {
         if let destination = creation.destination { navigate(to: destination) }
         // Accounts has a panel of its own already; everything else is a sheet
         // owned by the detail view.
+        // Two that already own a panel. A security is **not** an account —
+        // several accounts can hold the same security, in different portfolios
+        // — so it gets its own sheet rather than being folded into the account
+        // editor, which is how "add a security" came to mean "add an account"
+        // and left no way to do the first without the second.
         if creation == .account {
             presentedPanel = .newAccount
+        } else if creation == .security {
+            presentedPanel = .newSecurity
         } else {
             sidebarCreateRequest = creation
         }

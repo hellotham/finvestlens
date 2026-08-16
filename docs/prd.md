@@ -257,6 +257,7 @@ per security and exported, never as one book-wide table.
 | FR-INV-31 | Provide a **FIIG provider** for Australian corporate bonds, matched by **ISIN**, fetched as one batch, with **daily history** from its per-bond endpoint. Prices are published as percent of par and scaled to each security's own unit. | Could | P11 |
 | FR-INV-38 | Supply a security's **exchange suffix from its namespace** where the mnemonic lacks one, so a GnuCash-shaped commodity (`ASX` + `WMX`) reaches providers as `WMX.AX`. | Should | P11 |
 | FR-INV-39 | Fetch **company profile and financials for every security in one command**, not only per security. | Should | P11 |
+| FR-INV-41 | Add a security by **looking it up through a price provider** — search by name or ticker, with the exchange-qualified identifier, name and type filled in from the result, then its prices and (where served) profile and financials fetched. A security is distinct from an account: several accounts may hold the same security. | Should | P11 |
 | FR-INV-40 | Record that a security has **no public price** — a retail super or managed-fund unit, a private holding — so no provider is ever asked for it. Distinct from *no longer trading*: these still trade, their price simply arrives on a statement. | Should | P11 |
 | FR-INV-32 | Treat **ISIN as a first-class, editable identifier** (GnuCash `cmdty:xcode`). | Should | P11 |
 | FR-INV-33 | Show **FX-rate health** alongside price health, so a foreign holding cannot be silently unvalued. | Should | P11 |

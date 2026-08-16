@@ -3098,3 +3098,32 @@ outlined rather than invisible so a lone home tab reads as a tab.
   leading/center/trailing groupings and never mentions stacking, expanded style
   or label-below-icon. Emptying the title area bought the room without the
   legacy chrome, so the stacked layout was not needed.
+
+## A security is not an account (16 Aug 2026)
+
+`FR-INV-41`. The two had been conflated in the UI: the only way to bring a new
+security into a book was the **New Account** sheet's Exchange/Ticker fields, so
+"add a security" meant "add an account" — and Investments' own `+` offered
+*Watch a Security*, which makes a watchlist entry rather than a holding. Several
+accounts can hold the same security (the same shares in two portfolios), so the
+two acts are separate and now have separate sheets.
+
+**New Security is a lookup, not a form.** `SecuritySearchProvider` +
+`YahooQuoteProvider.searchSecurities(matching:)` — `v1/finance/search`, keyless
+and crumbless, verified live on 16 Aug 2026 where "WAM Income" returned
+`WMX.AX` (ASX), `3RO.F` (Frankfurt) and `WMX.XA` (Cboe Australia). Three
+listings of one company, which is why the person picks and the app does not
+guess. Choosing one registers the commodity with the provider's **own**
+identifier and then fetches its price history and fundamentals in the same act.
+
+That closes the loop on the day's worst data bug at the only point it can be
+closed. `WMX` and `MG` were both entered as bare tickers, and both find US
+namesakes that answer 200 — one an index stub priced at zero, the other an
+industrial-services company whose closes became a super fund's unit price for
+836 days. An identifier that is never typed cannot be typed wrongly.
+
+Reachable from Investments' sidebar `+`, the Book menu, and `presentedPanel`.
+
+**Still to do here:** New Account should offer to *link* to an existing security
+and to create one inline when none matches; today it still carries its own
+Exchange/Ticker fields, which now duplicate this sheet.

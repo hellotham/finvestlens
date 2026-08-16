@@ -585,6 +585,7 @@ public struct FinvestLensRootView: View {
         .sheet(item: $model.presentedPanel) { panel in
             switch panel {
             case .newAccount: NewAccountSheet(model: model)
+            case .newSecurity: NewSecuritySheet(model: model)
             case .newTransaction: TransactionEditorSheet(model: model)
             case .stockTransaction: StockTransactionSheet(model: model)
             case .currencyTransfer: CurrencyTransferSheet(model: model)

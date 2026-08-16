@@ -141,7 +141,7 @@ public enum AppMode: String, CaseIterable, Identifiable, Hashable, Sendable {
         switch self {
         case .overview: [.overviewView]
         case .accounts: [.account]
-        case .investments: [.watchedSecurity]
+        case .investments: [.security, .watchedSecurity]
         case .reports: []          // the catalogue is fixed; saved reports come from a report
         case .business: [.customer, .vendor, .invoice, .job, .employee]
         case .planning: [.budget, .goal, .scheduled]
@@ -172,7 +172,7 @@ public enum AppMode: String, CaseIterable, Identifiable, Hashable, Sendable {
 /// detail view, which the sidebar cannot reach. The same shape as
 /// `bankImportRequested` and the other cross-surface requests on `AppModel`.
 public enum SidebarCreation: String, Identifiable, Hashable, Sendable {
-    case account, budget, goal, scheduled, ruleGroup, emergencyRecord
+    case account, security, budget, goal, scheduled, ruleGroup, emergencyRecord
     case customer, vendor, invoice, job, employee, watchedSecurity, overviewView
 
     public var id: String { rawValue }
@@ -180,6 +180,7 @@ public enum SidebarCreation: String, Identifiable, Hashable, Sendable {
     public var title: LocalizedStringKey {
         switch self {
         case .account: "New Account…"
+        case .security: "New Security…"
         case .budget: "New Budget"
         case .goal: "New Goal…"
         case .scheduled: "New Scheduled Transaction…"
@@ -206,6 +207,7 @@ public enum SidebarCreation: String, Identifiable, Hashable, Sendable {
         case .emergencyRecord: .emergencyRecords
         case .customer, .vendor, .invoice, .job, .employee: .business
         case .watchedSecurity: .investments
+        case .security: .investments
         case .account, .overviewView: nil
         }
     }

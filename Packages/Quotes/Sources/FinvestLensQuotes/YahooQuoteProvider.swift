@@ -18,6 +18,9 @@ public struct YahooQuoteProvider: QuoteProvider {
     public let kind: QuoteProviderKind = .yahoo
     private let http: HTTPFetching
     private let host: String
+    /// The same client and host, reachable from the search extension.
+    var searchHTTP: HTTPFetching { http }
+    var searchHost: String { host }
 
     public init(http: HTTPFetching = URLSessionHTTPClient(), host: String = "query1.finance.yahoo.com") {
         self.http = http

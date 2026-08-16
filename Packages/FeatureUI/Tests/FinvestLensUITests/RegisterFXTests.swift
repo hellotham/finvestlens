@@ -21,6 +21,7 @@
 import Foundation
 import Testing
 import FinvestLensEngine
+import FinvestLensQuotes
 @testable import FinvestLensUI
 
 private func dec(_ s: String) -> Decimal { Decimal(string: s)! }
@@ -360,5 +361,87 @@ struct DocumentCurrencyTests {
         #expect(model.restructureAsForeign(transactionID: id,
                                            foreignAmount: dec("600"),
                                            currencyCode: "MYR") == .notForeign)
+    }
+}
+
+/// Adding a security by looking it up (`FR-INV-41`).
+///
+/// Asked for on 16 Aug 2026: "New security should be as seamless as possible.
+/// Rather than asking the user to fill in details, the user should be able to
+/// look up a security through any of the pricing providers, and details
+/// automatically filled."
+@MainActor
+@Suite("Security lookup")
+struct SecurityLookupTests {
+
+    private func book() throws -> (AppModel, URL) {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
+        let model = AppModel()
+        try model.newDocument(at: url)
+        return (model, url)
+    }
+
+    /// The identifier comes from the provider, suffix and all. Typing `WMX`
+    /// finds a New York index stub; the search result says `WMX.AX`, and that
+    /// is what the book stores.
+    @Test("A found security keeps the provider's own symbol and exchange")
+    func keepsProviderSymbol() throws {
+        let (model, url) = try book()
+        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+
+        let found = SecuritySearchResult(symbol: "WMX.AX", exchange: "ASX",
+                                         name: "Wam Income Maximiser Limited", kind: "EQUITY")
+        let made = try #require(model.createSecurity(from: found))
+        #expect(made.mnemonic == "WMX.AX", "the suffix is the whole point")
+        #expect(made.namespace == .security("ASX"))
+        #expect(made.fullName == "Wam Income Maximiser Limited")
+        #expect(model.book?.commodities.contains(made) == true)
+    }
+
+    /// A security is not an account. Adding one creates no account, because
+    /// several accounts can hold the same security in different portfolios.
+    @Test("Adding a security creates no account")
+    func createsNoAccount() throws {
+        let (model, url) = try book()
+        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+
+        let before = model.book?.accounts.count ?? 0
+        _ = model.createSecurity(from: SecuritySearchResult(
+            symbol: "CBA.AX", exchange: "ASX", name: "Commonwealth Bank", kind: "EQUITY"))
+        #expect(model.book?.accounts.count == before)
+    }
+
+    @Test("The same security is never added twice")
+    func noDuplicates() throws {
+        let (model, url) = try book()
+        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+
+        let found = SecuritySearchResult(symbol: "BHP.AX", exchange: "ASX",
+                                         name: "BHP Group", kind: "EQUITY")
+        #expect(model.createSecurity(from: found) != nil)
+        #expect(model.createSecurity(from: found) == nil, "asked again, it declines")
+    }
+
+    /// A listing with no exchange still lands somewhere findable rather than
+    /// in a namespace called "".
+    @Test("A result with no exchange gets a namespace anyway")
+    func missingExchange() throws {
+        let (model, url) = try book()
+        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+
+        let made = try #require(model.createSecurity(from: SecuritySearchResult(
+            symbol: "XYZ", exchange: "", name: "Something", kind: "")))
+        #expect(made.namespace == .security("OTHER"))
+    }
+
+    /// The ticker is recoverable from the symbol for the places that want it
+    /// bare (a namespace, a display column) without re-deriving the split.
+    @Test("The bare ticker is available beside the full symbol")
+    func tickerSplit() {
+        #expect(SecuritySearchResult(symbol: "WMX.AX", exchange: "ASX",
+                                     name: "", kind: "").ticker == "WMX")
+        #expect(SecuritySearchResult(symbol: "AAPL", exchange: "NMS",
+                                     name: "", kind: "").ticker == "AAPL")
     }
 }
