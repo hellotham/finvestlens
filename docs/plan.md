@@ -474,6 +474,97 @@ interchange change. That is what makes a change this visible tractable.
 46,831 transactions, and a sidebar that must stay responsive while the mode
 selector never moves on its own.
 
+## 13e. Phase P13 — Remediation: the five-angle scan
+
+Ordered by the owner on 16 Aug 2026 after a run of defects found one complaint
+at a time. Five read-only subagents audited the tree in parallel — reachability,
+surface parity, P12 spec-vs-build, docs-vs-code, and price-data consistency —
+and returned **47 issues**. The owner approved: keep the uncommitted work and
+verify it, data correctness first, everything in sequence.
+
+**The scan's own lesson.** Three defects it found were in fixes reported as
+complete the same day. A fix is not done because its diff looks right; it is
+done when the path a user actually presses has been traced to it.
+
+### P13.0 — Verify the tree ✅ (16 Aug 2026, `e2c4843`)
+
+Found three defects the suite could not see: replacing `.searchable` orphaned
+`searchSuggestions` and with it every route to saved searches; `onExitCommand`
+is unavailable on iOS and broke that build; and a plain 150pt field cost more
+width than stacking the mode labels had saved, putting Reports and Business back
+in the overflow menu. Also corrected a claim that Wilson serves fundamentals
+while its factory returns `nil`.
+
+### P13.1 — Stop bad data entering the book
+
+One guard layer between every provider and `addPrice`. Exit criteria:
+
+- Non-positive, unknown-currency and epoch-0 quotes are refused **for every
+  provider on both the latest and history paths** — today the zero guard is in
+  Yahoo's `latestQuote` alone, and the currency guard cannot fire on EODHD,
+  Alpha Vantage, Finnhub or Stooq, which all report `currencyCode: nil`.
+- The cross-provider fallback sweep moves to `fetchHistory`. It was added to
+  `fetchLatestQuotes`, which **no button calls** — only the six-hourly refresh —
+  so ⌘⇧U, the Quotes sheet and per-security update still lose coverage.
+- The sweep stops trying currency-blind providers first (it sorts by `rawValue`,
+  so the four that cannot report a currency run before the two that can).
+- FIIG's history path carries the currency its index path reports.
+- One dedup rule across both write paths, and `Book.latest` returns the *last*
+  row of a day rather than the first — today the 06:00 auto-refresh values the
+  portfolio all day and the evening close cannot be written.
+- One day convention at ingest. Three are in use (instant, UTC midnight, Sydney
+  midnight), so a western user's Stooq series is a day off from Yahoo's.
+- FX fetch routes through `preferredQuoteProvider` and dedups.
+- CSV price import validates currency, or is removed (it is unreachable today).
+- Typed bond prices are par-scaled like fetched ones.
+
+### P13.2 — Controls that do nothing
+
+Wire or remove: the period selector (inert in 5 of 7 modes), the sort menu
+(inert in 3), All Transactions' filter and sort (ignored — and its sort header
+silently re-sorts *other* registers), the `registerFilterRequested` flag (latches
+`true` and kills the command everywhere), multi-selection context menus (empty in
+every mode), and `routeCandidatesToFIIG` (re-points every bond, ungated).
+
+Restore the unreachable: **`deleteBudget`** (a budget can never be removed),
+`renameSecurity`, `clearFundamentals(for:)`, and either wire or delete
+`importPrices(csv:)` and the eleven dead `inlineSet*` wrappers.
+
+### P13.3 — The owner's outstanding asks
+
+- **Investments tabs: All Holdings, then one per portfolio.** `securityAccountNodes`
+  exists and the sidebar never reads it.
+- `openNewTab()` appends the mode's *default* selection, so `+`/⌘T makes a
+  duplicate home tab — which `restoreNavigation` then filters out on reopen.
+- The Wilson Asset Management provider: wire it, test the date parser against
+  the page's **inconsistent** own format (day-first above the 12th, month-first
+  below), and add the profile parser that `servesFundamentals` is waiting on.
+- "New Security…" in the menu bar — documented, never added.
+- Overview cards for Business, Reports and Records (`FR-NAV-07`, **Must**).
+- The stacked mode labels: read `ModeLabelFit` again (nothing does), and lift the
+  label off the selected pill's bottom edge.
+
+### P13.4 — Register parity
+
+All Transactions gets a toolbar, entry bar, summary bar, a Balance that is not
+permanently blank, and amounts labelled in the transaction's currency rather than
+the report currency. `selectedSplitIDs` stops mirroring an arbitrary
+`splits.first`. The three transaction editors converge: Num editable and settable
+everywhere (`addTransaction` has no `number:` parameter at all), description
+autocomplete everywhere, one `isBalanced` — the sheet's Save button and its own
+Balance cell currently disagree.
+
+### P13.5 — Documentation, then the gates
+
+`deferred.md:118` still files the wrong-currency stamping as an **accepted
+won't-fix**; that is the behaviour that wrote 1,205 bad rows. `FR-NAV-02` demands
+"one segmented control" that the build deliberately is not. Seven `FR-*` ids are
+cited in shipped code and exist in no document, `FR-INV-42` among them.
+`implemented.md` calls the navigation design "still a proposal" 2,600 lines above
+the section describing it as shipped, and contradicts itself on sidebar drag.
+
+Then `/ui-review`, `/preflight`, `/code-review`.
+
 ## 14. Quality gates (apply every phase)
 
 1. **Double-entry invariant** — no unbalanced transaction persists (`FR-ENG-06`). *Hard gate.*
