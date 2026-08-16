@@ -59,9 +59,17 @@ struct ModeLabelFitTests {
     /// The guard still exists, for a language or an accessibility text size
     /// that makes even the stacked words too wide. It simply no longer fires at
     /// any width this window can take.
-    @Test("The degradation is still there for a window too small to hold them")
-    func narrowWindowDropsLabels() {
-        #expect(!ModeLabelFit.labelsFit(defaults, in: 400))
+    ///
+    /// Derived rather than guessed: the threshold moved on 16 Aug 2026 when the
+    /// reserve stopped standing for a toolbar's worth of other controls (260pt)
+    /// and became the row's own inset (12pt), so a hard-coded "400 is too
+    /// narrow" would have quietly started passing for the wrong reason.
+    @Test("The degradation is still there for a row too small to hold them")
+    func narrowRowDropsLabels() {
+        let needed = defaults.reduce(CGFloat(0)) { $0 + ModeLabelFit.width(of: $1.name) }
+            + ModeLabelFit.reservedForTheRest
+        #expect(ModeLabelFit.labelsFit(defaults, in: needed), "exactly enough is enough")
+        #expect(!ModeLabelFit.labelsFit(defaults, in: needed - 1), "one point short is short")
         #expect(!ModeLabelFit.labelsFit(defaults, in: 0), "no measurement yet is not a licence")
     }
 
@@ -74,24 +82,33 @@ struct ModeLabelFitTests {
                 "a nameless mode still occupies its symbol and padding")
     }
 
-    /// The model asks about the modes actually on the toolbar, not all seven —
-    /// so leaving the defaults alone keeps the labels, and adding a sixth is
-    /// the act that spends the room.
-    @Test("The model measures the visible modes at the measured width")
-    func modelUsesVisibleModes() throws {
+    /// The model measures **the mode row**, not the window.
+    ///
+    /// It read `windowWidth` — the whole split view, measured on
+    /// `FinvestLensRootView` — while `ModeBar` is a safe-area inset on the
+    /// *detail* column, so the sidebar's 200–400pt was counted as room the
+    /// modes could use. `ModeBar` measures itself now, and the property is
+    /// named after what it holds.
+    @Test("The model measures the mode row, at the row's own width")
+    func modelMeasuresTheModeRow() throws {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
         let model = AppModel()
         try model.newDocument(at: url)
         defer { model.close(); try? FileManager.default.removeItem(at: url) }
 
+        // All seven are drawn now, so this is the figure that has to fit.
+        let sevenWide = AppMode.allCases.reduce(CGFloat(0)) { $0 + ModeLabelFit.width(of: $1.name) }
+            + ModeLabelFit.reservedForTheRest
+
         #expect(!model.modeLabelsFit, "nothing measured yet")
-        model.windowWidth = 1_280
-        #expect(model.modeLabelsFit)
-        model.windowWidth = 986
-        #expect(model.modeLabelsFit, "the window this was reported from")
-        model.windowWidth = 400
-        #expect(!model.modeLabelsFit)
+        // The row inside the 860pt minimum window, with the sidebar at its own
+        // 200pt minimum — the narrowest row the app can actually produce.
+        model.modeRowWidth = 660
+        #expect(model.modeLabelsFit, "the narrowest row the app can produce")
+        #expect(sevenWide <= 660, "…and it fits with room to spare")
+        model.modeRowWidth = sevenWide - 1
+        #expect(!model.modeLabelsFit, "a row one point short drops the labels")
     }
 
     /// Every mode on the toolbar by default is one of the five the design

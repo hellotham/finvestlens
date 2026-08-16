@@ -24,6 +24,10 @@ struct SecurityDetailView: View {
     let commodity: Commodity
 
     @Environment(\.appDateFormat) private var dateFormat
+    /// True when this is a tab in the detail pane rather than a sheet — the tab
+    /// strip is then already saying the security's name, so the window title
+    /// must not say it a second time.
+    @Environment(\.isEmbeddedDestination) private var embedded
     @State private var range: DetailRange = .year
     @State private var exportingCSV = false
     @State private var importingCSV = false
@@ -54,7 +58,7 @@ struct SecurityDetailView: View {
                                        description: Text("This security has no prices or transactions in this book."))
             }
         }
-        .navigationTitle(commodity.mnemonic)
+        .navigationTitle(embedded ? "" : commodity.mnemonic)
         .toolbar { toolbar }
         .sheet(isPresented: $showingTarget) { PriceTargetSheet(model: model, commodity: commodity) }
         .sheet(isPresented: $showingAddPrice) { AddPriceSheet(model: model, commodity: commodity) }

@@ -172,6 +172,89 @@ struct ModeSidebarTests {
         #expect(!groups.contains { $0.id == "customers" })
         #expect(AppMode.business.isOnToolbarByDefault)
     }
+
+    /// **The way back survives the filter, in every mode.**
+    ///
+    /// Accounts had always pinned All Transactions outside the filter and the
+    /// other six had not, so one character typed into Investments took *All
+    /// Holdings* off the sidebar — the same class of fault the mode sidebars
+    /// were built to remove from the old one, at smaller scale. Asserted over
+    /// `allCases` rather than the six, so an eighth mode inherits the rule.
+    @Test("A filter that matches nothing still leaves the mode's home row")
+    func filterKeepsTheHomeRow() throws {
+        let f = try makeFixture()
+        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+
+        for mode in AppMode.allCases where mode != .accounts {
+            let groups = ModeSidebarRows.groups(for: mode, model: f.model)
+            let narrowed = ModeSidebarRows.filtering(groups, by: "zzzznomatch",
+                                                     keeping: mode.defaultSelection)
+            let ids = narrowed.flatMap(\.rows).map(\.id)
+            #expect(ids == [mode.defaultSelection],
+                    "\(mode.rawValue) kept \(ids) rather than only its home row")
+            // Kept as a leaf: a disclosure triangle over nothing is worse than
+            // no triangle.
+            #expect(narrowed.flatMap(\.rows).first?.children == nil)
+        }
+    }
+
+    /// A filter that *does* match still narrows — the home row is pinned, not
+    /// the whole list.
+    @Test("Pinning the home row does not stop the filter filtering")
+    func filterStillNarrows() throws {
+        let f = try makeFixture()
+        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+
+        let groups = ModeSidebarRows.groups(for: .planning, model: f.model)
+        let all = groups.flatMap(\.rows).count
+        let narrowed = ModeSidebarRows.filtering(groups, by: "budget",
+                                                 keeping: AppMode.planning.defaultSelection)
+            .flatMap(\.rows)
+        #expect(narrowed.count < all, "the filter did nothing")
+        #expect(narrowed.contains { $0.id == .budgets })
+        #expect(narrowed.contains { $0.id == .planner }, "the home row, still there")
+    }
+
+    /// The three planners are destinations, not a control buried in a view.
+    ///
+    /// They were a segmented `Picker` inside `PlanningView` — the only
+    /// navigation in the app that lived in the content, unreachable from the
+    /// sidebar, the tab strip, ⌘T or the View menu.
+    @Test("Planning lists its three planners as rows")
+    func planningListsItsPlanners() throws {
+        let f = try makeFixture()
+        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+
+        let rows = ModeSidebarRows.groups(for: .planning, model: f.model).flatMap(\.rows)
+        let planner = try #require(rows.first { $0.id == .planner })
+        #expect(planner.children?.map(\.id) == [.plannerDebt, .plannerLifetime, .plannerTax])
+        // Each names itself the way its tab does, and each belongs to Planning.
+        for tool in PlanningView.Tool.allCases {
+            #expect(AppMode(hosting: tool.selection) == .planning)
+            #expect(f.model.tabTitle(for: tool.selection) == tool.name)
+            #expect(!tool.name.isEmpty)
+        }
+    }
+
+    /// Each planner opens as a tab and survives a reopen, like every other
+    /// destination — the point of making them selections rather than a picker.
+    @Test("A planner opens in a tab and restores")
+    func plannerOpensAndRestores() throws {
+        let f = try makeFixture()
+        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+
+        f.model.navigate(to: .plannerTax, inNewTab: true)
+        #expect(f.model.mode == .planning)
+        #expect(f.model.sidebarSelection == .plannerTax)
+        #expect(f.model.openTabs.contains(.plannerTax))
+        #expect(f.model.exists(.plannerTax), "a tab the restore filter would drop")
+
+        for tool in PlanningView.Tool.allCases {
+            let raw = AppModel.encode(tool.selection)
+            #expect(!raw.isEmpty, "\(tool.rawValue) has no desk-state spelling")
+            #expect(AppModel.decodeSelection(raw) == tool.selection)
+        }
+    }
 }
 
 // MARK: - Defects the review found, fixed 15 Aug 2026

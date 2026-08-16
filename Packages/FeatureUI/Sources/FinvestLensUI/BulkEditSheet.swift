@@ -56,6 +56,9 @@ struct BulkEditSheet: View {
                         DatePicker("", selection: $date, displayedComponents: .date)
                             .labelsHidden()
                             .disabled(!setDate)
+                            // The "Date" toggle beside it labels this visually
+                            // and not at all to VoiceOver.
+                            .accessibilityLabel("New date")
                     }
                     HStack {
                         Toggle("Description", isOn: $setDescription)

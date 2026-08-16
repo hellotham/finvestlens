@@ -37,15 +37,16 @@ struct InvestmentsView: View {
     @State private var showingPreview = false
     @State private var targeting: CommodityTarget?
     @State private var cadenceFor: CommodityTarget?
-    /// The stack's own path, so a command can open a security's page.
-    ///
-    /// Clicking the row was the only way in, and a row that navigates on click
-    /// gives no sign that it will — so the ticker override, the ISIN and the
-    /// per-security provider (`SecurityDetailView`, the Identifiers section)
-    /// were unreachable to anyone who looked for them where they belong: on
-    /// the security's context menu. Reported 15 Aug 2026 as "right click does
-    /// not allow a security to be edited", which was exactly right.
-    @State private var path = NavigationPath()
+    // A security's page opens as a **tab**, not as a push onto a stack of this
+    // view's own.
+    //
+    // It used to be both: the sidebar's security rows navigate to
+    // `.security(key)` and open a tab, while *Get Info* on a holding pushed the
+    // very same `SecurityDetailView` onto a private `NavigationPath` — so the
+    // same page had a back button or a tab depending on which of two equivalent
+    // routes you took, and Investments was the only mode in the app carrying a
+    // second navigation model inside a tab. One route now, the one every other
+    // mode uses.
 
     /// The holdings shown, narrowed to the portfolio when this tab has one.
     ///
@@ -65,10 +66,10 @@ struct InvestmentsView: View {
     private var issues: [InvestmentIssue] { model.investmentIssues() }
 
     var body: some View {
-        // A stack, so a holding can open its own page (`FR-INV-15`). One level
-        // deep and no further: the design's L1 → L2 → sheets, with no tab bar
-        // anywhere.
-        NavigationStack(path: $path) {
+        // A stack for the toolbar to hang from — with no path of its own. A
+        // holding's page (`FR-INV-15`) is a tab, reached the same way the
+        // sidebar reaches it.
+        NavigationStack {
             Group {
                 if model.securityCommodities.isEmpty && model.watchlist.isEmpty {
                     ContentUnavailableView(
@@ -89,9 +90,6 @@ struct InvestmentsView: View {
                 guard model.sidebarCreateRequest == .watchedSecurity else { return }
                 model.sidebarCreateRequest = nil
                 showingAddWatch = true
-            }
-            .navigationDestination(for: Commodity.self) { commodity in
-                SecurityDetailView(model: model, commodity: commodity)
             }
             .toolbar { toolbar }
         }
@@ -285,7 +283,10 @@ struct InvestmentsView: View {
                                     row: row, model: model, sparkWindow: sparkWindow,
                                     onTarget: { targeting = CommodityTarget(commodity: row.commodity) },
                                     onCadence: { cadenceFor = CommodityTarget(commodity: row.commodity) },
-                                    onOpen: { path.append(row.commodity) })
+                                    onOpen: {
+                                        model.navigate(to: .security(
+                                            SidebarSelection.securityKey(row.commodity)))
+                                    })
                             }
                         }
                     }

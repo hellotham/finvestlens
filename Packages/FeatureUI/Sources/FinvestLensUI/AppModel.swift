@@ -238,6 +238,17 @@ public enum SidebarSelection: Hashable, Sendable {
     case rules
     case goals
     case planner
+    /// The three planners, each a destination of its own.
+    ///
+    /// They were a segmented `Picker` inside `PlanningView` — the only
+    /// navigation in the app that lived in the content rather than in the
+    /// sidebar and the tab strip. Three whole screens reachable from neither
+    /// the sidebar, the tab strip, ⌘T nor the View menu, in a mode whose other
+    /// four destinations were reachable from all four. Reports already lists a
+    /// fixed catalogue as sidebar rows; this is the same shape.
+    case plannerDebt
+    case plannerLifetime
+    case plannerTax
     case emergencyRecords
     /// The Investments hub (`FR-INV-08`) — holdings, price health, per-security
     /// detail. Replaced `case prices`, which named a database rather than a
@@ -1463,12 +1474,14 @@ public final class AppModel {
     /// progress strip the same way `quoteProgress` drives the price one.
     public var fundamentalsRun: FundamentalsRun?
 
-    /// The window's current width, measured by the content view.
+    /// The **mode row's** current width, measured by `ModeBar` itself.
     ///
-    /// Held on the model because the thing that needs it — the mode buttons —
-    /// lives in the window's *toolbar*, which is outside the content view's
-    /// geometry and has no other way to learn how much room it has.
-    public var windowWidth: CGFloat = 0
+    /// It was `windowWidth`, measured on the whole split view, back when the
+    /// modes were toolbar items spanning the window. They are not: `ModeBar` is
+    /// a safe-area inset on the *detail* column, so the sidebar's 200–400pt was
+    /// being counted as room the modes could use. Measured where it is drawn,
+    /// and named after what it measures.
+    public var modeRowWidth: CGFloat = 0
 
     /// Whether all seven modes can show their names on their own row.
     ///
@@ -1478,9 +1491,11 @@ public final class AppModel {
     /// to symbols at any width the window can take — 452pt of labels against an
     /// 860pt minimum — but the measurement stays, because a longer language or
     /// a larger accessibility text size can still outgrow the row, and this is
-    /// what a future `ModeBar` would ask.
+    /// what a future `ModeBar` would ask. Kept honest for that day: a retained
+    /// measurement that measures the wrong thing is worse than none, because
+    /// whoever picks it up will believe it.
     public var modeLabelsFit: Bool {
-        ModeLabelFit.labelsFit(ModeBar.modes, in: windowWidth)
+        ModeLabelFit.labelsFit(ModeBar.modes, in: modeRowWidth)
     }
 
     /// Bumped when the sidecar changes. The cache is a file, not an observed
@@ -2700,6 +2715,7 @@ public final class AppModel {
         case .overviewView(let id): overviewViews.contains { $0.id == id }
         case .dashboard, .generalLedger, .reports, .report, .investments,
              .business, .timeMileage, .planner, .budgets, .goals, .scheduled,
+             .plannerDebt, .plannerLifetime, .plannerTax,
              .rules, .emergencyRecords, .auditLog, .overviewCard:
             true
         }

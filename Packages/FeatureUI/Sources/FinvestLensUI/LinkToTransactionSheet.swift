@@ -33,6 +33,11 @@ struct LinkToTransactionSheet: View {
                         if pick.hasDocument {
                             Image(systemName: "paperclip").foregroundStyle(.secondary)
                                 .help("Already has an attachment")
+                                // `.help` is a tooltip; VoiceOver speaks it
+                                // only on request. This glyph carries the one
+                                // fact that would make someone pick a different
+                                // row, so it says it out loud.
+                                .accessibilityLabel("Already has an attachment")
                         }
                         Text(pick.summary).scaledFont(.callout)
                         Spacer()

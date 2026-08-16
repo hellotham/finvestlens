@@ -129,6 +129,12 @@ struct AccountMatchPicker: View {
                 .contentShape(.rect)
             }
             .buttonStyle(.plain)
+            // The tick is drawn and nothing else says it: without this the row
+            // reads out as the account's name whether it is chosen or not, so a
+            // VoiceOver user cannot tell what the report is scoped to. The two
+            // other multi-selects in the app already do this
+            // (`AppearanceSettingsView`, `View.sidebarInstance`).
+            .accessibilityAddTraits(selection.contains(node.id) ? [.isSelected] : [])
         }
     }
 }

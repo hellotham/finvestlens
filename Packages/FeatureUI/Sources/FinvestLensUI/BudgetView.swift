@@ -87,7 +87,10 @@ struct BudgetView: View {
                     }
                 }
             }
-            .navigationTitle(title)
+            // Blank as a tab — the tab strip names this destination, and the
+            // other ten tab destinations all leave the title area empty. The
+            // sheet still needs a title, because it has no strip above it.
+            .navigationTitle(embedded ? Text(verbatim: "") : title)
             .onChange(of: model.sidebarCreateRequest) {
                 guard model.sidebarCreateRequest == .budget else { return }
                 model.sidebarCreateRequest = nil

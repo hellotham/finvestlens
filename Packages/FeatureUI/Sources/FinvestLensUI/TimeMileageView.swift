@@ -74,7 +74,9 @@ struct TimeMileageView: View {
                     }
                 }
             }
-            .navigationTitle("Time & Mileage")
+            // Blank as a tab; the tab strip names this destination, as it does
+            // for every other tab in every other mode.
+            .navigationTitle(embedded ? "" : "Time & Mileage")
             .onEscapeCommand { dismiss() }
             .toolbar {
                 if !embedded {

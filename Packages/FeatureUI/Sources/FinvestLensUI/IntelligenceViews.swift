@@ -536,6 +536,9 @@ struct BudgetSuggestSheet: View {
                 }
             ))
             .labelsHidden()
+            // The account's name is in the stack beside this box, which SwiftUI
+            // does not lift into the control — unnamed to VoiceOver otherwise.
+            .accessibilityLabel(Text("Include \(line.fullName)"))
             VStack(alignment: .leading, spacing: 2) {
                 Text(line.fullName)
                 Text(line.rationale).scaledFont(.caption).foregroundStyle(.secondary)

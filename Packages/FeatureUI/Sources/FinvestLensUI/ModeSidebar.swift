@@ -185,10 +185,13 @@ struct ModeSidebar: View {
         VStack(alignment: .leading, spacing: 6) {
             // The mode, in words, permanently.
             //
-            // The toolbar's mode buttons drop to symbols when the window cannot
-            // hold their labels (`ModeLabelFit`), and they vanish entirely if
-            // someone hides the toolbar — so orientation cannot rest on them
-            // alone. HIG *Toolbars* counts "the title of the current view"
+            // The mode row is chrome on the detail column, so it goes with any
+            // window state that hides it, and it is off screen entirely
+            // whenever the detail pane is — so orientation cannot rest on it
+            // alone. (It said the buttons "drop to symbols when the window
+            // cannot hold their labels"; they never do — `ModeLabelFit` is
+            // retained but unconsulted.) HIG *Toolbars* counts "the title of
+            // the current view"
             // among a toolbar's three jobs and *Tab bars* warns that when the
             // selector is hidden "people can forget which area of the app
             // they're in"; this is the answer that costs no toolbar width.
@@ -246,7 +249,9 @@ struct ModeSidebar: View {
             Button {
                 model.requestCreate(only)
             } label: {
-                Image(systemName: "plus")
+                // The command's own glyph, not a blanket `+` — see
+                // `SidebarCreation.symbol`.
+                Image(systemName: only.symbol)
                     .accessibilityLabel(only.title)
             }
             .buttonStyle(.borderless)
@@ -450,27 +455,9 @@ struct ModeSidebar: View {
         .tag(row.id)
     }
 
-    /// Filters a mode's rows, keeping a collection whose *children* match so the
-    /// match stays reachable.
     private func filtered(_ groups: [SidebarGroup]) -> [SidebarGroup] {
-        guard !trimmedFilter.isEmpty else { return groups }
-        let needle = trimmedFilter.lowercased()
-        func matches(_ row: SidebarRow) -> SidebarRow? {
-            let kept = (row.children ?? []).filter {
-                $0.searchText.lowercased().contains(needle)
-            }
-            if !kept.isEmpty {
-                var copy = row
-                copy.children = kept
-                return copy
-            }
-            return row.searchText.lowercased().contains(needle) ? row : nil
-        }
-        return groups.compactMap { group in
-            let kept = group.rows.compactMap(matches)
-            guard !kept.isEmpty else { return nil }
-            return SidebarGroup(id: group.id, key: group.key, text: group.text, rows: kept)
-        }
+        ModeSidebarRows.filtering(groups, by: trimmedFilter,
+                                  keeping: model.mode.defaultSelection)
     }
 
     // MARK: Accounts
@@ -630,6 +617,46 @@ enum ModeSidebarRows {
         }
     }
 
+    /// Narrows a mode's rows to `filter`, keeping a collection whose *children*
+    /// match so the match stays reachable — and **always keeping `home`**.
+    ///
+    /// That last clause is the fix this function was extracted for. Accounts had
+    /// pinned All Transactions outside the filter since the sidebar was built —
+    /// "hiding the way back whenever someone types is the fault the old sidebar
+    /// earned, in miniature" — and the other six modes had not, because their
+    /// home row is just the first row of the first group and went through the
+    /// filter with everything else. Typing `BHP` in Investments removed *All
+    /// Holdings*; typing anything in Reports removed *All Reports*. One rule,
+    /// written once, for all seven — and out of the view, so a test can hold it
+    /// there.
+    static func filtering(_ groups: [SidebarGroup], by filter: String,
+                          keeping home: SidebarSelection) -> [SidebarGroup] {
+        guard !filter.isEmpty else { return groups }
+        let needle = filter.lowercased()
+        func matches(_ row: SidebarRow) -> SidebarRow? {
+            let kept = (row.children ?? []).filter {
+                $0.searchText.lowercased().contains(needle)
+            }
+            if !kept.isEmpty {
+                var copy = row
+                copy.children = kept
+                return copy
+            }
+            if row.searchText.lowercased().contains(needle) { return row }
+            // The way back, kept — narrowed to nothing rather than removed, so
+            // the row does not offer a disclosure triangle over no matches.
+            guard row.id == home else { return nil }
+            var stripped = row
+            stripped.children = nil
+            return stripped
+        }
+        return groups.compactMap { group in
+            let kept = group.rows.compactMap(matches)
+            guard !kept.isEmpty else { return nil }
+            return SidebarGroup(id: group.id, key: group.key, text: group.text, rows: kept)
+        }
+    }
+
     private static func build(for mode: AppMode, model: AppModel) -> [SidebarGroup] {
         switch mode {
         case .dashboard: overview(model)
@@ -749,7 +776,13 @@ enum ModeSidebarRows {
 
     private static func planning(_ model: AppModel) -> [SidebarGroup] {
         [.untitled([
-            .collection(.planner, "Planner", in: model, symbol: "chart.xyaxis.line"),
+            // The three planners, as rows. They were a segmented picker inside
+            // the Planner view and nothing else could reach them — see
+            // `SidebarSelection.plannerDebt`.
+            .collection(.planner, "Planner", in: model, symbol: "chart.xyaxis.line",
+                        children: PlanningView.Tool.allCases.map {
+                            .instance($0.selection, in: model)
+                        }),
             .collection(.budgets, "Budgets", in: model, symbol: "chart.bar.doc.horizontal",
                         children: model.budgets.map { .instance(.budget($0.id), in: model) }),
             .collection(.goals, "Savings Goals", in: model, symbol: "target",

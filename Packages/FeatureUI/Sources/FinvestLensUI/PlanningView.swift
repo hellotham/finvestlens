@@ -22,17 +22,65 @@ struct PlanningView: View {
     @Bindable var model: AppModel
 
     enum Tool: String, CaseIterable, Identifiable {
-        case debt = "Debt Reduction"
-        case lifetime = "Lifetime"
-        case tax = "Tax Estimate"
+        case debt, lifetime, tax
         var id: String { rawValue }
+
+        /// The planner's own destination, so the sidebar, the tab strip and
+        /// this view all name the same thing by the same route.
+        var selection: SidebarSelection {
+            switch self {
+            case .debt: .plannerDebt
+            case .lifetime: .plannerLifetime
+            case .tax: .plannerTax
+            }
+        }
+
+        var title: LocalizedStringKey {
+            switch self {
+            case .debt: "Debt Reduction"
+            case .lifetime: "Lifetime"
+            case .tax: "Tax Estimate"
+            }
+        }
+
+        /// The same name as text, for the sidebar row and the tab — both of
+        /// which take a `String`. The raw values used to *be* the English
+        /// names, which meant the three planners were the one set of screen
+        /// names in the app that never reached the string catalog.
+        var name: String {
+            switch self {
+            case .debt: String(localized: "Debt Reduction")
+            case .lifetime: String(localized: "Lifetime")
+            case .tax: String(localized: "Tax Estimate")
+            }
+        }
+
+        init?(_ selection: SidebarSelection?) {
+            switch selection {
+            case .plannerDebt: self = .debt
+            case .plannerLifetime: self = .lifetime
+            case .plannerTax: self = .tax
+            default: return nil
+            }
+        }
     }
-    @SceneStorage("planner.tool") private var tool: Tool = .debt
+
+    /// Which planner is showing — read from the selection, exactly as
+    /// `BudgetView` reads which budget. The hub row (`.planner`) lands on the
+    /// first, so the mode's home is never a blank frame.
+    private var tool: Tool { Tool(model.sidebarSelection) ?? .debt }
 
     var body: some View {
         VStack(spacing: 0) {
-            Picker("Tool", selection: $tool) {
-                ForEach(Tool.allCases) { Text($0.rawValue).tag($0) }
+            // The picker stays: three tools side by side is a good control, and
+            // on a narrow window it is the quickest way between them. It is no
+            // longer the *only* way — it drives the same selection the sidebar
+            // and the tab strip do, rather than a private `@SceneStorage` no
+            // other surface could see.
+            Picker("Tool", selection: Binding(
+                get: { tool },
+                set: { model.navigate(to: $0.selection) })) {
+                ForEach(Tool.allCases) { Text($0.title).tag($0) }
             }
             .pickerStyle(.segmented)
             .labelsHidden()

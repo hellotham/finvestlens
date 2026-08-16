@@ -198,6 +198,9 @@ extension AppModel {
                 .map { $0.address.name.isEmpty ? $0.username : $0.address.name }
                 ?? String(localized: "Employee")
         case .planner: String(localized: "Planner")
+        case .plannerDebt: PlanningView.Tool.debt.name
+        case .plannerLifetime: PlanningView.Tool.lifetime.name
+        case .plannerTax: PlanningView.Tool.tax.name
         case .budgets: String(localized: "Budgets")
         case .budget(let id): budgets.first { $0.id == id }?.name ?? String(localized: "Budget")
         case .goals: String(localized: "Savings Goals")

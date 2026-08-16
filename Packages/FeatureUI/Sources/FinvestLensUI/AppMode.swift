@@ -179,7 +179,8 @@ public enum AppMode: String, CaseIterable, Identifiable, Hashable, Sendable {
         case .business, .timeMileage, .invoice, .customer, .vendor, .job, .employee:
             self = .business
         case .budgets, .budget, .scheduled, .scheduledTransaction,
-             .goals, .goal, .planner:
+             .goals, .goal, .planner,
+             .plannerDebt, .plannerLifetime, .plannerTax:
             self = .planning
         case .rules, .ruleGroup, .emergencyRecords, .emergencyRecord, .auditLog:
             self = .records
@@ -248,6 +249,23 @@ public enum SidebarCreation: String, Identifiable, Hashable, Sendable {
         case .employee: "New Employee…"
         case .watchedSecurity: "Watch a Security…"
         case .overviewView: "Save This View…"
+        }
+    }
+
+    /// The glyph the sidebar header draws for this command.
+    ///
+    /// `plus` for the twelve that add something to the mode's collection, and
+    /// **not** for the one that does not: Dashboard's only creation is "Save
+    /// This View…", which stores what is already on screen. Drawn as a `+` it
+    /// was the same glyph that means "new item" in five other sidebars, a few
+    /// pixels from where the tab strip had already learned this lesson —
+    /// "a + button can mean anything, and I would have thought 'add item to
+    /// collection'" (`ModeTabStrip`). The name was right in the tooltip and to
+    /// VoiceOver all along; only the symbol lied.
+    public var symbol: String {
+        switch self {
+        case .overviewView: "square.and.arrow.down"
+        default: "plus"
         }
     }
 

@@ -1761,8 +1761,10 @@ number traces to the book.
   reload/persist/commit pattern; classification heuristics (retirement roots,
   franking/PAYG names, mortgage exclusion) kept visible on the screens they
   feed.
-- **UI**: a **Planner** sidebar destination (Debt Reduction / Lifetime / Tax
-  Estimate segments); **Spending Insights** as a report kind in the gallery,
+- **UI**: a **Planner** sidebar destination with the three planners under it
+  (Debt Reduction / Lifetime / Tax Estimate — segments at first, destinations
+  in their own right since the 16 Aug 2026 consistency pass below);
+  **Spending Insights** as a report kind in the gallery,
   menu, and favourites machinery; a **Wellbeing** dashboard tile with the
   full working one click away; the **Financial Summary (passport)** as a
   Present-section card and Reports-menu item (A4 PDF, statement typography);
@@ -3335,3 +3337,89 @@ design "still a proposal" 2,700 lines above the section describing it as
 shipped, and said "sidebar dragging is off" 35 lines above "both halves of the
 sidebar drag are built"; `SidebarSort.allowsDragging` said "nothing reads this
 yet" with two call sites.
+
+# Cross-mode consistency pass (16 Aug 2026)
+
+A `/ui-review` asked for the two review gates and, specifically, for
+consistency **between the seven modes**. Nine defects, all fixed here. Each was
+a rule the app had already decided and then applied in one place.
+
+**The way back survived the filter in one mode out of seven.** Accounts pinned
+*All Transactions* outside the sidebar filter, with the reason written beside
+it. The other six put their home row in the first group and filtered it like
+any other, so typing `BHP` in Investments took *All Holdings* off the sidebar
+and typing anything in Reports took *All Reports*. The filter moved out of the
+view to `ModeSidebarRows.filtering(_:by:keeping:)`, which keeps the home row in
+every mode — as a leaf, so it never offers a disclosure triangle over no
+matches — and `ModeSidebarTests` now holds the rule over `AppMode.allCases`.
+
+**The tab strip was documented "always, in every mode" and hung off one branch
+of an `if`.** A search replaced the detail pane *and* took the mode's open tabs
+off screen, in every mode, with the mode bar still naming where you were. The
+inset moved onto the `Group`, so search is a takeover of the detail view and
+not of the mode.
+
+**Three tab destinations named the window and ten refused to.** Ten carry
+`.navigationTitle("")`, three of them with the comment "the tab strip names
+this destination"; `SecurityDetailView`, `BudgetView` and `TimeMileageView` set
+real titles, so a title appeared and vanished as you moved between tabs of one
+mode. All three now blank it when `isEmbeddedDestination` — which two of them
+were already reading for their Done buttons. `SearchResultsView` keeps its
+title: search is not a tab, and the title is the only thing naming the query.
+
+**A security had two chromes.** The sidebar's security rows opened
+`SecurityDetailView` as a tab; *Get Info* on a holding pushed the identical
+view onto a `NavigationPath` private to `InvestmentsView` — a back button or a
+tab depending on which of two equivalent routes you took, and the only nested
+navigation model in the app. The path and its `navigationDestination` are gone;
+`onOpen` navigates to `.security(key)` like everything else.
+
+**Planning's three planners were reachable from nothing but themselves.** A
+segmented `Picker` inside `PlanningView` — three whole screens with no sidebar
+row, no tab, no ⌘T, no View-menu item, in a mode whose other four destinations
+had all four. `SidebarSelection` gained `plannerDebt`, `plannerLifetime` and
+`plannerTax` (plain cases, so the desk-state codec carries them by its existing
+table); the sidebar lists them under Planner and the picker now drives that
+selection instead of a private `@SceneStorage`. Their names were the enum's raw
+values, which is why they were the one set of screen names in the app that
+never reached the string catalog; they are `LocalizedStringKey`s now.
+
+**Dashboard's `+` meant "save", not "new".** Its only creation is "Save This
+View…", drawn with the same `plus` that means "add an item" in five other
+sidebars — the ambiguity `ModeTabStrip` had already recorded fixing for its own
+button. `SidebarCreation.symbol` gives that one command `square.and.arrow.down`
+and leaves the other twelve alone.
+
+**The mode icons ignored the Text Size preference.** `ModeButton` drew its
+glyph at a flat 24pt above a label on `scaledFont(.body)`, so at the larger
+settings the word grew and the symbol did not — in the app's primary
+navigation, and the last fixed size in that chrome.
+
+**`ModeLabelStyle` and `StackedModeLabelStyle` were deleted** (52 lines, no
+call site since the modes left the toolbar), and the measurement they were
+paired with was **repaired rather than deleted**: `ModeLabelFit` is retained on
+purpose for a longer language or a larger text size, and it had gone wrong in
+both directions at once — `windowWidth` measured the whole split view while
+`ModeBar` occupies only the detail column, and `reservedForTheRest` still held
+back 260pt for a search field and create menu that had left the row. It is
+`modeRowWidth`, measured in `ModeBar`, against a 12pt reserve that is the row's
+own inset. A retained measurement that measures the wrong thing is worse than
+none.
+
+**Four unnamed controls**, found by sweeping every `Image(systemName:)` and
+`Toggle` inside a control for a missing label: the accept checkbox in Match
+Attachments and the include checkbox in Suggest Budget were both `Toggle("")`
+with the name in the column beside them; Bulk Edit's `DatePicker` was labelled
+only by the toggle next to it; and the account multi-select in report scope and
+Find drew its tick and said nothing, so a VoiceOver user could not tell what a
+report was scoped to. The paperclip in Link-to-Transaction carried its meaning
+in a `.help` tooltip alone.
+
+**Also checked, nothing found**: no `Color.accentColor` anywhere; 38 keyboard
+shortcuts with no collision; every toast posts an
+`AccessibilityNotification.Announcement`, `.high` for failures; no `imports/`
+reference in any source, script or website file; `check-no-real-data.py` clean;
+no book data in any log or error string. Two things stay **unverified on
+screen** and want a look: whether the window title now stays put as you move
+between a mode's tabs, and whether the tab strip's `.accessibilityElement(
+children: .combine)` leaves the close button reachable under VoiceOver.

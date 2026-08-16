@@ -13,7 +13,14 @@ import SwiftUI
 import AppKit
 #endif
 
-/// Decides whether the toolbar's mode buttons show words or only symbols.
+/// Decides whether the mode row's buttons could show words or only symbols.
+///
+/// **Nothing consults this today.** `ModeBar` always draws the words, because
+/// all seven fit at every width the window can take. It is kept as the answer
+/// to the question a future `ModeBar` would have to ask — a longer language, a
+/// larger text size — and it is kept *correct* for that day rather than left to
+/// rot: see `reservedForTheRest` and `AppModel.modeRowWidth`, both of which had
+/// gone stale when the modes left the toolbar.
 ///
 /// The HIG asks for both things at once and they compete. *Toolbars*: "Make
 /// sure the meaning of each control is clear. Don't make people guess or
@@ -63,19 +70,24 @@ enum ModeLabelFit {
     /// Kept for callers that still name it.
     static var symbolAndPadding: CGFloat { symbolWidth + horizontalPadding }
 
-    /// Everything else the toolbar has to hold: the sidebar toggle and the
-    /// trailing group (search, create, inspector). Deliberately generous —
-    /// being wrong towards icons costs a word, and being wrong the other way
-    /// costs the overflow menu the HIG warns against.
+    /// Everything on the mode row that is not a mode: its own horizontal inset,
+    /// and nothing else.
     ///
-    /// Was 380 while the window carried a title. Emptying the title area (HIG
-    /// *Toolbars*: "If titling a toolbar seems redundant, you can leave the
-    /// title area empty") gave back about 120pt, which is what now lets the
-    /// default five keep their words at **every** width the window can take,
-    /// rather than only above 868pt.
-    static let reservedForTheRest: CGFloat = 260
+    /// It was **260**, and before that 380 — the sidebar toggle plus the
+    /// trailing group of search, create and inspector, back when all of them
+    /// shared one toolbar with the modes. They do not: the modes have a row to
+    /// themselves and the secondary controls stayed in the title bar, so
+    /// reserving a quarter of the row for absent controls understated the space
+    /// by roughly 250pt. Paired with `AppModel.modeRowWidth`, which used to
+    /// overstate it by the sidebar's width — two errors that partly cancelled,
+    /// which is the worst way for a measurement to be wrong.
+    ///
+    /// Declared here rather than on `ModeBar` and read from there: a `View` is
+    /// `@MainActor`-isolated, so its statics cannot initialise this nonisolated
+    /// one.
+    static let reservedForTheRest: CGFloat = 12
 
-    /// Whether `modes` can all show their labels in a window of `width`.
+    /// Whether `modes` can all show their labels in a row of `available` points.
     static func labelsFit(_ modes: [AppMode], in available: CGFloat) -> Bool {
         guard available > 0 else { return false }
         // `name`, not `title`: the localised text the button will actually

@@ -143,6 +143,10 @@ struct MatchAttachmentsSheet: View {
                 .labelsHidden()
                 .checkboxToggleStyle()
                 .disabled(!matched)
+                // `Toggle("")` with the name in the column beside it leaves
+                // VoiceOver a checkbox with no name at all — the file is what
+                // this box is about, so the file is what it is called.
+                .accessibilityLabel(Text("Link \(match.fileName)"))
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
                     Image(systemName: matched ? "doc.badge.plus" : "questionmark.circle")

@@ -420,27 +420,35 @@ public struct FinvestLensRootView: View {
     /// Areas that used to be modal sheets are shown inline here (HIG).
     @ViewBuilder
     private var detailPane: some View {
-        if model.isSearching {
-            SearchResultsView(model: model)
-        } else {
-            destinationView
-                // Areas that were modal sheets suppress their Done/sheet
-                // chrome via this flag when shown inline.
-                .environment(\.isEmbeddedDestination, true)
-                // **The strip, always, in every mode** — as a safe-area inset
-                // rather than a `VStack` sibling.
-                //
-                // As a sibling it did not draw at all: the register's body is a
-                // `GeometryReader` filling the pane, and stacked above one the
-                // strip was measured away to nothing. Observed on screen at
-                // 986pt — register column headers directly under the toolbar,
-                // no strip — after confirming the running binary post-dated the
-                // change. An inset is chrome the child's layout cannot consume,
-                // which is what this needs to be: it carries the only control
-                // that creates a tab.
-                .safeAreaInset(edge: .top, spacing: 0) {
-                    ModeTabStrip(model: model)
-                }
+        Group {
+            if model.isSearching {
+                SearchResultsView(model: model)
+            } else {
+                destinationView
+                    // Areas that were modal sheets suppress their Done/sheet
+                    // chrome via this flag when shown inline.
+                    .environment(\.isEmbeddedDestination, true)
+            }
+        }
+        // **The strip, always, in every mode** — as a safe-area inset rather
+        // than a `VStack` sibling.
+        //
+        // As a sibling it did not draw at all: the register's body is a
+        // `GeometryReader` filling the pane, and stacked above one the strip
+        // was measured away to nothing. Observed on screen at 986pt — register
+        // column headers directly under the toolbar, no strip — after
+        // confirming the running binary post-dated the change. An inset is
+        // chrome the child's layout cannot consume, which is what this needs to
+        // be: it carries the only control that creates a tab.
+        //
+        // **Including while searching.** It used to hang off the `else` branch
+        // alone, so the sentence above was false of the one state people reach
+        // by typing: a query replaced the pane *and* took the mode's open tabs
+        // off screen, in every mode, with the mode bar still naming where you
+        // were. Search is a takeover of the detail view, not of the mode, and
+        // the tabs are how you get back out of it.
+        .safeAreaInset(edge: .top, spacing: 0) {
+            ModeTabStrip(model: model)
         }
     }
 
@@ -481,7 +489,11 @@ public struct FinvestLensRootView: View {
         case .business, .invoice, .customer, .vendor, .job, .employee:
             BusinessHub(model: model)
         case .timeMileage: TimeMileageView(model: model)
-        case .planner: PlanningView(model: model)
+        // One view for all four: the planner hub and each planner in it. The
+        // selection says which tool, exactly as `.budget(id)` says which budget
+        // to `BudgetView`.
+        case .planner, .plannerDebt, .plannerLifetime, .plannerTax:
+            PlanningView(model: model)
         case .emergencyRecords, .emergencyRecord: EmergencyRecordsView(model: model)
         case .auditLog: AuditLogSheet(model: model)
         }
@@ -506,17 +518,11 @@ public struct FinvestLensRootView: View {
         // drawn here, above the split view, where they get the full window
         // width and no grouping chrome. The window toolbar keeps everything
         // else, at its own single height.
+        // The mode row is measured *in* `ModeBar`, which is where it is drawn.
+        // This used to measure here — the whole split view, sidebar included —
+        // and call the answer the row's width, which overstated it by the
+        // sidebar's 200–400pt.
         splitView
-            // The mode row is measured where it is drawn.
-            .background(
-                GeometryReader { geo in
-                    Color.clear
-                        .onAppear { model.windowWidth = geo.size.width }
-                        .onChange(of: geo.size.width) { _, width in
-                            model.windowWidth = width
-                        }
-                }
-            )
     }
 
     private var splitView: some View {
@@ -828,13 +834,27 @@ struct ModeBar: View {
                     .frame(maxWidth: .infinity)
             }
         }
-        .padding(.horizontal, 6)
+        .padding(.horizontal, ModeLabelFit.reservedForTheRest / 2)
         .padding(.vertical, 5)
         .background(.bar)
+        // Measured here, because here is where the row is. `modeRowWidth` feeds
+        // `AppModel.modeLabelsFit`, which is what a future `ModeBar` would ask
+        // before dropping these labels to symbols — so it has to be this view's
+        // width and not the window's.
+        .background {
+            GeometryReader { geo in
+                Color.clear
+                    .onAppear { model.modeRowWidth = geo.size.width }
+                    .onChange(of: geo.size.width) { _, width in
+                        model.modeRowWidth = width
+                    }
+            }
+        }
         .overlay(alignment: .bottom) { Divider() }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Areas")
     }
+
 }
 
 
@@ -878,13 +898,17 @@ struct PanelContent: View {
 
 /// One mode's button.
 ///
-/// A `Toggle`, not a `Button`: the control's whole job is orientation, so its
-/// on/off state has to be both drawn and *announced* — VoiceOver reads a toggle's
-/// state, where a button would say only its name and leave a blind user with no
-/// answer to "which area am I in?".
+/// A `Button` carrying `.isSelected`, not a `Toggle`. It *was* a toggle, for a
+/// reason that was sound and is recorded here because the requirement it names
+/// still binds: the control's whole job is orientation, so its on/off state has
+/// to be both drawn and **announced**, or a blind user has no answer to "which
+/// area am I in?". A toggle got that free; a button gets it from
+/// `.accessibilityAddTraits(.isSelected)` below, which is why the switch was
+/// safe. The comment claiming this is still a toggle outlived the toggle.
 struct ModeButton: View {
     @Bindable var model: AppModel
     let mode: AppMode
+    @Environment(\.appFontScale) private var appFontScale
 
     private var isSelected: Bool { model.mode == mode }
 
@@ -911,10 +935,19 @@ struct ModeButton: View {
                     // left more gap than button. Reported as "the mode icons
                     // are too small … you can afford to make the mode buttons
                     // bigger", and the width to spend was already there.
-                    .font(.system(size: 24, weight: isSelected ? .semibold : .regular))
+                    //
+                    // **And scaled**, like the word underneath it. A flat 24
+                    // ignored the Text Size preference entirely, so at the
+                    // larger settings the label grew and the glyph above it did
+                    // not — in the one control on screen that is the app's
+                    // primary navigation. Everything else in this chrome scales
+                    // (`ModeTabStrip` scales its own height); this was the last
+                    // fixed size among them.
+                    .font(.system(size: 24 * appFontScale,
+                                  weight: isSelected ? .semibold : .regular))
                     .foregroundStyle(isSelected ? AnyShapeStyle(.tint)
                                                 : AnyShapeStyle(.secondary))
-                    .frame(height: 28)
+                    .frame(height: 28 * appFontScale)
                 // *Tab bars*: "Include tab labels to help with navigation. A
                 // tab label appears beneath or beside a tab bar icon… Use
                 // single words whenever possible."
@@ -938,72 +971,23 @@ struct ModeButton: View {
         // **The name, said out loud.** A custom label puts the title in a
         // `Text` inside a `VStack`, and SwiftUI does not lift that into the
         // control's accessibility label — so the five most important controls
-        // in the app came back from the accessibility API as
-        // `AXCheckBox 'toggle button' / 'missing value'`. Read on screen,
-        // unreadable to VoiceOver, and no screenshot would have shown it.
+        // in the app came back from the accessibility API named
+        // `'missing value'`. Read on screen, unreadable to VoiceOver, and no
+        // screenshot would have shown it.
         .accessibilityLabel(mode.name)
         .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }
 }
 
-/// Stacked when the names fit, the symbol alone when they do not.
-///
-/// One style rather than a branch at the call site, because a `LabelStyle` is
-/// what `Toggle`'s button style consults and swapping between two of them in a
-/// conditional changes the view's identity — which is how a toolbar item loses
-/// its place in the customisation order.
-struct ModeLabelStyle: LabelStyle {
-    let stacked: Bool
-
-    func makeBody(configuration: Configuration) -> some View {
-        if stacked {
-            StackedModeLabelStyle().makeBody(configuration: configuration)
-        } else {
-            configuration.icon
-                .font(.system(size: StackedModeLabelStyle.iconSide))
-                .frame(width: StackedModeLabelStyle.iconSide + 12,
-                       height: StackedModeLabelStyle.height)
-        }
-    }
-}
-
-/// Symbol above, name below — and **twice the height of an ordinary toolbar
-/// button**, because the modes are the app's primary navigation.
-///
-/// Not `.titleAndIcon`, which lays them in a row and makes each button as wide
-/// as its word *plus* its symbol: five of those measured 488pt and pushed
-/// Reports and Business into the system overflow menu at a 986pt window.
-/// Stacked, the word is the whole width — 329pt for five, 452pt for all seven,
-/// inside the 860pt minimum.
-///
-/// The height that buys is then spent deliberately rather than left as
-/// padding: the trailing controls sit in two short rows beside these, search
-/// above and the small buttons below (`StackedTrailingControls`), so the
-/// toolbar is one band with the modes as its tallest, most legible element.
-struct StackedModeLabelStyle: LabelStyle {
-    /// The symbol's own square. Large enough to read as the primary control on
-    /// the window rather than as one more small button among many.
-    static let iconSide: CGFloat = 22
-    /// The whole button, which sets the toolbar's height.
-    static let height: CGFloat = 46
-
-    func makeBody(configuration: Configuration) -> some View {
-        VStack(spacing: 2) {
-            configuration.icon
-                .font(.system(size: Self.iconSide))
-                .frame(height: Self.iconSide)
-            configuration.title
-                .scaledFont(.caption)
-                .lineLimit(1)
-                // The descenders in "Accounts" and "Business" sat on the
-                // selected pill's bottom edge and read as clipped.
-                .padding(.bottom, 1)
-        }
-        .frame(minWidth: 58)
-        .frame(height: Self.height)
-        .padding(.horizontal, 2)
-    }
-}
+// `ModeLabelStyle` and `StackedModeLabelStyle` were **deleted** here, not
+// moved. They were the label styles for the modes while the modes were
+// `CustomizableToolbarContent` — a stacked symbol-over-word style and its
+// symbol-only fallback, sized to set the *toolbar's* height. The modes came out
+// of the toolbar onto a row of their own on 16 Aug 2026 and `ModeButton` lays
+// itself out directly; nothing has applied either style since, and their doc
+// comments went on explaining a system overflow menu and a customisation order
+// that this window no longer has. The measurement they were paired with —
+// `ModeLabelFit` — is *kept*, and says in its own docs why.
 
 /// Search above, the small actions below — the two short rows that fill the
 /// height the tall mode buttons set.
