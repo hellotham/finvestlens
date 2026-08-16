@@ -3419,7 +3419,22 @@ in a `.help` tooltip alone.
 shortcuts with no collision; every toast posts an
 `AccessibilityNotification.Announcement`, `.high` for failures; no `imports/`
 reference in any source, script or website file; `check-no-real-data.py` clean;
-no book data in any log or error string. Two things stay **unverified on
-screen** and want a look: whether the window title now stays put as you move
-between a mode's tabs, and whether the tab strip's `.accessibilityElement(
-children: .combine)` leaves the close button reachable under VoiceOver.
+no book data in any log or error string.
+
+**Both of the two open questions were then closed against the running app**,
+through the accessibility API rather than a screenshot — `screencapture` shows
+what a title says, not whether a control exists.
+
+- *Does the window title now hold still across a mode's tabs?* **Yes.**
+  `AXTitle` of window 1 read empty on the tab that was showing, empty after
+  Book ▸ Budget… (⌘B), and empty after Business ▸ Time & Mileage… — the two
+  destinations that set a title before this pass. Only the emptiness was read
+  back, never the string: on the reference book a window title is an account
+  name.
+- *Does `.accessibilityElement(children: .combine)` swallow the tab's close
+  button?* **No.** Walking the window's element tree found 15 reachable
+  `AXButton`s, exactly one of them labelled `Close…` — the close control of the
+  one closable tab then open. The button keeps its own identity and the label
+  `ModeTabStrip` gives it, so `.combine` here merges the title without
+  flattening the action. The modifier stays as it is; the worry was unfounded
+  and is recorded so it is not re-raised.
