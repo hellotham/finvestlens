@@ -648,7 +648,8 @@ struct RegisterTableView: View {
                          focus: RegisterFocus(row: row.id, field: .description),
                          cursor: $cursor,
                          onEdit: { text in withDraft { $0.description = text } },
-                         onEscape: { escapePressed() })
+                         onEscape: { escapePressed() },
+                         suggest: { model.descriptionSuggestions(prefix: $0, limit: 1).first })
             }
         case .detail(let detail):
             // Notes and tags sit under the description, GnuCash's own column
@@ -1647,6 +1648,10 @@ struct GridCell: View {
     var cursor: FocusState<RegisterFocus?>.Binding
     var onEdit: (String) -> Void = { _ in }
     var onEscape: () -> Void = {}
+    /// The completion for what has been typed so far, or `nil`. Only the
+    /// description column supplies one; every other cell passes nothing and
+    /// renders exactly as before.
+    var suggest: (String) -> String? = { _ in nil }
 
     @State private var text: String
 
@@ -1656,7 +1661,8 @@ struct GridCell: View {
          muted: Bool = false, negative: Bool = false, isEditable: Bool = true,
          focus: RegisterFocus, cursor: FocusState<RegisterFocus?>.Binding,
          onEdit: @escaping (String) -> Void = { _ in },
-         onEscape: @escaping () -> Void = {}) {
+         onEscape: @escaping () -> Void = {},
+         suggest: @escaping (String) -> String? = { _ in nil }) {
         self.restValue = restValue
         self.editValue = editValue
         self.placeholder = placeholder
@@ -1669,13 +1675,55 @@ struct GridCell: View {
         self.cursor = cursor
         self.onEdit = onEdit
         self.onEscape = onEscape
+        self.suggest = suggest
         _text = State(initialValue: restValue)
     }
 
     private var isFocused: Bool { cursor.wrappedValue == focus }
 
+    /// The completion to draw after the caret, if the cell offers one and the
+    /// field is being edited.
+    private var ghost: String? {
+        guard isFocused, !text.trimmingCharacters(in: .whitespaces).isEmpty,
+              let match = suggest(text), match.count > text.count
+        else { return nil }
+        return match
+    }
+
     var body: some View {
+        // **Ghost text, offered rather than applied** — the shape
+        // `RegisterEntryBar` already uses, reused verbatim so the register's
+        // third editor completes descriptions like the other two
+        // (P13.4: "description autocomplete everywhere"). It is a `ZStack`
+        // overlay and one key handler: no tap-to-focus mapping and no layout
+        // change, which is why it does not need the harness that the register's
+        // focus machinery does.
+        ZStack(alignment: .leading) {
+            if let ghost {
+                HStack(spacing: 0) {
+                    Text(text).foregroundStyle(.clear)
+                    Text(ghost.dropFirst(text.count)).foregroundStyle(.tertiary)
+                }
+                .scaledFont(.body)
+                .lineLimit(1)
+                .padding(.horizontal, 4)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+            }
+            field
+        }
+    }
+
+    private var field: some View {
         TextField(isFocused ? placeholder : "", text: $text)
+            .onKeyPress(.tab) {
+                // Only when there is something to accept; otherwise Tab keeps
+                // meaning "next field", which the grid already handles.
+                guard let ghost else { return .ignored }
+                text = ghost
+                onEdit(ghost)
+                return .handled
+            }
             .textFieldStyle(.plain)
             .focusEffectDisabled()   // the ring below is the focus visual
             .scaledFont(.body)

@@ -554,14 +554,32 @@ everywhere (`addTransaction` has no `number:` parameter at all), description
 autocomplete everywhere, one `isBalanced` — the sheet's Save button and its own
 Balance cell currently disagree.
 
-### P13.5 — Documentation, then the gates ✅ (16 Aug 2026)
+### P13.5 — Documentation, then the gates ✅ (16 Aug 2026, `1c49f8b`; completed 16 Aug 2026)
 
-`deferred.md:118` still files the wrong-currency stamping as an **accepted
-won't-fix**; that is the behaviour that wrote 1,205 bad rows. `FR-NAV-02` demands
-"one segmented control" that the build deliberately is not. Seven `FR-*` ids are
-cited in shipped code and exist in no document, `FR-INV-42` among them.
-`implemented.md` calls the navigation design "still a proposal" 2,600 lines above
-the section describing it as shipped, and contradicts itself on sidebar drag.
+Five contradictions between the documents and the build, all now closed.
+`deferred.md` had filed the wrong-currency stamping as an **accepted won't-fix**
+when it was the behaviour that wrote 1,205 bad rows — the entry is struck
+through and reversed. `FR-NAV-02` no longer demands "one segmented control" the
+build deliberately is not; it states the toolbar rule and records why the old
+wording described an implementation that could not satisfy the requirement
+beside it. `implemented.md` no longer calls the navigation design "still a
+proposal" while describing it as shipped, and its sidebar-drag contradiction is
+resolved by dating the first statement to its point in the phase.
+
+The seven undocumented `FR-*` ids were closed in `1c49f8b` except **`FR-INV-42`**,
+which post-dates that commit: the Wilson provider was built afterwards and cited
+an id no document carried. Added to `prd.md` on the re-verification below.
+
+**Re-verified from zero, 16 Aug 2026.** Asked to restart the phase assuming
+nothing verified, all 42 claims across P13.0–P13.5 were re-checked against the
+tree rather than the diff. Two survived as real: `inlineSetTransfer` was still
+`public` and callerless while this file and `AppModel+InlineEdit.swift` both
+said it had been deleted, and `FR-INV-42` above. Two of the phase's own claims
+resolved differently from how they are worded here and are right as built: the
+period selector is *absent* where it would be inert (`AppMode.usesPeriod` is
+true only for Dashboard and Reports) rather than wired in all seven modes, and
+All Transactions shows a total rather than a running balance, because a whole
+book has none — which is what GnuCash does.
 
 Then `/ui-review`, `/preflight`, `/code-review`.
 

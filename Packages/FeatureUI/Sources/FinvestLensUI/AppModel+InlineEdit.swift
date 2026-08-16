@@ -113,18 +113,4 @@ extension AppModel {
         return (transactions.count, transferSkipped)
     }
 
-    /// Moves the counter leg to another account (re-categorising the row).
-    /// Two-leg transactions, same-currency destination only.
-    @discardableResult
-    public func inlineSetTransfer(splitID: GncGUID, to accountID: GncGUID) -> Bool {
-        guard let book, let split = book.split(with: splitID),
-              let txn = split.transaction, txn.splits.count == 2,
-              let other = txn.splits.first(where: { $0 !== split }),
-              let account = book.account(with: accountID),
-              account.commodity == txn.currency,
-              other.account !== account
-        else { return false }
-        editing([txn.guid], named: "Edit Transfer Account") { other.account = account }
-        return true
-    }
 }

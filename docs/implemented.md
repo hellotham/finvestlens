@@ -3237,10 +3237,18 @@ records which, and why each of the other five is excluded rather than wired.
 Four capabilities existed with no way to reach them: `deleteBudget`,
 `renameSecurity` (its sheet was written and presented from nowhere),
 `clearFundamentals(for:)`, and `importPrices(csv:)` — `FR-XIO-03` with no caller
-at all, the export half of the pair wired and the import half not. The ten
+at all, the export half of the pair wired and the import half not. The eleven
 `inlineSet*` methods went the other way and were **deleted**: superseded by the
 register sheet's whole-draft `updateTransaction`, with only their own tests
 keeping them alive.
+
+**Ten went in `40ebaec`; the eleventh went on the re-verification.** Asked on
+16 Aug 2026 to restart P13 assuming nothing verified, the sweep found
+`inlineSetTransfer` still `public` in `AppModel+InlineEdit.swift` with no caller
+anywhere in `Packages/` — while the comment left in that same file already
+listed it among the methods "**deleted**, not moved". The record and the code
+disagreed, and the record was the optimistic one. This is the phase's own lesson
+holding a second time: a fix is not done because its diff looks right.
 
 Two of the scan's findings did not survive checking and are recorded as such:
 the sidebar is single-selection, so its context menu can never see a
@@ -3292,6 +3300,27 @@ account and there is none, so every row read AUD including the USD invoices.
 GnuCash XML can change — and returns the debit leg now: stable, and the one the
 row displays. `addTransaction` gained the `number:` parameter it never had, so a
 Num can be set on a new transaction and not only edited on an old one.
+
+**Description autocomplete reaches the third editor.** P13.4 asked for it
+"everywhere" and it landed in two of three: `RegisterEntryBar` draws ghost text
+after the caret and `TransactionEditorSheet` offers "Fill from recent…", while
+the in-place row editor — the one a person types in most — had neither. The
+re-verification on 16 Aug 2026 found `descriptionSuggestions` referenced in
+`Views.swift` and nowhere else.
+
+`GridCell` now takes an optional `suggest:` closure, supplied only by the
+description column; every other cell passes nothing and renders exactly as
+before. The completion is drawn as the same `ZStack` ghost `RegisterEntryBar`
+already used — a clear-coloured copy of what is typed, then the remainder in
+tertiary — accepted on Tab and otherwise ignored, so Tab keeps meaning "next
+field". It is **offered, not applied**: autofilling on a prefix match races the
+typing.
+
+This deliberately does *not* go through RegisterLab2, and the reason is worth
+recording, because register work normally must. The harness rule exists for the
+sheet's tap-to-focus mapping and its lazy-container layout, both of which have
+failed on real hands. A non-interactive overlay and one `onKeyPress` touch
+neither.
 
 ## P13.5 — Documentation
 
