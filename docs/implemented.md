@@ -3124,6 +3124,10 @@ industrial-services company whose closes became a super fund's unit price for
 
 Reachable from Investments' sidebar `+`, the Book menu, and `presentedPanel`.
 
-**Still to do here:** New Account should offer to *link* to an existing security
-and to create one inline when none matches; today it still carries its own
-Exchange/Ticker fields, which now duplicate this sheet.
+**New Account links rather than retypes.** Its Exchange/Ticker/Full-name fields
+are gone, replaced by a picker over the securities the book already holds plus a
+**New Security…** button that opens the lookup. `makeCommodity()` returns the
+stored instance, never a freshly built copy — two commodities differing only in
+`fullName` or fraction are two securities, and that is the other way a book ends
+up holding `WMX` twice. Add stays disabled until a security is picked; before,
+an account could be added against an empty ticker.

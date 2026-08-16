@@ -2420,6 +2420,10 @@ struct NewAccountSheet: View {
     @State private var currencyCode = ""
     @State private var exchange = ""
     @State private var ticker = ""
+    /// The chosen security's mnemonic. Empty until one is picked, which is what
+    /// keeps Add disabled — an account typed against no security used to be
+    /// addable and produced one with an empty commodity.
+    @State private var securityKey = ""
     @State private var securityName = ""
     @FocusState private var nameFocused: Bool
 
@@ -2442,7 +2446,7 @@ struct NewAccountSheet: View {
 
     private var canAdd: Bool {
         guard !name.trimmingCharacters(in: .whitespaces).isEmpty else { return false }
-        return isSecurity ? !ticker.trimmingCharacters(in: .whitespaces).isEmpty : true
+        return isSecurity ? !securityKey.isEmpty : true
     }
 
     var body: some View {
@@ -2463,10 +2467,30 @@ struct NewAccountSheet: View {
                 }
 
                 if isSecurity {
+                    // **Link, don't retype.** An account holds a security; it
+                    // does not define one, and several accounts can hold the
+                    // same security in different portfolios. Typing an exchange
+                    // and ticker here was how a second, subtly different copy
+                    // of a security got made — and how `WMX` was born without
+                    // its `.AX`. The list is what the book already has; New
+                    // Security… is the way to add one that isn't there, and it
+                    // looks the identifier up rather than asking for it.
                     Section("Security") {
-                        TextField("Exchange (e.g. ASX)", text: $exchange)
-                        TextField("Ticker (e.g. CBA)", text: $ticker)
-                        TextField("Full name (optional)", text: $securityName)
+                        Picker("Security", selection: $securityKey) {
+                            Text("Choose…").tag("")
+                            ForEach(model.pricableSecurities.sorted { $0.mnemonic < $1.mnemonic },
+                                    id: \.mnemonic) { security in
+                                Text("\(security.mnemonic) — \(security.fullName)")
+                                    .tag(security.mnemonic)
+                            }
+                        }
+                        Button("New Security…") {
+                            model.presentedPanel = .newSecurity
+                        }
+                        .help("Look one up by name — the exchange and identifier are filled in for you")
+                        Text("An account holds a security. Two accounts can hold the same one.")
+                            .scaledFont(.caption)
+                            .foregroundStyle(.secondary)
                     }
                 } else {
                     Picker("Currency", selection: $currencyCode) {
@@ -2495,13 +2519,11 @@ struct NewAccountSheet: View {
 
     private func makeCommodity() -> Commodity {
         if isSecurity {
-            let code = ticker.trimmingCharacters(in: .whitespaces).uppercased()
-            let ex = exchange.trimmingCharacters(in: .whitespaces).uppercased()
-            let full = securityName.trimmingCharacters(in: .whitespaces)
-            return Commodity(namespace: .security(ex.isEmpty ? "OTHER" : ex),
-                             mnemonic: code,
-                             fullName: full.isEmpty ? code : full,
-                             smallestFraction: 10_000)
+            // Whatever was picked, exactly as the book holds it — never a
+            // freshly built copy, whose `fullName` or fraction could differ and
+            // split one security into two.
+            return model.pricableSecurities.first { $0.mnemonic == securityKey }
+                ?? .currency(model.reportCurrency.mnemonic)
         }
         return availableCurrencies.first { $0.mnemonic == currencyCode } ?? .currency(currencyCode)
     }

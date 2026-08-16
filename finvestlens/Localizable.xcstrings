@@ -15251,6 +15251,53 @@
         }
       }
     },
+    "An account holds a security. Two accounts can hold the same one.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein Konto hält ein Wertpapier. Zwei Konten können dasselbe halten."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una cuenta contiene un valor. Dos cuentas pueden contener el mismo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un compte détient un titre. Deux comptes peuvent détenir le même."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un conto detiene un titolo. Due conti possono detenere lo stesso."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "口座は銘柄を保有します。同じ銘柄を2つの口座で保有できます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uma conta detém um título. Duas contas podem deter o mesmo."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "账户持有证券。两个账户可以持有同一只证券。"
+          }
+        }
+      }
+    },
     "An audit log is kept beside the book, recording each edit.": {
       "extractionState": "manual",
       "localizations": {
@@ -34834,53 +34881,6 @@
         }
       }
     },
-    "Exchange (e.g. ASX)": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Börse (z. B. ASX)"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mercado (p. ej. ASX)"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Place boursière (p. ex. ASX)"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Borsa (es. ASX)"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "取引所（例：ASX）"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bolsa (ex.: ASX)"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "交易所（例如 ASX）"
-          }
-        }
-      }
-    },
     "Exchange (e.g. NASDAQ)": {
       "extractionState": "manual",
       "localizations": {
@@ -39582,7 +39582,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "氏名（任意）"
+            "value": "正式名称（任意）"
           }
         },
         "pt-BR": {
@@ -39594,7 +39594,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "全名（可选）"
+            "value": "全称（可选）"
           }
         }
       }
@@ -47220,6 +47220,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "记录可计费工时或差旅，然后汇总到客户发票上。"
+          }
+        }
+      }
+    },
+    "Look one up by name — the exchange and identifier are filled in for you": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nach Namen suchen – Börse und Kennung werden für Sie ausgefüllt"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Búscalo por nombre: la bolsa y el identificador se rellenan solos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recherchez-le par nom — la place et l’identifiant sont renseignés pour vous"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cercalo per nome: borsa e identificativo vengono compilati per te"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "名称で検索します。取引所と識別子は自動で入力されます"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pesquise pelo nome — a bolsa e o identificador são preenchidos para você"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按名称查找 — 交易所与标识符将自动填写"
           }
         }
       }
@@ -83485,53 +83532,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "代码（例如 AAPL）"
-          }
-        }
-      }
-    },
-    "Ticker (e.g. CBA)": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kürzel (z. B. CBA)"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ticker (p. ej. CBA)"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Symbole (p. ex. CBA)"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ticker (es. CBA)"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ティッカー（例：CBA）"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ticker (ex.: CBA)"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "代码（例如 CBA）"
           }
         }
       }
