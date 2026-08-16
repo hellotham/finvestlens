@@ -259,11 +259,22 @@ extension AppModel {
     /// register view setting — changes: filtering and sorting the whole book on
     /// every body pass is what made the general ledger unusable.
     ///
-    /// A single-account journal honours the register's Subaccounts, Filter and
-    /// Sort settings, applied per *transaction*: a transaction is shown when any
-    /// of its focus-account legs passes the filter, and sorts by its own fields
-    /// (amount/memo meaning the focus legs' net value / first memo). The general
-    /// ledger is always the whole book, oldest first.
+    /// Both honour the register's Subaccounts, Filter and Sort settings,
+    /// applied per *transaction*: a transaction is shown when any of its
+    /// relevant legs passes the filter, and sorts by its own fields.
+    ///
+    /// **The whole book used to honour neither.** Filtering and sorting sat
+    /// inside an `if !focusSet.isEmpty` block, and the general ledger's focus
+    /// set is empty by definition — so All Transactions ignored the Filter
+    /// sheet entirely and came back oldest-first however its column headers
+    /// were clicked. Worse, those headers still wrote `registerSort`, which is
+    /// one shared setting: sorting All Transactions by Amount did nothing here
+    /// and silently re-sorted every single-account register instead.
+    ///
+    /// A leg is "relevant" when it is in focus, or — with no anchoring account
+    /// — always. That is the only change the general ledger needs: GnuCash is
+    /// explicit that the general journal has no anchoring split
+    /// (`gnc-split-reg.c:894`), so "the focus legs" becomes "the legs".
     func journalTransactions(forAccountID accountID: GncGUID?) -> [Transaction] {
         if let cached = journalTransactionCache[accountID] { return cached }
         guard let book else { return [] }
@@ -272,6 +283,7 @@ extension AppModel {
         func inFocus(_ split: Split) -> Bool {
             split.account.map { focusSet.contains(ObjectIdentifier($0)) } ?? false
         }
+        func relevant(_ split: Split) -> Bool { focusSet.isEmpty || inFocus(split) }
 
         var transactions = book.transactions
             .filter { txn in
@@ -279,44 +291,51 @@ extension AppModel {
             }
             .sorted { $0.datePosted < $1.datePosted }
 
-        if !focusSet.isEmpty {
-            let filter = registerFilter
-            if !filter.isShowingEverything {
-                let calendar = Calendar.current
-                let start = filter.startDate.map { calendar.startOfDay(for: $0) }
-                let end = filter.endDate.map { calendar.startOfDay(for: $0) }
-                transactions = transactions.filter { txn in
-                    let day = calendar.startOfDay(for: txn.datePosted)
-                    if let start, day < start { return false }
-                    if let end, day > end { return false }
-                    return txn.splits.contains { inFocus($0) && filter.statuses.contains($0.reconcileState) }
-                }
+        let filter = registerFilter
+        if !filter.isShowingEverything {
+            let calendar = Calendar.current
+            let start = filter.startDate.map { calendar.startOfDay(for: $0) }
+            let end = filter.endDate.map { calendar.startOfDay(for: $0) }
+            transactions = transactions.filter { txn in
+                let day = calendar.startOfDay(for: txn.datePosted)
+                if let start, day < start { return false }
+                if let end, day > end { return false }
+                return txn.splits.contains { relevant($0) && filter.statuses.contains($0.reconcileState) }
             }
-
-            func focusValue(_ txn: Transaction) -> Decimal {
-                txn.splits.reduce(Decimal(0)) { $0 + (inFocus($1) ? $1.value : 0) }
-            }
-            switch registerSort {
-            case .standard, .date:
-                break   // already oldest first
-            case .dateEntered:
-                transactions.sort { $0.dateEntered < $1.dateEntered }
-            case .number:
-                transactions.sort { Transaction.numOrString($0.number, $1.number) < 0 }
-            case .amount:
-                transactions.sort { focusValue($0) < focusValue($1) }
-            case .description:
-                transactions.sort {
-                    $0.transactionDescription.localizedCaseInsensitiveCompare($1.transactionDescription) == .orderedAscending
-                }
-            case .memo:
-                func memo(_ txn: Transaction) -> String {
-                    txn.splits.first(where: inFocus)?.memo ?? ""
-                }
-                transactions.sort { memo($0).localizedCaseInsensitiveCompare(memo($1)) == .orderedAscending }
-            }
-            if registerSortReversed { transactions.reverse() }
         }
+
+        /// What the Amount column shows, so it sorts by what it displays.
+        ///
+        /// With no anchor there is no leg whose value is "the" amount, and
+        /// summing every leg would give zero on a balanced transaction. GnuCash
+        /// fills the general journal's total from the debit side
+        /// (`split-register-model.c:1650-1657`), which is also what
+        /// ``wholeBookRowSummary(ofTransaction:)`` puts in the cell.
+        func focusValue(_ txn: Transaction) -> Decimal {
+            focusSet.isEmpty
+                ? txn.splits.filter { $0.value > 0 }.reduce(0) { $0 + $1.value }
+                : txn.splits.reduce(Decimal(0)) { $0 + (inFocus($1) ? $1.value : 0) }
+        }
+        switch registerSort {
+        case .standard, .date:
+            break   // already oldest first
+        case .dateEntered:
+            transactions.sort { $0.dateEntered < $1.dateEntered }
+        case .number:
+            transactions.sort { Transaction.numOrString($0.number, $1.number) < 0 }
+        case .amount:
+            transactions.sort { focusValue($0) < focusValue($1) }
+        case .description:
+            transactions.sort {
+                $0.transactionDescription.localizedCaseInsensitiveCompare($1.transactionDescription) == .orderedAscending
+            }
+        case .memo:
+            func memo(_ txn: Transaction) -> String {
+                txn.splits.first(where: relevant)?.memo ?? ""
+            }
+            transactions.sort { memo($0).localizedCaseInsensitiveCompare(memo($1)) == .orderedAscending }
+        }
+        if registerSortReversed { transactions.reverse() }
 
         journalTransactionCache[accountID] = transactions
         return transactions

@@ -17,6 +17,7 @@ struct BudgetView: View {
     @Environment(\.isEmbeddedDestination) private var embedded
     @State private var showingEdit = false
     @State private var showingSuggest = false
+    @State private var confirmingDelete: GncGUID?
 
     /// The budget the sidebar has selected, or the only one there is.
     ///
@@ -119,8 +120,29 @@ struct BudgetView: View {
                                 EditBudgetSheet(model: model, budget: budget)
                             }
                     }
+                    // A budget could be created and edited but never removed:
+                    // `deleteBudget` existed with no caller outside its own
+                    // test, so a book that had gained a stray "Budget" from a
+                    // mis-click kept it for good.
+                    ToolbarItem {
+                        Menu("More", systemImage: "ellipsis.circle") {
+                            Button("Delete Budget…", systemImage: "trash", role: .destructive) {
+                                confirmingDelete = budget.id
+                            }
+                        }
+                    }
                 }
             }
+        }
+        .confirmationDialog("Delete this budget?", isPresented: Binding(
+            get: { confirmingDelete != nil },
+            set: { if !$0 { confirmingDelete = nil } }), presenting: confirmingDelete) { id in
+            Button("Delete Budget", role: .destructive) {
+                model.deleteBudget(id)
+                confirmingDelete = nil
+            }
+        } message: { _ in
+            Text("Its amounts are removed. Your transactions are not affected.")
         }
         .frame(minWidth: embedded ? nil : 500, minHeight: embedded ? nil : 420)
     }

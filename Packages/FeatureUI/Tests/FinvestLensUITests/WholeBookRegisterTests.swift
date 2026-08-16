@@ -127,4 +127,69 @@ struct WholeBookRegisterTests {
         #expect(summary.reconcile.isEmpty)
         #expect(summary.total == 0)
     }
+
+    // MARK: Filter and sort (P13.2)
+
+    /// Both were gated on `!focusSet.isEmpty`, and the general ledger's focus
+    /// set is empty by definition — so All Transactions ignored the Filter
+    /// sheet entirely and came back oldest-first however its headers were
+    /// clicked, while those headers still wrote the shared `registerSort` and
+    /// silently re-sorted every single-account register instead.
+
+    private func makeDatedBook() throws -> Fixture {
+        let f = try makeFixture()
+        for (day, amount, name) in [(1_000_000.0, "10", "Milk"),
+                                    (9_000_000.0, "80", "Weekly shop"),
+                                    (5_000_000.0, "45", "Top-up")] {
+            _ = f.model.addTransfer(from: f.bank, to: f.groceries,
+                                    amount: Decimal(string: amount)!,
+                                    date: Date(timeIntervalSince1970: day),
+                                    description: name)
+        }
+        return f
+    }
+
+    @Test("All Transactions honours the register's date filter")
+    func wholeBookHonoursFilter() throws {
+        let f = try makeDatedBook()
+        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+
+        #expect(f.model.journalTransactions(forAccountID: nil).count == 3)
+
+        var filter = RegisterFilter.showAll
+        filter.startDate = Date(timeIntervalSince1970: 4_000_000)
+        f.model.registerFilter = filter
+        let filtered = f.model.journalTransactions(forAccountID: nil)
+        #expect(filtered.count == 2)
+        #expect(filtered.allSatisfy { $0.datePosted >= Date(timeIntervalSince1970: 4_000_000) })
+    }
+
+    @Test("All Transactions honours the sort its own headers set")
+    func wholeBookHonoursSort() throws {
+        let f = try makeDatedBook()
+        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+
+        f.model.registerSort = .description
+        #expect(f.model.journalTransactions(forAccountID: nil).map(\.transactionDescription)
+                == ["Milk", "Top-up", "Weekly shop"])
+
+        f.model.registerSortReversed = true
+        #expect(f.model.journalTransactions(forAccountID: nil).map(\.transactionDescription)
+                == ["Weekly shop", "Top-up", "Milk"])
+    }
+
+    /// With no anchoring split there is no leg whose value is "the" amount, and
+    /// summing every leg gives zero on a balanced transaction. The debit total
+    /// is what the row displays (`split-register-model.c:1650-1657`), so it is
+    /// what the column sorts by.
+    @Test("Sorting by amount uses the debit total the row shows")
+    func wholeBookSortsByDisplayedTotal() throws {
+        let f = try makeDatedBook()
+        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+
+        f.model.registerSort = .amount
+        let sorted = f.model.journalTransactions(forAccountID: nil)
+        let totals = sorted.map { f.model.wholeBookRowSummary(ofTransaction: $0.guid).total }
+        #expect(totals == [10, 45, 80])
+    }
 }

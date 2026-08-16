@@ -934,8 +934,13 @@ struct StackedTrailingControls: View {
                         in: RoundedRectangle(cornerRadius: 6))
 
             HStack(spacing: 6) {
-                PeriodSelector(model: model, period: $model.period)
-                    .controlSize(.small)
+                // Only where it governs something (`AppMode.usesPeriod`). It
+                // used to appear in all seven modes and act in two, so in the
+                // other five it was a control that moved and changed nothing.
+                if model.mode.usesPeriod {
+                    PeriodSelector(model: model, period: $model.period)
+                        .controlSize(.small)
+                }
             }
         }
         .frame(height: StackedModeLabelStyle.height)
@@ -1457,12 +1462,19 @@ struct RegisterView: View {
         // redundant, you can leave the title area empty."
         .navigationTitle("")
         .background { jumpShortcuts }
+        // A **latch**, until it was consumed on appear too.
+        //
+        // `onChange` fires only while this view is alive. Choosing "Filter
+        // Transactions…" from a mode with no register — Reports, Planning —
+        // set the flag with nothing on screen to clear it. From then on every
+        // press wrote `true` over `true`: no change, no callback, and the menu
+        // command was dead in every mode for the rest of the session. Reading
+        // it on appear as well means a request made elsewhere is honoured when
+        // a register next opens, and the flag can never stay stuck.
         .onChange(of: model.registerFilterRequested) { _, now in
-            if now {
-                filterShown = true
-                model.registerFilterRequested = false
-            }
+            if now { consumeFilterRequest() }
         }
+        .onAppear { if model.registerFilterRequested { consumeFilterRequest() } }
         .sheet(isPresented: $filterShown) {
             RegisterFilterSheet(model: model)
         }
@@ -1635,6 +1647,13 @@ struct RegisterView: View {
     /// thousands of scroll-wheel ticks end to end. In the journal styles these
     /// move within the loaded page — "oldest" means the oldest entry on screen,
     /// which "Show Earlier" extends.
+    /// Opens the filter sheet and clears the request, so the flag is never left
+    /// standing for the next press to be swallowed by.
+    private func consumeFilterRequest() {
+        filterShown = true
+        model.registerFilterRequested = false
+    }
+
     private var jumpShortcuts: some View {
         Group {
             Button("Go to Oldest Transaction") { jump = .oldest }

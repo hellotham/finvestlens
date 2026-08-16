@@ -27,87 +27,22 @@ extension AppModel {
             && txn.splits.allSatisfy { $0.account?.commodity == txn.currency }
     }
 
-    /// Re-dates a transaction (journal headings address it directly; register
-    /// rows via their split).
-    public func inlineSetDate(transactionID: GncGUID, to date: Date) {
-        guard let book, let txn = book.transaction(with: transactionID),
-              txn.datePosted != date else { return }
-        editing([txn.guid], named: "Edit Date") { txn.datePosted = date }
-    }
-
-    public func inlineSetDate(splitID: GncGUID, to date: Date) {
-        guard let id = transactionID(ofSplit: splitID) else { return }
-        inlineSetDate(transactionID: id, to: date)
-    }
-
-    /// Renames a transaction.
-    public func inlineSetDescription(transactionID: GncGUID, to text: String) {
-        let cleaned = text.trimmingCharacters(in: .whitespaces)
-        guard let book, let txn = book.transaction(with: transactionID),
-              !cleaned.isEmpty, txn.transactionDescription != cleaned else { return }
-        editing([txn.guid], named: "Edit Description") { txn.transactionDescription = cleaned }
-    }
-
-    public func inlineSetDescription(splitID: GncGUID, to text: String) {
-        guard let id = transactionID(ofSplit: splitID) else { return }
-        inlineSetDescription(transactionID: id, to: text)
-    }
-
-    /// Sets a transaction's notes (the Double Line field). Empty clears them.
-    public func inlineSetNotes(transactionID: GncGUID, to text: String) {
-        let cleaned = text.trimmingCharacters(in: .whitespaces)
-        guard let book, let txn = book.transaction(with: transactionID),
-              txn.notes != cleaned else { return }
-        editing([txn.guid], named: "Edit Notes") { txn.notes = cleaned }
-    }
-
-    public func inlineSetNotes(splitID: GncGUID, to text: String) {
-        guard let id = transactionID(ofSplit: splitID) else { return }
-        inlineSetNotes(transactionID: id, to: text)
-    }
-
-    /// Sets a split's memo. Empty clears it.
-    public func inlineSetMemo(splitID: GncGUID, to text: String) {
-        let cleaned = text.trimmingCharacters(in: .whitespaces)
-        guard let book, let split = book.split(with: splitID),
-              let txn = split.transaction, split.memo != cleaned else { return }
-        editing([txn.guid], named: "Edit Memo") { split.memo = cleaned }
-    }
-
-    /// Moves *this* leg to another account (journal legs, expanded Auto-Split
-    /// legs). Same-currency destinations only — a security or foreign-currency
-    /// account needs the editor's quantity handling.
-    @discardableResult
-    public func inlineSetLegAccount(splitID: GncGUID, to accountID: GncGUID) -> Bool {
-        guard let book, let split = book.split(with: splitID),
-              let txn = split.transaction,
-              let account = book.account(with: accountID),
-              account.commodity == txn.currency,
-              split.account !== account
-        else { return false }
-        editing([txn.guid], named: "Edit Account") { split.account = account }
-        return true
-    }
-
-    /// Sets the row leg's amount and rebalances the counter leg. Two-leg
-    /// same-currency transactions only; returns whether the edit applied.
-    @discardableResult
-    public func inlineSetAmount(splitID: GncGUID, to value: Decimal) -> Bool {
-        guard let book, let split = book.split(with: splitID),
-              let txn = split.transaction, txn.splits.count == 2,
-              txn.splits.allSatisfy({ $0.account?.commodity == txn.currency }),
-              let other = txn.splits.first(where: { $0 !== split })
-        else { return false }
-        let rounded = txn.currency.round(value)
-        guard split.value != rounded else { return true }
-        editing([txn.guid], named: "Edit Amount") {
-            split.value = rounded
-            split.quantity = rounded
-            other.value = -rounded
-            other.quantity = -rounded
-        }
-        return true
-    }
+    // The per-field inline setters that lived here — `inlineSetDate`,
+    // `inlineSetDescription`, `inlineSetNotes`, `inlineSetMemo`,
+    // `inlineSetLegAccount`, `inlineSetAmount` and `inlineSetTransfer`, each in
+    // split- and transaction-keyed spellings — were **deleted**, not moved.
+    //
+    // They were the register's editing API until the sheet redesign, which
+    // commits a whole `TransactionDraft` through `updateTransaction`
+    // (`RegisterSheet.swift`). Nothing in the app has called one since; only
+    // their own tests did, which is how ten public methods on the app's central
+    // model went on looking maintained. The invariants they carried — a
+    // money-touching edit only on a two-leg same-currency transaction, the
+    // counter leg rebalanced with it — are `updateTransaction`'s now, and are
+    // covered there.
+    //
+    // `isSimpleTransfer(splitID:)` above stays: the register and the bulk-edit
+    // sheet both ask it.
 
     // MARK: Bulk edit
 

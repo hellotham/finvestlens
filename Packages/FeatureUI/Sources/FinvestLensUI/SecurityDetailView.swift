@@ -26,8 +26,10 @@ struct SecurityDetailView: View {
     @Environment(\.appDateFormat) private var dateFormat
     @State private var range: DetailRange = .year
     @State private var exportingCSV = false
+    @State private var importingCSV = false
     @State private var showingTarget = false
     @State private var showingAddPrice = false
+    @State private var showingEdit = false
     @State private var confirmingDelete: SecurityPriceRow?
 
     private var detail: SecurityDetail? { model.securityDetail(for: commodity) }
@@ -56,10 +58,20 @@ struct SecurityDetailView: View {
         .toolbar { toolbar }
         .sheet(isPresented: $showingTarget) { PriceTargetSheet(model: model, commodity: commodity) }
         .sheet(isPresented: $showingAddPrice) { AddPriceSheet(model: model, commodity: commodity) }
+        .sheet(isPresented: $showingEdit) { EditSecuritySheet(model: model, commodity: commodity) }
         .fileExporter(isPresented: $exportingCSV,
                       document: CSVFileDocument(text: model.priceCSV(for: commodity)),
                       contentType: .commaSeparatedText,
                       defaultFilename: model.priceCSVFilename(for: commodity)) { _ in }
+        // `importPrices(csv:)` satisfies `FR-XIO-03` and had no caller at all —
+        // the export half of the pair was wired and the import half was not.
+        // It reads a whole file, so it fills any security the file names, not
+        // just this one; the toast says how many landed and what was skipped.
+        .fileImporter(isPresented: $importingCSV,
+                      allowedContentTypes: [.commaSeparatedText, .text]) { result in
+            guard case let .success(url) = result else { return }
+            importPrices(from: url)
+        }
         .confirmationDialog("Delete this price?", isPresented: Binding(
             get: { confirmingDelete != nil },
             set: { if !$0 { confirmingDelete = nil } }), presenting: confirmingDelete) { row in
@@ -70,6 +82,37 @@ struct SecurityDetailView: View {
         } message: { row in
             Text("\(dateFormat.long(row.date)) · \(AmountFormat.string(row.value, code: row.currencyCode))")
         }
+    }
+
+    /// Reads a price CSV and reports what it did — including what it refused.
+    ///
+    /// The refusals matter as much as the count. A row naming a currency the
+    /// book does not know is skipped rather than relabelled into the base
+    /// currency, which is the same mislabel the fetch path now refuses.
+    private func importPrices(from url: URL) {
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        guard let text = try? String(contentsOf: url, encoding: .utf8) else {
+            model.showToast(.failure, String(localized: "Couldn't read that file."))
+            return
+        }
+        let outcome = model.importPrices(csv: text)
+        if outcome.unrecognisedFormat {
+            model.showToast(.failure, String(localized: "That file's columns weren't recognised."))
+            return
+        }
+        var detail: [String] = []
+        if !outcome.unmatchedSymbols.isEmpty {
+            detail.append(String(localized: "\(outcome.unmatchedSymbols.count) unknown symbols"))
+        }
+        if !outcome.unknownCurrencies.isEmpty {
+            detail.append(String(localized: "\(outcome.unknownCurrencies.count) unknown currencies"))
+        }
+        let skipped = detail.joined(separator: ", ")
+        model.showToast(outcome.imported > 0 ? .success : .info,
+                        skipped.isEmpty
+                            ? String(localized: "Imported \(outcome.imported) prices.")
+                            : String(localized: "Imported \(outcome.imported) prices — skipped \(skipped)."))
     }
 
     // MARK: Toolbar
@@ -105,11 +148,25 @@ struct SecurityDetailView: View {
             Menu("More", systemImage: "ellipsis.circle") {
                 Button("Enter a Price…", systemImage: "plus") { showingAddPrice = true }
                 Button("Set Price Target…", systemImage: "target") { showingTarget = true }
+                Divider()
+                // `EditSecuritySheet` existed and was presented from nowhere, so
+                // `renameSecurity` — the only way to correct a security's name
+                // across every holding that shares it — could not be reached.
+                Button("Edit Security…", systemImage: "pencil") { showingEdit = true }
+                Divider()
+                Button("Import Prices…", systemImage: "square.and.arrow.down") { importingCSV = true }
                 Button("Export Prices…", systemImage: "square.and.arrow.up") { exportingCSV = true }
                 Divider()
                 Toggle("No Longer Trading", isOn: Binding(
                     get: { model.isDelisted(commodity) },
                     set: { model.setDelisted(commodity, $0) }))
+                // Clears the cached profile and statements so the next fetch
+                // rebuilds them — the fix for a sidecar that cached a wrong
+                // match, and until now callable only from a test.
+                Button("Clear Cached Fundamentals", systemImage: "trash",
+                       role: .destructive) {
+                    model.clearFundamentals(for: commodity)
+                }
             }
         }
     }

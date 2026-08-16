@@ -2,8 +2,8 @@
 //  InlineEditTests.swift
 //  FinvestLens — FeatureUI
 //
-//  In-place register editing (AppModel+InlineEdit): field commits, the
-//  counter-leg rebalance, the simple-transfer gate, and bulk edits.
+//  What survives of AppModel+InlineEdit: the simple-transfer gate the
+//  register and bulk-edit sheet both ask, and bulk edits across a selection.
 //
 //  Copyright (C) 2026 Christine Tham
 //  SPDX-License-Identifier: GPL-3.0-or-later
@@ -78,151 +78,16 @@ struct InlineEditTests {
         #expect(!model.isSimpleTransfer(splitID: .random()))
     }
 
-    @Test("Date, description, notes and memo commit from a register row")
-    func fieldEdits() throws {
-        let url = tempURL()
-        let model = AppModel()
-        let ids = try makeTransferBook(model, at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
-        let book = try #require(model.book)
-        let txn = try #require(book.transaction(with: ids.txn))
-
-        let newDate = Date(timeIntervalSince1970: 5_000_000)
-        model.inlineSetDate(splitID: ids.bankSplit, to: newDate)
-        #expect(txn.datePosted == newDate)
-
-        model.inlineSetDescription(splitID: ids.bankSplit, to: "  Woolworths Metro  ")
-        #expect(txn.transactionDescription == "Woolworths Metro")
-
-        // An empty description is rejected — a transaction needs one.
-        model.inlineSetDescription(splitID: ids.bankSplit, to: "   ")
-        #expect(txn.transactionDescription == "Woolworths Metro")
-
-        model.inlineSetNotes(splitID: ids.bankSplit, to: "second line")
-        #expect(txn.notes == "second line")
-        model.inlineSetNotes(splitID: ids.bankSplit, to: "")
-        #expect(txn.notes.isEmpty)
-
-        let bankLeg = try #require(book.split(with: ids.bankSplit))
-        model.inlineSetMemo(splitID: ids.bankSplit, to: "  card 1234 ")
-        #expect(bankLeg.memo == "card 1234")
-        model.inlineSetMemo(splitID: ids.bankSplit, to: "")
-        #expect(bankLeg.memo.isEmpty)
-    }
-
-    @Test("Setting the amount rebalances the counter leg and rounds to the currency")
-    func amountRebalance() throws {
-        let url = tempURL()
-        let model = AppModel()
-        let ids = try makeTransferBook(model, at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
-        let book = try #require(model.book)
-        let txn = try #require(book.transaction(with: ids.txn))
-        let bankLeg = try #require(book.split(with: ids.bankSplit))
-        let counterLeg = try #require(txn.splits.first { $0 !== bankLeg })
-
-        // Bank held -50; make the purchase -82.344 → rounded to cents.
-        #expect(model.inlineSetAmount(splitID: ids.bankSplit, to: dec("-82.344")))
-        #expect(bankLeg.value == dec("-82.34"))
-        #expect(bankLeg.quantity == dec("-82.34"))
-        #expect(counterLeg.value == dec("82.34"))
-        #expect(counterLeg.quantity == dec("82.34"))
-        #expect(txn.isBalanced)
-
-        // Same value again: reports success, changes nothing.
-        #expect(model.inlineSetAmount(splitID: ids.bankSplit, to: dec("-82.34")))
-        #expect(bankLeg.value == dec("-82.34"))
-    }
-
-    @Test("Amount edits are refused on multi-leg and security transactions")
-    func amountRefusals() throws {
-        let url = tempURL()
-        let model = AppModel()
-        try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
-
-        let bank = try #require(model.addAccount(name: "Bank", type: .bank))
-        let food = try #require(model.addAccount(name: "Food", type: .expense))
-        let household = try #require(model.addAccount(name: "Household", type: .expense))
-        try model.addTransaction(date: Date(timeIntervalSince1970: 0), description: "Split shop",
-                                 currency: .aud, splits: [
-            SplitInput(accountID: bank, value: dec("-30")),
-            SplitInput(accountID: food, value: dec("20")),
-            SplitInput(accountID: household, value: dec("10"))])
-        let book = try #require(model.book)
-        let splitTxn = try #require(book.transactions.first)
-        let bankLeg = try #require(splitTxn.splits.first { $0.account?.guid == bank })
-        #expect(!model.inlineSetAmount(splitID: bankLeg.guid, to: dec("-40")))
-        #expect(bankLeg.value == dec("-30"))                       // untouched
-
-        // Two legs, but one in a security commodity: refused.
-        let cba = Commodity(namespace: .security("ASX"), mnemonic: "CBA",
-                            fullName: "Commonwealth Bank", smallestFraction: 10000)
-        let shares = try #require(model.addAccount(name: "CBA", type: .stock, commodity: cba))
-        try model.addTransaction(date: Date(timeIntervalSince1970: 1000), description: "Buy",
-                                 currency: .aud, splits: [
-            SplitInput(accountID: shares, value: dec("1000"), quantity: dec("10")),
-            SplitInput(accountID: bank, value: dec("-1000"))])
-        let buy = try #require(book.transactions.first { $0.transactionDescription == "Buy" })
-        let buyBankLeg = try #require(buy.splits.first { $0.account?.guid == bank })
-        #expect(!model.inlineSetAmount(splitID: buyBankLeg.guid, to: dec("-900")))
-    }
-
-    @Test("Re-categorising moves the counter leg; the row leg stays put")
-    func transferEdit() throws {
-        let url = tempURL()
-        let model = AppModel()
-        let ids = try makeTransferBook(model, at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
-        let book = try #require(model.book)
-        let txn = try #require(book.transaction(with: ids.txn))
-        let bankLeg = try #require(book.split(with: ids.bankSplit))
-        let counterLeg = try #require(txn.splits.first { $0 !== bankLeg })
-
-        let dining = try #require(model.addAccount(name: "Dining", type: .expense))
-        #expect(model.inlineSetTransfer(splitID: ids.bankSplit, to: dining))
-        #expect(counterLeg.account?.guid == dining)
-        #expect(bankLeg.account?.guid == ids.bank)                 // unchanged
-
-        // Already there: no-op, reported as a refusal.
-        #expect(!model.inlineSetTransfer(splitID: ids.bankSplit, to: dining))
-
-        // A foreign-commodity destination is refused.
-        let cba = Commodity(namespace: .security("ASX"), mnemonic: "CBA",
-                            fullName: "Commonwealth Bank", smallestFraction: 10000)
-        let shares = try #require(model.addAccount(name: "CBA", type: .stock, commodity: cba))
-        #expect(!model.inlineSetTransfer(splitID: ids.bankSplit, to: shares))
-        #expect(counterLeg.account?.guid == dining)
-    }
-
-    @Test("Moving this leg re-homes it, same-currency destinations only")
-    func legAccountEdit() throws {
-        let url = tempURL()
-        let model = AppModel()
-        let ids = try makeTransferBook(model, at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
-        let book = try #require(model.book)
-        let bankLeg = try #require(book.split(with: ids.bankSplit))
-
-        let savings = try #require(model.addAccount(name: "Savings", type: .bank))
-        #expect(model.inlineSetLegAccount(splitID: ids.bankSplit, to: savings))
-        #expect(bankLeg.account?.guid == savings)
-
-        // Same account again: refused (nothing to do).
-        #expect(!model.inlineSetLegAccount(splitID: ids.bankSplit, to: savings))
-
-        // A security account is refused; the leg stays where it was.
-        let cba = Commodity(namespace: .security("ASX"), mnemonic: "CBA",
-                            fullName: "Commonwealth Bank", smallestFraction: 10000)
-        let shares = try #require(model.addAccount(name: "CBA", type: .stock, commodity: cba))
-        #expect(!model.inlineSetLegAccount(splitID: ids.bankSplit, to: shares))
-        #expect(bankLeg.account?.guid == savings)
-    }
-}
-
-@MainActor
-@Suite("Bulk register editing")
-struct BulkEditTests {
+    // The five tests that stood here exercised `inlineSetDate`,
+    // `inlineSetDescription`, `inlineSetNotes`, `inlineSetMemo`,
+    // `inlineSetAmount`, `inlineSetTransfer` and `inlineSetLegAccount`. Those
+    // methods are gone (see AppModel+InlineEdit.swift): the register sheet
+    // commits a whole draft through `updateTransaction`, and had done since the
+    // redesign — these tests were the only callers left, which is exactly why
+    // the dead API looked alive. What they were really protecting, the
+    // counter-leg rebalance and the refusal to touch money on a multi-leg or
+    // security transaction, is `updateTransaction`'s and is covered in
+    // EditingTests, EditFidelityTests and EditableQuantityTests.
 
     @Test("A bulk edit applies transaction and split fields across the selection")
     func bulkFieldsApply() throws {

@@ -61,6 +61,36 @@ public enum AppMode: String, CaseIterable, Identifiable, Hashable, Sendable {
         }
     }
 
+    /// Whether the window's period selector governs anything in this mode.
+    ///
+    /// `FR-NAV-11` asks for one period control rather than a private one per
+    /// screen, and two modes read it: the Overview board scopes its tiles by it
+    /// (`DashboardView`), and Reports seeds every new report's configuration
+    /// from it (`ReportKind.defaultConfiguration(for:)`), which is what makes a
+    /// report agree with the board you were just looking at.
+    ///
+    /// The other five do not, and the control was shown in all seven — so in
+    /// Accounts, Business, Planning and Records it was a live picker that
+    /// changed the number beside it and nothing on screen. Each has its own
+    /// reason to be excluded rather than wired:
+    ///
+    /// - **Accounts** — a register already has a date range, in the Filter
+    ///   sheet, which is per-register and persists. A second date scope in the
+    ///   toolbar would silently fight it.
+    /// - **Investments** — holdings are valued as of today by definition, and
+    ///   the chart window is its own persisted book preference
+    ///   (`AppModel.sparkRange`) with ranges an accounting period has no names
+    ///   for, like five years.
+    /// - **Business** — invoices and aging are as-of, not for-a-period.
+    /// - **Planning** — forward-looking, with each planner's own horizon.
+    /// - **Records** — a document list, not a ledger view.
+    public var usesPeriod: Bool {
+        switch self {
+        case .overview, .reports: return true
+        case .accounts, .investments, .business, .planning, .records: return false
+        }
+    }
+
     public var symbol: String {
         switch self {
         case .overview: "square.grid.2x2"
