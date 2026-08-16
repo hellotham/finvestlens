@@ -36,7 +36,7 @@ struct RulesView: View {
                     list
                 }
             }
-            .navigationTitle("Rules")
+            .navigationTitle("")   // the tab strip names this destination
             .onChange(of: model.sidebarCreateRequest) {
                 guard model.sidebarCreateRequest == .ruleGroup else { return }
                 model.sidebarCreateRequest = nil

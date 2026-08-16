@@ -46,7 +46,7 @@ struct PlanningView: View {
             case .tax: TaxEstimateView(model: model)
             }
         }
-        .navigationTitle("Planner")
+        .navigationTitle("")
     }
 }
 

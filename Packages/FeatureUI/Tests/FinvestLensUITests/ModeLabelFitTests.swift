@@ -98,7 +98,7 @@ struct ModeLabelFitTests {
     /// names, and the measurement is taken over exactly those.
     @Test("The default set is the five the design names")
     func defaultSet() {
-        #expect(AppMode.toolbarDefault == [.overview, .accounts, .investments, .reports, .business])
+        #expect(AppMode.toolbarDefault == [.dashboard, .accounts, .investments, .reports, .business])
         #expect(AppMode.allCases.filter(\.isOnToolbarByDefault) == AppMode.toolbarDefault)
     }
 }

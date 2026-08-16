@@ -103,6 +103,22 @@ struct finvestlensApp: App {
         // minimum ones: sidebar 240 + Date 100 + Description 280 + Transfer 180
         // + R 24 + Amount 100 + Balance 112 + seam 10 + attachments 200.
         .defaultSize(width: 1280, height: 820)
+        // **The window draws no title, and the toolbar is tall enough for the
+        // modes.**
+        //
+        // `.navigationTitle("")` on one view was not this. It was applied to
+        // `RegisterView` alone and asserted, in a comment citing the HIG, as if
+        // it held for the app — while `InvestmentsView`, `ReportsHome`,
+        // `BusinessView` and `PlanningView` each set their own. Seen on screen
+        // 16 Aug 2026: "Investments" and then "Reports" sitting in the toolbar,
+        // taking the width the search field needs. The title belongs to the
+        // *window*, so suppressing it is a window decision, not one made seven
+        // times and got right once.
+        //
+        // `.expanded` is also what gives the 46pt mode buttons a toolbar they
+        // fit in. In the standard height they overflowed, and the selected
+        // pill was drawn around the row height rather than the button — which
+        // is why it covered the label and only the bottom of the symbol.
         .commands {
             #if os(macOS)
             // File ▸ New/Open/Open Recent (replaces the stock New Window item).
@@ -463,7 +479,7 @@ struct finvestlensApp: App {
         .defaultSize(width: 520, height: 480)
 
         Settings {
-            FinvestLensSettingsView()
+            FinvestLensSettingsView(model: model)
                 .finvestLensAppearance()
         }
         #endif

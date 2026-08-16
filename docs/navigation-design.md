@@ -100,7 +100,65 @@ guidance; and the most-used content sits on the bottom edge.
 
 ## 4 The design
 
-### 4.1 Modes live in the toolbar
+### 4.1 Modes are a tab bar on a row of their own
+
+**Revised 16 Aug 2026, after four rejected layouts.** The modes are *not* toolbar
+items. They are a full-width tab bar drawn immediately below the window's title
+bar and to the right of the sidebar, in the detail column; the title bar carries
+the secondary controls (search, New, Saved searches, the period) and the modes
+carry nothing else.
+
+The HIG settles the component, and it is not the one this section originally
+chose. *Toolbars*: **"In contrast to a toolbar, a tab bar is specifically for
+navigating between areas of an app."** Modes navigate between areas, so a
+toolbar was the wrong container from the start — everything below about
+persistence was reasoning about placement inside a container that should not
+have been used.
+
+**Why it is not in the toolbar, measured rather than argued.** Three attempts
+failed on screen, in this order:
+
+1. **Modes beside the other toolbar items.** At a 986pt window, five labelled
+   modes plus a search field pushed Reports and Business into the system's `»`
+   overflow — the outcome *Toolbars* warns of: "avoid layouts that cause toolbar
+   items to overflow by default." macOS also draws a grouping capsule around a
+   toolbar group, which reads as an oval nobody asked for.
+2. **Modes double height with the search field stacked above small buttons.**
+   The whole toolbar became double height for one item's sake.
+3. **Modes as a single `.principal` toolbar item.** A toolbar clamps its item to
+   a width it chooses, so all seven labels truncated ("Overvi…", "Accoun…",
+   "Invest…") and the grouping capsule returned.
+
+So the modes take a row the toolbar cannot give them, and the title bar — which
+would otherwise be an empty band above them — earns its height by holding the
+secondary controls.
+
+**Selection is the symbol, not a shape behind it.** *Toolbars*: "Prefer
+system-provided symbols without borders. Borders (like outlined circle symbols)
+aren't necessary because the section provides a visible container." *Tab bars*:
+"Prefer filled symbols or icons for consistency with the platform", and "Include
+tab labels… A tab label appears beneath or beside a tab bar icon." So a selected
+mode is a **filled, tinted symbol with a tinted label beneath it** — no circle,
+no oval, no pill. Two modes (Investments, Planning) have no `.fill` variant in
+SF Symbols and are distinguished by tint and weight alone.
+
+**All seven, always.** *Tab bars*: "Don't disable or hide tab bar buttons, even
+when their content is unavailable." The five-of-seven toolbar default and the
+system toolbar customisation went with the toolbar; ⌘1…⌘7 still reach every
+mode. `ModeLabelFit` still measures, because a longer language or a larger
+accessibility text size can outgrow the row even though no window width can.
+
+**Accessibility.** A custom label puts the title in a `Text` inside a `VStack`,
+and SwiftUI does not lift that into the control's accessibility label — the five
+mode controls came back from the accessibility API as
+`AXCheckBox 'toggle button' / 'missing value'`. Every mode button carries an
+explicit `accessibilityLabel` and `.isSelected`. No screenshot would have shown
+this; it was found by dumping the accessibility tree.
+
+---
+
+*Superseded, kept because its reasoning about persistence still holds and is why
+the mode bar sits outside the sidebar rather than inside it:*
 
 Mode buttons in the window toolbar, at the leading edge with the other
 navigation controls.
@@ -450,6 +508,64 @@ back to the register's existing "— Split —", and the amount is the transacti
 total. `isHeadingOnly` stays: there are facts to read, still no split to edit
 through.
 
+### 4.4a Titles, sheets and tabs
+
+**One title rule, applied everywhere** (16 Aug 2026, after an inconsistency was
+spotted mid-change). A destination in the **main window shows no title**: the
+sidebar names the mode and the tab strip names what is open, so a title repeats
+one of them a few pixels away. A **sheet always shows one**, because it has
+neither. The Settings window titles its tabs for the same reason.
+
+That rule caught four in-window destinations still titling themselves after the
+first pass — the report screen, Rules, Savings Goals and Scheduled — and the
+Overview board, which put "Overview" in the title bar directly above a tab that
+said "Overview".
+
+**Naming** (16 Aug 2026). The mode is **Dashboard**; the every-card board inside
+it is **Overview**. A mode called Overview containing a view called Mix read
+backwards. The stored identifiers were renamed with it rather than left as
+debt — `AppMode.overview` → `.dashboard`, view id `"mix"` → `"overview"` — with
+`AppModel.decodeMode` and `decodeSelection` accepting the old spellings so no
+saved desk state loses its place (`AppModeTests.preRenameDeskStateRestores`).
+
+**Sheets become tabs, with one exception** *(agreed 16 Aug 2026; not yet built)*.
+The tabbed interface is meant to be consistent across modes, so a sheet you
+**work in** should be a tab: New Invoice, Edit Budget, the Loan Calculator,
+Import, Reconcile. A sheet that asks a **question you must answer** stays modal —
+Delete Account, Process Payment, Close Financial Year, Repair Book — because
+those hold the book until they are answered, and a tab you can wander away from
+leaves the question half-answered. The rule in one line: *a thing you work in is
+a tab; a question you must answer is a sheet.*
+
+### 4.4b Secondary toolbar controls: symbol, tooltip, accessibility label
+
+**Named, not spelled out** (16 Aug 2026). "Unlabelled toolbar buttons still
+exist" was reported and was true — the register's View, Filter and Actions, the
+Overview card menu, Saved searches and New all drew a bare glyph, because a
+toolbar `Menu` or `Button` renders icon-only unless told otherwise.
+
+Spelling all of them out is not the fix: doing it to the register's three put the
+system `»` overflow back and hid two of them behind it — present in the
+accessibility tree, absent from the screen, which is the worst of both. HIG
+*Toolbars* rules both ways at once: "avoid layouts that cause toolbar items to
+overflow by default", and "Prefer simple, recognizable symbols for items instead
+of text, except for actions like edit that aren't well-represented by symbols."
+
+So the rule is: the **window-level** controls (New, Saved, the period) carry
+visible text because there is room and they are not obvious; the **register's
+own** controls keep their symbols and carry their names in the tooltip *and* an
+explicit `accessibilityLabel`. "Unlabelled" costs a VoiceOver user the control
+entirely and a sighted user only a hover — the fix has to serve the first.
+
+**Filter moved into the View menu** rather than being a third item, because
+filtering is choosing what the register shows, which is what that menu is. HIG
+again: "Add a More menu to contain additional actions."
+
+The check that catches this is not a screenshot. Dump the toolbar's
+accessibility tree: five mode toggles once came back as
+`AXCheckBox 'toggle button' / 'missing value'` while looking perfectly labelled
+on screen.
+
 ### 4.5 Tabs are a tabbed interface, not window tabs
 
 Several open items within a mode — registers, reports, portfolios — as document
@@ -483,6 +599,24 @@ of the account tree, and switching tabs would switch modes. In-window tabs keep
   first and not closeable.
 
 ### 4.6 Sidebar behaviour common to every mode
+
+**Selection is written off the render pass** (16 Aug 2026). The sidebar's
+`List(selection:)` must not bind straight to `AppModel.sidebarSelection`: that
+binding's setter calls `navigate(to:)`, and a `List` writes its selection
+*during* SwiftUI's update. `navigate` then mutates `currentMode`, `tabsByMode`,
+`activeTabByMode` and runs `applyNavigationChange`, which restores register view
+state and can call `refreshRegister()` — all observed properties the sidebar is
+reading as it is being built, so the write happens in a pass already reading
+them and is discarded.
+
+Reported as "Clicking on reports in the sidebar does not work", and reproduced:
+with a report showing, clicking All Reports left the selection, the tab and the
+content untouched, while clicking the *tab* of the same name worked. The model
+was never wrong — `ModeTabTests.homeRowIsSelectable` drives the identical
+sequence through `navigate` and passes. Only the delivery was. The binding hops
+off the pass with `Task { @MainActor in … }`, which is the same hop the register
+already makes for the same reason (`RegisterSheet`: "Consuming mutates the model
+— hop off the render pass first").
 
 The sidebar is one component with one set of manners, whatever collection it is
 showing.

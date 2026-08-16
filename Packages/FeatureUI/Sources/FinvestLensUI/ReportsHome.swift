@@ -401,7 +401,7 @@ struct ReportGallery: View {
             }
             .padding(20)
         }
-        .navigationTitle("Reports")
+        .navigationTitle("")
         .sheet(isPresented: $packShown) { FinancialYearPackSheet(model: model) }
         .sheet(isPresented: $reviewShown) { FinancialReviewSheet(model: model, kind: .financial) }
         .sheet(isPresented: $investmentReviewShown) { FinancialReviewSheet(model: model, kind: .investment) }
@@ -448,15 +448,15 @@ struct ReportGallery: View {
                 reviewShown = true
             }
         }
-        .toolbar {
-            ToolbarItem {
-                Button("Report Settings", systemImage: "gearshape") { settingsShown = true }
-                    .help("Financial year and default period")
-                    .popover(isPresented: $settingsShown) {
-                        ReportSettingsPopover(model: model)
-                    }
-            }
-        }
+        // **The gear is gone.** Asked, on seeing it: "Why do we need the
+        // settings dropdown. Don't these items belong in the settings page?"
+        // They do — it held the financial year and the default period, which
+        // are preferences of the *book*, not actions on the report in front of
+        // you. HIG *Tab bars* draws the same line for navigation; *Toolbars*
+        // draws it for actions: "Provide actions that support the main tasks
+        // people perform." Setting a financial year is not a task you perform
+        // on a report. Both live in Settings ▸ General now, which is where
+        // someone looking for them would have gone first.
     }
 
     private func favouriteCard(_ saved: SavedReport) -> some View {
@@ -506,11 +506,11 @@ struct ReportGallery: View {
 }
 
 /// Book-scoped report preferences, edited where they are used.
-struct ReportSettingsPopover: View {
+struct ReportSettingsForm: View {
     @Bindable var model: AppModel
 
     var body: some View {
-        Form {
+        Group {
             Picker("Financial year starts", selection: Binding(
                 get: { model.financialYearStartMonth },
                 set: { month in
@@ -638,7 +638,12 @@ struct ReportScreen: View {
             Divider()
             content
         }
-        .navigationTitle(configuration.kind)
+        // **The main window never titles.** The tab strip names this report,
+        // and titling it here put the same word twice a few pixels apart. The
+        // rule, applied everywhere: a *window* destination shows no title
+        // because the sidebar and tab strip name it; a *sheet* always shows one
+        // because it has neither.
+        .navigationTitle("")
         .toolbar {
             ToolbarItem(placement: .navigation) {
                 Button("All Reports", systemImage: "chevron.backward", action: close)

@@ -149,6 +149,70 @@ public enum RootPanel: String, Identifiable, Sendable {
     case find
     case findAccount
     public var id: String { rawValue }
+
+    /// Whether this opens as a **tab** rather than a modal sheet.
+    ///
+    /// The rule, agreed 16 Aug 2026: *a thing you work in is a tab; a question
+    /// you must answer is a sheet.* The tabbed interface is meant to be
+    /// consistent across modes, and a form you sit in for a few minutes —
+    /// entering a transaction, reconciling, calculating a loan — is a document,
+    /// not a question.
+    ///
+    /// The exceptions earn their modality. Find and Find Account are pickers
+    /// that end the moment you choose; Save This Search asks one thing; Close
+    /// Financial Year and the tax options hold the book until answered, and a
+    /// tab you can wander away from leaves them half-answered — which is a
+    /// data-integrity hazard, not a consistency win.
+    public var opensAsTab: Bool {
+        switch self {
+        case .newAccount, .newSecurity, .newTransaction, .stockTransaction,
+             .currencyTransfer, .reconcile, .autoCategorize, .bulkEdit,
+             .matchAttachments, .linkedDocuments, .loanCalculator:
+            true
+        case .saveSearch, .onboarding, .closeBook, .taxOptions, .find, .findAccount:
+            false
+        }
+    }
+
+    /// What its tab calls it.
+    public var title: String {
+        switch self {
+        case .newAccount: String(localized: "New Account")
+        case .newSecurity: String(localized: "New Security")
+        case .newTransaction: String(localized: "New Transaction")
+        case .stockTransaction: String(localized: "Stock Transaction")
+        case .currencyTransfer: String(localized: "Currency Transfer")
+        case .saveSearch: String(localized: "Save Search")
+        case .onboarding: String(localized: "Welcome")
+        case .reconcile: String(localized: "Reconcile")
+        case .autoCategorize: String(localized: "Auto-Categorise")
+        case .bulkEdit: String(localized: "Bulk Edit")
+        case .matchAttachments: String(localized: "Match Attachments")
+        case .linkedDocuments: String(localized: "Linked Documents")
+        case .loanCalculator: String(localized: "Loan Calculator")
+        case .closeBook: String(localized: "Close Financial Year")
+        case .taxOptions: String(localized: "Tax Options")
+        case .find: String(localized: "Find")
+        case .findAccount: String(localized: "Find Account")
+        }
+    }
+
+    /// The mode whose tab strip hosts it, so opening one never moves the window
+    /// to an unrelated area.
+    public var hostMode: AppMode {
+        switch self {
+        case .newTransaction, .stockTransaction, .currencyTransfer, .reconcile,
+             .autoCategorize, .bulkEdit, .matchAttachments, .linkedDocuments,
+             .newAccount:
+            .accounts
+        case .newSecurity: .investments
+        case .loanCalculator: .planning
+        // The modal ones never become tabs, so their host is never consulted;
+        // Accounts is the honest default rather than a trap.
+        case .saveSearch, .onboarding, .closeBook, .taxOptions, .find, .findAccount:
+            .accounts
+        }
+    }
 }
 
 /// What the sidebar has selected.
@@ -188,6 +252,8 @@ public enum SidebarSelection: Hashable, Sendable {
     /// mode uses — a sidebar row opened in a tab — so this is a selection, not
     /// a second kind of tab.
     case portfolio(GncGUID)
+    /// An editor opened as a tab rather than a sheet (`RootPanel/opensAsTab`).
+    case panel(RootPanel)
     case business
     case timeMileage
 
@@ -471,13 +537,48 @@ public final class AppModel {
     /// `tabsByMode` holds the tabs the user opened. The mode's **home** is not
     /// among them — it is always tab 0, and derived rather than stored, so it
     /// cannot be closed, reordered or lost to a stale desk state.
-    private var currentMode: AppMode = .overview
+    private var currentMode: AppMode = .dashboard
     private var tabsByMode: [AppMode: [SidebarSelection]] = [:]
     private var activeTabByMode: [AppMode: Int] = [:]
 
-    /// A mode's open tabs, home first (`FR-NAV-05`).
+    /// Tabs a mode **always** shows, derived from the book rather than opened
+    /// by hand — like the home tab, and for the same reason.
+    ///
+    /// Asked for twice, in these words: "we talked about tabs in the investment
+    /// mode (All Holdings, and then each portfolio) - I did not see this", and
+    /// then again after the first attempt, which put the portfolios in the
+    /// *sidebar* and left the user to open each one. The tabs were the ask.
+    ///
+    /// A portfolio is the account whose sub-accounts hold securities. On the
+    /// reference book that is fifteen of them — brokers, super funds and the
+    /// SMSF's two — so they come from the book, not from anyone's history of
+    /// having clicked them.
+    private func standingTabs(in mode: AppMode) -> [SidebarSelection] {
+        switch mode {
+        case .investments: portfolioAccounts.map { .portfolio($0.id) }
+        default: []
+        }
+    }
+
+    /// A mode's open tabs: home, then the ones it always has, then the ones the
+    /// user opened (`FR-NAV-05`).
     public func tabs(in mode: AppMode) -> [SidebarSelection] {
-        [mode.defaultSelection] + (tabsByMode[mode] ?? [])
+        let standing = standingTabs(in: mode)
+        // A standing tab that also sits in stored desk state would appear
+        // twice; the derived one wins, exactly as the home tab does.
+        let opened = (tabsByMode[mode] ?? []).filter { !standing.contains($0) }
+        return [mode.defaultSelection] + standing + opened
+    }
+
+    /// The first tab index the user may close. Home and the standing tabs are
+    /// derived, so closing one would only make it come back.
+    public func firstClosableTabIndex(in mode: AppMode) -> Int {
+        1 + standingTabs(in: mode).count
+    }
+
+    /// Whether the tab at `index` in the current mode has a close button.
+    public func isClosableTab(_ index: Int) -> Bool {
+        index >= firstClosableTabIndex(in: currentMode)
     }
 
     /// The current mode's open tabs.
@@ -506,14 +607,19 @@ public final class AppModel {
     /// Closes a tab. The home tab (index 0) has no close button and this
     /// refuses it anyway — a mode with no tab at all has nothing to show.
     public func closeTab(_ index: Int) {
-        guard index > 0, openTabs.indices.contains(index) else { return }
+        // Home *and* the standing tabs are derived, so removing one only makes
+        // it reappear on the next read — and the arithmetic below would take
+        // the wrong element out of `tabsByMode`.
+        let firstClosable = firstClosableTabIndex(in: currentMode)
+        guard index >= firstClosable, openTabs.indices.contains(index) else { return }
         let old = storedSelection(in: currentMode)
         var extras = tabsByMode[currentMode] ?? []
-        extras.remove(at: index - 1)
+        extras.remove(at: index - firstClosable)
         tabsByMode[currentMode] = extras
         // Land on the tab that took its place, or the one before it — never on
         // the home tab merely because the arithmetic was easier.
-        activeTabByMode[currentMode] = min(activeTabIndexAfterClosing(index), extras.count)
+        activeTabByMode[currentMode] = min(activeTabIndexAfterClosing(index),
+                                           extras.count + firstClosable - 1)
         applyNavigationChange(from: old)
     }
 
@@ -552,21 +658,28 @@ public final class AppModel {
             activeTabByMode[mode] = 0
             return
         }
+        // A standing tab is already open; select it rather than appending a
+        // second copy into the stored list.
+        if let standing = standingTabs(in: mode).firstIndex(of: selection) {
+            activeTabByMode[mode] = 1 + standing
+            return
+        }
+        let base = firstClosableTabIndex(in: mode)
         var extras = tabsByMode[mode] ?? []
         if let existing = extras.firstIndex(of: selection) {
-            activeTabByMode[mode] = existing + 1
+            activeTabByMode[mode] = existing + base
             return
         }
         // Clamped, not trusted. A stored index can outrun its list — restore
         // filters dead tabs out and the index does not follow — and this is the
         // one place that *subscripts* with it rather than reading through the
         // clamp, so an unvalidated read here is a crash rather than a wrong tab.
-        let active = min(max(activeTabByMode[mode] ?? 0, 0), extras.count)
-        if inNewTab || active == 0 {
+        let active = min(max(activeTabByMode[mode] ?? 0, 0), extras.count + base - 1)
+        if inNewTab || active < base {
             extras.append(selection)
-            activeTabByMode[mode] = extras.count
+            activeTabByMode[mode] = extras.count + base - 1
         } else {
-            extras[active - 1] = selection
+            extras[active - base] = selection
             activeTabByMode[mode] = active
         }
         tabsByMode[mode] = extras
@@ -677,6 +790,14 @@ public final class AppModel {
     @ObservationIgnored var codeIndex: [GncGUID: String] = [:]
     @ObservationIgnored var sortIndexRevision = -1
 
+    /// The memo behind ``portfolioAccounts``, which the Investments tab strip
+    /// reads several times per SwiftUI pass. `@ObservationIgnored` because it
+    /// is a cache: `derivedRevision` is already the redraw signal.
+    @ObservationIgnored var portfolioCache: [AccountNode] = []
+    @ObservationIgnored var portfolioCacheRevision = -1
+    /// Which side of the Show Closed Positions toggle the cache was built for.
+    @ObservationIgnored var portfolioCacheShowedClosed = false
+
     /// Custom Overview views, decoded once per book rather than per read.
     /// Observed, not `@ObservationIgnored`: saving a view has to redraw the
     /// sidebar that lists it.
@@ -743,7 +864,7 @@ public final class AppModel {
     /// book's desk does not open on top of the next one's.
     func resetNavigation() {
         let old = storedSelection(in: currentMode)
-        currentMode = .overview
+        currentMode = .dashboard
         tabsByMode = [:]
         activeTabByMode = [:]
         applyNavigationChange(from: old)
@@ -1160,10 +1281,30 @@ public final class AppModel {
     /// Hypothetical events layered onto the cash-flow forecast (session-only).
     public internal(set) var whatIfEvents: [WhatIfEvent] = []
 
-    /// The tool panel currently presented over the root view. Views bind a
-    /// sheet to this; menu commands and toolbar buttons set it, so every panel
-    /// is reachable from the menu bar as well as the toolbar.
-    public var presentedPanel: RootPanel?
+    /// The tool panel currently presented **as a sheet**. Views bind a sheet to
+    /// this; menu commands and toolbar buttons set it, so every panel is
+    /// reachable from the menu bar as well as the toolbar.
+    ///
+    /// Setting it to an **editor** opens a tab instead
+    /// (`RootPanel/opensAsTab`) — every call site keeps the one spelling it
+    /// always had, and the decision lives in one place rather than at each of
+    /// the thirty-odd buttons and menu items that open one.
+    public var presentedPanel: RootPanel? {
+        get { modalPanel }
+        set {
+            guard let panel = newValue else { modalPanel = nil; return }
+            if panel.opensAsTab {
+                modalPanel = nil
+                navigate(to: .panel(panel), inNewTab: true)
+            } else {
+                modalPanel = panel
+            }
+        }
+    }
+
+    /// The sheet-presented panel, which is what the `.sheet(item:)` binds to.
+    /// Private storage so nothing can bypass the tab/sheet decision above.
+    private var modalPanel: RootPanel?
 
     /// A report to open immediately when the Reports panel appears — set by a
     /// menu item that jumps straight to one report (e.g. the aging reports).
@@ -1329,15 +1470,17 @@ public final class AppModel {
     /// geometry and has no other way to learn how much room it has.
     public var windowWidth: CGFloat = 0
 
-    /// Whether the mode buttons currently on the toolbar can show their names.
+    /// Whether all seven modes can show their names on their own row.
     ///
-    /// Only the visible ones are measured: someone who has left the default
-    /// five alone keeps their labels, and adding a sixth or seventh is the act
-    /// that spends the room — which is the right way round, because that person
-    /// has already shown they know what the modes are.
+    /// Measured over **every** mode now, not the toolbar-visible subset: the
+    /// modes have a row to themselves, so all seven are always drawn and there
+    /// is no customisation that could remove one. `ModeBar` no longer degrades
+    /// to symbols at any width the window can take — 452pt of labels against an
+    /// 860pt minimum — but the measurement stays, because a longer language or
+    /// a larger accessibility text size can still outgrow the row, and this is
+    /// what a future `ModeBar` would ask.
     public var modeLabelsFit: Bool {
-        ModeLabelFit.labelsFit(ModeToolbar.modes.filter(\.isOnToolbarByDefault),
-                               in: windowWidth)
+        ModeLabelFit.labelsFit(ModeBar.modes, in: windowWidth)
     }
 
     /// Bumped when the sidecar changes. The cache is a file, not an observed
@@ -2546,6 +2689,9 @@ public final class AppModel {
         case .savedReport(let id): savedReports.contains { $0.id == id }
         case .security(let key): securityCommodity(forKey: key) != nil
         case .portfolio(let id): portfolioAccounts.contains { $0.id == id }
+        // A panel tab is always live: it is a form, not a reference to
+        // something in the book that could have been deleted.
+        case .panel: true
         case .invoice(let id): businessInvoices.contains { $0.guid == id }
         case .customer(let id): businessCustomers.contains { $0.guid == id }
         case .vendor(let id): businessVendors.contains { $0.guid == id }

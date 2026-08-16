@@ -75,11 +75,15 @@ public struct DocumentSettingsView: View {
 
 /// General preferences: autosave (`FR-DAT-10`), date format.
 public struct GeneralSettingsView: View {
+    /// The open book, for the preferences that belong to it rather than to the
+    /// app — the financial year and the default report period, which moved here
+    /// out of a gear in the Reports toolbar.
+    @Bindable var model: AppModel
     @AppStorage("finvestlens.autosaveIntervalSeconds") private var autosaveSeconds = 300
     @AppStorage(AppModel.reopenLastBookDefaultsKey) private var reopenLastBook = true
     @AppStorage(AppDateFormat.orderKey) private var dateOrderRaw = DateOrder.dmy.rawValue
 
-    public init() {}
+    public init(model: AppModel) { self.model = model }
 
     private var dateFormat: AppDateFormat {
         AppDateFormat(order: DateOrder(rawValue: dateOrderRaw) ?? .dmy)
@@ -92,6 +96,18 @@ public struct GeneralSettingsView: View {
                 Text("When on, FinvestLens reopens the book you had open when you last quit.")
                     .scaledFont(.caption)
                     .foregroundStyle(.secondary)
+            }
+            // Moved here from a gear in the Reports toolbar, on being asked
+            // "Why do we need the settings dropdown. Don't these items belong
+            // in the settings page?" — they do. A financial year and a default
+            // period are properties of the book, not actions on the report in
+            // front of you, and HIG *Toolbars* asks a toolbar for "actions that
+            // support the main tasks people perform". Setting a financial-year
+            // convention is not one of those tasks; it is done once.
+            if model.isOpen {
+                Section("Reporting") {
+                    ReportSettingsForm(model: model)
+                }
             }
             Section("Dates") {
                 Picker("Date format", selection: $dateOrderRaw) {
@@ -137,11 +153,13 @@ public struct GeneralSettingsView: View {
 
 /// Tabbed Settings window: General + Appearance + Documents.
 public struct FinvestLensSettingsView: View {
-    public init() {}
+    @Bindable var model: AppModel
+
+    public init(model: AppModel) { self.model = model }
 
     public var body: some View {
         TabView {
-            GeneralSettingsView()
+            GeneralSettingsView(model: model)
                 .tabItem { Label("General", systemImage: "gearshape") }
             AppearanceSettingsView()
                 .tabItem { Label("Appearance", systemImage: "paintpalette") }

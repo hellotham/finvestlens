@@ -130,7 +130,7 @@ struct OverviewView: Identifiable, Hashable, Codable, Sendable {
     var title: LocalizedStringKey? {
         guard isStandard else { return nil }
         switch id {
-        case "mix": return "Mix"
+        case "overview": return "Overview"
         case "accounts": return "Accounts"
         case "investments": return "Investments"
         case "business": return "Business"
@@ -158,7 +158,7 @@ struct OverviewView: Identifiable, Hashable, Codable, Sendable {
     var displayName: String {
         guard isStandard else { return name }
         switch id {
-        case "mix": return String(localized: "Mix")
+        case "overview": return String(localized: "Overview")
         case "accounts": return String(localized: "Accounts")
         case "investments": return String(localized: "Investments")
         case "business": return String(localized: "Business")
@@ -173,16 +173,21 @@ struct OverviewView: Identifiable, Hashable, Codable, Sendable {
         OverviewView(id: id, name: name, cards: cards.map(\.rawValue), isStandard: true)
     }
 
-    /// Every card, in board priority — the "Mix" view, and the fallback for a
-    /// stored view whose id no longer exists.
-    static let mix = standard("mix", "Mix", OverviewCard.allCases)
+    /// Every card, in board priority — the **Overview** view, and the fallback
+    /// for a stored view whose id no longer exists.
+    ///
+    /// Renamed 16 Aug 2026: the mode is *Dashboard* and its every-card view is
+    /// *Overview*, which reads better than a mode called Overview holding a
+    /// view called Mix. The stored id stays `"overview"` so no desk state migrates —
+    /// only what a reader sees changed.
+    static let everything = standard("overview", "Overview", OverviewCard.allCases)
 
     /// Views named after modes. §4.3 is explicit that choosing one does **not**
     /// switch mode: the sidebar would then be doing navigation *and* data, the
     /// exact conflation this redesign deletes from the account sidebar. The
     /// door out is the board's "Open …" button, and clicking *through* a card.
     static let standards: [OverviewView] = [
-        mix,
+        everything,
         standard("accounts", "Accounts",
                  OverviewCard.allCases.filter { $0.mode == .accounts }),
         standard("investments", "Investments",
@@ -236,7 +241,7 @@ extension AppModel {
     }
 
     func overviewView(id: String) -> OverviewView {
-        overviewViews.first { $0.id == id } ?? .mix
+        overviewViews.first { $0.id == id } ?? .everything
     }
 
     /// Saves the cards currently on the board as a view of the user's own.
@@ -267,7 +272,7 @@ extension AppModel {
         // to the board it came from rather than to whichever view happens to
         // list it first.
         case .overviewCard(let view, _): overviewView(id: view)
-        default: .mix
+        default: .everything
         }
     }
 

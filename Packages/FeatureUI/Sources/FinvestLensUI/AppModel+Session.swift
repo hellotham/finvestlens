@@ -49,12 +49,23 @@ extension AppModel {
         init(from decoder: any Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             mode = try container.decodeIfPresent(String.self, forKey: .mode)
-                ?? AppMode.overview.rawValue
+                ?? AppMode.dashboard.rawValue
             tabs = try container.decodeIfPresent([String: [String]].self, forKey: .tabs) ?? [:]
             active = try container.decodeIfPresent([String: Int].self, forKey: .active) ?? [:]
             selections = try container.decodeIfPresent([String: String].self, forKey: .selections)
                 ?? [:]
         }
+    }
+
+    /// A stored mode, accepting the spelling used before the 16 Aug 2026 rename.
+    ///
+    /// The mode is *Dashboard* now and its rawValue says so; desk state written
+    /// by any earlier build says `"overview"`. Without this, every existing
+    /// window reopens on the Dashboard having lost each mode's place — which is
+    /// the whole point of the file this lives in.
+    static func decodeMode(_ raw: String) -> AppMode? {
+        if raw == "overview" { return .dashboard }
+        return AppMode(rawValue: raw)
     }
 
     private var sessionNavigationKey: String? {
@@ -107,25 +118,25 @@ extension AppModel {
            let stored = try? JSONDecoder().decode(SessionNavigation.self, from: Data(raw.utf8)) {
             var tabs: [AppMode: [SidebarSelection]] = [:]
             for (rawMode, rawTabs) in stored.tabs {
-                guard let mode = AppMode(rawValue: rawMode) else { continue }
+                guard let mode = Self.decodeMode(rawMode) else { continue }
                 tabs[mode] = rawTabs.compactMap(Self.decodeSelection)
             }
             var active: [AppMode: Int] = [:]
             for (rawMode, index) in stored.active {
-                guard let mode = AppMode(rawValue: rawMode) else { continue }
+                guard let mode = Self.decodeMode(rawMode) else { continue }
                 active[mode] = index
             }
             // A desk state written by N1, before tabs existed: one selection per
             // mode becomes that mode's single open tab.
             for (rawMode, rawSelection) in stored.selections {
-                guard tabs[AppMode(rawValue: rawMode) ?? .overview] == nil,
-                      let mode = AppMode(rawValue: rawMode),
+                guard tabs[Self.decodeMode(rawMode) ?? .dashboard] == nil,
+                      let mode = Self.decodeMode(rawMode),
                       let selection = Self.decodeSelection(rawSelection),
                       selection != mode.defaultSelection else { continue }
                 tabs[mode] = [selection]
                 active[mode] = 1
             }
-            return (AppMode(rawValue: stored.mode) ?? .overview, tabs, active)
+            return (Self.decodeMode(stored.mode) ?? .dashboard, tabs, active)
         }
         // Migration. The pre-P12 value named a destination with no mode
         // attached, so the mode is derived from the destination — a book last
@@ -219,6 +230,7 @@ extension AppModel {
         switch selection {
         case .account(let id): "account:\(id.hexString)"
         case .portfolio(let id): "portfolio:\(id.hexString)"
+        case .panel(let panel): "panel:\(panel.rawValue)"
         case .budget(let id): "budget:\(id.hexString)"
         case .goal(let id): "goal:\(id.hexString)"
         case .scheduledTransaction(let id): "scheduledTransaction:\(id.hexString)"
@@ -247,6 +259,12 @@ extension AppModel {
         for (prefix, make) in uuidCases where raw.hasPrefix(prefix) {
             return UUID(uuidString: String(raw.dropFirst(prefix.count))).map(make)
         }
+        if raw.hasPrefix("panel:") {
+            // An editor tab restores; a stale name from a future build does not
+            // become a blank tab.
+            return RootPanel(rawValue: String(raw.dropFirst("panel:".count)))
+                .flatMap { $0.opensAsTab ? .panel($0) : nil }
+        }
         if raw.hasPrefix("security:") {
             return .security(String(raw.dropFirst("security:".count)))
         }
@@ -255,12 +273,17 @@ extension AppModel {
                 .map(SidebarSelection.report)
         }
         if raw.hasPrefix("overviewView:") {
-            return .overviewView(String(raw.dropFirst("overviewView:".count)))
+            let id = String(raw.dropFirst("overviewView:".count))
+            // The every-card board's id was `"mix"` before 16 Aug 2026; a desk
+            // state naming it must still find the board rather than falling
+            // back to it by accident.
+            return .overviewView(id == "mix" ? "overview" : id)
         }
         if raw.hasPrefix("overviewCard:") {
             let body = raw.dropFirst("overviewCard:".count)
             guard let slash = body.firstIndex(of: "/") else { return nil }
-            return .overviewCard(view: String(body[body.startIndex..<slash]),
+            let view = String(body[body.startIndex..<slash])
+            return .overviewCard(view: view == "mix" ? "overview" : view,
                                  card: String(body[body.index(after: slash)...]))
         }
         // "prices" is the pre-P11 spelling: a saved session must still restore

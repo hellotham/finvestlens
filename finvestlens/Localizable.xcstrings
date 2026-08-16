@@ -828,6 +828,53 @@
       "extractionState": "manual",
       "shouldTranslate": false
     },
+    "%@ units": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ Einheiten"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ unidades"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ unités"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ unità"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 口"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ unidades"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 单位"
+          }
+        }
+      }
+    },
     "%@ × %@ units": {
       "extractionState": "manual",
       "localizations": {
@@ -16745,6 +16792,53 @@
         }
       }
     },
+    "Areas": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bereiche"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Áreas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Domaines"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aree"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "エリア"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Áreas"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "区域"
+          }
+        }
+      }
+    },
     "Ask for Touch ID or your password each time this screen opens": {
       "extractionState": "manual",
       "localizations": {
@@ -22951,6 +23045,53 @@
         }
       }
     },
+    "Choose the scope or the provider for this run": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Umfang oder Anbieter für diesen Durchlauf wählen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elige el alcance o el proveedor para esta ejecución"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisir la portée ou le fournisseur pour cette exécution"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scegli l’ambito o il fornitore per questa esecuzione"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この実行の範囲またはプロバイダを選択"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escolha o escopo ou o provedor desta execução"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择本次更新的范围或数据源"
+          }
+        }
+      }
+    },
     "Choose what the register shows": {
       "extractionState": "manual",
       "localizations": {
@@ -23533,6 +23674,53 @@
         }
       }
     },
+    "Clear Filter": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filter löschen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Borrar filtro"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Effacer le filtre"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancella filtro"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フィルタを消去"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Limpar filtro"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清除筛选"
+          }
+        }
+      }
+    },
     "Clear Find": {
       "extractionState": "manual",
       "localizations": {
@@ -23623,6 +23811,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "清除某一行的科目，即可将该行排除在导入之外。"
+          }
+        }
+      }
+    },
+    "Clear search": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suche löschen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Borrar búsqueda"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Effacer la recherche"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancella ricerca"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "検索を消去"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Limpar busca"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清除搜索"
           }
         }
       }
@@ -27519,49 +27754,49 @@
         }
       }
     },
-    "Create a transaction or account": {
+    "Create a transaction, account or security": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Buchung oder Konto erstellen"
+            "value": "Buchung, Konto oder Wertpapier anlegen"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Crear una transacción o cuenta"
+            "value": "Crear una transacción, cuenta o valor"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Créer une opération ou un compte"
+            "value": "Créer une transaction, un compte ou un titre"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Crea una transazione o un conto"
+            "value": "Crea una transazione, un conto o un titolo"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "取引または勘定科目を作成"
+            "value": "取引・勘定・証券を作成"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Criar uma transação ou conta"
+            "value": "Criar uma transação, conta ou título"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "创建交易或科目"
+            "value": "新建交易、账户或证券"
           }
         }
       }
@@ -28075,6 +28310,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "条件"
+          }
+        }
+      }
+    },
+    "Currencies": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Währungen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Monedas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Devises"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Valute"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通貨"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moedas"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "货币"
           }
         }
       }
@@ -28732,6 +29014,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "切换对账状态"
+          }
+        }
+      }
+    },
+    "Dashboard": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Übersicht"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Panel"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tableau de bord"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pannello"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダッシュボード"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Painel"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仪表板"
           }
         }
       }
@@ -31838,55 +32167,49 @@
         }
       }
     },
-    "Each row shows units, value, return since you bought, and how old the price is.": {
+    "Each row shows the units you hold and what you paid for them, then what they are worth now, the return since you bought, and how old the price is.": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Jede Zeile zeigt Einheiten, Wert, Rendite seit dem Kauf und das Alter des Kurses."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Each row shows units, value, return since you bought, and how old the price is."
+            "value": "Jede Zeile zeigt die gehaltenen Einheiten und den dafür gezahlten Betrag, dann den aktuellen Wert, die Rendite seit dem Kauf und das Alter des Kurses."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cada fila muestra unidades, valor, rentabilidad desde la compra y la antigüedad del precio."
+            "value": "Cada fila muestra las unidades que tienes y lo que pagaste por ellas, luego cuánto valen ahora, la rentabilidad desde la compra y la antigüedad del precio."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Chaque ligne indique les unités, la valeur, le rendement depuis l’achat et l’ancienneté du cours."
+            "value": "Chaque ligne indique les unités détenues et le montant payé, puis leur valeur actuelle, le rendement depuis l’achat et l’ancienneté du cours."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ogni riga mostra unità, valore, rendimento dall’acquisto e quanto è vecchio il prezzo."
+            "value": "Ogni riga mostra le unità possedute e quanto hai pagato, poi quanto valgono ora, il rendimento dall’acquisto e quanto è vecchio il prezzo."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "各行に口数、評価額、購入以来のリターン、価格の古さが表示されます。"
+            "value": "各行に保有口数と取得金額、現在の評価額、購入以来のリターン、価格の古さが表示されます。"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cada linha mostra unidades, valor, retorno desde a compra e a idade do preço."
+            "value": "Cada linha mostra as unidades que você tem e quanto pagou por elas, depois quanto valem agora, o retorno desde a compra e a idade do preço."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "每一行显示份额、价值、买入以来的回报，以及价格的新旧程度。"
+            "value": "每一行显示持有份额及买入花费，然后是当前价值、买入以来的回报，以及价格的新旧程度。"
           }
         }
       }
@@ -37942,6 +38265,53 @@
         }
       }
     },
+    "Filter transactions": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buchungen filtern"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filtrar transacciones"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filtrer les transactions"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filtra transazioni"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取引を絞り込む"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filtrar transações"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "筛选交易"
+          }
+        }
+      }
+    },
     "Filter views": {
       "extractionState": "manual",
       "localizations": {
@@ -38032,6 +38402,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "已筛选"
+          }
+        }
+      }
+    },
+    "Filtered — Change…": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gefiltert – ändern …"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filtrado — Cambiar…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filtré — Modifier…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filtrato — Modifica…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "絞り込み中 — 変更…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filtrado — Alterar…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已筛选 — 更改…"
+          }
+        }
+      }
+    },
+    "Filtered — change or clear": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gefiltert – ändern oder löschen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filtrado: cambiar o borrar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filtré — modifier ou effacer"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filtrato — modifica o cancella"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "絞り込み中 — 変更または消去"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filtrado — alterar ou limpar"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已筛选 — 更改或清除"
           }
         }
       }
@@ -38455,53 +38919,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "财政年度"
-          }
-        }
-      }
-    },
-    "Financial year and default period": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Geschäftsjahr und Standardzeitraum"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ejercicio fiscal y período predeterminado"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Exercice et période par défaut"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Esercizio e periodo di default"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "会計年度とデフォルト期間"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Exercício e período padrão"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "财政年度与默认周期"
           }
         }
       }
@@ -49841,53 +50258,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "*持有期间内*的缺失日会单独指出：正是这些让过去的估值出错。"
-          }
-        }
-      }
-    },
-    "Mix": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Überblick"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mezcla"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ensemble"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Insieme"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ミックス"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Misto"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "综合"
           }
         }
       }
@@ -67770,6 +68140,53 @@
         }
       }
     },
+    "Reconciling needs an account to reconcile.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zum Abgleichen wird ein Konto benötigt."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Para conciliar hace falta una cuenta."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le rapprochement nécessite un compte."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La riconciliazione richiede un conto."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "照合するには勘定が必要です。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A conciliação precisa de uma conta."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "对账需要先选择一个账户。"
+          }
+        }
+      }
+    },
     "Reconciling proves your records match the bank's. Choose Book ▸ Reconcile Account… (⇧⌘R) with the account selected.": {
       "extractionState": "manual",
       "localizations": {
@@ -70778,49 +71195,49 @@
         }
       }
     },
-    "Report Settings": {
+    "Reporting": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Berichtseinstellungen"
+            "value": "Berichte"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ajustes del informe"
+            "value": "Informes"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Réglages du rapport"
+            "value": "Rapports"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Impostazioni resoconto"
+            "value": "Rendiconti"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "レポート設定"
+            "value": "レポート"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ajustes do relatório"
+            "value": "Relatórios"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "报表设置"
+            "value": "报表"
           }
         }
       }
@@ -74728,6 +75145,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "评分"
+          }
+        }
+      }
+    },
+    "Search": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suchen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buscar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rechercher"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cerca"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "検索"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buscar"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "搜索"
           }
         }
       }
@@ -80879,6 +81343,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "税号 / ABN"
+          }
+        }
+      }
+    },
+    "Tax Options": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Steueroptionen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opciones fiscales"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Options fiscales"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opzioni fiscali"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "税務オプション"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opções fiscais"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "税务选项"
           }
         }
       }
@@ -87768,6 +88279,53 @@
         }
       }
     },
+    "Update prices for this book's securities": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kurse für die Wertpapiere dieses Buchs aktualisieren"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Actualizar los precios de los valores de este libro"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mettre à jour les cours des titres de ce livre"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiorna i prezzi dei titoli di questo libro"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この帳簿の証券の価格を更新"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Atualizar os preços dos títulos deste livro"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更新此账本中证券的价格"
+          }
+        }
+      }
+    },
     "Update using %@": {
       "extractionState": "manual",
       "localizations": {
@@ -89210,6 +89768,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "每周（52 次）"
+          }
+        }
+      }
+    },
+    "Welcome": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Willkommen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bienvenido"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bienvenue"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Benvenuto"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ようこそ"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bem-vindo"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "欢迎"
           }
         }
       }
@@ -91663,6 +92268,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "以逗号分隔"
+          }
+        }
+      }
+    },
+    "cost %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kosten %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "coste %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "coût %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "costo %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取得 %@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "custo %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "成本 %@"
           }
         }
       }

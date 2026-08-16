@@ -90,7 +90,7 @@ struct ScheduledView: View {
                 }
             }
             }
-            .navigationTitle("Scheduled")
+            .navigationTitle("")   // the tab strip names this destination
             .onChange(of: model.sidebarCreateRequest) {
                 guard model.sidebarCreateRequest == .scheduled else { return }
                 model.sidebarCreateRequest = nil

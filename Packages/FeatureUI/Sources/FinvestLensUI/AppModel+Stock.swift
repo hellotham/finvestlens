@@ -38,16 +38,53 @@ extension AppModel {
     ///
     /// Sorted by the name shown, so the tabs and the sidebar agree on order.
     public var portfolioAccounts: [AccountNode] {
+        // **Memoised on the book revision.** Reported 16 Aug 2026: "investments
+        // took a long time to display, so there is a performance issue" — and
+        // this was it. `standingTabs` calls this to build the Investments tab
+        // strip, and `tabs(in:)` is read by `openTabs`, `activeTabIndex` and
+        // `storedSelection`, several times per SwiftUI pass. Each call walked
+        // `postableAccounts` and then ran a full recursive `accountTree` search
+        // **per portfolio** — on the reference book that is fifteen DFS walks
+        // of a 565-account tree, repeated on every redraw.
+        //
+        // **Only portfolios with something still in them**, unless closed
+        // positions are being shown. Reported 16 Aug 2026: "Investments shows a
+        // lot of portfolio tabs, many are closed positions." A broker you last
+        // held a share through in 2014 is history, not a place you work; the
+        // reference book has fifteen parents and only some are live. The
+        // existing Show Closed Positions toggle governs it, so one control
+        // means one thing in the tab strip and the holdings table alike.
+        let showClosed = showsClosedPositions
+        if portfolioCacheRevision == bookRevision,
+           portfolioCacheShowedClosed == showClosed { return portfolioCache }
         guard let book else { return [] }
         var seen = Set<GncGUID>()
-        var out: [AccountNode] = []
+        var parents: [GncGUID] = []
         for node in securityAccountNodes {
+            // A holding is open when units remain. `balance` is the account's
+            // own commodity, so this is a share count, not a valuation — a
+            // security nobody has priced is still held.
+            guard showClosed || node.balance != 0 else { continue }
             guard let parent = book.account(with: node.id)?.parent,
-                  let parentNode = accountNode(for: parent.guid),
                   seen.insert(parent.guid).inserted else { continue }
-            out.append(parentNode)
+            parents.append(parent.guid)
         }
-        return out.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+        // One walk of the tree for all of them, not one walk each.
+        let wanted = Set(parents)
+        var found: [GncGUID: AccountNode] = [:]
+        func visit(_ nodes: [AccountNode]) {
+            for node in nodes {
+                if wanted.contains(node.id) { found[node.id] = node }
+                if let children = node.children { visit(children) }
+            }
+        }
+        visit(accountTree)
+        let out = parents.compactMap { found[$0] }
+            .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+        portfolioCache = out
+        portfolioCacheRevision = bookRevision
+        portfolioCacheShowedClosed = showClosed
+        return out
     }
 
     /// The securities held in one portfolio — the commodities of the security
@@ -57,20 +94,6 @@ extension AppModel {
         return Set(parent.children
             .filter { $0.type.isSecurityType }
             .map(\.commodity))
-    }
-
-    /// The `AccountNode` for one account, found in the same tree the pickers
-    /// read so a portfolio row carries the balance and colour the rest of the
-    /// app shows for it.
-    private func accountNode(for id: GncGUID) -> AccountNode? {
-        func find(_ nodes: [AccountNode]) -> AccountNode? {
-            for node in nodes {
-                if node.id == id { return node }
-                if let children = node.children, let hit = find(children) { return hit }
-            }
-            return nil
-        }
-        return find(accountTree)
     }
 
     /// Cash / settlement accounts (bank, cash, other assets).

@@ -59,6 +59,10 @@ public struct InvestmentRow: Identifiable, Sendable {
 
     public var units: Decimal
     public var price: Decimal?
+    /// What the units still held cost in total — a figure of the same kind as
+    /// ``marketValue``, so the two can be read against each other. A per-unit
+    /// average cannot: "I can't compare average price with current value."
+    public var purchaseAmount: Decimal?
     public var marketValue: Decimal?
     /// Total return since holding — unrealised + realised + income ÷ money in.
     public var returnFraction: Double?
@@ -240,15 +244,24 @@ extension AppModel {
         // Return and allocation come from the lot engine, per *account*; a
         // commodity can be held in more than one, so money-weight the returns
         // and sum the allocations rather than taking the first match.
-        var returns: [String: (weight: Decimal, weighted: Double, allocation: Double)] = [:]
+        //
+        // Cost comes along for the ride, and for the same reason: a security
+        // held through two brokers arrives as two holdings, and what was paid
+        // for it is the sum of both. `shares` rides along only to tell a live
+        // holding from one that has been sold out of — a closed position has a
+        // cost basis of zero, which is not a purchase amount of zero.
+        var returns: [String: (weight: Decimal, weighted: Double, allocation: Double,
+                               cost: Decimal, shares: Decimal)] = [:]
         for holding in advanced?.holdings ?? [] {
             let weight = abs(holding.marketValue ?? holding.costBasis)
-            var entry = returns[holding.symbol] ?? (0, 0, 0)
+            var entry = returns[holding.symbol] ?? (0, 0, 0, 0, 0)
             if let fraction = holding.returnFraction {
                 entry.weighted += fraction * NSDecimalNumber(decimal: weight).doubleValue
                 entry.weight += weight
             }
             entry.allocation += holding.allocation ?? 0
+            entry.cost += holding.costBasis
+            entry.shares += holding.shares
             returns[holding.symbol] = entry
         }
 
@@ -275,6 +288,7 @@ extension AppModel {
                 group: group,
                 units: security.units,
                 price: book.securityUnitValue(security.commodity, in: reportCurrency, on: asOf),
+                purchaseAmount: (stats?.shares ?? 0) == 0 ? nil : stats!.cost,
                 marketValue: security.marketValue,
                 returnFraction: (stats?.weight ?? 0) == 0 ? nil
                     : (stats!.weighted / NSDecimalNumber(decimal: stats!.weight).doubleValue),
@@ -292,7 +306,7 @@ extension AppModel {
             rows.append(InvestmentRow(
                 id: "\(commodity.namespace)|\(commodity.mnemonic)",
                 commodity: commodity, symbol: commodity.mnemonic, name: commodity.fullName,
-                group: .watching, units: 0, price: nil, marketValue: nil,
+                group: .watching, units: 0, price: nil, purchaseAmount: nil, marketValue: nil,
                 returnFraction: nil, allocation: nil, freshness: .missing,
                 tradingDaysBehind: 0, lastPriceDate: nil, missingWhileHeld: 0, spark: []))
         }
@@ -359,11 +373,36 @@ extension AppModel {
         // Swift 6 rejects passing one into the other. Debug builds let it pass;
         // the release build does not, so this only appeared when `finlab` was
         // built with `-c release`.
+        // **One security, one row.** A holding claimed by an earlier kind is
+        // not offered again by a later one.
+        //
+        // Reported 16 Aug 2026, and correct: the reference book showed three
+        // rows where the answer is one bond. `FR0014014MD4` appeared twice —
+        // once as a hand-valued holding out of date, once as a bond FIIG could
+        // price — which are not two problems but a problem and its fix.
+        var claimed: Set<Commodity> = []
         func add(_ kind: InvestmentIssue.Kind, _ matching: @MainActor (SecurityPriceHealth) -> Bool) {
-            let hits = health.securities.filter { $0.isHeld && matching($0) }
+            let hits = health.securities.filter {
+                $0.isHeld && !claimed.contains($0.commodity) && matching($0)
+            }
             guard !hits.isEmpty else { return }
+            claimed.formUnion(hits.map(\.commodity))
             issues.append(InvestmentIssue(kind: kind, count: hits.count,
                                           symbols: hits.map(\.commodity.mnemonic).sorted()))
+        }
+
+        // The one-click fix comes first, so a bond FIIG can price is offered
+        // FIIG rather than scolded for being out of date. Same reasoning as
+        // above: name the remedy, not the symptom.
+        let heldSet = Set(health.securities.filter(\.isHeld).map(\.commodity))
+        let wantingSet = Set(health.securities
+            .filter { $0.freshness == .missing || $0.freshness == .old }
+            .map(\.commodity))
+        let bondCandidates = fiigCandidates.filter { heldSet.contains($0) && wantingSet.contains($0) }
+        if !bondCandidates.isEmpty {
+            claimed.formUnion(bondCandidates)
+            issues.append(InvestmentIssue(kind: .bondProvider, count: bondCandidates.count,
+                                          symbols: bondCandidates.map(\.mnemonic).sorted()))
         }
 
         add(.unpriced) { $0.freshness == .missing }
@@ -375,7 +414,12 @@ extension AppModel {
         add(.manualOverdue) { [self] in
             !$0.isQuotable && isValuationOverdue($0.commodity)
         }
-        add(.gaps) { $0.missingWhileHeld > 0 }
+        // **Gaps are not a worklist item.** A hole in a series while a security
+        // was held is a fact about history, not a thing to do today — and the
+        // confidence band above already states it in the same words ("14 with
+        // gaps while held"), so the row was the same sentence twice. Fourteen
+        // of them sat between the user and the one bond that did need a
+        // decision.
 
         let rates = rateHealth()
         if !rates.missing.isEmpty {
@@ -383,27 +427,6 @@ extension AppModel {
                                           symbols: rates.missing.sorted()))
         }
 
-        // Bonds that carry an ISIN and no provider that reads one (`FR-INV-31`).
-        // An offer, not a diagnosis: the identifier's *shape* is all that is
-        // known here, and whether the bond is actually in FIIG's index is one
-        // request away. Only raised for securities that are actually held —
-        // pointing at a bond redeemed years ago is noise.
-        // ...and only where FIIG would actually change anything. A bond whose
-        // prices are already arriving needs no new provider, however
-        // ISIN-shaped its identifier is: reported 16 Aug 2026, four bonds were
-        // offered FIIG while three of them were drawing sparklines from prices
-        // they already had. An offer that is already satisfied is not an
-        // offer, it is noise on a worklist — and a worklist people learn to
-        // ignore is worse than none.
-        let held = Set(health.securities.filter(\.isHeld).map(\.commodity))
-        let wanting = Set(health.securities
-            .filter { $0.freshness == .missing || $0.freshness == .old }
-            .map(\.commodity))
-        let candidates = fiigCandidates.filter { held.contains($0) && wanting.contains($0) }
-        if !candidates.isEmpty {
-            issues.append(InvestmentIssue(kind: .bondProvider, count: candidates.count,
-                                          symbols: candidates.map(\.mnemonic).sorted()))
-        }
         return issues
     }
 

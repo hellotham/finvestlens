@@ -28,13 +28,13 @@ import SwiftUI
 /// Declaration order is the order they are offered — ⌘1…⌘7, and the first five
 /// are ``toolbarDefault``.
 public enum AppMode: String, CaseIterable, Identifiable, Hashable, Sendable {
-    case overview, accounts, investments, reports, business, planning, records
+    case dashboard, accounts, investments, reports, business, planning, records
 
     public var id: String { rawValue }
 
     public var title: LocalizedStringKey {
         switch self {
-        case .overview: "Overview"
+        case .dashboard: "Dashboard"
         case .accounts: "Accounts"
         case .investments: "Investments"
         case .reports: "Reports"
@@ -51,7 +51,7 @@ public enum AppMode: String, CaseIterable, Identifiable, Hashable, Sendable {
     /// the app's single catalog lives.
     public var name: String {
         switch self {
-        case .overview: String(localized: "Overview")
+        case .dashboard: String(localized: "Dashboard")
         case .accounts: String(localized: "Accounts")
         case .investments: String(localized: "Investments")
         case .reports: String(localized: "Reports")
@@ -86,20 +86,43 @@ public enum AppMode: String, CaseIterable, Identifiable, Hashable, Sendable {
     /// - **Records** — a document list, not a ledger view.
     public var usesPeriod: Bool {
         switch self {
-        case .overview, .reports: return true
+        case .dashboard, .reports: return true
         case .accounts, .investments, .business, .planning, .records: return false
         }
     }
 
     public var symbol: String {
         switch self {
-        case .overview: "square.grid.2x2"
+        case .dashboard: "square.grid.2x2"
         case .accounts: "list.bullet.rectangle"
         case .investments: "chart.line.uptrend.xyaxis"
         case .reports: "chart.pie"
         case .business: "building.2"
         case .planning: "chart.xyaxis.line"
         case .records: "archivebox"
+        }
+    }
+
+    /// The symbol for the **selected** tab.
+    ///
+    /// HIG *Tab bars*: "Prefer filled symbols or icons for consistency with the
+    /// platform." Filled is how a macOS tab bar says "you are here", and it
+    /// needs no shape drawn behind the glyph — HIG *Toolbars*: "Borders (like
+    /// outlined circle symbols) aren't necessary."
+    ///
+    /// Three of the seven have no `.fill` variant in SF Symbols, so they keep
+    /// their outline and are distinguished by tint and weight alone. Naming
+    /// them here rather than appending ".fill" blindly is the difference
+    /// between a symbol and a blank square.
+    public var selectedSymbol: String {
+        switch self {
+        case .dashboard: "square.grid.2x2.fill"
+        case .accounts: "list.bullet.rectangle.fill"
+        case .investments: "chart.line.uptrend.xyaxis"   // no filled variant
+        case .reports: "chart.pie.fill"
+        case .business: "building.2.fill"
+        case .planning: "chart.xyaxis.line"              // no filled variant
+        case .records: "archivebox.fill"
         }
     }
 
@@ -121,11 +144,11 @@ public enum AppMode: String, CaseIterable, Identifiable, Hashable, Sendable {
     /// the thing people came for (navigation-design §4.4).
     public var defaultSelection: SidebarSelection {
         switch self {
-        // The Mix view, which *is* the board — not `.dashboard`, which no
-        // Overview sidebar row carries. With `.dashboard` as the home, the
-        // sidebar highlighted nothing at launch and clicking "Mix" opened a
-        // second tab showing the identical board.
-        case .overview: .overviewView("mix")
+        // The **Overview** view, which *is* the board — not `.dashboard`,
+        // which no sidebar row carries. With `.dashboard` as the home, the
+        // sidebar highlighted nothing at launch and clicking the board's own
+        // row opened a second tab showing the identical board.
+        case .dashboard: .overviewView("overview")
         case .accounts: .generalLedger
         case .investments: .investments
         case .reports: .reports
@@ -145,9 +168,11 @@ public enum AppMode: String, CaseIterable, Identifiable, Hashable, Sendable {
         switch selection {
         // Overview's views and cards stay in Overview. Selecting one changes
         // what you see; it never changes where you are (navigation-design §4.3).
-        case .dashboard, .overviewView, .overviewCard: self = .overview
+        case .dashboard, .overviewView, .overviewCard: self = .dashboard
         case .account, .generalLedger: self = .accounts
         case .investments, .security, .portfolio: self = .investments
+        // An editor tab belongs to the mode that owns its subject.
+        case .panel(let panel): self = panel.hostMode
         case .reports, .savedReport, .report: self = .reports
         // Billable time and mileage exist to be invoiced, so they belong beside
         // the invoices rather than in Records (navigation-design §4.2).
@@ -169,7 +194,7 @@ public enum AppMode: String, CaseIterable, Identifiable, Hashable, Sendable {
     /// is the same command, where the list is.
     public var creations: [SidebarCreation] {
         switch self {
-        case .overview: [.overviewView]
+        case .dashboard: [.overviewView]
         case .accounts: [.account]
         case .investments: [.security, .watchedSecurity]
         case .reports: []          // the catalogue is fixed; saved reports come from a report
@@ -188,7 +213,7 @@ public enum AppMode: String, CaseIterable, Identifiable, Hashable, Sendable {
     /// five keeps the default layout clear of the system's overflow menu, which
     /// *Toolbars* says to avoid by default (navigation-design §4.1a).
     public static let toolbarDefault: [AppMode] = [
-        .overview, .accounts, .investments, .reports, .business,
+        .dashboard, .accounts, .investments, .reports, .business,
     ]
 
     /// Whether this mode appears in the toolbar before the user customises it.

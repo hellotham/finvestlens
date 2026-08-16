@@ -50,8 +50,26 @@ struct PortfolioTabTests {
                                           commodity: acme, parentID: broker))
         _ = try #require(model.addAccount(name: "ZETA", type: .stock,
                                           commodity: zeta, parentID: superFund))
+        // **Both actually hold something.** A portfolio with no open holding is
+        // not listed any more (closed positions are hidden by default), so a
+        // fixture of empty accounts would test the wrong thing.
+        try buy(model, security: acme, under: broker, cash: "Broker Cash", units: 10)
+        try buy(model, security: zeta, under: superFund, cash: "Super Cash", units: 5)
         return Fixture(model: model, url: url, broker: broker, superFund: superFund,
                        acme: acme, zeta: zeta)
+    }
+
+    /// Puts units into a security account, so its portfolio counts as open.
+    @discardableResult
+    private func buy(_ model: AppModel, security: Commodity, under parent: GncGUID,
+                     cash name: String, units: Decimal) throws -> GncGUID {
+        let settlement = try #require(model.addAccount(name: name, type: .bank,
+                                                       parentID: parent))
+        let account = try #require(model.book?.accounts.first { $0.commodity == security })
+        return try model.addTransaction(
+            date: Date(), description: "Buy \(security.mnemonic)", currency: .aud,
+            splits: [SplitInput(accountID: settlement, value: -100),
+                     SplitInput(accountID: account.guid, value: 100, quantity: units)])
     }
 
     @Test("A portfolio is a parent of security accounts, and only that")
@@ -103,16 +121,63 @@ struct PortfolioTabTests {
         defer { model.close(); try? FileManager.default.removeItem(at: url) }
 
         let broker = try #require(model.addAccount(name: "Broker", type: .asset))
-        _ = try #require(model.addAccount(
-            name: "ACME", type: .stock,
-            commodity: Commodity(namespace: .security("ASX"), mnemonic: "ACME",
-                                 fullName: "Acme", smallestFraction: 10000),
-            parentID: broker))
+        let acme = Commodity(namespace: .security("ASX"), mnemonic: "ACME",
+                             fullName: "Acme", smallestFraction: 10000)
+        _ = try #require(model.addAccount(name: "ACME", type: .stock,
+                                          commodity: acme, parentID: broker))
+        try buy(model, security: acme, under: broker, cash: "Cash", units: 10)
 
         #expect(model.portfolioAccounts.count == 1)
         let ids = ModeSidebarRows.groups(for: .investments, model: model)
             .flatMap(\.rows).map(\.id)
         #expect(!ids.contains(.portfolio(broker)))
+    }
+
+    /// **Closed portfolios are not tabs.** Reported 16 Aug 2026: "Investments
+    /// shows a lot of portfolio tabs, many are closed positions." A broker you
+    /// last held a share through years ago is history, not a place you work —
+    /// and the existing Show Closed Positions toggle governs it, so one control
+    /// means one thing in the tab strip and the holdings table alike.
+    @Test("Only portfolios with an open holding appear, unless closed are shown")
+    func closedPortfoliosAreHidden() throws {
+        let f = try makeFixture()
+        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+
+        #expect(f.model.showsClosedPositions == false)
+        #expect(f.model.portfolioAccounts.map(\.name) == ["Broker", "Super"])
+
+        // Sell the super fund's whole holding: that portfolio is now history.
+        let zeta = try #require(f.model.book?.accounts.first { $0.commodity == f.zeta })
+        let cash = try #require(f.model.book?.accounts.first { $0.name == "Super Cash" })
+        _ = try f.model.addTransaction(
+            date: Date(), description: "Sell ZETA", currency: .aud,
+            splits: [SplitInput(accountID: zeta.guid, value: -100, quantity: -5),
+                     SplitInput(accountID: cash.guid, value: 100)])
+
+        #expect(f.model.portfolioAccounts.map(\.name) == ["Broker"],
+                "a portfolio with nothing left in it is not a place you work")
+
+        // The toggle brings it back — and the cache must not serve the previous
+        // answer when the toggle moves.
+        f.model.showsClosedPositions = true
+        #expect(f.model.portfolioAccounts.map(\.name) == ["Broker", "Super"])
+        f.model.showsClosedPositions = false
+        #expect(f.model.portfolioAccounts.map(\.name) == ["Broker"], "stale cache")
+    }
+
+    /// Seen on screen 16 Aug 2026: the securities group in the Investments
+    /// sidebar was headed `security("ASX")` — the enum's synthesized
+    /// description, printed straight into the UI.
+    @Test("A securities group is headed by the exchange, not the enum case")
+    func namespaceHeadingIsTheExchange() throws {
+        let f = try makeFixture()
+        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+
+        let headings = ModeSidebarRows.groups(for: .investments, model: f.model)
+            .compactMap(\.text)
+        #expect(headings.contains("ASX"))
+        #expect(!headings.contains { $0.contains("security(") },
+                "the enum's description reached the screen")
     }
 
     @Test("A portfolio opens in its own tab, named after the account")

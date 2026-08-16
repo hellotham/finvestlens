@@ -312,7 +312,7 @@ struct ModeSidebar: View {
 
     private var filterPrompt: LocalizedStringKey {
         switch model.mode {
-        case .overview: "Filter views"
+        case .dashboard: "Filter views"
         case .accounts: "Filter accounts"
         case .investments: "Filter securities"
         case .reports: "Filter reports"
@@ -324,9 +324,38 @@ struct ModeSidebar: View {
 
     // MARK: The list
 
+    /// The sidebar's selection, **written off the render pass**.
+    ///
+    /// Reported 16 Aug 2026: "Clicking on reports in the sidebar does not
+    /// work", and reproduced — with Balance Sheet showing, clicking All Reports
+    /// left the selection, the tab and the content exactly where they were,
+    /// while clicking the *tab* of the same name worked.
+    ///
+    /// `$model.sidebarSelection` is a computed binding whose setter calls
+    /// `navigate(to:)`, and a `List` writes its selection **during** SwiftUI's
+    /// update. `navigate` then mutates `currentMode`, `tabsByMode`,
+    /// `activeTabByMode`, and runs `applyNavigationChange` — which restores
+    /// register view state and can call `refreshRegister()`. Those are observed
+    /// properties this very view is reading as it is being built, so the write
+    /// is made in a pass that is already reading them and is discarded.
+    ///
+    /// The model was never wrong: `ModeTabTests.homeRowIsSelectable` drives the
+    /// identical sequence through `navigate` and passes. Only the delivery was.
+    /// This is the same hop the register already makes for the same reason —
+    /// `RegisterSheet.swift`: "Consuming mutates the model — hop off the render
+    /// pass first."
+    private var navigationSelection: Binding<SidebarSelection?> {
+        Binding(
+            get: { model.sidebarSelection },
+            set: { new in
+                guard let new, new != model.sidebarSelection else { return }
+                Task { @MainActor in model.navigate(to: new) }
+            })
+    }
+
     @ViewBuilder
     private var list: some View {
-        List(selection: $model.sidebarSelection) {
+        List(selection: navigationSelection) {
             // Accounts keeps its own shape: a tree four levels deep, which the
             // two-level guidance ("in general") explicitly tolerates and
             // GnuCash users expect. Every other mode is collections and their
@@ -603,7 +632,7 @@ enum ModeSidebarRows {
 
     private static func build(for mode: AppMode, model: AppModel) -> [SidebarGroup] {
         switch mode {
-        case .overview: overview(model)
+        case .dashboard: overview(model)
         case .accounts: []          // built in the view — a tree, not a list
         case .investments: investments(model)
         case .reports: reports(model)
@@ -668,13 +697,19 @@ enum ModeSidebarRows {
         // Securities by type, using the grouping the book already carries:
         // GnuCash's commodity namespace (ASX, NASDAQ, FUND…). The exchange is
         // data, so its name is shown verbatim rather than looked up.
-        let byNamespace = Dictionary(grouping: model.securityCommodities) { "\($0.namespace)" }
-        for namespace in byNamespace.keys.sorted() {
+        // Grouped by the namespace itself, and headed by its `displayName` —
+        // the string interpolation that used to do both printed the enum's own
+        // description, so the heading read `security("ASX")`. The group id
+        // keeps that interpolation deliberately: sidebar ids are persisted.
+        let byNamespace = Dictionary(grouping: model.securityCommodities, by: \.namespace)
+        for namespace in byNamespace.keys.sorted(by: {
+            $0.displayName.localizedStandardCompare($1.displayName) == .orderedAscending
+        }) {
             let holdings = (byNamespace[namespace] ?? [])
                 .sorted { $0.mnemonic < $1.mnemonic }
                 .map { security($0, model) }
             guard !holdings.isEmpty else { continue }
-            groups.append(.named("ns-\(namespace)", namespace, holdings))
+            groups.append(.named("ns-\(namespace)", namespace.displayName, holdings))
         }
         // Watch-only, or a security held *and* watched appears twice with the
         // same tag — and two rows carrying one tag makes `List` selection

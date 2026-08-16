@@ -84,7 +84,7 @@ struct InvestmentsView: View {
                     }
                 }
             }
-            .navigationTitle("Investments")
+            .navigationTitle("")
             .onChange(of: model.sidebarCreateRequest) {
                 guard model.sidebarCreateRequest == .watchedSecurity else { return }
                 model.sidebarCreateRequest = nil
@@ -121,13 +121,25 @@ struct InvestmentsView: View {
                     Task { await model.updatePrices() }
                 }
                 .disabled(model.pricableSecurities.isEmpty || model.quoteProgress != nil)
-                // `ellipsis.circle`, not `chevron.down`. A toolbar `Menu`
-                // draws its symbol and drops the title, so a chevron symbol
-                // rendered as a lone chevron — a control with no name at all,
-                // which is what was reported on 16 Aug 2026. HIG *Toolbars*
-                // gives this shape its own name: "Add a More menu to contain
-                // additional actions."
-                Menu("Update Options", systemImage: "ellipsis.circle") {
+                // A `ControlGroup` renders its buttons icon-only, and a
+                // `Button`'s title does not become its accessibility label when
+                // the icon is all that is drawn — so this and the menu beside
+                // it came back from the accessibility API unnamed.
+                .accessibilityLabel("Update Prices")
+                .help("Update prices for this book's securities")
+                // `slider.horizontal.3`, and neither `chevron.down` nor
+                // `ellipsis.circle`. A toolbar `Menu` draws its symbol and
+                // drops the title, so a chevron rendered as a lone chevron —
+                // a control with no name at all, reported 16 Aug 2026. The
+                // ellipsis then collided with the *More* menu beside it: two
+                // identical glyphs, adjacent, meaning different things. HIG
+                // *Toolbars*: "Make sure the meaning of each control is clear.
+                // Don't make people guess or experiment to figure out what a
+                // toolbar item does." The ellipsis belongs to More, which is
+                // the shape the same page names — "Add a More menu to contain
+                // additional actions" — so this one, which adjusts the run the
+                // button beside it starts, takes the settings glyph instead.
+                Menu("Update Options", systemImage: "slider.horizontal.3") {
                     // Scope, remembered per book (`FR-INV-25`). The default run
                     // used to ask about every security the book had ever held —
                     // 87 on the reference book, 48 of them closed.
@@ -151,25 +163,32 @@ struct InvestmentsView: View {
                     Button("Quote Settings…") { showingQuotes = true }
                 }
                 .disabled(model.quoteProgress != nil)
+                .accessibilityLabel("Update Options")
+                .help("Choose the scope or the provider for this run")
             }
-        }
-        ToolbarItem {
-            // The sparkline period, named rather than abbreviated, and
-            // adjustable: a line's shape says nothing until you know whether it
-            // spans a month or five years (`FR-INV-12`).
-            Picker(selection: Binding(get: { model.sparkRange },
-                                      set: { model.sparkRange = $0 })) {
-                ForEach(AppModel.SparkRange.allCases) { range in
-                    Text(range.label).tag(range)
-                }
-            } label: {
-                Label("Price History", systemImage: "chart.xyaxis.line")
-            }
-            .pickerStyle(.menu)
-            .help("How much price history each holding's sparkline covers")
         }
         ToolbarItem {
             Menu("More", systemImage: "ellipsis.circle") {
+                // **The sparkline period lives here, not in its own toolbar
+                // item.** Seen on screen 16 Aug 2026: with the search field in
+                // the window title bar and a wide sidebar, macOS pushed both
+                // this and the More menu behind the `»` overflow chevron —
+                // two controls a person could no longer see at all. HIG
+                // *Toolbars* names the remedy: "Add a More menu to contain
+                // additional actions", and there already was one.
+                //
+                // Nothing is lost by moving it. The period is *stated* in the
+                // list itself, above the first group ("Prices · 3 months"), so
+                // a line's shape is still readable without opening a menu
+                // (`FR-INV-12`); only the way to change it moved.
+                Picker("Price History", selection: Binding(
+                    get: { model.sparkRange }, set: { model.sparkRange = $0 })) {
+                    ForEach(AppModel.SparkRange.allCases) { range in
+                        Text(range.label).tag(range)
+                    }
+                }
+                .help("How much price history each holding's sparkline covers")
+                Divider()
                 // Company data for the whole book in one command. Per-security
                 // Fetch buttons on each holding's page were the only route,
                 // which made filling a portfolio a matter of opening every
@@ -429,6 +448,11 @@ private struct InvestmentRowView: View {
     let onCadence: () -> Void
     let onOpen: () -> Void
     @Environment(\.appDateFormat) private var dateFormat
+    /// The cost column is fixed so the figures line up down the page, and
+    /// scaled so they are not truncated when the text is. A plain constant
+    /// clipped "1,234,567 units" to "1,234…" at the larger accessibility
+    /// sizes — the same class of defect as the dashboard's.
+    @ScaledMetric(relativeTo: .body) private var costWidth: CGFloat = 130
 
     var body: some View {
         HStack(spacing: 10) {
@@ -452,6 +476,38 @@ private struct InvestmentRowView: View {
             .frame(minWidth: 90, alignment: .leading)
 
             Spacer(minLength: 4)
+
+            // What it cost, and what is held — asked for 16 Aug 2026: "each
+            // holding row should also show no of units and purchase price (to
+            // compare against current value)", then sharpened twice. First:
+            // "I asked for Purchase Amount not average price - I can't compare
+            // average price with current value", so the figure is a **total**
+            // of the same kind as the market value. Then: "having purchase
+            // amount at bottom row in small font vs current value in top row is
+            // just wrong."
+            //
+            // Both money totals therefore sit on the **same line at the same
+            // size** — cost, then value, left to right — and the two supporting
+            // figures line up beneath them: units under the cost, return under
+            // the value. What you paid → what it is worth; how many → how it
+            // did. A comparison the eye cannot make on one line is not a
+            // comparison.
+            VStack(alignment: .trailing, spacing: 1) {
+                if let paid = row.purchaseAmount {
+                    Text("cost \(AmountFormat.string(paid, code: model.reportCurrency.mnemonic))")
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text("—").foregroundStyle(.secondary)
+                }
+                if row.units != 0 {
+                    Text("\(DecimalFormat.units(row.units)) units")
+                        .scaledFont(.caption).monospacedDigit()
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .lineLimit(1)
+            .frame(width: costWidth, alignment: .trailing)
 
             VStack(alignment: .trailing, spacing: 1) {
                 if let value = row.marketValue {
@@ -522,6 +578,16 @@ private struct InvestmentRowView: View {
     /// to be said here (`FR-INV-12` accessibility).
     private var voiceOver: String {
         var parts = [row.symbol, row.name]
+        // The row's own label replaces its children, so anything added to the
+        // row has to be added here too or it is silently inaudible — and in
+        // the order it is *read*, cost then value, so the comparison the layout
+        // makes with the eye is the one the ear gets too.
+        if let paid = row.purchaseAmount {
+            parts.append(String(localized: "cost \(AmountFormat.string(paid, code: model.reportCurrency.mnemonic))"))
+        }
+        if row.units != 0 {
+            parts.append(String(localized: "\(DecimalFormat.units(row.units)) units"))
+        }
         if let value = row.marketValue {
             parts.append(AmountFormat.string(value, code: model.reportCurrency.mnemonic))
         }

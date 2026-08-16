@@ -316,6 +316,33 @@ struct ModeTabRegressionTests {
         #expect(model.unopenedTabDestinations.isEmpty)
     }
 
+    /// Clicking the collection row after opening one of its instances.
+    ///
+    /// Reported 16 Aug 2026: "Clicking on reports in the sidebar does not
+    /// work." Reproduced on screen — with Balance Sheet showing, clicking
+    /// "All Reports" left the selection, the tab and the content unchanged.
+    @Test("Selecting a mode's home row returns to it")
+    func homeRowIsSelectable() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
+        let model = AppModel()
+        try model.newDocument(at: url)
+        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+
+        model.showMode(.reports)
+        #expect(model.sidebarSelection == .reports)
+
+        // Open a report, as clicking one in the sidebar does.
+        model.navigate(to: .report(.balanceSheet))
+        #expect(model.sidebarSelection == .report(.balanceSheet))
+        #expect(model.activeTabIndex == 1)
+
+        // Now click "All Reports" — the collection row.
+        model.navigate(to: .reports)
+        #expect(model.sidebarSelection == .reports, "the home row did not take the selection")
+        #expect(model.activeTabIndex == 0, "the home tab did not become active")
+    }
+
     /// A stored active index that outruns its tab list used to crash the next
     /// single-click navigation: the replace branch subscripted `extras` with it.
     @Test("An out-of-range stored tab index does not crash a navigation")

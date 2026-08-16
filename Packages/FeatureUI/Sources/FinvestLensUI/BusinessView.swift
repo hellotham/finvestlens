@@ -160,7 +160,7 @@ struct BusinessHub: View {
                 }
             }
             }
-            .navigationTitle("Business")
+            .navigationTitle("")
             .onChange(of: model.sidebarCreateRequest) { answer(model.sidebarCreateRequest) }
             .frame(minWidth: embedded ? nil : 460, minHeight: embedded ? nil : 460)
             .onEscapeCommand { dismiss() }

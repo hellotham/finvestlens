@@ -181,6 +181,24 @@ extension EnvironmentValues {
 
 // MARK: - Formatting
 
+extension CommodityNamespace {
+    /// The exchange as a person names it — "ASX", not `security("ASX")`.
+    ///
+    /// `"\(namespace)"` is the enum's *synthesized* description, and it reached
+    /// the Investments sidebar as a section heading. That spelling is still the
+    /// right one for the identity keys elsewhere — the watchlist, valuation
+    /// cadences and quote-provider slots are all stored under
+    /// `"\(namespace)|\(mnemonic)"` — so this is a second accessor rather than
+    /// a `CustomStringConvertible` conformance, which would have silently
+    /// rewritten every one of those keys and orphaned what a book already holds.
+    var displayName: String {
+        switch self {
+        case .currency: String(localized: "Currencies")
+        case .security(let name), .other(let name): name
+        }
+    }
+}
+
 enum AmountFormat {
     static func string(_ value: Decimal, code: String) -> String {
         value.formatted(.currency(code: code))
@@ -448,6 +466,9 @@ public struct FinvestLensRootView: View {
         // "the holdings of this broker" is the same question as "the holdings"
         // with a narrower answer — a second view would drift from it.
         case .portfolio(let id): InvestmentsView(model: model, portfolio: id)
+        // The same view a sheet would show, in a tab. One builder, so a panel
+        // cannot look like two different things depending on how it opened.
+        case .panel(let panel): PanelContent(model: model, panel: panel)
         case .security(let key):
             if let commodity = model.securityCommodity(forKey: key) {
                 SecurityDetailView(model: model, commodity: commodity)
@@ -469,44 +490,24 @@ public struct FinvestLensRootView: View {
     /// Create actions and the period. Lifted out of `body` for the same reason
     /// as `searchSuggestions`: P12 grew that expression past the type-checker's
     /// budget, and the fix is fewer things in one builder, not fewer features.
-    @ToolbarContentBuilder
-    private var primaryToolbar: some ToolbarContent {
-        // Primary create actions (the rest live in the menu bar). Areas
-        // (Overview, Reports, Budgets, …) are in the sidebar, so they no longer
-        // need toolbar buttons. Pinned leading (redesign 6.1):
-        // `[+ New ▾] [⬇ Import ▾] … [Search]` — never behind ».
-        ToolbarItemGroup(placement: .navigation) {
-            Menu {
-                Button("New Transaction…", systemImage: "plus.circle") {
-                    model.presentedPanel = .newTransaction
-                }
-                .disabled(model.postableAccounts.count < 2)
-                Button("New Account…", systemImage: "plus.rectangle.on.folder") {
-                    model.presentedPanel = .newAccount
-                }
-                // Stock Transaction and Currency Transfer are guided
-                // *transaction editors*, not top-level app actions: they are
-                // reached from the transaction area (the Transaction menu and
-                // the register's context menu) and from the Book menu, which is
-                // where HIG *Toolbars* (macOS) requires every command to exist
-                // anyway.
-            } label: {
-                Label("New", systemImage: "plus")
-            }
-            .help("Create a transaction or account")
-        }
-        // Search over the period selector, in two short rows beside the tall
-        // mode buttons — the height the modes set, spent rather than padded.
-        ToolbarItem {
-            StackedTrailingControls(model: model)
-        }
-    }
-
     public var body: some View {
+        // **Modes on a row of their own.**
+        //
+        // Reported 16 Aug 2026: "the top toolbar design is truly horrible …
+        // Can the modes buttons be on a row of their own, not sharing with any
+        // other toolbars. That way we can have all modes comfortably displaying
+        // on one row. The other toolbar buttons should live in a separate row
+        // and be single line height. Your double line height design is
+        // embarassing. Please [do] not group them into ovals either."
+        //
+        // A window toolbar cannot give a row to one kind of item: everything
+        // shares it, macOS wraps groups in capsules, and what does not fit goes
+        // behind a `»`. So the modes come out of the toolbar entirely and are
+        // drawn here, above the split view, where they get the full window
+        // width and no grouping chrome. The window toolbar keeps everything
+        // else, at its own single height.
         splitView
-            // The mode buttons live in the window's toolbar, outside any view's
-            // geometry, so the width they have to fit in is measured here and
-            // handed to them through the model.
+            // The mode row is measured where it is drawn.
             .background(
                 GeometryReader { geo in
                     Color.clear
@@ -536,7 +537,58 @@ public struct FinvestLensRootView: View {
             // here was a second sidebar competing with the attachments panel,
             // and as a split-view column it widened the *window* to make room —
             // off the side of the display, where the editor could not be seen.
+            // **The two rows, to the right of the sidebar** — asked for in
+            // those words on 16 Aug 2026, and it is also what the HIG says.
+            //
+            // *Toolbars*: "In contrast to a toolbar, a tab bar is specifically
+            // for navigating between areas of an app." The modes navigate
+            // between areas, so they are a tab bar, not toolbar items — which
+            // is the HIG break in putting them in the window toolbar at all.
+            //
+            // *Toolbars* again: "Elements that let people … show or hide a
+            // sidebar appear at the far leading edge." That edge belongs to the
+            // sidebar toggle, so the modes cannot span the window above it;
+            // they start where the detail pane starts.
+            // `safeAreaInset`, **not** a `VStack` sibling.
+            //
+            // Above the register's `GeometryReader` a sibling is measured away:
+            // the reader claims the full height, the AppKit register paints
+            // over the band, and the modes vanish — leaving an empty strip.
+            // Seen on screen 16 Aug 2026 in Accounts, and reported the same
+            // minute: "The modes tab bar disappeared in accounts mode."
+            //
+            // This is the *second* time this codebase has hit it. The tab strip
+            // was a VStack sibling too and disappeared the same way; the note
+            // on that fix is why this one took minutes rather than an hour.
             detailPane
+                // **Fill first, then inset.** A `safeAreaInset` pins to the
+                // edge of what it insets, and a detail view that does not fill
+                // its space is centred by SwiftUI — so in Records, where the
+                // empty state is a `ContentUnavailableView` sized to its own
+                // content, the mode bar and the tab strip slid to the vertical
+                // middle of the window. Reported as "Records mode not correct",
+                // and it was every mode with a short empty state.
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .safeAreaInset(edge: .top, spacing: 0) {
+                    ModeBar(model: model)
+                }
+        }
+        // **The secondary controls in the title bar; the modes get the row.**
+        //
+        // The modes were tried in the title bar first — "why can't the window
+        // title bar contain the modes tab bar?" — and it cannot: a toolbar
+        // clamps its item to a width it chooses, so all seven labels truncated
+        // ("Overvi…", "Accoun…", "Invest…") and macOS drew its grouping capsule
+        // back around them, which is the oval this design exists to remove.
+        // Seen on screen 16 Aug 2026.
+        //
+        // So the fallback, as instructed: the band earns its height by holding
+        // the secondary controls, and the modes take the full-width row below
+        // it where nothing clamps them.
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                StackedTrailingControls(model: model)
+            }
         }
         // The sidebar gets a column of its own, never a layer over the detail.
         // `.automatic` overlays it on a narrow window, and the register was
@@ -556,33 +608,10 @@ public struct FinvestLensRootView: View {
         // people can add Planning and Records — the HIG's remedy for an app
         // with "advanced functionality that not everyone needs" — while the
         // create actions below stay put.
-        .toolbar(id: "modes") {
-            ModeToolbar(model: model)
-        }
-        .toolbar { primaryToolbar }
+        // Only the panels that stay modal reach here; the editors are tabs
+        // (`RootPanel.opensAsTab`) and `AppModel.presentedPanel` routes them.
         .sheet(item: $model.presentedPanel) { panel in
-            switch panel {
-            case .newAccount: NewAccountSheet(model: model)
-            case .newSecurity: NewSecuritySheet(model: model)
-            case .newTransaction: TransactionEditorSheet(model: model)
-            case .stockTransaction: StockTransactionSheet(model: model)
-            case .currencyTransfer: CurrencyTransferSheet(model: model)
-            case .saveSearch: SaveSearchSheet(model: model)
-            case .onboarding: OnboardingSheet(model: model)
-            case .reconcile:
-                if let id = model.selectedAccountID {
-                    ReconcileView(model: model, accountID: id)
-                }
-            case .autoCategorize: AutoCategorizeSheet(model: model)
-            case .bulkEdit: BulkEditSheet(model: model)
-            case .matchAttachments: MatchAttachmentsSheet(model: model)
-            case .linkedDocuments: LinkedDocumentsView(model: model)
-            case .loanCalculator: LoanCalculatorView(model: model)
-            case .closeBook: CloseBookView(model: model)
-            case .taxOptions: TaxOptionsView(model: model)
-            case .find: FindSheet(model: model)
-            case .findAccount: FindAccountSheet(model: model)
-            }
+            PanelContent(model: model, panel: panel)
         }
         // Schedule… (the register context menu and the Transaction menu) sets
         // `schedulingTransactionID`, but the sheet that observed it hung off
@@ -769,32 +798,81 @@ public struct FinvestLensRootView: View {
 /// conformance to give it one. `ModeToolbarTests` holds the list to
 /// `allCases`, so adding a mode without a button fails a test rather than
 /// silently shipping an unreachable one.
-struct ModeToolbar: CustomizableToolbarContent {
+/// The modes, on a row of their own (`FR-NAV-01`, `FR-NAV-02`).
+///
+/// Not a `CustomizableToolbarContent` any more. Sharing the window toolbar cost
+/// the modes the two things they most needed: the whole width, and freedom from
+/// the capsule macOS draws around a toolbar group. On a 986pt window five modes
+/// and a search field pushed two of them behind a `»`, and the group capsule
+/// read — accurately — as an oval nobody asked for.
+///
+/// Every mode is here, all seven, because a full row holds them. The
+/// system's toolbar customisation went with the toolbar; the View menu's
+/// ⌘1…⌘n still reaches every one, which is what `FR-NAV-03` actually requires.
+struct ModeBar: View {
     @Bindable var model: AppModel
 
-    /// Every mode this toolbar offers, in order — written out to mirror `body`,
-    /// **not** derived from `allCases`. It was `AppMode.allCases`, which made
-    /// the test that guards against drift compare `allCases` with itself: an
-    /// eighth mode would have shipped with no button and a green suite.
-    static let modes: [AppMode] = [
-        .overview, .accounts, .investments, .reports, .business, .planning, .records,
-    ]
+    /// Every mode, in order — written out rather than derived from `allCases`,
+    /// so an eighth mode fails a test rather than shipping without a button.
+    static let modes: [AppMode] = [.dashboard, .accounts, .investments, .reports,
+                                   .business, .planning, .records]
 
-    var body: some CustomizableToolbarContent {
-        item(.overview)
-        item(.accounts)
-        item(.investments)
-        item(.reports)
-        item(.business)
-        item(.planning)
-        item(.records)
-    }
-
-    private func item(_ mode: AppMode) -> some CustomizableToolbarContent {
-        ToolbarItem(id: mode.rawValue, placement: .navigation) {
-            ModeButton(model: model, mode: mode)
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(Self.modes) { mode in
+                ModeButton(model: model, mode: mode)
+                    // **Fills the row.** Asked for: "since it takes up an
+                    // entire row, it should be sized so that it fills the row".
+                    // Equal shares rather than a left-hugging cluster with dead
+                    // space after it.
+                    .frame(maxWidth: .infinity)
+            }
         }
-        .defaultCustomization(mode.isOnToolbarByDefault ? .visible : .hidden)
+        .padding(.horizontal, 6)
+        .padding(.vertical, 5)
+        .background(.bar)
+        .overlay(alignment: .bottom) { Divider() }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Areas")
+    }
+}
+
+
+/// One panel's content, whether it is showing as a tab or as a sheet.
+///
+/// Extracted 16 Aug 2026 when the editors became tabs: a second copy of this
+/// switch would let a panel drift into looking like two different things
+/// depending on how it was opened.
+struct PanelContent: View {
+    @Bindable var model: AppModel
+    let panel: RootPanel
+
+    var body: some View {
+        switch panel {
+        case .newAccount: NewAccountSheet(model: model)
+        case .newSecurity: NewSecuritySheet(model: model)
+        case .newTransaction: TransactionEditorSheet(model: model)
+        case .stockTransaction: StockTransactionSheet(model: model)
+        case .currencyTransfer: CurrencyTransferSheet(model: model)
+        case .saveSearch: SaveSearchSheet(model: model)
+        case .onboarding: OnboardingSheet(model: model)
+        case .reconcile:
+            if let id = model.selectedAccountID {
+                ReconcileView(model: model, accountID: id)
+            } else {
+                ContentUnavailableView("Select an account", systemImage: "checkmark.seal",
+                                       description: Text("Reconciling needs an account to reconcile."))
+            }
+        case .autoCategorize: AutoCategorizeSheet(model: model)
+        case .bulkEdit: BulkEditSheet(model: model)
+        case .matchAttachments: MatchAttachmentsSheet(model: model)
+        case .linkedDocuments: LinkedDocumentsView(model: model)
+        case .loanCalculator: LoanCalculatorView(model: model)
+        case .closeBook: CloseBookView(model: model)
+        case .taxOptions: TaxOptionsView(model: model)
+        case .find: FindSheet(model: model)
+        case .findAccount: FindAccountSheet(model: model)
+        }
     }
 }
 
@@ -808,40 +886,63 @@ struct ModeButton: View {
     @Bindable var model: AppModel
     let mode: AppMode
 
+    private var isSelected: Bool { model.mode == mode }
+
     var body: some View {
-        Toggle(isOn: Binding(
-            get: { model.mode == mode },
-            // Toggling the current mode off would leave the window in no mode
-            // at all; the only meaningful action here is switching *to* one.
-            set: { if $0 { model.showMode(mode) } }
-        )) {
-            Label(mode.title, systemImage: mode.symbol)
+        Button {
+            model.showMode(mode)
+        } label: {
+            VStack(spacing: 3) {
+                // **No circle, no oval.** *Toolbars*: "Prefer system-provided
+                // symbols without borders. Borders (like outlined circle
+                // symbols) aren't necessary because the section provides a
+                // visible container, and the system defines hover and selection
+                // state appearances automatically."
+                //
+                // So selection is carried by the symbol itself, which is what
+                // *Tab bars* asks for: "Prefer filled symbols or icons for
+                // consistency with the platform." Filled and tinted when
+                // selected, outline and secondary when not — the same
+                // distinction macOS draws in its own tab bars, and it costs no
+                // shape behind the glyph at all.
+                Image(systemName: isSelected ? mode.selectedSymbol : mode.symbol)
+                    // **Bigger.** The row is theirs and it was mostly white
+                    // space: seven items sharing a 700pt row at a 17pt glyph
+                    // left more gap than button. Reported as "the mode icons
+                    // are too small … you can afford to make the mode buttons
+                    // bigger", and the width to spend was already there.
+                    .font(.system(size: 24, weight: isSelected ? .semibold : .regular))
+                    .foregroundStyle(isSelected ? AnyShapeStyle(.tint)
+                                                : AnyShapeStyle(.secondary))
+                    .frame(height: 28)
+                // *Tab bars*: "Include tab labels to help with navigation. A
+                // tab label appears beneath or beside a tab bar icon… Use
+                // single words whenever possible."
+                Text(mode.title)
+                    // **Readable.** `.caption2` then `.caption` were both too
+                    // small to read at a glance — reported twice. These are the
+                    // app's primary navigation, so the label is body text, at
+                    // the weight the selected one already carries. The row has
+                    // the height for it: nothing else is competing for that
+                    // band now that the modes have it to themselves.
+                    .scaledFont(.body, weight: isSelected ? .semibold : .regular)
+                    .lineLimit(1)
+                    .foregroundStyle(isSelected ? AnyShapeStyle(.tint)
+                                                : AnyShapeStyle(.secondary))
+            }
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
         }
-        .toggleStyle(.button)
-        // **The name under the symbol**, not beside it.
-        //
-        // Beside it, five labelled modes measure 488pt and at a 986pt window
-        // that was enough to push Reports and Business into the system overflow
-        // menu — seen on screen, and the exact outcome HIG *Toolbars* warns
-        // about: "avoid layouts that cause toolbar items to overflow by
-        // default." Stacked they measure 329pt, because the width becomes the
-        // word rather than symbol-plus-gap-plus-word, and all seven then fit
-        // inside the narrowest window the app allows.
-        //
-        // The cost is vertical, and it is the cheap direction here: the toolbar
-        // grows once, for the window, while horizontal space is what every
-        // register column competes for.
-        // …and the symbol alone when even stacked words will not fit.
-        //
-        // `ModeLabelFit` measured this from the start and **nothing read it**:
-        // the style was applied unconditionally, so the documented degradation
-        // — drop to symbols rather than overflow — could not happen, and a
-        // window narrow enough (or a language long enough, or an accessibility
-        // text size large enough) would have put modes back in the overflow
-        // menu that this whole layout exists to keep them out of. The
-        // measurement had tests; the behaviour it describes had no caller.
-        .labelStyle(ModeLabelStyle(stacked: model.modeLabelsFit))
+        .buttonStyle(.plain)
         .help(mode.title)
+        // **The name, said out loud.** A custom label puts the title in a
+        // `Text` inside a `VStack`, and SwiftUI does not lift that into the
+        // control's accessibility label — so the five most important controls
+        // in the app came back from the accessibility API as
+        // `AXCheckBox 'toggle button' / 'missing value'`. Read on screen,
+        // unreadable to VoiceOver, and no screenshot would have shown it.
+        .accessibilityLabel(mode.name)
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }
 }
 
@@ -914,70 +1015,85 @@ struct StackedModeLabelStyle: LabelStyle {
 /// controls that were competing with them for width.
 struct StackedTrailingControls: View {
     @Bindable var model: AppModel
-    /// Whether the field is open. Collapsed it is a magnifier and nothing more.
-    ///
-    /// `.searchable` was cheap because the system collapsed it until clicked; a
-    /// plain `TextField` is its full width always, and at 150pt that pushed
-    /// Reports and Business back into the overflow menu — seen on screen at
-    /// 986pt, the very failure stacking the mode labels had just fixed. So the
-    /// field earns its width only while it is being used.
-    @State private var expanded = false
     @FocusState private var searchFocused: Bool
 
-    private var isOpen: Bool {
-        expanded || searchFocused || !model.searchQuery.isEmpty
-    }
-
     var body: some View {
-        VStack(alignment: .trailing, spacing: 2) {
-            HStack(spacing: 4) {
-                Button {
-                    expanded = true
-                    searchFocused = true
-                } label: {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Search transactions")
-                if isOpen {
-                    TextField("Search transactions", text: $model.searchQuery)
-                        .textFieldStyle(.plain)
-                        .frame(width: 150)
-                        .focused($searchFocused)
-                        .accessibilityLabel("Search transactions")
-                        // ⎋ closes the field and clears the query, through the
-                        // project's own wrapper — SwiftUI's `onExitCommand` is
-                        // unavailable on iOS and broke that build.
-                        .onEscapeCommand {
-                            model.searchQuery = ""
-                            expanded = false
-                            searchFocused = false
-                        }
-                    // Saved searches, which `.searchable`'s suggestion list
-                    // used to carry. Replacing that field with this one
-                    // orphaned `searchSuggestions` and took Save This Search
-                    // and the saved list with it — a regression found by
-                    // reading the call graph before shipping, not after.
-                    savedSearchMenu
+        // **One row, single height.** The two-row stack this replaces put a
+        // search field above a strip of small buttons inside one toolbar item,
+        // which made the whole toolbar double height — "embarassing", and
+        // fairly. The modes have their own row now, so nothing here needs to be
+        // tall, and nothing here is wrapped in a capsule.
+        HStack(spacing: 8) {
+            HStack(spacing: 5) {
+                Image(systemName: "magnifyingglass")
+                    .scaledFont(.caption)
+                    .foregroundStyle(.secondary)
+                    .accessibilityHidden(true)
+                TextField("Search", text: $model.searchQuery)
+                    .textFieldStyle(.plain)
+                    .scaledFont(.callout)
+                    .frame(width: 150)
+                    .focused($searchFocused)
+                    .accessibilityLabel("Search transactions")
+                    // ⎋ clears and gives the field up, through the project's own
+                    // wrapper — SwiftUI's `onExitCommand` is unavailable on iOS.
+                    .onEscapeCommand {
+                        model.searchQuery = ""
+                        searchFocused = false
+                    }
+                if !model.searchQuery.isEmpty {
+                    Button {
+                        model.searchQuery = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .scaledFont(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Clear search")
                 }
             }
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
-            .background(isOpen ? AnyShapeStyle(.quaternary) : AnyShapeStyle(.clear),
-                        in: RoundedRectangle(cornerRadius: 6))
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 6))
 
-            HStack(spacing: 6) {
-                // Only where it governs something (`AppMode.usesPeriod`). It
-                // used to appear in all seven modes and act in two, so in the
-                // other five it was a control that moved and changed nothing.
-                if model.mode.usesPeriod {
-                    PeriodSelector(model: model, period: $model.period)
-                        .controlSize(.small)
-                }
+            newMenu
+            savedSearchMenu
+            if model.mode.usesPeriod {
+                PeriodSelector(model: model, period: $model.period)
+                    .labelStyle(.titleAndIcon)
             }
         }
-        .frame(height: StackedModeLabelStyle.height)
+        // Inset from the capsule macOS draws around a toolbar item group.
+        // Without it the search field's own rounded background sat flush on
+        // that capsule's leading edge — "the search bar is bleeding into the
+        // left of oval" — because the field brings a background of its own and
+        // the group's container assumes its content does not.
+        .padding(.horizontal, 6)
+        .fixedSize()
+    }
+
+    /// Create actions, named. A toolbar `Menu` renders icon-only unless told
+    /// otherwise, which is how this shipped as a bare `+` — reported as
+    /// "unlabelled toolbar buttons still exist", and correctly.
+    private var newMenu: some View {
+        Menu {
+            Button("New Transaction…", systemImage: "plus.circle") {
+                model.presentedPanel = .newTransaction
+            }
+            .disabled(model.postableAccounts.count < 2)
+            Button("New Account…", systemImage: "plus.rectangle.on.folder") {
+                model.presentedPanel = .newAccount
+            }
+            Button("New Security…", systemImage: "chart.line.uptrend.xyaxis") {
+                model.presentedPanel = .newSecurity
+            }
+        } label: {
+            Label("New", systemImage: "plus")
+        }
+        .labelStyle(.titleAndIcon)
+        .fixedSize()
+        .help("Create a transaction, account or security")
     }
 
     /// The saved searches, and the offer to save this one.
@@ -1005,8 +1121,12 @@ struct StackedTrailingControls: View {
                 Button("Save This Search…") { model.presentedPanel = .saveSearch }
             }
         } label: {
-            Image(systemName: "bookmark")
+            Label("Saved", systemImage: "bookmark")
         }
+        // Named, like every other control on this row. A bare bookmark glyph
+        // was the last of the unlabelled toolbar buttons.
+        .labelStyle(.titleAndIcon)
+        .fixedSize()
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
         .fixedSize()
@@ -1620,6 +1740,19 @@ struct RegisterView: View {
         } label: {
             Label("Actions", systemImage: "ellipsis.circle")
         }
+        // Named. A toolbar `Menu`/`Button` draws its symbol and drops the
+        // title unless told otherwise, which is how the register's three
+        // controls shipped as unlabelled round glyphs.
+        // **Symbol, not text — but never nameless.**
+        //
+        // Spelling all three out put the `»` overflow back and hid two of them
+        // behind it, which is the failure HIG *Toolbars* names: "avoid layouts
+        // that cause toolbar items to overflow by default." The same page gives
+        // the rule for secondary actions: "Prefer simple, recognizable symbols
+        // for items instead of text." So they keep their symbols and carry
+        // their names where a name is actually needed — the tooltip, and the
+        // accessibility label, which is what "unlabelled" really costs.
+        .accessibilityLabel("Actions")
         .help("Reconcile, import, categorise")
     }
 
@@ -1629,6 +1762,23 @@ struct RegisterView: View {
         let selectedHasDocument = model.selectedTransactionIDs.count == 1
             && model.selectedTransactionIDs.first.map(model.hasLinkedDocument) == true
         return Menu {
+            // Filter joined this menu when it was pushed into the `»` overflow
+            // as a third toolbar item — present in the accessibility tree but
+            // not on screen, the worst of both. Filtering *is* choosing what
+            // the register shows, so it belongs here rather than beside it.
+            Button(model.registerFilter.isShowingEverything ? "Filter Transactions…"
+                                                            : "Filtered — Change…",
+                   systemImage: model.registerFilter.isShowingEverything
+                       ? "line.3.horizontal.decrease.circle"
+                       : "line.3.horizontal.decrease.circle.fill") {
+                filterShown = true
+            }
+            if !model.registerFilter.isShowingEverything {
+                Button("Clear Filter", systemImage: "xmark.circle") {
+                    model.registerFilter = .showAll
+                }
+            }
+            Divider()
             Picker(selection: $registerStyle) {
                 ForEach(RegisterStyle.allCases) { style in
                     Label(style.title, systemImage: style.symbol).tag(style)
@@ -1692,6 +1842,7 @@ struct RegisterView: View {
         } label: {
             Label("View", systemImage: "slider.horizontal.3")
         }
+        .accessibilityLabel("View")
         .help("Choose what the register shows")
     }
 
@@ -1704,6 +1855,8 @@ struct RegisterView: View {
                       ? "line.3.horizontal.decrease.circle"
                       : "line.3.horizontal.decrease.circle.fill")
         }
+        .accessibilityLabel(model.registerFilter.isShowingEverything
+                            ? "Filter transactions" : "Filtered — change or clear")
         .fixedSize()
         .help("Show only some transactions")
     }

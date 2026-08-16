@@ -177,7 +177,7 @@ struct FinancialReviewTests {
         let to = date.addingTimeInterval(86_400)
         let slides = model.investmentReviewSlides(from: .distantPast, to: to, label: "Test")
         let ids = slides.map(\.id)
-        #expect(ids.contains("inv.overview"))
+        #expect(ids.contains("inv.dashboard"))
         #expect(ids.contains("inv.allocation"))
         #expect(ids.contains("inv.leaders"))
         #expect(ids.contains("inv.decomposition"))

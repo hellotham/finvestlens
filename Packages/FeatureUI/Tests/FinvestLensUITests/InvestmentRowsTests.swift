@@ -65,6 +65,51 @@ private func buy(_ model: AppModel, _ commodity: Commodity, units: String, cost:
 @Suite("Investment rows")
 struct InvestmentRowsTests {
 
+    /// **Units and what they cost.** Asked for 16 Aug 2026: "each holding row
+    /// should also show no of units and purchase price (to compare against
+    /// current value)", then sharpened — "I asked for Purchase Amount not
+    /// average price - I can't compare average price with current value."
+    ///
+    /// So the figure is a **total**, of the same kind as the market value
+    /// beside it, and it sums across every account the security is held in: a
+    /// holding bought through two brokers cost the sum of both, and reporting
+    /// one broker's share would understate it silently.
+    @Test("A row carries its units and the total purchase amount")
+    func unitsAndPurchaseAmount() throws {
+        let model = try makeModel()
+        let book = model.book!
+
+        // 1,000 units for $1,000 through the first broker.
+        buy(model, acme, units: "1000", cost: "1000", daysBack: 60)
+
+        // 10 units for $500 through a second — same security, own account.
+        let bank = book.accounts.first { $0.type == .bank }!
+        let second = book.addAccount(Account(name: "ACME (Broker B)", type: .stock,
+                                             commodity: acme))
+        let txn = Transaction(currency: .aud, datePosted: daysAgo(30), description: "Buy")
+        txn.addSplit(Split(account: second, value: dec("500"), quantity: dec("10")))
+        txn.addSplit(account: bank, value: dec("-500"))
+        book.addTransaction(txn)
+
+        let row = try #require(model.investmentRows().first { $0.symbol == "ACME" })
+        #expect(row.units == dec("1010"), "units are the whole holding, not one account's")
+        #expect(row.purchaseAmount == dec("1500"), "one broker's cost, not both")
+        // Not the per-unit average ($1.485…), which is what the row showed
+        // first and cannot be read against a market value.
+        #expect(row.purchaseAmount! > 1)
+    }
+
+    /// A watch-list entry is not held, so nothing was paid for it.
+    @Test("A watched security has no units and no purchase amount")
+    func watchedRowHasNoCost() throws {
+        let model = try makeModel()
+        model.addWatchSecurity(exchange: "ASX", ticker: "OTHR", name: "Other")
+
+        let row = try #require(model.investmentRows().first { $0.symbol == "OTHR" })
+        #expect(row.units == 0)
+        #expect(row.purchaseAmount == nil)
+    }
+
     @Test("Held, hand-valued, watched and closed land in different groups")
     func grouping() throws {
         let model = try makeModel()

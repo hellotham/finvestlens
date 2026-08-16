@@ -79,7 +79,7 @@ struct GoalsView: View {
                     }
                 }
             }
-            .navigationTitle("Savings Goals")
+            .navigationTitle("")   // the tab strip names this destination
             // The sidebar's + asks; this view owns the editor, so it answers.
             .onChange(of: model.sidebarCreateRequest) {
                 guard model.sidebarCreateRequest == .goal else { return }

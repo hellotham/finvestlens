@@ -47,14 +47,24 @@ public extension FinancialReports {
         var totalValue = Decimal(0)
 
         for account in book.accounts where account.type.isSecurityType && !account.isPlaceholder {
+            // **This account's own splits, not the whole book's.** Reported
+            // 16 Aug 2026: "dashboard mode takes too long to load". Measured on
+            // the reference book, `portfolio(asOf:)` was 0.25s — the single
+            // largest thing the board pays for, and it is called before the
+            // layout can even decide which cards fit.
+            //
+            // The cost was the shape, not the arithmetic: this walked **every
+            // transaction in the book, once per security account**, which is
+            // O(securities × transactions × splits) — millions of iterations to
+            // find a few thousand splits. `book.splits(for:)` is an indexed
+            // lookup that was already there and already used elsewhere.
             var shares = Decimal(0)
             var cost = Decimal(0)
-            for transaction in book.transactions where transaction.datePosted <= asOf {
-                for split in transaction.splits
-                where split.account === account && split.reconcileState != .voided {
-                    shares += split.quantity
-                    cost += split.value
-                }
+            for split in book.splits(for: account)
+            where split.reconcileState != .voided
+                && (split.transaction?.datePosted ?? .distantPast) <= asOf {
+                shares += split.quantity
+                cost += split.value
             }
             guard shares != 0 || cost != 0 else { continue }
 

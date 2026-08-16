@@ -536,7 +536,7 @@ public enum HelpBook {
             ]),
             .heading("Holdings"),
             .bullets([
-                "Each row shows units, value, return since you bought, and how old the price is.",
+                "Each row shows the units you hold and what you paid for them, then what they are worth now, the return since you bought, and how old the price is.",
                 "**Price History** in the toolbar sets the period every small chart covers — a month through five years. The period is named above the first group, and remembered with the book.",
                 "Every chart uses **the same time axis**, so the same position means the same date on every row: a line that stops short of the right-hand edge is one whose prices stop there.",
                 "**A break in the line means missing prices** — it is never drawn through days that have none. What counts as a break scales with the period, so a week's absence shows over a month and not over five years.",

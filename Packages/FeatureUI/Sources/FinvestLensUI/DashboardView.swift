@@ -166,7 +166,11 @@ struct DashboardView: View {
                 board(range: range)
             }
         }
-        .navigationTitle(boardTitle)
+        // **No window title.** `boardTitle` put "Mix" in the title bar, where
+        // the tab strip a few pixels below already says it — the same
+        // redundancy the mode names had, found the same way: on screen. The
+        // title area belongs to the secondary controls now.
+        .navigationTitle("")
         .onChange(of: model.sidebarCreateRequest) {
             guard model.sidebarCreateRequest == .overviewView else { return }
             model.sidebarCreateRequest = nil
@@ -229,6 +233,11 @@ struct DashboardView: View {
                 } label: {
                     Label("Cards", systemImage: "rectangle.badge.checkmark")
                 }
+                // Named, like every other control in this band. A toolbar
+                // `Menu` renders icon-only unless told otherwise, so this was
+                // an unlabelled glyph in its own capsule.
+                .labelStyle(.titleAndIcon)
+                .fixedSize()
                 .help("Show a card, hide one, or save this set as a view")
             }
         }

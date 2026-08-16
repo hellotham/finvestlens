@@ -111,10 +111,10 @@ struct ModeTabStrip: View {
                     .foregroundStyle(isActive ? .primary : .secondary)
             }
             .buttonStyle(.plain)
-            // The home tab has no close button because it cannot be closed —
-            // absent rather than disabled, so nothing invites a click that
-            // will not work.
-            if index > 0 {
+            // Home and the standing tabs have no close button because they
+            // cannot be closed — absent rather than disabled, so nothing
+            // invites a click that will not work.
+            if model.isClosableTab(index) {
                 Button {
                     model.closeTab(index)
                 } label: {
@@ -139,7 +139,7 @@ struct ModeTabStrip: View {
         }
         .contentShape(Rectangle())
         .contextMenu {
-            if index > 0 {
+            if model.isClosableTab(index) {
                 Button("Close Tab") { model.closeTab(index) }
             }
             Button("Close Other Tabs") { model.closeOtherTabs(keeping: index) }
@@ -178,8 +178,8 @@ extension AppModel {
         case .savedReport(let id):
             savedReports.first { $0.id == id }?.name ?? String(localized: "Report")
         case .investments: String(localized: "All Holdings")
-        case .portfolio(let id):
-            portfolioAccounts.first { $0.id == id }?.name ?? String(localized: "Portfolio")
+        case .portfolio(let id): portfolioLabel(id)
+        case .panel(let panel): panel.title
         case .security(let key):
             securityCommodity(forKey: key)?.mnemonic ?? String(localized: "Security")
         case .business: String(localized: "Business")
@@ -215,6 +215,27 @@ extension AppModel {
         }
     }
 
+    /// A portfolio's tab name, qualified only when a bare name would be
+    /// ambiguous.
+    ///
+    /// The reference book holds `Assets:Chris Tham:Investments` **and**
+    /// `Assets:Lyn Cheah:Investments`. Two tabs both reading "Investments" name
+    /// nothing, so where a name repeats it takes its parent's:
+    /// "Chris Tham · Investments". Where it does not, the bare name is what a
+    /// person calls it and the qualifier would be noise on all fifteen.
+    func portfolioLabel(_ id: GncGUID) -> String {
+        let all = portfolioAccounts
+        guard let node = all.first(where: { $0.id == id }) else {
+            return String(localized: "Portfolio")
+        }
+        guard all.filter({ $0.name == node.name }).count > 1 else { return node.name }
+        // `fullName` is the colon path; the segment above this one is what
+        // tells the two apart.
+        let parts = node.fullName.split(separator: ":").map(String.init)
+        guard parts.count >= 2 else { return node.name }
+        return "\(parts[parts.count - 2]) · \(node.name)"
+    }
+
     /// Moves to the next tab, wrapping — ⌃⇥, the shortcut macOS uses for this
     /// everywhere. `offset` of -1 is ⌃⇧⇥.
     public func cycleTab(by offset: Int) {
@@ -228,7 +249,7 @@ extension AppModel {
     public func closeOtherTabs(keeping index: Int) {
         let keep = openTabs.indices.contains(index) ? openTabs[index] : nil
         // Descending, so each removal leaves the earlier indices where they are.
-        for candidate in openTabs.indices.reversed() where candidate > 0 {
+        for candidate in openTabs.indices.reversed() where isClosableTab(candidate) {
             if openTabs[candidate] != keep { closeTab(candidate) }
         }
     }

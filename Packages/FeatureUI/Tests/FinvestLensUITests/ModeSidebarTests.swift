@@ -266,11 +266,11 @@ struct ModeSidebarRegressionTests {
         }
 
         // What DashboardView passes: this view's cards, less the hidden ones.
-        let shown = OverviewView.mix.overviewCards.filter { $0 != .alerts && $0 != .wellbeing }
+        let shown = OverviewView.everything.overviewCards.filter { $0 != .alerts && $0 != .wellbeing }
         model.saveOverviewView(named: "Trimmed", cards: shown)
         let saved = try #require(model.customOverviewViews.first)
         #expect(saved.overviewCards == shown)
-        #expect(saved.overviewCards.count < OverviewView.mix.overviewCards.count,
+        #expect(saved.overviewCards.count < OverviewView.everything.overviewCards.count,
                 "the saved view is a copy of its source")
     }
 }
@@ -367,22 +367,46 @@ struct SidebarCreationTests {
         let (model, url) = try model()
         defer { model.close(); try? FileManager.default.removeItem(at: url) }
 
-        model.showMode(.overview)
+        model.showMode(.dashboard)
         model.requestCreate(.budget)
         #expect(model.mode == .planning)
         #expect(model.sidebarSelection == .budgets)
         #expect(model.sidebarCreateRequest == .budget)
     }
 
-    /// Accounts already had a panel; it opens that rather than a second route.
-    @Test("New Account opens the panel that already existed")
+    /// Accounts already had a panel; it opens that rather than a second route —
+    /// and since 16 Aug 2026 that panel opens as a **tab**, not a sheet.
+    ///
+    /// The rule: *a thing you work in is a tab; a question you must answer is a
+    /// sheet.* Every call site still writes `presentedPanel`; the model routes
+    /// it (`RootPanel.opensAsTab`), so the decision lives in one place rather
+    /// than at each of the thirty-odd buttons that open one.
+    @Test("New Account opens as a tab, through the panel it already had")
     func accountUsesItsPanel() throws {
         let (model, url) = try model()
         defer { model.close(); try? FileManager.default.removeItem(at: url) }
 
         model.requestCreate(.account)
-        #expect(model.presentedPanel == .newAccount)
+        #expect(model.presentedPanel == nil, "an editor must not also be a sheet")
+        #expect(model.openTabs.contains(.panel(.newAccount)))
+        #expect(model.sidebarSelection == .panel(.newAccount))
+        #expect(model.mode == .accounts, "an editor opens in the mode that owns it")
         #expect(model.sidebarCreateRequest == nil, "two routes to one editor")
+    }
+
+    /// The other half of the rule: a question stays modal.
+    @Test("A question you must answer is still a sheet")
+    func questionsStayModal() throws {
+        let (model, url) = try model()
+        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+
+        for panel in [RootPanel.closeBook, .taxOptions, .find, .findAccount, .saveSearch] {
+            model.presentedPanel = panel
+            #expect(model.presentedPanel == panel, "\(panel.rawValue) stopped being modal")
+            #expect(!model.openTabs.contains(.panel(panel)),
+                    "\(panel.rawValue) opened a tab as well")
+            model.presentedPanel = nil
+        }
     }
 
     /// A collection row filters by the name the reader sees, not by its key.

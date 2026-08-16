@@ -103,7 +103,7 @@ extension AppModel {
             CategoryBar(label: $0.symbol, current: $0.marketValue ?? 0, prior: nil)
         }
         return ReviewSlide(
-            id: "inv.overview",
+            id: "inv.dashboard",
             kicker: "Investment Review · \(label)",
             headline: headline,
             callouts: callouts,

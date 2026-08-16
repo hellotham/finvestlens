@@ -30,7 +30,7 @@ struct EmergencyRecordsView: View {
                 recordsList
             }
         }
-        .navigationTitle("Emergency Records")
+        .navigationTitle("")   // the tab strip names this destination
         .onChange(of: model.sidebarCreateRequest) {
             guard model.sidebarCreateRequest == .emergencyRecord else { return }
             model.sidebarCreateRequest = nil
@@ -158,7 +158,7 @@ struct AuditLogSheet: View {
                     }
                 }
             }
-            .navigationTitle("Audit Log")
+            .navigationTitle("")   // the tab strip names this destination
             .onEscapeCommand { if !embedded { dismiss() } }
             .toolbar {
                 if !embedded {

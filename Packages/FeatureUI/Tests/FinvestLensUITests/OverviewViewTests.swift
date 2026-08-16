@@ -42,13 +42,13 @@ struct OverviewViewTests {
         let (model, url) = try makeModel()
         defer { model.close(); try? FileManager.default.removeItem(at: url) }
 
-        model.showMode(.overview)
+        model.showMode(.dashboard)
         for view in OverviewView.standards {
             model.navigate(to: .overviewView(view.id))
-            #expect(model.mode == .overview, "view \(view.id) switched mode")
+            #expect(model.mode == .dashboard, "view \(view.id) switched mode")
             for card in view.overviewCards {
                 model.navigate(to: .overviewCard(view: view.id, card: card.rawValue))
-                #expect(model.mode == .overview, "card \(card.rawValue) switched mode")
+                #expect(model.mode == .dashboard, "card \(card.rawValue) switched mode")
             }
         }
     }
@@ -61,7 +61,7 @@ struct OverviewViewTests {
         defer { model.close(); try? FileManager.default.removeItem(at: url) }
 
         model.navigate(to: .overviewView("accounts"))
-        #expect(model.mode == .overview)
+        #expect(model.mode == .dashboard)
 
         // What the button does.
         let target = try #require(model.currentOverviewView.mode)
@@ -73,15 +73,15 @@ struct OverviewViewTests {
     /// must be absent rather than pointing somewhere arbitrary.
     @Test("Mix has no Open button because it has no single mode")
     func mixHasNoDoor() {
-        #expect(OverviewView.mix.mode == nil)
-        #expect(OverviewView.mix.overviewCards.count == OverviewCard.allCases.count)
+        #expect(OverviewView.everything.mode == nil)
+        #expect(OverviewView.everything.overviewCards.count == OverviewCard.allCases.count)
     }
 
     /// A view is a *selection* of cards; each mode-named one carries the cards
     /// that report on it.
     @Test("Each standard view carries its mode's cards")
     func standardViewsCarryTheirCards() {
-        for view in OverviewView.standards where view.id != "mix" {
+        for view in OverviewView.standards where view.id != "overview" {
             guard let mode = view.mode else { continue }
             for card in view.overviewCards {
                 #expect(card.mode == mode,
@@ -102,7 +102,7 @@ struct OverviewViewTests {
     /// board.
     @Test("Every mode contributes at least one card")
     func everyModeContributesACard() {
-        for mode in AppMode.allCases where mode != .overview {
+        for mode in AppMode.allCases where mode != .dashboard {
             let cards = OverviewCard.allCases.filter { $0.mode == mode }
             #expect(!cards.isEmpty, "\(mode.rawValue) contributes no Overview card")
             let view = OverviewView.standards.first { $0.id == mode.rawValue }
@@ -116,7 +116,7 @@ struct OverviewViewTests {
     /// new card cannot be added and left unreachable.
     @Test("A new card lands on the Mix board")
     func mixCarriesEveryCard() {
-        #expect(Set(OverviewView.mix.overviewCards) == Set(OverviewCard.allCases))
+        #expect(Set(OverviewView.everything.overviewCards) == Set(OverviewCard.allCases))
     }
 
     /// A favourite *is* a saved custom view — one concept, not two.
@@ -136,7 +136,7 @@ struct OverviewViewTests {
         #expect(saved.overviewCards == [.income, .expenses])
         // Saving selects it, and selecting it does not leave Overview.
         #expect(model.sidebarSelection == .overviewView(saved.id))
-        #expect(model.mode == .overview)
+        #expect(model.mode == .dashboard)
 
         model.deleteOverviewView(id: saved.id)
         #expect(model.customOverviewViews.isEmpty)
@@ -151,9 +151,9 @@ struct OverviewViewTests {
         defer { model.close(); try? FileManager.default.removeItem(at: url) }
 
         for card in OverviewCard.allCases {
-            model.navigate(to: .overviewCard(view: "mix", card: card.rawValue))
+            model.navigate(to: .overviewCard(view: "overview", card: card.rawValue))
             #expect(model.zoomedOverviewCard == card)
-            #expect(model.mode == .overview)
+            #expect(model.mode == .dashboard)
         }
     }
 
@@ -165,6 +165,6 @@ struct OverviewViewTests {
         defer { model.close(); try? FileManager.default.removeItem(at: url) }
 
         model.navigate(to: .overviewView("no-such-view"))
-        #expect(model.currentOverviewView.id == "mix")
+        #expect(model.currentOverviewView.id == "overview")
     }
 }

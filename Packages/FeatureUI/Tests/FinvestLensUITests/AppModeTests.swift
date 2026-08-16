@@ -55,7 +55,7 @@ struct AppModeTests {
 
     @Test("Destinations are hosted where the design says")
     func hostingMap() {
-        #expect(AppMode(hosting: .dashboard) == .overview)
+        #expect(AppMode(hosting: .dashboard) == .dashboard)
         #expect(AppMode(hosting: .generalLedger) == .accounts)
         #expect(AppMode(hosting: .account(.random())) == .accounts)
         #expect(AppMode(hosting: .investments) == .investments)
@@ -84,22 +84,26 @@ struct AppModeTests {
         // actually carries. `.dashboard` was not, so the sidebar highlighted
         // nothing at launch and clicking Mix opened a second tab of the same
         // board.
-        #expect(AppMode.overview.defaultSelection == .overviewView("mix"))
+        #expect(AppMode.dashboard.defaultSelection == .overviewView("overview"))
     }
 
     // MARK: Toolbar and shortcuts
 
-    @Test("Five modes are on the toolbar, and every mode has a button")
-    func toolbarDefault() {
-        #expect(AppMode.toolbarDefault.count == 5)
-        #expect(AppMode.toolbarDefault == [.overview, .accounts, .investments, .reports, .business])
-        // Planning and Records are modes in full; they are simply not in
-        // everyone's way (navigation-design §4.1a).
-        #expect(!AppMode.planning.isOnToolbarByDefault)
-        #expect(!AppMode.records.isOnToolbarByDefault)
-        // The toolbar lists its items one by one because a customisation id has
-        // to be a constant. This is the guard against that list drifting.
-        #expect(ModeToolbar.modes == AppMode.allCases)
+    /// **Every mode is on the row, all seven.**
+    ///
+    /// The five-of-seven default belonged to the window toolbar, where the
+    /// modes competed with the search field and two of them ended up behind a
+    /// `»`. They have their own row now (`ModeBar`), which holds all seven at
+    /// the narrowest window the app allows — so there is nothing to hide and no
+    /// customisation that could hide it. `AppMode.toolbarDefault` survives only
+    /// because `ModeLabelFit`'s measurements are still expressed in terms of
+    /// it.
+    @Test("Every mode has a button on the mode row")
+    func everyModeHasAButton() {
+        #expect(ModeBar.modes == AppMode.allCases)
+        // Written out rather than derived, so an eighth mode fails here instead
+        // of shipping without a button.
+        #expect(ModeBar.modes.count == 7)
     }
 
     /// ⌘1…⌘n, one per mode and none shared — the reason nothing is hidden by
@@ -192,7 +196,7 @@ struct AppModeTests {
         f.model.selectedAccountID = f.bank
         f.model.close()
 
-        #expect(f.model.mode == .overview)
+        #expect(f.model.mode == .dashboard)
         #expect(f.model.selectedAccountID == nil)
         f.model.showMode(.planning)
         #expect(f.model.sidebarSelection == .planner, "one book's desk opened on top of the next")
@@ -335,7 +339,7 @@ struct SessionCodecTests {
         .vendor(.random()), .job(.random()), .employee(.random()),
         .ruleGroup(UUID()), .emergencyRecord(UUID()), .savedReport(UUID()),
         .security("ASX|BHP"), .report(.balanceSheet),
-        .overviewView("mix"), .overviewCard(view: "mix", card: "netWorth"),
+        .overviewView("overview"), .overviewCard(view: "overview", card: "netWorth"),
     ]
 
     @Test("Every destination survives the round trip")
@@ -346,6 +350,24 @@ struct SessionCodecTests {
             #expect(AppModel.decodeSelection(raw) == selection,
                     "\(selection) encoded as \(raw) and decoded to \(String(describing: AppModel.decodeSelection(raw)))")
         }
+    }
+
+    /// **The 16 Aug 2026 renames must not lose anyone's place.** The mode is
+    /// `dashboard` now and the every-card board is `"overview"`; desk state
+    /// written by any earlier build says `"overview"` and `"mix"`.
+    @Test("Desk state written before the Dashboard rename still restores")
+    func preRenameDeskStateRestores() {
+        #expect(AppModel.decodeMode("overview") == .dashboard, "the old mode name")
+        #expect(AppModel.decodeMode("dashboard") == .dashboard)
+        #expect(AppModel.decodeMode("accounts") == .accounts)
+        #expect(AppModel.decodeMode("no-such-mode") == nil)
+
+        #expect(AppModel.decodeSelection("overviewView:mix") == .overviewView("overview"))
+        #expect(AppModel.decodeSelection("overviewCard:mix/netWorth")
+                == .overviewCard(view: "overview", card: "netWorth"))
+        // A view that was never renamed is untouched.
+        #expect(AppModel.decodeSelection("overviewView:accounts")
+                == .overviewView("accounts"))
     }
 
     /// The pre-P11 spelling still restores rather than dropping the user back
