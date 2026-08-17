@@ -55,7 +55,12 @@ struct LockWidgetSyncTests {
     private func makeBook() throws -> (model: AppModel, url: URL) {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
-        let model = AppModel()
+        // `AllowAllAuthenticator`, not the default `BiometricAuthenticator`.
+        // The real one calls `LAContext.evaluatePolicy`, which on a CI runner
+        // with a logged-in account can evaluate device-password policy and then
+        // block forever on a prompt nobody can answer — this test hung the
+        // FeatureUI job for 22 minutes. BookLockTests already does it this way.
+        let model = AppModel(authenticator: AllowAllAuthenticator())
         try model.newDocument(at: url)
         return (model, url)
     }
