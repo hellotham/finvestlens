@@ -26,11 +26,11 @@ export const site = {
 } as const;
 
 export const release = {
-  version: '1.0',
+  version: '1.1',
   /** Signed with Developer ID and notarized by Apple. */
-  file: 'FinvestLens-1.0.dmg',
-  sizeLabel: '12 MB',
-  sha256: '771621981936fcfcb33fd72f278f2f2bc2503b67317299e02b364e7a90f6908a',
+  file: 'FinvestLens-1.1.dmg',
+  sizeLabel: '15 MB',
+  sha256: '477d4ccd7bf024f463f083835496f8fd1744ba6eee7793fd788befde069d92d9',
   /** Release assets live on GitHub, not in this repository. */
   url: 'https://github.com/hellotham/finvestlens/releases/latest',
   requirements: 'macOS 26 or later · Apple silicon and Intel',
