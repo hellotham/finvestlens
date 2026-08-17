@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -fsSL https://www.gnu.org/licenses/gpl-3.0.txt -o LICENSE)",
+      "Bash(xcodebuild -list -project finvestlens.xcodeproj)",
+      "Bash(xcodebuild build *)",
+      "Bash(ls -d /Users/christie/Library/Developer/Xcode/DerivedData/finvestlens-* 2>/dev/null; echo \"--- size ---\"; du -sh /Users/christie/Library/Developer/Xcode/DerivedData/finvestlens-* 2>/dev/null)",
+      "Bash(rm -rf /Users/christie/Library/Developer/Xcode/DerivedData/finvestlens-aruezuovvqdbgafqoldfgvpgoqui /Users/christie/Library/Developer/Xcode/DerivedData/finvestlens-flhxmemcknirtogzaxzxygdpcowz && echo \"removed\" && ls -d /Users/christie/Library/Developer/Xcode/DerivedData/finvestlens-* 2>/dev/null || echo \"no finvestlens DerivedData remaining\")",
+      "Bash(plutil -lint finvestlens.xcodeproj/xcshareddata/IDETemplateMacros.plist)",
+      "WebFetch(domain:gnucash.org)",
+      "WebFetch(domain:www.gnucash.org)",
+      "Bash(gh api *)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:en.wikipedia.org)",
+      "WebFetch(domain:msmoney.helpmax.net)",
+      "WebFetch(domain:www.tekgia.com)",
+      "WebFetch(domain:docs.firefly-iii.org)",
+      "WebFetch(domain:deepwiki.com)",
+      "WebFetch(domain:frollo.com.au)",
+      "Bash(swift --version)",
+      "Bash(xcodebuild -version)",
+      "Bash(xcode-select -p)",
+      "Bash(ls \"$\\(xcode-select -p\\)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx/\")",
+      "Bash(swift build *)",
+      "Bash(swift test *)",
+      "Bash(gzip -c /tmp/min.gnucash)",
+      "Bash(timeout 180 swift package resolve)",
+      "Bash(swift package *)",
+      "Bash(git checkout *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(grep -E \"objectVersion|// !\\\\$\\\\*UTF8\" finvestlens.xcodeproj/project.pbxproj)",
+      "Bash(grep -nB1 -A6 \"isa = PBXFrameworksBuildPhase\" finvestlens.xcodeproj/project.pbxproj)",
+      "Bash(grep -vE \"^\\\\s*$\")",
+      "Bash(git merge *)",
+      "Bash(git branch *)",
+      "Bash([ -f \"$MEM\" ])"
+    ]
+  }
+}

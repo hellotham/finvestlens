@@ -324,3 +324,69 @@ struct DocumentLinkRoundTripTests {
         #expect(!xml.contains("<trn:slots>"))
     }
 }
+
+@Suite("Text fidelity through XML")
+struct XMLTextFidelityTests {
+
+    @Test("A carriage return survives the round trip")
+    func carriageReturnSurvives() throws {
+        // XML 1.0 §2.11 makes a parser normalise every line ending to #xA
+        // before the application sees it, so a literal CR came back as LF and
+        // import → export → re-import → export stopped being byte-identical.
+        // A character reference is exempt from that normalisation.
+        #expect(GnuCashXMLExporter.escape("one\r\ntwo\rthree") == "one&#13;\ntwo&#13;three")
+
+        let book = Book(baseCurrency: .aud)
+        let bank = book.addAccount(Account(name: "Bank", type: .bank, commodity: .aud))
+        let equity = book.addAccount(Account(name: "Opening", type: .equity, commodity: .aud))
+        let txn = Transaction(currency: .aud, datePosted: Date(timeIntervalSince1970: 0),
+                              description: "Line\rbreak")
+        txn.addSplit(account: bank, value: dec("10"))
+        txn.addSplit(account: equity, value: dec("-10"))
+        book.addTransaction(txn)
+
+        let once = GnuCashXMLExporter.export(book)
+        let reread = try GnuCashXMLImporter.importBook(from: once).book
+        #expect(reread.transactions.first?.transactionDescription == "Line\rbreak")
+        #expect(GnuCashXMLExporter.export(reread) == once)
+    }
+
+    @Test("Characters XML cannot hold are dropped, not written raw")
+    func illegalControlsDropped() {
+        // U+0000–U+001F other than tab/LF/CR have no XML 1.0 representation at
+        // all. Writing one produced a document no parser would reopen — ours
+        // included — so the export silently created an unusable book file.
+        #expect(GnuCashXMLExporter.escape("a\u{0}b\u{1}c\u{1F}d") == "abcd")
+        // Tab and newline are legal in element content and stay literal.
+        #expect(GnuCashXMLExporter.escape("a\tb\nc") == "a\tb\nc")
+        // The original three are untouched by any of this.
+        #expect(GnuCashXMLExporter.escape("a&b<c>d") == "a&amp;b&lt;c&gt;d")
+    }
+}
+
+@Suite("Invoice slot fidelity")
+struct InvoiceSlotFidelityTests {
+
+    @Test("Invoice slots with no field of their own survive import and re-export")
+    func invoiceSlotsSurvive() throws {
+        // Only `credit-note` was read; the rest of the frame was discarded, so
+        // a GnuCash invoice's document links vanished on the next export while
+        // every other object in the file kept its slots.
+        let book = Book(baseCurrency: .aud)
+        _ = book.addAccount(Account(name: "Accounts Receivable", type: .receivable, commodity: .aud))
+        let customer = book.addCustomer(Customer(id: "000001", name: "Acme Pty Ltd", currency: .aud))
+        let invoice = Invoice(id: "INV-1", kind: .invoice, owner: .customer(customer),
+                              currency: .aud)
+        invoice.kvp["assoc_uri"] = .string("file:///invoices/INV-1.pdf")
+        book.addInvoice(invoice)
+
+        let once = GnuCashXMLExporter.export(book)
+        #expect(String(decoding: once, as: UTF8.self).contains("assoc_uri"))
+        let reread = try GnuCashXMLImporter.importBook(from: once).book
+        #expect(reread.invoices.first?.kvp["assoc_uri"] == .string("file:///invoices/INV-1.pdf"))
+        // Lifted out of the bag, not left in it to be written twice.
+        #expect(reread.invoices.first?.kvp["credit-note"] == nil)
+        #expect(reread.invoices.first?.isCreditNote == false)
+        #expect(GnuCashXMLExporter.export(reread) == once)
+    }
+}

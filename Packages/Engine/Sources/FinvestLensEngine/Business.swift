@@ -510,18 +510,27 @@ public final class Invoice: Identifiable, @unchecked Sendable {
     /// The lot the posting and its payments belong to.
     public var postedLot: Lot?
     public var active: Bool
+    /// Invoice slots this app has no field for, kept verbatim so they survive
+    /// a GnuCash round-trip — the same bargain accounts, transactions, splits,
+    /// commodities and lots already make. `credit-note` is lifted out into
+    /// ``isCreditNote`` and is *not* stored here; everything else GnuCash
+    /// wrote (document links, a user's own slots) used to be read and thrown
+    /// away, so it vanished on the next export.
+    public var kvp: KvpFrame
 
     public init(guid: GncGUID = .random(), id: String, kind: InvoiceKind,
                 isCreditNote: Bool = false,
                 owner: BusinessOwner, dateOpened: Date = Date(),
                 datePosted: Date? = nil, dueDate: Date? = nil, terms: BillTerm? = nil,
                 billingID: String = "", notes: String = "", currency: Commodity,
-                entries: [InvoiceEntry] = [], active: Bool = true) {
+                entries: [InvoiceEntry] = [], active: Bool = true,
+                kvp: KvpFrame = KvpFrame()) {
         self.guid = guid; self.id = id; self.kind = kind; self.isCreditNote = isCreditNote
         self.owner = owner
         self.dateOpened = dateOpened; self.datePosted = datePosted; self.dueDate = dueDate
         self.terms = terms; self.billingID = billingID; self.notes = notes
         self.currency = currency; self.entries = entries; self.active = active
+        self.kvp = kvp
     }
 
     public var isPosted: Bool { datePosted != nil }

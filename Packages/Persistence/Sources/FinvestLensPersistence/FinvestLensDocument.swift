@@ -76,7 +76,13 @@ public final class FinvestLensDocument {
     private var store: SQLiteDocumentStore
     /// Hash of the shared file as of open / last successful save — for conflict
     /// detection (`FR-DAT-08`).
-    private var baselineFingerprint: Data
+    ///
+    /// `nil` means "no baseline to compare against": the last write-back
+    /// succeeded but re-reading the file to fingerprint it did not. Conflict
+    /// detection skips rather than accusing, and the next save re-establishes
+    /// it — the alternative, keeping the pre-save hash, made a document refuse
+    /// every subsequent save for the rest of the session.
+    private var baselineFingerprint: Data?
 
     private init(fileURL: URL, book: Book, lock: FileLock, lockHeld: Bool,
                  workingCopyURL: URL, store: SQLiteDocumentStore,
@@ -154,12 +160,24 @@ public final class FinvestLensDocument {
     /// set — checked before anything is written, since a file at this path
     /// could be someone else's real, currently-open document and the write
     /// below is not reversible.
+    ///
+    /// The refusal is keyed on the lock file **existing**, not on a holder
+    /// decoding out of it. `currentHolder()` returns nil for a lock that is
+    /// present but unreadable — a crash mid-create, zero bytes, an
+    /// undownloaded cloud placeholder — and reading that as "no lock" let the
+    /// irreversible write below run over a real document and then delete it
+    /// on the way out. ``FileLock/isStale()`` already treats an unreadable
+    /// lock as stale-but-present, which is the judgement wanted here.
     public static func create(at fileURL: URL, baseCurrency: Commodity = .aud,
                               breakStaleLock: Bool = false) throws -> FinvestLensDocument {
         let lock = FileLock(documentURL: fileURL)
-        if let holder = lock.currentHolder(), !lock.isStale() || !breakStaleLock {
-            throw FileLock.LockError.alreadyLocked(holder)
+        if FileManager.default.fileExists(atPath: lock.lockURL.path),
+           !lock.isStale() || !breakStaleLock {
+            throw FileLock.LockError.alreadyLocked(lock.currentHolder() ?? FileLock.unreadableHolder)
         }
+        // Whether this call is the one that brings the file into existence
+        // decides whether the failure path below may remove it.
+        let preexisting = FileManager.default.fileExists(atPath: fileURL.path)
 
         let workingCopyURL = Self.makeWorkingCopyURL()
         let store = try SQLiteDocumentStore(path: workingCopyURL.path)
@@ -172,10 +190,10 @@ public final class FinvestLensDocument {
             lockHeld = try Self.acquireLockIfPossible(lock, breakStaleLock: breakStaleLock)
         } catch {
             // A live lock on a file we just created — don't leave an
-            // unlockable orphan behind. (Pre-existing content at this path
-            // was already refused above, before any write, so this only
-            // ever removes a file this call itself just wrote.)
-            try? FileManager.default.removeItem(at: fileURL)
+            // unlockable orphan behind. Only ever remove a file this call
+            // itself brought into existence: replacing content that was
+            // already there is bad enough without deleting it too.
+            if !preexisting { try? FileManager.default.removeItem(at: fileURL) }
             throw error
         }
 
@@ -280,16 +298,27 @@ public final class FinvestLensDocument {
         // A read-only session never touches the shared file (FR-DAT-06).
         if isReadOnly { throw DocumentError.readOnly }
         // Detect an out-of-band change to the shared file (bypassed lock, etc.).
-        if FileManager.default.fileExists(atPath: fileURL.path) {
+        if FileManager.default.fileExists(atPath: fileURL.path),
+           let baseline = baselineFingerprint {
             let current = try Self.fingerprint(of: fileURL)
-            if current != baselineFingerprint {
+            if current != baseline {
                 throw DocumentError.conflict
             }
         }
 
         try store.write(book, progress: progress)                // in-memory → working copy
         try Self.replaceItem(at: fileURL, withContentsOf: workingCopyURL)  // atomic write-back
-        baselineFingerprint = try Self.fingerprint(of: fileURL)
+
+        // The write-back has landed; everything below is bookkeeping. It must
+        // not be able to throw. Re-reading the file we just wrote goes through
+        // NSFileCoordinator on a NAS/iCloud path, and a failure there used to
+        // leave `baselineFingerprint` naming the *pre-save* file while the
+        // document stayed dirty — so the next save read its own successful
+        // write as an out-of-band change and refused with `.conflict` for the
+        // rest of the session. A fingerprint we cannot take is recorded as
+        // "no baseline"; conflict detection then re-baselines on the next save
+        // rather than accusing the user of a conflict that never happened.
+        baselineFingerprint = try? Self.fingerprint(of: fileURL)
         hasUnsavedChanges = false
         if advisoryLockHeld { heartbeat() }
     }
@@ -339,8 +368,13 @@ public final class FinvestLensDocument {
     /// external writer or an iCloud sync from another device.
     public func hasExternalChanges() -> Bool {
         guard FileManager.default.fileExists(atPath: fileURL.path),
-              let current = try? Self.fingerprint(of: fileURL) else { return false }
-        return current != baselineFingerprint
+              let current = try? Self.fingerprint(of: fileURL),
+              // No baseline means the last save landed but could not be
+              // re-read to fingerprint it. That is our own write, not an
+              // external one — reporting a change here would prompt the user
+              // to reload over their own edits.
+              let baseline = baselineFingerprint else { return false }
+        return current != baseline
     }
 
     /// Reloads the book from the shared file, adopting external changes and

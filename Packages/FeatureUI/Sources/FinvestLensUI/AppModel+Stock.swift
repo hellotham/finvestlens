@@ -135,7 +135,12 @@ extension AppModel {
         date: Date,
         description: String,
         memo: String = "",
-        reference: String = ""
+        reference: String = "",
+        // Whether `reference` is a broker-unique id. `true` for a reference a
+        // person typed into the Stock Transaction sheet, which is a deliberate
+        // act; the import path passes the staged row's own flag, because QIF
+        // puts the *action verb* in that field — see below.
+        referenceIsBankUnique: Bool = true
     ) throws -> GncGUID {
         guard let book else { throw StockEntryError.noBook }
         let commissionAccount = commissionID.flatMap { book.account(with: $0) }
@@ -210,7 +215,15 @@ extension AppModel {
             // stamp it — it is the only thing that lets a re-imported
             // overlapping statement recognise an already-posted trade
             // (investment rows never pass through the cash matcher).
-            if !reference.isEmpty {
+            //
+            // Only a genuinely unique id may go there, for the same reason the
+            // cash path checks: `importedInvestmentReferences()` harvests every
+            // `online_id` in the book and the review sheet drops any row whose
+            // reference is among them. QIF writes the action verb into that
+            // field, so the first imported "Buy" used to claim the slot and
+            // every later Buy in every later file was silently dropped as
+            // already-recorded.
+            if referenceIsBankUnique, !reference.isEmpty {
                 txn.splits.first?.kvp["online_id"] = .string(reference)
             }
             book.addTransaction(txn)

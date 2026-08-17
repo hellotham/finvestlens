@@ -69,13 +69,17 @@ public struct AlphaVantageQuoteProvider: QuoteProvider {
         try checkForNotice(data)
         let response = try JSONDecoder().decode(TimeSeriesResponse.self, from: data)
         guard let series = response.series else { throw QuoteError.noData }
-        // Bar dates are day-only (UTC midnight); `from`/`to` usually carry a
-        // wall-clock time, so compare at UTC day granularity or the first/last
-        // day of the window would be dropped.
-        var utc = Calendar(identifier: .gregorian)
-        utc.timeZone = TimeZone(identifier: "UTC")!
-        let fromDay = utc.startOfDay(for: from)
-        let toDay = utc.startOfDay(for: to)
+        // `from`/`to` usually carry a wall-clock time, so the window has to be
+        // compared at civil-day granularity or its edges are lost.
+        //
+        // Both ends are reduced to the same representative instant the bars
+        // themselves parse to. Bounding with `startOfDay` looked equivalent
+        // and was not: `QuoteDate.date(from:)` returns **10:59Z** — the
+        // day-neutral instant this module stores every date-only price at —
+        // so the last day's bar was tested as `10:59 <= 00:00` and silently
+        // dropped from every window ever requested.
+        let fromDay = QuoteDate.dayNeutral(from)
+        let toDay = QuoteDate.dayNeutral(to)
         var quotes: [Quote] = []
         for (dateString, bar) in series {
             guard let date = QuoteDate.date(from: dateString), date >= fromDay, date <= toDay,

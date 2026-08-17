@@ -23,7 +23,30 @@ public enum IntentSupport {
     static func lastBook() -> Book? {
         guard let path = UserDefaults.standard.string(forKey: "finvestlens.lastBookPath"),
               FileManager.default.fileExists(atPath: path) else { return nil }
-        return try? SQLiteDocumentStore(path: path).read()
+        // **Read-only**, which is what every caller here is. The read-write
+        // initialiser runs the migrator, so a Spotlight or Siri query would
+        // `ALTER TABLE` the user's live shared book — uncoordinated, holding no
+        // lock, while the app has it open. That changes the file's bytes, so
+        // the app's next save compares against a fingerprint that no longer
+        // matches and throws `DocumentError.conflict`, and the external-change
+        // watcher starts offering to reload the user's own edits away. The
+        // v5_invoice_kvp migration made this reachable rather than theoretical.
+        guard let book = try? SQLiteDocumentStore(readOnlyPath: path).read() else { return nil }
+        // A book behind Face/Touch ID (`NFR-07`) stays behind it here too.
+        // These entry points answer Spotlight, Shortcuts and Siri without any
+        // window, so nothing else would ever put the lock in front of them —
+        // account names and balances would have been readable from the Lock
+        // Screen on a book the user explicitly gated.
+        guard !requiresAuthentication(book) else { return nil }
+        return book
+    }
+
+    /// Whether the book's own KVP asks for authentication — the same key
+    /// `AppModel.requireAuthentication` reads, checked here without an
+    /// `AppModel` because these entry points run outside the app's UI.
+    static func requiresAuthentication(_ book: Book) -> Bool {
+        if case let .int64(v)? = book.kvp["finvestlens/requireAuth"] { return v != 0 }
+        return false
     }
 
     static func baseCurrency(_ book: Book) -> Commodity {
@@ -77,10 +100,17 @@ public enum IntentSupport {
     /// indexing. Balances are in each account's own commodity.
     public static func accounts() -> [AccountInfo] {
         guard let book = lastBook() else { return [] }
+        // One walk for every balance, not one walk per account. `balance(of:)`
+        // scans the whole book each time it is called, so asking it for all of
+        // them is accounts × transactions — on the reference book 559 × 46,553
+        // splits, and Spotlight calls this while the user is still typing.
+        // `balancesByAccount` exists for exactly this shape and matches it
+        // exactly: own balance, no descendants, every split.
+        let balances = book.balancesByAccount()
         return book.accounts
             .filter { !$0.isPlaceholder }
             .map { account in
-                let amount = book.balance(of: account).amount
+                let amount = balances[ObjectIdentifier(account)] ?? 0
                 return AccountInfo(id: account.guid.hexString, name: account.fullName,
                                    balance: Money(amount, account.commodity).formatted())
             }
@@ -150,13 +180,4 @@ public enum IntentSupport {
         )
     }
 
-    /// Recomputes and writes the snapshot, then asks WidgetKit to reload. Safe to
-    /// call after every refresh/save; a no-op for the file write when the App
-    /// Group is not yet provisioned.
-    public static func publishWidgetSnapshot() {
-        snapshot().write()
-        #if canImport(WidgetKit)
-        WidgetCenter.shared.reloadAllTimelines()
-        #endif
-    }
 }

@@ -326,7 +326,13 @@ enum GnuCashScheduledBudgetImport {
                 for (accountHex, periods) in record.lines {
                     guard let accountGUID = GncGUID(hex: accountHex),
                           book.account(with: accountGUID) != nil, !periods.isEmpty else { continue }
-                    let flat = periods[0] ?? periods.values.first ?? 0
+                    // The headline amount is period 0's, or — when a budget
+                    // starts numbering later — the earliest period it defines.
+                    // `periods.values.first` was an arbitrary element of an
+                    // unordered Dictionary, so a budget without a period 0
+                    // took a different flat amount on different runs of the
+                    // same import.
+                    let flat = periods[0] ?? periods.min { $0.key < $1.key }?.value ?? 0
                     lines.append(BudgetLine(accountGUID: accountGUID, amount: flat, periodAmounts: periods))
                 }
                 return Budget(id: GncGUID(hex: record.guid) ?? .random(),

@@ -526,11 +526,25 @@ private final class Delegate: NSObject, XMLParserDelegate {
         case "split:slots":
             split?.kvp = frame
         case "invoice:slots":
-            // The one invoice slot GnuCash writes: the credit-note marker
-            // (deferred.md FR-BUS-01) — lifted onto the model.
+            // The credit-note marker (deferred.md FR-BUS-01) is lifted onto
+            // the model; everything else is kept for a faithful re-export, as
+            // every other slot container here does. Reading only the one slot
+            // and discarding the frame meant a GnuCash invoice's document
+            // links — and any slot a user had added — disappeared on the next
+            // export, breaking the round-trip invariant.
+            //
+            // The key is removed whatever type it arrived as. Removing it only
+            // on the `.int64` branch meant a `credit-note` written as any other
+            // type stayed in the bag, and the exporter — which appends its own
+            // unconditionally — then emitted **two** `credit-note` slots in one
+            // `invoice:slots` block. `slots` is an array, so nothing deduped
+            // them, and the round-trip invariant broke on the very file the
+            // fidelity work was meant to protect.
             if case let .int64(flag)? = frame["credit-note"] {
                 invoice?.isCreditNote = (flag != 0)
             }
+            frame["credit-note"] = nil
+            invoice?.kvp = frame
         case "cmdty:slots":
             commodity?.kvp = frame
         case "lot:slots":
@@ -865,7 +879,8 @@ private final class Delegate: NSObject, XMLParserDelegate {
                                   dateOpened: b.opened ?? Date(), datePosted: b.posted,
                                   terms: b.termsGUID.flatMap { terms[$0] }, billingID: b.billingID,
                                   notes: b.notes, currency: currency(b.currencySpace, b.currencyID),
-                                  entries: entriesByInvoice[guid] ?? [], active: b.active)
+                                  entries: entriesByInvoice[guid] ?? [], active: b.active,
+                                  kvp: b.kvp)
             invoice.postedAccount = account(b.postAccountGUID)
             invoice.postedTransaction = b.postTxnGUID.flatMap { g in book.transactions.first { $0.guid == g } }
             invoice.postedLot = b.postLotGUID.flatMap { lots[$0] }
@@ -990,6 +1005,8 @@ struct InvoiceBuilder {
     var termsGUID: GncGUID?; var billingID = ""; var notes = ""; var active = true
     var currencySpace: String?; var currencyID: String?
     var postAccountGUID: GncGUID?; var postTxnGUID: GncGUID?; var postLotGUID: GncGUID?
+    /// Slots with no field of their own, carried so re-export is faithful.
+    var kvp = KvpFrame()
 }
 struct EntryBuilder {
     var guid: GncGUID?; var date: Date?; var entered: Date?

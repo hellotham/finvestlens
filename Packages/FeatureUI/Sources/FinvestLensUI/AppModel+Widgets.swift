@@ -58,7 +58,13 @@ extension AppModel {
         // kill the whole suite mid-run. A missing bundle identifier is the
         // reliable tell across XCTest and swift-testing runners.
         guard Bundle.main.bundleIdentifier != nil else { return }
-        guard let book else {
+        // A book the user has put behind Face/Touch ID must not have its net
+        // worth and bill amounts rendered on the Lock Screen, pushed as
+        // notification bodies, or returned to Spotlight. The lock gate covers
+        // the window; these surfaces are outside it, so they need the same
+        // check. Publishing the placeholder (rather than returning early)
+        // also clears any snapshot written before the book was locked.
+        guard let book, !requireAuthentication || !isLocked else {
             publish(.placeholder)
             Task { await AlertNotificationScheduler.cancelAll() }
             return

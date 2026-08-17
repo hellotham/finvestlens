@@ -224,7 +224,8 @@ struct AppImportTests {
         // Now the CMA statement reports the same $5,000 arriving.
         let staged = [StagedTransaction(date: Date(timeIntervalSince1970: 1_770_000_000),
                                         amount: Decimal(5000), payee: "From Smsf Pty Ltd Atf",
-                                        reference: "RCPT-72063013")]
+                                        reference: "RCPT-72063013",
+                                        referenceIsBankUnique: true)]
         let results = model.matchStaged(staged, intoAccountID: cma)
         let row = try #require(results.first)
         #expect(row.transferSplitID != nil)
@@ -256,7 +257,8 @@ struct AppImportTests {
 
         let staged = [StagedTransaction(date: Date(timeIntervalSince1970: 1_600_000_000),
                                         amount: Decimal(string: "-52.30")!, payee: "Woolworths",
-                                        reference: "FIT-777")]
+                                        reference: "FIT-777",
+                                        referenceIsBankUnique: true)]
         let results = model.matchStaged(staged, intoAccountID: bank)
         #expect(results.first?.isDuplicate == true)
         #expect(model.importMatched(results, intoAccountID: bank) == 0)

@@ -120,12 +120,30 @@ public extension Book {
         invoice.postedLot = nil
     }
 
-    /// The amount still outstanding on a posted invoice (0 if unposted or paid).
-    /// Always non-negative: it is the magnitude of the lot balance.
+    /// The amount still outstanding on a posted invoice (0 if unposted or paid),
+    /// signed in the **owed** direction: positive is money still owed, negative
+    /// is money owed back — a credit note.
+    ///
+    /// It used to return the magnitude, which read a credit note as a positive
+    /// receivable: a $1,000 invoice plus a $200 credit note aged as $1,200
+    /// owing instead of $800, and `applyPayment` then treated the credit note
+    /// as an open document and paid *into* it, so paying the true balance in
+    /// full left the customer still showing a debt. The A/R–A/P direction is
+    /// what the sign has to be normalised against, not the amount's own sign.
     func outstanding(_ invoice: Invoice) -> Decimal {
         guard let lot = invoice.postedLot else { return 0 }
-        let balance = lot.balance
-        return balance < 0 ? -balance : balance
+        // A/R lots carry a debit balance when money is owed, A/P lots a credit
+        // one — the same `receivable ? total : -total` the posting applies.
+        return Self.isReceivable(invoice.kind) ? lot.balance : -lot.balance
+    }
+
+    /// ``outstanding(_:)`` as it stood on `date` — payments made after it are
+    /// not counted, and an invoice posted after it is not yet outstanding.
+    func outstanding(_ invoice: Invoice, asOf date: Date) -> Decimal {
+        guard let lot = invoice.postedLot,
+              let posted = invoice.datePosted, posted <= date else { return 0 }
+        let balance = lot.balance(asOf: date)
+        return Self.isReceivable(invoice.kind) ? balance : -balance
     }
 }
 

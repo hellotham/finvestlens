@@ -258,3 +258,124 @@ struct SidebarReorderTests {
         #expect(order(f) == ["A", "B", "C"], "an account moved past the start")
     }
 }
+
+@MainActor
+@Suite("Sidebar drag-reorder placement")
+struct SidebarPlacementTests {
+
+    /// Closes the document and removes it. Without this each test leaks a
+    /// `.finvestlens` file, its lock sidecar and working copy, leaves quote and
+    /// maintenance timers running for the rest of the process, and leaves
+    /// `finvestlens.lastBookPath` pointing at a temp book that other suites in
+    /// this same target read.
+    private func tearDown(_ model: AppModel, _ url: URL) {
+        model.close()
+        try? FileManager.default.removeItem(at: url)
+    }
+
+
+    private struct Fixture {
+        let model: AppModel
+        let url: URL
+        let ids: [String: GncGUID]
+    }
+
+    /// Four top-level siblings, A B C D, in that manual order.
+    private func makeFixture() throws -> Fixture {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
+        let model = AppModel()
+        try model.newDocument(at: url)
+        var ids: [String: GncGUID] = [:]
+        for (index, name) in ["A", "B", "C", "D"].enumerated() {
+            let id = try #require(model.addAccount(name: name, type: .bank))
+            model.book?.account(with: id)?.sidebarOrder = index
+            ids[name] = id
+        }
+        return Fixture(model: model, url: url, ids: ids)
+    }
+
+    private func order(_ f: Fixture) -> [String] {
+        (f.model.book?.rootAccount.children ?? [])
+            .filter { ["A", "B", "C", "D"].contains($0.name) }
+            .sorted { ($0.sidebarOrder ?? .max) < ($1.sidebarOrder ?? .max) }
+            .map(\.name)
+    }
+
+    @Test("Dropping A after B puts it directly after B, not one past it")
+    func downwardDropDoesNotOvershoot() throws {
+        // The drop handler passed an index counted in the list that still
+        // contained the dragged row, while the reorder removed it first — so
+        // every downward drop landed one row too far.
+        let f = try makeFixture()
+        defer { tearDown(f.model, f.url) }
+        f.model.reorderAccount(f.ids["A"]!, .after(f.ids["B"]!))
+        #expect(order(f) == ["B", "A", "C", "D"])
+    }
+
+    @Test("Dropping upward lands where it did before")
+    func upwardDropUnchanged() throws {
+        let f = try makeFixture()
+        defer { tearDown(f.model, f.url) }
+        f.model.reorderAccount(f.ids["D"]!, .before(f.ids["B"]!))
+        #expect(order(f) == ["A", "D", "B", "C"])
+    }
+
+    @Test("Dropping after the last row puts it last")
+    func dropAtTheEnd() throws {
+        let f = try makeFixture()
+        defer { tearDown(f.model, f.url) }
+        f.model.reorderAccount(f.ids["A"]!, .after(f.ids["D"]!))
+        #expect(order(f) == ["B", "C", "D", "A"])
+    }
+
+    @Test("A drop that changes nothing records no undo step")
+    func noOpDrop() throws {
+        let f = try makeFixture()
+        defer { tearDown(f.model, f.url) }
+        let undo = UndoManager()
+        f.model.undoManager = undo
+        f.model.reorderAccount(f.ids["A"]!, .before(f.ids["B"]!))
+        #expect(order(f) == ["A", "B", "C", "D"])
+        #expect(!undo.canUndo)
+        // …and a real move does register one, so the check above means
+        // something.
+        f.model.reorderAccount(f.ids["A"]!, .after(f.ids["B"]!))
+        #expect(undo.canUndo)
+    }
+
+    @Test("Placement is by neighbour identity, so a hidden sibling cannot shift it")
+    func hiddenSiblingIgnored() throws {
+        // Honest about what this pins. `siblings(of:)` does not filter hidden
+        // accounts, so setting the flag changes nothing here — that is the
+        // point: the neighbour-named API resolves the target by identity after
+        // the removal, so no index crosses the visible/stored boundary and the
+        // hidden row is structurally incapable of shifting the result. The
+        // integer API could not make that claim. Driving the actual drop
+        // handler needs `AccountRowDrop`, which is not reachable from a unit
+        // test — that path stays covered only by the API it now calls.
+        let f = try makeFixture()
+        defer { tearDown(f.model, f.url) }
+        f.model.book?.account(with: f.ids["A"]!)?.isHidden = true
+        f.model.reorderAccount(f.ids["D"]!, .after(f.ids["B"]!))
+        #expect(order(f) == ["A", "B", "D", "C"])
+        // Same move, hidden flag cleared: identical result, proving placement
+        // does not consult visibility at all.
+        let g = try makeFixture()
+        defer { tearDown(g.model, g.url) }
+        g.model.reorderAccount(g.ids["D"]!, .after(g.ids["B"]!))
+        #expect(order(g) == order(f))
+    }
+
+    @Test("Nudging still moves exactly one place in each direction")
+    func nudgeUnaffected() throws {
+        // `nudgeAccount` speaks the other index convention; the new API must
+        // not have disturbed it.
+        let f = try makeFixture()
+        defer { tearDown(f.model, f.url) }
+        f.model.nudgeAccount(f.ids["C"]!, by: -1)
+        #expect(order(f) == ["A", "C", "B", "D"])
+        f.model.nudgeAccount(f.ids["C"]!, by: 1)
+        #expect(order(f) == ["A", "B", "C", "D"])
+    }
+}

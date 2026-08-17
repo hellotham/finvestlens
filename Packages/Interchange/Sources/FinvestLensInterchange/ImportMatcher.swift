@@ -387,7 +387,12 @@ public enum ImportMatcher {
             // statement's entries).
             func amountCandidate(_ split: Split) -> Bool {
                 guard split.account?.commodity.round(split.quantity) == amount else { return false }
-                if !row.reference.isEmpty, case .string? = split.kvp["online_id"] { return false }
+                // Only a bank-unique id on *both* sides makes a mismatch
+                // definitive. A free-text row reference (a CSV "Reference"
+                // column) says nothing about a split carrying a real FITID,
+                // and vetoing on it hid legitimate matches.
+                if row.referenceIsBankUnique, !row.reference.isEmpty,
+                   case .string? = split.kvp["online_id"] { return false }
                 return true
             }
 
@@ -401,7 +406,13 @@ public enum ImportMatcher {
             if !row.reference.isEmpty {
                 for split in targetSplits where !claimed.contains(split.guid) {
                     guard let transaction = split.transaction else { continue }
-                    if case let .string(onlineID)? = split.kvp["online_id"],
+                    // Unconditional *only* for a bank-unique id. A CSV
+                    // "Reference" column lands in the same slot but is free
+                    // text the payer chose, and it repeats: matching on it
+                    // alone made February's larger rent payment a duplicate of
+                    // January's and skipped it silently.
+                    if row.referenceIsBankUnique,
+                       case let .string(onlineID)? = split.kvp["online_id"],
                        onlineID == row.reference {
                         return split
                     }

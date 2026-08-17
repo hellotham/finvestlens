@@ -110,7 +110,12 @@ public enum RuleEngine {
     }
 
     private static func matchesAmount(_ amount: Decimal, _ trigger: RuleTrigger) -> Bool {
-        guard let value = Decimal(string: trigger.value) else { return false }
+        // The threshold is text a person typed, so it is read with the app's
+        // one money parser rather than `Decimal(string:)`. That initialiser
+        // stops at the first character it cannot use and returns what it has,
+        // so "1,000" became **1** and a rule meant for large transactions
+        // matched everything over a dollar — with nothing on screen to say so.
+        guard let value = MoneyParsing.amount(trigger.value) else { return false }
         switch trigger.op {
         case .equals: return amount == value
         case .greaterThan: return amount > value

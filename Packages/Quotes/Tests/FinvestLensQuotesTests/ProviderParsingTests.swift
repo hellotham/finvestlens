@@ -355,3 +355,85 @@ struct AlphaVantageEmptyQuoteTests {
         }
     }
 }
+
+@Suite("Alpha Vantage history window")
+struct AlphaVantageWindowTests {
+
+    static let seriesJSON = """
+    {"Meta Data":{"2. Symbol":"IBM"},
+     "Time Series (Daily)":{
+       "2026-08-12":{"4. close":"100.00"},
+       "2026-08-13":{"4. close":"101.00"},
+       "2026-08-14":{"4. close":"102.00"}}}
+    """
+
+    @Test("The last day of the window is returned, not dropped")
+    func lastDayKept() throws {
+        // Bars parse to 10:59Z (the module's day-neutral instant) but the
+        // window's end was built with `startOfDay` — 00:00Z — so the final
+        // day was tested as `10:59 <= 00:00` and silently lost from every
+        // history request ever made.
+        let quotes = try AlphaVantageQuoteProvider.parseHistory(
+            Data(Self.seriesJSON.utf8), fallbackSymbol: "IBM",
+            from: QuoteDate.date(from: "2026-08-12")!,
+            to: QuoteDate.date(from: "2026-08-14")!)
+        #expect(quotes.count == 3)
+        #expect(quotes.last?.price == dec("102.00"))
+        #expect(quotes.last?.date == QuoteDate.date(from: "2026-08-14"))
+    }
+
+    @Test("Both edges are inclusive, and a wall-clock time on either does not shift them")
+    func edgesAreInclusive() throws {
+        // A caller passing "now" rather than a clean day must get the same
+        // window; the comparison is by civil day.
+        let from = QuoteDate.date(from: "2026-08-13")!.addingTimeInterval(6 * 3600)
+        let to = QuoteDate.date(from: "2026-08-14")!.addingTimeInterval(-6 * 3600)
+        let quotes = try AlphaVantageQuoteProvider.parseHistory(
+            Data(Self.seriesJSON.utf8), fallbackSymbol: "IBM", from: from, to: to)
+        #expect(quotes.count == 2)
+        #expect(quotes.first?.date == QuoteDate.date(from: "2026-08-13"))
+        #expect(quotes.last?.date == QuoteDate.date(from: "2026-08-14"))
+    }
+
+    @Test("A window that excludes everything still throws rather than returning nothing")
+    func emptyWindow() {
+        #expect(throws: (any Error).self) {
+            try AlphaVantageQuoteProvider.parseHistory(
+                Data(Self.seriesJSON.utf8), fallbackSymbol: "IBM",
+                from: QuoteDate.date(from: "2026-09-01")!,
+                to: QuoteDate.date(from: "2026-09-30")!)
+        }
+    }
+}
+
+@Suite("Exchange timezone for offset-less providers")
+struct ExchangeTimeZoneTests {
+
+    @Test("A suffixed ticker reads its own exchange's clock")
+    func suffixedTickers() {
+        #expect(QuoteService.exchangeTimeZone(forSymbol: "CBA.AX").identifier == "Australia/Sydney")
+        #expect(QuoteService.exchangeTimeZone(forSymbol: "VOD.L").identifier == "Europe/London")
+        #expect(QuoteService.exchangeTimeZone(forSymbol: "7203.T").identifier == "Asia/Tokyo")
+        #expect(QuoteService.exchangeTimeZone(forSymbol: "SHOP.TO").identifier == "America/Toronto")
+    }
+
+    @Test("A bare ticker is a US listing; an unknown suffix falls to UTC")
+    func bareAndUnknown() {
+        #expect(QuoteService.exchangeTimeZone(forSymbol: "IBM").identifier == "America/New_York")
+        // Never the reader's own zone: it says nothing about where the
+        // security trades, and it dated every US close a day late in Sydney.
+        #expect(QuoteService.exchangeTimeZone(forSymbol: "XYZ.ZZZ").secondsFromGMT() == 0)
+    }
+
+    @Test("A New York close keeps its own civil day whoever is reading")
+    func closeKeepsItsDay() {
+        // 14 Aug 2026, 16:00 America/New_York (EDT, UTC−4) = 20:00Z. In
+        // Sydney that instant is 06:00 on the 15th, which is exactly the
+        // day the reader's own calendar used to stamp it with.
+        let close = Date(timeIntervalSince1970: 1_786_737_600)
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = QuoteService.exchangeTimeZone(forSymbol: "IBM")
+        let day = cal.dateComponents([.year, .month, .day], from: close)
+        #expect(day.year == 2026 && day.month == 8 && day.day == 14)
+    }
+}

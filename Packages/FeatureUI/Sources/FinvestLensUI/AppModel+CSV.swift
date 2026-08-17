@@ -34,24 +34,38 @@ public struct CSVImportProfile: Codable, Identifiable, Hashable, Sendable {
     public var id: UUID
     public var name: String
     public var dateColumn: Int
-    public var amountColumn: Int
+    /// A single signed-amount column. Optional because a great many bank
+    /// exports have no such column at all — they carry a *pair*
+    /// (``debitColumn``/``creditColumn``) instead, and a profile for one of
+    /// those files has no amount column to name.
+    ///
+    /// Widening `Int` to `Int?` is safe for every profile already saved: a
+    /// present value still decodes as `.some`. The reverse — adding a
+    /// non-optional field — would have failed to decode all of them, which is
+    /// why the fields below were optional from the day they were added.
+    public var amountColumn: Int?
+    /// Added after the first release, so all five decode as absent from a
+    /// profile saved before they existed — `nil`/0 is exactly what those
+    /// profiles meant.
+    public var debitColumn: Int?
+    public var creditColumn: Int?
     public var payeeColumn: Int
     public var dateFormat: String
     public var hasHeader: Bool
-    /// Added after the first release, so all three decode as absent from a
-    /// profile saved before they existed — `nil`/0 is exactly what those
-    /// profiles meant.
     public var memoColumn: Int?
     public var referenceColumn: Int?
     public var skipRows: Int?
 
-    public init(id: UUID = UUID(), name: String, dateColumn: Int, amountColumn: Int,
+    public init(id: UUID = UUID(), name: String, dateColumn: Int, amountColumn: Int?,
                 payeeColumn: Int, dateFormat: String, hasHeader: Bool,
+                debitColumn: Int? = nil, creditColumn: Int? = nil,
                 memoColumn: Int? = nil, referenceColumn: Int? = nil, skipRows: Int? = nil) {
         self.id = id
         self.name = name
         self.dateColumn = dateColumn
         self.amountColumn = amountColumn
+        self.debitColumn = debitColumn
+        self.creditColumn = creditColumn
         self.payeeColumn = payeeColumn
         self.dateFormat = dateFormat
         self.hasHeader = hasHeader
@@ -59,6 +73,7 @@ public struct CSVImportProfile: Codable, Identifiable, Hashable, Sendable {
         self.referenceColumn = referenceColumn
         self.skipRows = skipRows
     }
+
 }
 
 @MainActor

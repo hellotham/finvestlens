@@ -172,6 +172,19 @@ public enum CostBasis {
     /// The conventional short/long-term boundary (one year).
     public static let defaultLongTermThresholdDays = 365
 
+    /// Share counts below this are arithmetic dust, not a position.
+    ///
+    /// A stock-split rescale multiplies every open lot by `(net + delta) / net`,
+    /// and `Decimal` cannot represent a ratio whose denominator has a prime
+    /// factor other than 2 or 5: a 4-for-3 bonus issue on 3 shares gives
+    /// 3.999…9, not 4. Testing exhaustion with `== 0` then left ~1e-37 of a
+    /// share unsold after a *full* disposal, which opened a phantom short — so
+    /// a holding the user had closed entirely kept reporting a negative share
+    /// count, an average cost of 0, and a realised gain of 1e-37 on the next
+    /// buy. 1e-12 is far below any real fractional holding (crypto and DRP
+    /// fractions run to ~8-10 places) and far above the residue.
+    static let quantityEpsilon = Decimal(sign: .plus, exponent: -12, significand: 1)
+
     /// Matches disposals against acquisitions by `method`, producing open lots
     /// and a realised-gain record per matched parcel.
     ///
@@ -321,7 +334,7 @@ public enum CostBasis {
                     shorts[index].remainingFee -= shortFee
                     shorts[index].remainingShares -= cover
                     quantity -= cover
-                    if shorts[index].remainingShares == 0 { shorts.remove(at: index) }
+                    if shorts[index].remainingShares <= Self.quantityEpsilon { shorts.remove(at: index) }
                 }
                 if quantity > 0 {
                     open.append(MutableLot(date: event.date, remaining: quantity, costPerShare: perShare))
@@ -335,7 +348,7 @@ public enum CostBasis {
                 var proceedsRemaining = -event.value
                 var feeRemaining = includeFees ? event.fee : 0
 
-                while sharesToSell > 0, !open.isEmpty {
+                while sharesToSell > Self.quantityEpsilon, !open.isEmpty {
                     let index = lifo ? open.count - 1 : 0
                     let take = min(open[index].remaining, sharesToSell)
                     let proceeds = rounded(proceedsRemaining * take / sharesToSell, fraction)
@@ -350,13 +363,13 @@ public enum CostBasis {
                     feeRemaining -= feeThis
                     open[index].remaining -= take
                     sharesToSell -= take
-                    if open[index].remaining == 0 { open.remove(at: index) }
+                    if open[index].remaining <= Self.quantityEpsilon { open.remove(at: index) }
                 }
 
                 // Uncovered sale (sold more than held): open a short position.
                 // No gain is realised yet — an open short has only unrealised
                 // P&L — its proceeds are struck against the eventual buy-back.
-                if sharesToSell > 0 {
+                if sharesToSell > Self.quantityEpsilon {
                     shorts.append(MutableShort(
                         date: event.date, remainingShares: sharesToSell,
                         remainingProceeds: proceedsRemaining, remainingFee: feeRemaining))
@@ -440,7 +453,7 @@ public enum CostBasis {
                     shorts[0].remainingShares -= cover
                     quantity -= cover
                     value -= cover * perShare
-                    if shorts[0].remainingShares == 0 { shorts.removeFirst() }
+                    if shorts[0].remainingShares <= Self.quantityEpsilon { shorts.removeFirst() }
                 }
                 pooledShares += quantity
                 pooledCost += value
@@ -464,18 +477,20 @@ public enum CostBasis {
                     pooledCost -= lotCost
                 }
                 // Sold more than the pool holds: open a short position. No gain
-                // yet — it is struck when a later buy covers it.
-                if uncovered > 0 {
+                // yet — it is struck when a later buy covers it. The epsilon
+                // keeps a split-rescale residue (see ``quantityEpsilon``) from
+                // opening a phantom short on a fully-closed holding.
+                if uncovered > Self.quantityEpsilon {
                     shorts.append(MutableShort(
                         date: event.date, remainingShares: uncovered,
                         remainingProceeds: proceedsPerShare * uncovered,
                         remainingFee: uncovered * feePerShare))
                 }
-                if pooledShares <= 0 { pooledShares = 0; pooledCost = 0 }
+                if pooledShares <= Self.quantityEpsilon { pooledShares = 0; pooledCost = 0 }
             }
         }
 
-        let openLots = pooledShares > 0
+        let openLots = pooledShares > Self.quantityEpsilon
             ? [OpenLot(acquisitionDate: nil, quantity: pooledShares, costBasis: pooledCost)]
             : []
         let shortfall = shorts.reduce(Decimal(0)) { $0 + $1.remainingShares }

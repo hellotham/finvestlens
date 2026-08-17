@@ -219,11 +219,13 @@ extension GnuCashXMLExporter {
         if let account = i.postedAccount { b += "  <invoice:postacc type=\"guid\">\(account.guid.hexString)</invoice:postacc>\n" }
         if let txn = i.postedTransaction { b += "  <invoice:posttxn type=\"guid\">\(txn.guid.hexString)</invoice:posttxn>\n" }
         if let lot = i.postedLot { b += "  <invoice:postlot type=\"guid\">\(lot.guid.hexString)</invoice:postlot>\n" }
-        // GnuCash writes the credit-note marker on every invoice (0 or 1).
-        b += "  <invoice:slots>\n"
-        b += "    <slot>\n      <slot:key>credit-note</slot:key>\n"
-        b += "      <slot:value type=\"integer\">\(i.isCreditNote ? 1 : 0)</slot:value>\n    </slot>\n"
-        b += "  </invoice:slots>\n"
+        // GnuCash writes the credit-note marker on every invoice (0 or 1),
+        // alongside whatever else the invoice carries. `i.kvp` holds the slots
+        // this app has no field for; sorted with the marker so the output is
+        // byte-stable whatever order they were read in.
+        var slots: [(String, KvpValue)] = i.kvp.slots.map { ($0.key, $0.value) }
+        slots.append(("credit-note", .int64(i.isCreditNote ? 1 : 0)))
+        b += slotsBlock(slots.sorted { $0.0 < $1.0 }, container: "invoice:slots", indent: "  ")
         b += "</gnc:GncInvoice>\n"
         return b
     }

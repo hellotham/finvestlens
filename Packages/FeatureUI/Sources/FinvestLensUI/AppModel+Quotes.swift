@@ -249,13 +249,18 @@ extension AppModel {
     /// meaning the recovery path systematically preferred the four providers
     /// whose answers nothing can verify.
     ///
-    /// FIIG is excluded: one request downloads its entire 510 KB index, so
-    /// probing it per security would cost that once per unpriced holding. A
-    /// bond reaches FIIG through its own per-security provider, which
-    /// ``fiigCandidates`` exists to offer.
+    /// Only providers that accept an arbitrary symbol are tried
+    /// (``QuoteProviderKind/acceptsArbitrarySymbols``). FIIG is excluded
+    /// because one request downloads its entire 510 KB index, so probing it per
+    /// security would cost that once per unpriced holding — a bond reaches FIIG
+    /// through its own per-security provider, which ``fiigCandidates`` exists to
+    /// offer. Wilson is excluded because its URL is a fund page slug rather than
+    /// a ticker: sending it every unpriced holding disclosed the portfolio to an
+    /// unrelated fund manager, and any page that answered would have had its
+    /// unit price stored as this security's.
     func fallbackProviders(after tried: QuoteProviderKind) -> [QuoteProviderKind] {
         availableProviders
-            .filter { $0 != tried && !$0.matchesByIdentifier }
+            .filter { $0 != tried && $0.acceptsArbitrarySymbols }
             .sorted { a, b in
                 a.reportsCurrency == b.reportsCurrency
                     ? a.rawValue < b.rawValue

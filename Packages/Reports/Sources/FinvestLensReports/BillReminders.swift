@@ -70,7 +70,14 @@ public extension FinancialReports {
         for schedule in scheduled where schedule.isEnabled {
             let amount = outflowAmount(schedule, book: book)
             guard amount > 0 else { continue }
-            let dates = schedule.recurrence.occurrences(since: nil, through: to).filter { $0 >= from }
+            // Bound the walk with `since:` rather than filtering afterwards.
+            // `limit` caps the dates *returned*, so asking for every occurrence
+            // since the schedule began and discarding the old ones spent the
+            // whole budget on history: a daily bill started more than 5,000
+            // days ago returned only its first 5,000 dates, every one of them
+            // older than `from`, and the reminder list came back empty. One
+            // second before `from`, because `since` is exclusive.
+            let dates = schedule.recurrence.occurrences(since: from.addingTimeInterval(-1), through: to)
             for date in dates {
                 let status: BillStatus
                 if isPaid(name: schedule.name, description: schedule.transactionDescription,

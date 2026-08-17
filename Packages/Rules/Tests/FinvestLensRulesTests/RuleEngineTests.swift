@@ -100,3 +100,48 @@ struct RuleEngineTests {
         #expect(decoded == groups)
     }
 }
+
+@Suite("Rule amount thresholds")
+struct RuleAmountThresholdTests {
+
+    private func group(_ rules: [Rule]) -> [RuleGroup] {
+        [RuleGroup(name: "Default", rules: rules)]
+    }
+
+    private func fires(_ value: String, op: RuleOperator, amount: Decimal) -> Bool {
+        let flagged = GncGUID.random()
+        let rule = Rule(name: "Large",
+                        triggers: [RuleTrigger(field: .amount, op: op, value: value)],
+                        actions: [.setAccount(flagged)])
+        return RuleEngine.evaluate(group([rule]),
+                                   context: RuleContext(description: "x", amount: amount))
+            .accountID == flagged
+    }
+
+    @Test("A grouped threshold means what it says, not its first digit")
+    func groupedThreshold() {
+        // `Decimal(string: "1,000")` is 1 — it parses greedily and stops at
+        // the comma — so this rule used to fire on everything over a dollar
+        // while reading correctly in the editor.
+        #expect(!fires("1,000", op: .greaterThan, amount: Decimal(500)))
+        #expect(!fires("1,000", op: .greaterThan, amount: Decimal(999)))
+        #expect(fires("1,000", op: .greaterThan, amount: Decimal(1001)))
+    }
+
+    @Test("Currency symbols, European grouping and parentheses all read")
+    func otherNotations() {
+        #expect(fires("$1,000.50", op: .lessThan, amount: Decimal(1000)))
+        #expect(!fires("$1,000.50", op: .lessThan, amount: Decimal(1001)))
+        // European: dot groups, comma decides the decimal.
+        #expect(fires("1.000,50", op: .greaterThan, amount: Decimal(1001)))
+        // A parenthesised threshold is negative.
+        #expect(fires("(500)", op: .lessThan, amount: Decimal(-600)))
+        #expect(!fires("(500)", op: .lessThan, amount: Decimal(-400)))
+    }
+
+    @Test("A threshold with no number in it matches nothing")
+    func unparseableThreshold() {
+        #expect(!fires("", op: .greaterThan, amount: Decimal(1)))
+        #expect(!fires("lots", op: .greaterThan, amount: Decimal(1)))
+    }
+}

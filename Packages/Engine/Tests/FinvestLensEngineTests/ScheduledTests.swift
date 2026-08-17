@@ -494,3 +494,39 @@ struct ScheduledTransactionGapTests {
         #expect(back == sx)
     }
 }
+
+@Suite("Recurrence — long-running schedules")
+struct RecurrenceHorizonTests {
+
+    @Test("A daily schedule started 20 years ago still produces this week's dates")
+    func dailyOutlivesTheOldIterationCap() {
+        // `limit` used to cap steps taken rather than dates returned. The walk
+        // always starts at `startDate`, so at the default of 5000 a daily rule
+        // went silent 13 years and 8 months in — no error, no occurrence, the
+        // bill simply stopped appearing.
+        let r = Recurrence(period: .daily, interval: 1, startDate: date(2006, 1, 1))
+        let dates = r.occurrences(since: date(2026, 8, 10), through: date(2026, 8, 17))
+        #expect(dates == [date(2026, 8, 11), date(2026, 8, 12), date(2026, 8, 13),
+                          date(2026, 8, 14), date(2026, 8, 15), date(2026, 8, 16),
+                          date(2026, 8, 17)])
+    }
+
+    @Test("limit caps the dates returned, not the steps taken")
+    func limitCapsResults() {
+        let r = Recurrence(period: .daily, interval: 1, startDate: date(2006, 1, 1))
+        // Twenty years of history in front of the window, and the cap still
+        // describes the answer rather than the search.
+        let dates = r.occurrences(since: date(2026, 8, 10), through: date(2026, 12, 31), limit: 3)
+        #expect(dates.count == 3)
+        #expect(dates.first == date(2026, 8, 11))
+    }
+
+    @Test("A weekly schedule from the 1990s still fires")
+    func weeklyOutlivesTheCap() {
+        let r = Recurrence(period: .weekly, interval: 1, startDate: date(1995, 1, 4))
+        let dates = r.occurrences(since: date(2026, 8, 1), through: date(2026, 8, 31))
+        #expect(!dates.isEmpty)
+        // 4 Jan 1995 was a Wednesday, and every occurrence stays one.
+        for day in dates { #expect(utc.component(.weekday, from: day) == 4) }
+    }
+}

@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import FinvestLensEngine
 
 /// A normalized transaction produced by a bank-file importer, before it is
 /// matched and posted into the book.
@@ -22,6 +23,19 @@ public struct StagedTransaction: Identifiable, Hashable, Sendable {
     public var payee: String
     public var memo: String
     public var reference: String
+    /// Whether ``reference`` is a **bank-unique** transaction identifier — an
+    /// OFX/HBCI `FITID`, or the bank's own servicer reference in MT940/CAMT —
+    /// rather than free text the payer chose.
+    ///
+    /// This decides two things, and getting it wrong is expensive both ways.
+    /// A bank-unique id is definitive duplicate evidence on its own, and is
+    /// the only thing that may be written to GnuCash's `online_id` slot. Free
+    /// text repeats: a CSV "Reference" column routinely says the same thing
+    /// every month ("RENT"), and treating that as an identifier made a later,
+    /// larger payment match January's row and be skipped as a duplicate.
+    /// Importers that cannot promise uniqueness leave this `false`, and their
+    /// references are then only corroborating evidence alongside the amount.
+    public var referenceIsBankUnique: Bool
     /// Source category label (QIF `L`, OFX has none) — a hint for matching.
     public var category: String
     /// Investment detail when this row is a security transaction (QIF
@@ -31,19 +45,34 @@ public struct StagedTransaction: Identifiable, Hashable, Sendable {
     /// Sub-splits when the record distributes one cash movement across several
     /// categories (QIF `S`/`E`/`$` lines). Empty for a plain two-legged row.
     public var splits: [StagedSplit]
+    /// The bank's identifier for the account **this particular row** came from
+    /// — MT940 `:25:`, CAMT `<Acct>`, OFX `<ACCTID>`.
+    ///
+    /// One file may carry several statements: a bank that exports "all my
+    /// accounts" writes one `<STMTRS>`/`:25:`/`<Stmt>` block per account into
+    /// a single download. The importers flattened those into one list and the
+    /// import sheet posted the lot into whichever account the user had picked,
+    /// so a joint file silently moved every other account's transactions into
+    /// one. Stamping the row lets the sheet see the seam. `nil` for formats
+    /// that carry no account id at all (CSV, QIF).
+    public var sourceAccountID: String?
 
     public init(id: UUID = UUID(), date: Date, amount: Decimal, payee: String = "",
-                memo: String = "", reference: String = "", category: String = "",
-                investment: InvestmentDetail? = nil, splits: [StagedSplit] = []) {
+                memo: String = "", reference: String = "",
+                referenceIsBankUnique: Bool = false, category: String = "",
+                investment: InvestmentDetail? = nil, splits: [StagedSplit] = [],
+                sourceAccountID: String? = nil) {
         self.id = id
         self.date = date
         self.amount = amount
         self.payee = payee
         self.memo = memo
         self.reference = reference
+        self.referenceIsBankUnique = referenceIsBankUnique
         self.category = category
         self.investment = investment
         self.splits = splits
+        self.sourceAccountID = sourceAccountID
     }
 
     /// Whether this staged row is a security transaction rather than cash.
@@ -112,50 +141,14 @@ public enum ImportParsing {
     }
 
     /// Parses a monetary string, tolerating currency symbols, thousands
-    /// separators, spaces, and parenthesised negatives.
+    /// separators, spaces, parenthesised negatives and `DR`/`CR` markers.
+    ///
+    /// The implementation lives in `FinvestLensEngine` as
+    /// ``MoneyParsing/amount(_:)`` — importers are not the only place a human
+    /// or a machine writes an amount as text, and the rule engine comparing
+    /// against its own `Decimal(string:)` read "1,000" as **1**. One parser,
+    /// one set of rules, wherever money arrives as a string.
     public static func amount(_ raw: String) -> Decimal? {
-        var text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty else { return nil }
-        var negative = false
-        if text.hasPrefix("(") && text.hasSuffix(")") {
-            negative = true
-            text = String(text.dropFirst().dropLast())
-        }
-        // A trailing minus ("500.00-") denotes a debit in many accounting/German
-        // exports; `Decimal(string:)` only honours a *leading* sign and would
-        // silently read it as +500, flipping a debit into a credit.
-        text = text.trimmingCharacters(in: .whitespaces)
-        if text.hasSuffix("-") {
-            negative = true
-            text = String(text.dropLast())
-        }
-        // When both separators appear, the rightmost is the decimal point — this
-        // disambiguates US "1,234.56" from European "1.234,56"; the other groups
-        // thousands.
-        if let dot = text.lastIndex(of: "."), let comma = text.lastIndex(of: ",") {
-            if comma > dot {   // European: comma is the decimal separator
-                text = text.replacingOccurrences(of: ".", with: "")
-                              .replacingOccurrences(of: ",", with: ".")
-            } else {           // US: comma groups thousands
-                text = text.replacingOccurrences(of: ",", with: "")
-            }
-        } else if text.contains(",") {
-            // A lone comma: thousands grouping needs exactly 3 digits per
-            // group, so a comma followed by 1–2 trailing digits ("4,99") can
-            // only be a decimal comma — stripping it read the amount 100×
-            // too large. Groups of 3 keep the en/US reading (ambiguous).
-            let parts = text.split(separator: ",", omittingEmptySubsequences: false)
-            let trailingDigits = parts.last.map { $0.filter(\.isNumber).count } ?? 0
-            if parts.count == 2, trailingDigits >= 1, trailingDigits <= 2 {
-                text = text.replacingOccurrences(of: ",", with: ".")
-            }
-        }
-        text = text.filter { $0.isNumber || $0 == "." || $0 == "-" || $0 == "+" }
-        guard let value = Decimal(string: text) else { return nil }
-        // The sign may already be explicit ("(-5)" / "-500.00-"): only apply
-        // the wrapper-derived negation to a positive magnitude, or the two
-        // notations cancel and a debit flips positive.
-        if negative { return value > 0 ? -value : value }
-        return value
+        MoneyParsing.amount(raw)
     }
 }

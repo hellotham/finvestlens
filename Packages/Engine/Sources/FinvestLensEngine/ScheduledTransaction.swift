@@ -171,9 +171,20 @@ public enum ScheduledTransactionService {
 
     /// Creates a real ``Transaction`` for `scheduled` dated `date` and adds it
     /// to `book`. Returns the created transaction, or `nil` if a split account
-    /// is missing. `variables` binds any formula variables (`FR-SCH-02`); a
-    /// split with a formula uses its evaluated value, others use their fixed
-    /// amount.
+    /// is missing **or the instance does not balance**. `variables` binds any
+    /// formula variables (`FR-SCH-02`); a split with a formula uses its
+    /// evaluated value, others use their fixed amount.
+    ///
+    /// The balance check is not belt-and-braces. ``ScheduledSplit/resolvedValue
+    /// (variables:)`` degrades an unevaluatable formula to the split's fixed
+    /// `value`, which for a formula leg is 0 — and a GnuCash template can carry
+    /// formula syntax this parser does not accept (assignment inside an
+    /// expression, function calls), which `variables(in:)` reports as having
+    /// variables while `evaluate` returns nil. A mixed fixed/formula template —
+    /// the ordinary shape of a loan payment — then posted its fixed leg with a
+    /// zeroed formula leg beside it, putting an unbalanced transaction into the
+    /// book. That is one of the two invariants that never move, so the instance
+    /// is refused rather than written.
     @discardableResult
     public static func post(_ scheduled: ScheduledTransaction, date: Date, into book: Book,
                             variables: [String: Decimal] = [:]) -> Transaction? {
@@ -184,6 +195,7 @@ public enum ScheduledTransactionService {
             let value = scheduled.currency.round(templateSplit.resolvedValue(variables: variables))
             transaction.addSplit(account: account, value: value, memo: templateSplit.memo)
         }
+        guard transaction.isBalanced else { return nil }
         book.addTransaction(transaction)
         return transaction
     }

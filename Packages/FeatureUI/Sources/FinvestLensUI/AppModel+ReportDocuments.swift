@@ -204,8 +204,31 @@ extension AppModel {
             chart: nil,
             sections: rows.isEmpty ? [] : [ReportDocumentSection(
                 title: "Realised Gains", rows: rows, total: ("Total realised", report.totalGain))],
-            notes: report.lines.isEmpty ? ["No realised gains in this period."] : [],
+            notes: capitalGainsNotes(report),
             facts: nil)
+    }
+
+    /// What the capital-gains report cannot vouch for, said out loud.
+    ///
+    /// A disposal whose currency has no exchange rate on its date is dropped
+    /// from `lines` rather than reported at face value, and `report`'s own
+    /// `unconvertedCurrencyCodes` records that it happened — but nothing read
+    /// that field, anywhere. So a tax report could omit a whole brokerage
+    /// account's disposals and look identical to one that genuinely had none.
+    /// This is the report people file tax from; an omission it knows about has
+    /// to be visible on its face.
+    private func capitalGainsNotes(_ report: CapitalGainsReport) -> [String] {
+        var notes: [String] = []
+        if report.lines.isEmpty { notes.append("No realised gains in this period.") }
+        if !report.unconvertedCurrencyCodes.isEmpty {
+            let codes = report.unconvertedCurrencyCodes.joined(separator: ", ")
+            notes.append("""
+                Incomplete: disposals in \(codes) are not included, because no \
+                exchange rate to \(report.currencyCode) was available on their \
+                dates. Add those rates and run this report again before filing.
+                """)
+        }
+        return notes
     }
 
     // MARK: Price history (FR-RPT — Price Scatter)

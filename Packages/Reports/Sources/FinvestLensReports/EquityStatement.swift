@@ -73,7 +73,12 @@ public extension FinancialReports {
         var contributions = Decimal(0)
         var withdrawals = Decimal(0)
         for transaction in book.transactions
-        where transaction.datePosted >= from && transaction.datePosted <= to {
+        where transaction.datePosted >= from && transaction.datePosted <= to
+            // Close Book credits the year's profit into equity. That is the
+            // `netIncome` line of this very statement, not money the owner put
+            // in — counting it here reported the profit twice and left an
+            // equal, opposite "unrealised change" to absorb it.
+            && !FindTest.isClosing(transaction) {
             for split in transaction.splits
             where split.account?.type == .equity && split.reconcileState != .voided {
                 guard let account = split.account,

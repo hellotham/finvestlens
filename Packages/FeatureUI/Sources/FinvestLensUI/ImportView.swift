@@ -63,15 +63,24 @@ struct ImportView: View {
     @State private var suggesting = false
     @State private var suggestError: String?
 
-    // CSV column mapping (only shown for CSV).
+    // CSV column mapping (only shown for CSV). −1 means "no such column":
+    // a file carries *either* one signed amount column *or* a debit/credit
+    // pair, never both, so each side has to be able to say it is absent.
     @State private var dateCol = 0
     @State private var amountCol = 1
+    @State private var debitCol = -1
+    @State private var creditCol = -1
     @State private var payeeCol = 2
     @State private var memoCol = -1
     @State private var refCol = -1
     @State private var skipRows = 0
     @State private var dateFormat = "yyyy-MM-dd"
     @State private var hasHeader = true
+    /// Every account this file holds a statement for, and the one being
+    /// imported. A download that covers several accounts used to be flattened
+    /// into the single chosen target, silently moving other accounts' money.
+    @State private var statementAccounts: [String] = []
+    @State private var selectedStatement: String?
     /// The shape worked out from the file's own header, and whether the user
     /// asked to set the columns themselves anyway.
     @State private var csvDetection: CSVFormatDetection?
@@ -173,7 +182,24 @@ struct ImportView: View {
                             }
                         }
                         Stepper("Date column: \(dateCol)", value: $dateCol, in: 0...40)
-                        Stepper("Amount column: \(amountCol)", value: $amountCol, in: 0...40)
+                        Stepper(amountCol < 0 ? "Amount column: none" : "Amount column: \(amountCol)",
+                                value: $amountCol, in: -1...40)
+                        // Most bank exports carry a debit/credit pair rather
+                        // than one signed column. The detector always read
+                        // them; until these controls existed, choosing to set
+                        // the columns by hand threw the pair away and the
+                        // import took its amounts from whatever sat in the
+                        // amount column — for those files, the description.
+                        Stepper(debitCol < 0 ? "Debit column: none" : "Debit column: \(debitCol)",
+                                value: $debitCol, in: -1...40)
+                        Stepper(creditCol < 0 ? "Credit column: none" : "Credit column: \(creditCol)",
+                                value: $creditCol, in: -1...40)
+                        if amountCol < 0 && (debitCol < 0 || creditCol < 0) {
+                            Label("Set an amount column, or both a debit and a credit column.",
+                                  systemImage: "exclamationmark.triangle")
+                                .scaledFont(.caption)
+                                .foregroundStyle(Color.negativeAmount)
+                        }
                         Stepper("Payee column: \(payeeCol)", value: $payeeCol, in: 0...40)
                         // Memo and reference were on the mapping all along and
                         // had no control, so no hand-mapped import could carry
@@ -191,9 +217,24 @@ struct ImportView: View {
                     }
                 }
 
+                if statementAccounts.count > 1 {
+                    Section {
+                        Picker("Statement", selection: $selectedStatement) {
+                            ForEach(statementAccounts, id: \.self) { account in
+                                Text(account).tag(String?.some(account))
+                            }
+                        }
+                        Text("This file holds \(statementAccounts.count) statements. Import one at a time, choosing its account above — then run the import again for the next.")
+                            .scaledFont(.caption)
+                            .foregroundStyle(.secondary)
+                    } header: {
+                        Text("Statements in this file")
+                    }
+                }
+
                 Section {
                     Button("Preview") { preview() }
-                        .disabled(targetID == nil)
+                        .disabled(targetID == nil || !csvMappingIsUsable)
                 }
 
                 if !results.isEmpty {
@@ -245,6 +286,24 @@ struct ImportView: View {
                 // needed after the import too, to remember the mapping.
                 let identifier = model.bankFileAccountID(payload.data, format: payload.format)
                 fileAccountID = identifier
+                // A file covering several accounts is imported one statement
+                // at a time — each needs its own target account, and there is
+                // exactly one target on this sheet.
+                let staged = payload.prestaged
+                    ?? model.parseBankFile(payload.data, format: payload.format)
+                var seen: Set<String> = []
+                statementAccounts = staged.compactMap(\.sourceAccountID)
+                    .filter { seen.insert($0).inserted }
+                // Only seeds an unmade choice. `.onAppear` fires again whenever
+                // the sheet re-presents (a size-class change, the system
+                // re-presenting it), and assigning unconditionally snapped the
+                // picker back to the first statement — so Preview then staged a
+                // different account's rows than the one on screen, with nothing
+                // to show it had moved. The `targetID` seeding below already
+                // guards itself the same way.
+                if selectedStatement == nil || !statementAccounts.contains(selectedStatement!) {
+                    selectedStatement = statementAccounts.first
+                }
                 if payload.format == .csv, csvDetection == nil,
                    let found = CSVFormatDetector.detect(payload.data) {
                     csvDetection = found
@@ -252,7 +311,14 @@ struct ImportView: View {
                     // Manually" starts from what was found rather than from
                     // zeros the user then has to rediscover.
                     dateCol = found.mapping.date
-                    amountCol = found.mapping.amount ?? amountCol
+                    // A detected debit/credit pair has no amount column, and
+                    // seeding `amountCol` with its *default* rather than −1
+                    // meant the manual controls opened claiming the amount was
+                    // in column 1 — usually the description — while silently
+                    // dropping the pair that actually held the money.
+                    amountCol = found.mapping.amount ?? -1
+                    debitCol = found.mapping.debit ?? -1
+                    creditCol = found.mapping.credit ?? -1
                     payeeCol = found.mapping.payee ?? payeeCol
                     memoCol = found.mapping.memo ?? -1
                     refCol = found.mapping.reference ?? -1
@@ -289,8 +355,12 @@ struct ImportView: View {
                             // Learn the mapping from what the user actually
                             // chose, not from what was suggested — a corrected
                             // suggestion is exactly the case worth remembering.
-                            if let fileAccountID {
-                                model.rememberImportAccount(fileAccountID, for: targetID)
+                            // In a multi-statement file the identifier to
+                            // remember is the statement being imported, not
+                            // the file's first account.
+                            if let learned = (statementAccounts.count > 1 ? selectedStatement : nil)
+                                ?? fileAccountID {
+                                model.rememberImportAccount(learned, for: targetID)
                             }
                         }
                         dismiss()
@@ -307,8 +377,11 @@ struct ImportView: View {
                 let name = newProfileName.trimmingCharacters(in: .whitespaces)
                 guard !name.isEmpty else { return }
                 model.saveCSVImportProfile(CSVImportProfile(
-                    name: name, dateColumn: dateCol, amountColumn: amountCol,
+                    name: name, dateColumn: dateCol,
+                    amountColumn: amountCol < 0 ? nil : amountCol,
                     payeeColumn: payeeCol, dateFormat: dateFormat, hasHeader: hasHeader,
+                    debitColumn: debitCol < 0 ? nil : debitCol,
+                    creditColumn: creditCol < 0 ? nil : creditCol,
                     memoColumn: memoCol < 0 ? nil : memoCol,
                     referenceColumn: refCol < 0 ? nil : refCol, skipRows: skipRows))
             }
@@ -320,7 +393,9 @@ struct ImportView: View {
 
     private func applyProfile(_ profile: CSVImportProfile) {
         dateCol = profile.dateColumn
-        amountCol = profile.amountColumn
+        amountCol = profile.amountColumn ?? -1
+        debitCol = profile.debitColumn ?? -1
+        creditCol = profile.creditColumn ?? -1
         payeeCol = profile.payeeColumn
         memoCol = profile.memoColumn ?? -1
         refCol = profile.referenceColumn ?? -1
@@ -412,17 +487,34 @@ struct ImportView: View {
         )
     }
 
+    /// A hand-set CSV mapping needs somewhere to read the money from: one
+    /// signed amount column, or both halves of a debit/credit pair. Without
+    /// this the importer read every row as 0.00 and staged a file of nothing.
+    private var csvMappingIsUsable: Bool {
+        guard payload.format == .csv, csvManualOverride || csvDetection == nil else { return true }
+        return amountCol >= 0 || (debitCol >= 0 && creditCol >= 0)
+    }
+
     private func preview() {
         guard let targetID else { return }
         // The detected shape wins unless the user asked to set the columns.
         let mapping = (csvManualOverride ? nil : csvDetection?.mapping)
-            ?? CSVColumnMapping(date: dateCol, amount: amountCol, payee: payeeCol,
+            ?? CSVColumnMapping(date: dateCol,
+                                amount: amountCol < 0 ? nil : amountCol,
+                                debit: debitCol < 0 ? nil : debitCol,
+                                credit: creditCol < 0 ? nil : creditCol,
+                                payee: payeeCol,
                                 memo: memoCol < 0 ? nil : memoCol,
                                 reference: refCol < 0 ? nil : refCol,
                                 dateFormat: dateFormat, hasHeader: hasHeader,
                                 skipRows: skipRows)
-        let staged = payload.prestaged
+        let parsed = payload.prestaged
             ?? model.parseBankFile(payload.data, format: payload.format, csvMapping: mapping)
+        // Only the chosen statement's rows may reach this sheet's one target
+        // account. Rows with no account id (CSV, QIF) are always in scope.
+        let staged = statementAccounts.count > 1
+            ? parsed.filter { $0.sourceAccountID == nil || $0.sourceAccountID == selectedStatement }
+            : parsed
         results = model.matchStaged(staged, intoAccountID: targetID)
         assignments = [:]
         excluded = []

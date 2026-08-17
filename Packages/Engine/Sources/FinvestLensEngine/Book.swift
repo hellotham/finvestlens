@@ -602,8 +602,16 @@ public final class Book {
     /// account tree did exactly that and cost ~28s on a 46k-transaction book.
     /// Callers that need many balances at once should ask for them together.
     /// Accounts with no postings are absent; treat a miss as zero.
+    /// - Parameter excludingClosing: Skip the transactions Close Book writes
+    ///   (the `book_closing` slot). An income statement **must** set this: the
+    ///   closing entries zero every income and expense account by design, so a
+    ///   period that has been closed otherwise reports $0 across the board.
+    ///   A balance sheet must not — retained earnings is exactly what those
+    ///   entries produce. GnuCash draws the same distinction, with
+    ///   `(list 'closing #t)` on the income-statement side only.
     public func balancesByAccount(filter: BalanceFilter = .all,
-                                  from: Date? = nil, to: Date? = nil) -> [ObjectIdentifier: Decimal] {
+                                  from: Date? = nil, to: Date? = nil,
+                                  excludingClosing: Bool = false) -> [ObjectIdentifier: Decimal] {
         var totals: [ObjectIdentifier: Decimal] = [:]
         for transaction in transactions {
             // Inclusive bounds, matching every per-account balance in the app.
@@ -612,6 +620,7 @@ public final class Book {
             // that made netWorthSeries 490× faster.
             if let from, transaction.datePosted < from { continue }
             if let to, transaction.datePosted > to { continue }
+            if excludingClosing, FindTest.isClosing(transaction) { continue }
             for split in transaction.splits {
                 guard let account = split.account, Book.matches(split, filter) else { continue }
                 totals[ObjectIdentifier(account), default: 0] += split.quantity

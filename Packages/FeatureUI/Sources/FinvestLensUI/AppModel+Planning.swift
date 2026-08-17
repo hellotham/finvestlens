@@ -338,9 +338,12 @@ extension AppModel {
     public func spendingInsights(period: ReportPeriod) -> SpendingInsights? {
         guard let book else { return nil }
         let (from, to) = resolve(period)
-        let length = to.timeIntervalSince(from)
+        // The preceding *calendar* period, not the preceding N seconds — the
+        // same rule the budget's rollover window uses. Months are 28–31 days
+        // long, so stepping back by this window's own duration landed
+        // mid-month: March was compared against 29 January – 28 February.
         let priorTo = from.addingTimeInterval(-1)
-        let priorFrom = priorTo.addingTimeInterval(-length)
+        let priorFrom = FinancialReports.periodStart(before: from, coveringThrough: to)
         return cachedReport("insights:\(from.timeIntervalSinceReferenceDate):\(to.timeIntervalSinceReferenceDate)") {
             FinancialReports.spendingInsights(book, from: from, to: to,
                                               priorFrom: priorFrom, priorTo: priorTo,

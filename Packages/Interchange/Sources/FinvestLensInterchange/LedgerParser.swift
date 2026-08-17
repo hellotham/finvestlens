@@ -125,7 +125,22 @@ public enum LedgerParser {
             file = fileName
             defer { file = previousFile }
 
-            let lines = text.components(separatedBy: "\n")
+            // Split on newlines of any flavour, keeping empty lines (the
+            // transaction reader ends a posting block on the first
+            // unindented line, so blank lines are structural and
+            // `split(whereSeparator:)` would drop them).
+            //
+            // The CR strip is load-bearing, not tidiness. Splitting on "\n"
+            // alone leaves a trailing "\r" on every line of a CRLF journal, and
+            // `trimmingCharacters(in: .whitespaces)` does not remove it —
+            // `CharacterSet.whitespaces` is Zs plus tab, and CR is a control
+            // character. Every posting's amount then failed to parse, every
+            // transaction was marked broken and discarded, and a CRLF journal
+            // imported as zero transactions with one diagnostic per line.
+            let lines = text
+                .replacingOccurrences(of: "\r\n", with: "\n")
+                .replacingOccurrences(of: "\r", with: "\n")
+                .components(separatedBy: "\n")
             var index = 0
             var inCommentBlock = false
 

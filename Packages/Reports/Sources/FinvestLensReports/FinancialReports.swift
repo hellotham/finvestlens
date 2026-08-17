@@ -82,8 +82,9 @@ public enum FinancialReports {
     ///
     /// Raw double-entry sign (debit positive); use ``displayBalance(in:of:)``
     /// for the presentation sign.
-    static func balanceMap(_ book: Book, from: Date?, to: Date?) -> [ObjectIdentifier: Decimal] {
-        book.balancesByAccount(from: from, to: to)
+    static func balanceMap(_ book: Book, from: Date?, to: Date?,
+                           excludingClosing: Bool = false) -> [ObjectIdentifier: Decimal] {
+        book.balancesByAccount(from: from, to: to, excludingClosing: excludingClosing)
     }
 
     /// The presentation-signed balance an account has in `map` — the same
@@ -102,16 +103,24 @@ public enum FinancialReports {
         let map = balanceMap(book, from: nil, to: asOf)
         let accounts = book.accounts.filter { !$0.isPlaceholder }
 
+        // Every figure on this sheet is the sum of *rounded* per-account
+        // amounts. Accumulating the raw conversions and rounding once at the
+        // end printed a Total Assets that was a cent or two off the column
+        // above it — each line rounded, the total rounded from a different
+        // number — which on a balance sheet reads as an error in the book
+        // rather than in the arithmetic. Rounding at the account, once, makes
+        // "the total is the sum of the lines" true by construction.
         func lines(_ types: Set<AccountType>) -> ([ReportLine], Decimal) {
             var result: [ReportLine] = []
             var total = Decimal(0)
             for account in accounts where types.contains(account.type) {
                 let native = displayBalance(in: map, of: account)
-                guard let amount = convert(native, of: account, in: book,
-                                           to: currency, on: asOf),
-                      amount != 0 else { continue }
+                guard let raw = convert(native, of: account, in: book,
+                                        to: currency, on: asOf) else { continue }
+                let amount = currency.round(raw)
+                guard amount != 0 else { continue }
                 result.append(ReportLine(id: account.guid, name: account.name,
-                                         fullName: account.fullName, amount: currency.round(amount)))
+                                         fullName: account.fullName, amount: amount))
                 total += amount
             }
             return (result.sorted { $0.fullName < $1.fullName }, total)
@@ -123,7 +132,7 @@ public enum FinancialReports {
                 let native = displayBalance(in: map, of: account)
                 guard let amount = convert(native, of: account, in: book,
                                            to: currency, on: asOf) else { continue }
-                total += amount
+                total += currency.round(amount)
             }
             return total
         }
@@ -146,16 +155,37 @@ public enum FinancialReports {
                                           amount: currency.round(tradingEquity)))
         }
 
+        // Two invariants have to hold at once, and satisfying only one breaks
+        // the other. Every figure above is a sum of **rounded** per-account
+        // amounts, so each column adds up to the total printed under it. But
+        // rounding the two sides independently means their residues need not
+        // match: three assets of 10.004 print 30.00 while the single 30.012
+        // equity account funding them prints 30.01, and the sheet stops
+        // balancing — a worse fault than the cent it was fixing, since
+        // `isBalanced` is the definition of a well-formed balance sheet.
+        //
+        // The gap is a currency-translation rounding difference: the book
+        // balances exactly in its own currencies and only stops once converted.
+        // That is an equity item, and it is disclosed as its own line rather
+        // than absorbed silently — the treatment "Unrealised FX" already gets.
+        var equityTotal = equityFromAccounts + retained + tradingEquity
+        let residual = totalAssets - totalLiabilities - equityTotal
+        if residual != 0 {
+            equityLines.append(ReportLine(id: .random(), name: "Rounding on translation",
+                                          fullName: "Rounding", amount: residual))
+            equityTotal += residual
+        }
+
         return BalanceSheet(
             asOf: asOf,
             currencyCode: currency.mnemonic,
             assets: assets,
             liabilities: liabilities,
             equity: equityLines,
-            totalAssets: currency.round(totalAssets),
-            totalLiabilities: currency.round(totalLiabilities),
-            totalEquity: currency.round(equityFromAccounts + retained + tradingEquity),
-            retainedEarnings: currency.round(retained)
+            totalAssets: totalAssets,
+            totalLiabilities: totalLiabilities,
+            totalEquity: equityTotal,
+            retainedEarnings: retained
         )
     }
 
@@ -163,19 +193,27 @@ public enum FinancialReports {
 
     public static func incomeStatement(_ book: Book, from: Date, to: Date,
                                        currency: Commodity) -> IncomeStatement {
-        let map = balanceMap(book, from: from, to: to)
+        // Closing entries are excluded, as GnuCash's income-statement.scm does.
+        // Close Book posts a counter-entry to every income and expense account
+        // dated the last day of the year — inside this window — so counting
+        // them netted a closed financial year to $0 income, $0 expenses and $0
+        // net income on the report that exists to show what the year did.
+        let map = balanceMap(book, from: from, to: to, excludingClosing: true)
         let accounts = book.accounts.filter { !$0.isPlaceholder }
 
+        // Rounded per account, for the same reason as the balance sheet: the
+        // printed total has to be the sum of the printed lines.
         func lines(_ type: AccountType) -> ([ReportLine], Decimal) {
             var result: [ReportLine] = []
             var total = Decimal(0)
             for account in accounts where account.type == type {
                 let native = displayBalance(in: map, of: account)
-                guard let amount = convert(native, of: account, in: book,
-                                           to: currency, on: to),
-                      amount != 0 else { continue }
+                guard let raw = convert(native, of: account, in: book,
+                                        to: currency, on: to) else { continue }
+                let amount = currency.round(raw)
+                guard amount != 0 else { continue }
                 result.append(ReportLine(id: account.guid, name: account.name,
-                                         fullName: account.fullName, amount: currency.round(amount)))
+                                         fullName: account.fullName, amount: amount))
                 total += amount
             }
             return (result.sorted { $0.fullName < $1.fullName }, total)
@@ -269,12 +307,21 @@ public enum FinancialReports {
 
     /// The presentation balance of an account within an optional date window,
     /// sign-adjusted so credit-normal types read positive.
+    ///
+    /// - Parameter excludingClosing: Skip Close Book's entries, for the same
+    ///   reason ``Book/balancesByAccount(filter:from:to:excludingClosing:)``
+    ///   takes the flag: they zero every income and expense account on the last
+    ///   day of the year, so any *period* total that counts them reads $0 for a
+    ///   closed year. This walk is the one the budget and the on-device
+    ///   advisers use, and it was left counting them.
     static func displayBalance(of account: Account, in book: Book,
-                               from: Date?, to: Date?) -> Decimal {
+                               from: Date?, to: Date?,
+                               excludingClosing: Bool = false) -> Decimal {
         var total = Decimal(0)
         for transaction in book.transactions {
             if let from, transaction.datePosted < from { continue }
             if let to, transaction.datePosted > to { continue }
+            if excludingClosing, FindTest.isClosing(transaction) { continue }
             for split in transaction.splits
             where split.account === account && split.reconcileState != .voided {
                 total += split.quantity
@@ -285,9 +332,13 @@ public enum FinancialReports {
 
     /// The sign-adjusted actual for an account over a period (spending positive
     /// for expense accounts) — used by auto-budget.
+    ///
+    /// Closing entries are excluded: every caller asks "what did this account
+    /// actually do over these months", and after Close the Books the June
+    /// window otherwise carries the whole year's counter-post.
     public static func periodActual(of account: Account, in book: Book,
                                     from: Date, to: Date) -> Decimal {
-        displayBalance(of: account, in: book, from: from, to: to)
+        displayBalance(of: account, in: book, from: from, to: to, excludingClosing: true)
     }
 
     /// The account's sign-adjusted balance converted into `currency` at
@@ -322,7 +373,10 @@ public enum FinancialReports {
                                     from: Date?, to: Date?, currency: Commodity,
                                     rateDate: Date?) -> Decimal {
         // One walk for the whole type, not one per account of the type.
-        let map = balanceMap(book, from: from, to: to)
+        // Closing entries are excluded for the same reason the income
+        // statement excludes them: every caller of this asks for income or
+        // expense over a period, and Close Book zeroes exactly those.
+        let map = balanceMap(book, from: from, to: to, excludingClosing: true)
         var total = Decimal(0)
         for account in book.accounts
         where types.contains(account.type) && !account.isPlaceholder {

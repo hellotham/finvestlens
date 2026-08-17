@@ -437,3 +437,90 @@ struct ModeTabRegressionTests {
         second.close()
     }
 }
+
+@MainActor
+@Suite("Tab indices survive a standing tab")
+struct StandingTabIndexTests {
+
+    /// A book with a portfolio, so Investments has a standing tab between the
+    /// home tab and anything the user opened.
+    private func makeFixture() throws -> (model: AppModel, url: URL, security: GncGUID) {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
+        let model = AppModel()
+        try model.newDocument(at: url)
+        let broker = try #require(model.addAccount(name: "Broker", type: .asset))
+        let cba = Commodity(namespace: .security("ASX"), mnemonic: "CBA.AX",
+                            fullName: "Commonwealth Bank", smallestFraction: 10000)
+        let holding = try #require(model.addAccount(name: "CBA", type: .stock,
+                                                    commodity: cba, parentID: broker))
+        let cash = try #require(model.addAccount(name: "Cash", type: .bank))
+        // A portfolio is a parent of a holding with units still in it, so the
+        // holding needs a buy before Broker becomes a standing tab.
+        _ = try model.addTransaction(date: Date(timeIntervalSince1970: 0), description: "Buy",
+                                     currency: .aud,
+                                     splits: [SplitInput(accountID: holding, value: 1000,
+                                                         quantity: 10),
+                                              SplitInput(accountID: cash, value: -1000)])
+        // `restoreNavigation` is the public way into a mode here.
+        model.restoreNavigation(mode: .investments, tabs: [:], active: [:])
+        return (model, url, holding)
+    }
+
+    /// Closes the document and removes it. Without this each test leaks a
+    /// `.finvestlens` file, its lock sidecar and working copy, leaves quote and
+    /// maintenance timers running for the rest of the process, and leaves
+    /// `finvestlens.lastBookPath` pointing at a temp book that other suites in
+    /// this same target read.
+    private func tearDown(_ model: AppModel, _ url: URL) {
+        model.close()
+        try? FileManager.default.removeItem(at: url)
+    }
+
+    @Test("Investments really does have a standing tab in this fixture")
+    func fixtureHasAStandingTab() throws {
+        // Without this the tests below would pass for the wrong reason.
+        let (model, url, _) = try makeFixture()
+        defer { tearDown(model, url) }
+        #expect(model.firstClosableTabIndex(in: .investments) > 1)
+    }
+
+    @Test("A restored index onto a standing tab is not clamped away")
+    func restoreKeepsAStandingTabIndex() throws {
+        // The clamp counted stored tabs plus one for home and forgot the
+        // standing tabs, so a valid index was pulled back to the last one it
+        // believed existed and the restore opened on the wrong tab.
+        let (model, url, _) = try makeFixture()
+        defer { tearDown(model, url) }
+        let standingIndex = 1
+        model.restoreNavigation(mode: .investments, tabs: [:],
+                                active: [.investments: standingIndex])
+        #expect(model.activeTabIndex == standingIndex)
+        #expect(model.openTabs[model.activeTabIndex] == model.tabs(in: .investments)[standingIndex])
+    }
+
+    @Test("A stored tab that has since become standing is not shown twice, and closing works")
+    func storedDuplicateOfAStandingTab() throws {
+        let (model, url, security) = try makeFixture()
+        defer { tearDown(model, url) }
+        let portfolio = try #require(model.tabs(in: .investments).dropFirst().first)
+        // Desk state written when this account was not yet a portfolio.
+        let commodity = try #require(model.book?.account(with: security)?.commodity)
+        model.restoreNavigation(
+            mode: .investments,
+            tabs: [.investments: [portfolio,
+                                  .security(SidebarSelection.securityKey(commodity))]],
+            active: [.investments: 0])
+        let strip = model.tabs(in: .investments)
+        #expect(strip.filter { $0 == portfolio }.count == 1)
+
+        // Closing the last tab must remove *that* tab. Indexing storage with a
+        // display index took the portfolio out of the stored list instead,
+        // leaving the clicked tab on screen.
+        let last = strip.count - 1
+        let doomed = strip[last]
+        model.closeTab(last)
+        #expect(!model.tabs(in: .investments).contains(doomed))
+        #expect(model.tabs(in: .investments).contains(portfolio))
+    }
+}

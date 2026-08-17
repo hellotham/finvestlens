@@ -116,8 +116,15 @@ public extension Book {
                calendar: Calendar = .current) -> AgingBuckets {
         var buckets = AgingBuckets()
         for invoice in invoices(forOwner: ownerGuid) where invoice.isPosted {
-            let due = outstanding(invoice)
-            guard due > 0 else { continue }
+            // As of `asOf`, not as of now: the aging is asked for a period end,
+            // and using today's settlement dropped invoices that were open then
+            // and paid since, while admitting invoices posted afterwards (whose
+            // negative day count then fell into the "current" bucket).
+            let due = outstanding(invoice, asOf: asOf)
+            // A credit note is negative and belongs in its bucket, reducing the
+            // total rather than being skipped — dropping it overstated the
+            // owner's debt by the note.
+            guard due != 0 else { continue }
             let dueDate = invoice.dueDate ?? invoice.datePosted ?? asOf
             let days = calendar.dateComponents([.day], from: dueDate, to: asOf).day ?? 0
             buckets.add(due, daysOverdue: days)

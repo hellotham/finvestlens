@@ -24,7 +24,7 @@ done
 swift test --package-path Packages/Shared --skip writeReadRoundTripThroughAppGroup
 ```
 
-The Shared `--skip` matters: that test round-trips through the real App Group container and can block forever on a wedged `containermanagerd`. If a test run hangs, `pkill swiftpm-testing-helper` also frees the `.build` lock. Every suite uses Swift Testing (`@Test` / `#expect`) — there is no XCTest anywhere.
+The Shared `--skip` matters: that test round-trips through the real App Group container and can block forever on a wedged `containermanagerd`. If a test run hangs, `pkill swiftpm-testing-helper` also frees the `.build` lock. Every package suite uses Swift Testing (`@Test` / `#expect`) — there is no XCTest under `Packages/`. The one exception is outside them and is not a suite: `finvestlensUITests/` is Xcode's XCUITest scaffold, generated with the project and never written. It asserts nothing (`testExample` launches the app and stops), so it proves nothing either — delete the target or write it, but do not read it as coverage.
 
 The app (both platforms must build before committing):
 

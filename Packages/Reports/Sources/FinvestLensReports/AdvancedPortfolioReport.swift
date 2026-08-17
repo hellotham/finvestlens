@@ -110,9 +110,15 @@ public extension FinancialReports {
                     let amount = -other.value                 // income splits are credits
                     if txn.currency == currency {
                         total += amount
-                    } else {
-                        total += book.convert(amount, from: txn.currency, to: currency, on: txn.datePosted) ?? amount
+                    } else if let converted = book.convert(amount, from: txn.currency,
+                                                           to: currency, on: txn.datePosted) {
+                        total += converted
                     }
+                    // No rate for the pair on that date: the dividend is left
+                    // out rather than added at face value. Adding the raw
+                    // foreign figure put, say, USD into an AUD income column
+                    // and thence into `totalReturnFraction` — a wrong number
+                    // that reads as a right one.
                 }
             }
             return currency.round(total)

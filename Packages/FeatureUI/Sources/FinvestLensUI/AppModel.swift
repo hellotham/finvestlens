@@ -574,11 +574,26 @@ public final class AppModel {
     /// A mode's open tabs: home, then the ones it always has, then the ones the
     /// user opened (`FR-NAV-05`).
     public func tabs(in mode: AppMode) -> [SidebarSelection] {
+        [mode.defaultSelection] + standingTabs(in: mode) + normalisedExtras(in: mode)
+    }
+
+    /// The mode's user-opened tabs, with everything the strip derives for
+    /// itself removed — the home selection and the standing tabs.
+    ///
+    /// There is one list, and this is it. The strip used to filter derived
+    /// entries out at display time while `tabsByMode` kept them, so a display
+    /// index and a position in storage meant different things whenever a
+    /// stored tab had since become a standing one — which desk state written
+    /// against a book with different investment accounts does routinely. Three
+    /// call sites subscripted storage with a display index, and a fourth
+    /// clamped against a count that omitted the standing tabs entirely.
+    /// Filtering here, and writing the filtered list back, means the two
+    /// orders are the same order.
+    private func normalisedExtras(in mode: AppMode) -> [SidebarSelection] {
         let standing = standingTabs(in: mode)
-        // A standing tab that also sits in stored desk state would appear
-        // twice; the derived one wins, exactly as the home tab does.
-        let opened = (tabsByMode[mode] ?? []).filter { !standing.contains($0) }
-        return [mode.defaultSelection] + standing + opened
+        return (tabsByMode[mode] ?? []).filter {
+            $0 != mode.defaultSelection && !standing.contains($0)
+        }
     }
 
     /// The first tab index the user may close. Home and the standing tabs are
@@ -624,7 +639,9 @@ public final class AppModel {
         let firstClosable = firstClosableTabIndex(in: currentMode)
         guard index >= firstClosable, openTabs.indices.contains(index) else { return }
         let old = storedSelection(in: currentMode)
-        var extras = tabsByMode[currentMode] ?? []
+        // The same list the strip is showing, so `index - firstClosable` lands
+        // on the tab the user actually clicked the cross on.
+        var extras = normalisedExtras(in: currentMode)
         extras.remove(at: index - firstClosable)
         tabsByMode[currentMode] = extras
         // Land on the tab that took its place, or the one before it — never on
@@ -676,7 +693,7 @@ public final class AppModel {
             return
         }
         let base = firstClosableTabIndex(in: mode)
-        var extras = tabsByMode[mode] ?? []
+        var extras = normalisedExtras(in: mode)
         if let existing = extras.firstIndex(of: selection) {
             activeTabByMode[mode] = existing + base
             return
@@ -862,11 +879,14 @@ public final class AppModel {
         // tab shifts every index after it, so a desk state that lost one would
         // otherwise reopen on the tab *next to* the one it was left on — and an
         // index past the end poisons `openTab` until the next relaunch.
-        // Counted from `tabsByMode`, already filtered above, plus the derived
-        // home tab. (`tabs(in:)` is shadowed here by the `tabs` parameter.)
+        //
+        // Counted from the strip itself. Counting `tabsByMode` plus one for
+        // home omitted the standing tabs, so in a mode that has any (only
+        // Investments today) a perfectly valid index was clamped *down* and
+        // the restore landed on the wrong tab. `self.tabs(in:)` because the
+        // `tabs` parameter shadows the method here.
         activeTabByMode = active.reduce(into: [:]) { result, entry in
-            let count = (tabsByMode[entry.key]?.count ?? 0) + 1
-            result[entry.key] = min(max(entry.value, 0), count - 1)
+            result[entry.key] = min(max(entry.value, 0), self.tabs(in: entry.key).count - 1)
         }
         applyNavigationChange(from: old)
     }
@@ -2669,18 +2689,31 @@ public final class AppModel {
     func pruneDeadTabs() {
         guard isOpen else { return }
         var changed = false
-        for (mode, list) in tabsByMode {
-            let live = list.filter { exists($0) }
-            guard live.count != list.count else { continue }
-            // Keep the user on the same tab where it survived: closing a tab
-            // before the active one shifts every index after it.
-            let active = activeTabByMode[mode] ?? 0
-            let survivingBefore = zip(list.indices, list)
-                .prefix(max(0, active - 1))
-                .filter { exists($0.1) }
-                .count
+        // `Array(keys)` because the loop writes back into `tabsByMode`.
+        for mode in Array(tabsByMode.keys) {
+            let extras = normalisedExtras(in: mode)
+            let live = extras.filter { exists($0) }
+            guard live.count != extras.count else { continue }
+            // Counted in *display* indices from end to end. `activeTabByMode`
+            // indexes the strip (``tabs(in:)``), never `tabsByMode`, and the
+            // old arithmetic — a position in storage plus one for home — was
+            // right only in a mode whose strip begins with the home tab alone.
+            // In Investments, where the standing portfolio tabs sit between,
+            // deleting an account bounced the user onto a portfolio.
+            let before = tabs(in: mode)
+            let active = min(max(activeTabByMode[mode] ?? 0, 0), max(before.count - 1, 0))
+            let current = before.indices.contains(active) ? before[active] : nil
             tabsByMode[mode] = live
-            activeTabByMode[mode] = min(active > 0 ? survivingBefore + 1 : 0, live.count)
+            let after = tabs(in: mode)
+            if let current, let landed = after.firstIndex(of: current) {
+                // It survived: stay on it, wherever it moved to.
+                activeTabByMode[mode] = landed
+            } else {
+                // It died: land on whatever took its place, or the last tab
+                // that outlived it.
+                let survivors = before.prefix(active).filter { after.contains($0) }.count
+                activeTabByMode[mode] = min(survivors, max(after.count - 1, 0))
+            }
             changed = true
         }
         guard changed else { return }
@@ -2806,6 +2839,7 @@ public final class AppModel {
     /// captured — transactions and other accounts are not — so an account edit
     /// no longer pays the whole-book serialisation ``editingWholeBook`` costs.
     func editingAccounts(_ ids: [GncGUID], named: String, _ body: () -> Void) {
+        if isReadOnly { return }   // read-only session: edits are refused (FR-DAT-06)
         auditLog(named)
         let before = ids.compactMap { accountSnapshot($0) }
         body()

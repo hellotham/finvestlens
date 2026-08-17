@@ -24,31 +24,81 @@ public enum OFXImporter {
     }
 
     public static func parse(_ text: String) -> [StagedTransaction] {
-        // Split on the transaction marker; the first chunk is the header/preamble.
-        let chunks = text.components(separatedBy: "<STMTTRN>").dropFirst()
         var result: [StagedTransaction] = []
 
-        for chunk in chunks {
-            // Bound the chunk at the closing tag if present (v2) or the next
-            // statement boundary (v1).
-            let body = chunk.components(separatedBy: "</STMTTRN>").first ?? chunk
+        // One response may carry several statements — a bank that exports
+        // "all my accounts" writes a `<STMTRS>` per account into one file.
+        // Splitting on `<STMTTRN>` across the whole text flattened them, and
+        // the import sheet then posted every account's rows into the one
+        // account the user had picked. Each row now remembers which statement
+        // it came from.
+        for statement in statements(in: text) {
+            let accountID = identifier(inStatement: statement)
+            // Split on the transaction marker; the first chunk is the
+            // statement's own header.
+            for chunk in statement.components(separatedBy: "<STMTTRN>").dropFirst() {
+                // Bound the chunk at the closing tag if present (v2) or the
+                // next statement boundary (v1).
+                let body = chunk.components(separatedBy: "</STMTTRN>").first ?? chunk
 
-            guard let posted = value("DTPOSTED", in: body),
-                  let date = parseDate(posted),
-                  let amountText = value("TRNAMT", in: body),
-                  let amount = ImportParsing.amount(amountText)
-            else { continue }
+                guard let posted = value("DTPOSTED", in: body),
+                      let date = parseDate(posted),
+                      let amountText = value("TRNAMT", in: body),
+                      let amount = ImportParsing.amount(amountText)
+                else { continue }
 
-            result.append(StagedTransaction(
-                date: date,
-                amount: amount,
-                payee: value("NAME", in: body) ?? value("PAYEE", in: body) ?? "",
-                memo: value("MEMO", in: body) ?? "",
-                reference: value("FITID", in: body) ?? ""
-            ))
+                result.append(StagedTransaction(
+                    date: date,
+                    amount: amount,
+                    payee: value("NAME", in: body) ?? value("PAYEE", in: body) ?? "",
+                    memo: value("MEMO", in: body) ?? "",
+                    // FITID is unique per account per institution by the OFX
+                    // spec, so it is definitive duplicate evidence and belongs
+                    // in GnuCash's `online_id` slot.
+                    reference: value("FITID", in: body) ?? "",
+                    referenceIsBankUnique: value("FITID", in: body)?.isEmpty == false,
+                    sourceAccountID: accountID
+                ))
+            }
         }
         result.append(contentsOf: parseInvestments(text))
         return result
+    }
+
+    /// The statement wrappers an OFX response can repeat, cash and investment.
+    private static let statementWrappers = ["STMTRS", "CCSTMTRS", "INVSTMTRS"]
+
+    /// Splits a response into its statement bodies, one per account.
+    ///
+    /// A file with no recognised wrapper (a hand-trimmed fragment, or a
+    /// dialect this list does not name) yields the whole text as a single
+    /// statement, which is exactly how the importer behaved before statements
+    /// were separated — so nothing that parsed before stops parsing.
+    /// Returned in **document order**, not wrapper order.
+    ///
+    /// Looping the wrapper list emitted every `<STMTRS>` before every
+    /// `<CCSTMTRS>` however the file was actually written, while
+    /// ``accountIdentifier(_:)`` reads the first account in document order. A
+    /// response whose card statement precedes its bank statement therefore
+    /// preselected the card as the import target while the sheet defaulted to
+    /// the bank statement's rows — posting the cheque account's transactions
+    /// into the credit card, which is the failure separating statements was
+    /// meant to prevent.
+    private static func statements(in text: String) -> [String] {
+        var found: [(start: String.Index, body: String)] = []
+        for tag in statementWrappers {
+            let open = "<\(tag)>"
+            var searchFrom = text.startIndex
+            while let range = text.range(of: open, range: searchFrom..<text.endIndex) {
+                let rest = text[range.upperBound...]
+                let body = rest.range(of: "</\(tag)>").map { String(rest[..<$0.lowerBound]) }
+                    ?? String(rest)
+                found.append((range.lowerBound, body))
+                searchFrom = range.upperBound
+            }
+        }
+        guard !found.isEmpty else { return [text] }
+        return found.sorted { $0.start < $1.start }.map(\.body)
     }
 
     /// The bank's identifier for the account this statement belongs to, for
@@ -64,11 +114,21 @@ public enum OFXImporter {
     }
 
     public static func accountIdentifier(_ text: String) -> String? {
-        // Read from the statement's own account block, not the whole file: a
-        // response can carry more than one, and the first is the one whose
-        // transactions follow.
-        guard let account = value("ACCTID", in: text) else { return nil }
-        if let bank = value("BANKID", in: text) { return "\(bank)/\(account)" }
+        // Scoped to the first statement, in document order — the one whose
+        // rows the sheet also defaults to. Searching the whole file took the
+        // first `ACCTID` and the first `BANKID` independently, so a response
+        // with a card statement first (an `ACCTID`, no `BANKID`) followed by a
+        // bank statement composed "<bank routing>/<card number>" — an
+        // identifier belonging to neither account, which `rememberImportAccount`
+        // would then teach the book permanently.
+        guard let first = statements(in: text).first else { return nil }
+        return identifier(inStatement: first)
+    }
+
+    /// The account id carried by one statement body.
+    private static func identifier(inStatement body: String) -> String? {
+        guard let account = value("ACCTID", in: body) else { return nil }
+        if let bank = value("BANKID", in: body) { return "\(bank)/\(account)" }
         return account
     }
 
@@ -100,26 +160,33 @@ public enum OFXImporter {
     /// its ``InvestmentDetail``. Quantity/price are absent on income rows.
     private static func parseInvestments(_ text: String) -> [StagedTransaction] {
         var result: [StagedTransaction] = []
+        // The security directory is file-wide (`<SECLIST>` sits outside the
+        // statements), but the trades belong to one brokerage account each.
         let directory = securityDirectory(text)
-        for (tag, action) in investmentWrappers {
-            for chunk in text.components(separatedBy: "<\(tag)>").dropFirst() {
-                let body = chunk.components(separatedBy: "</\(tag)>").first ?? chunk
-                guard let traded = value("DTTRADE", in: body) ?? value("DTPOSTED", in: body),
-                      let date = parseDate(traded) else { continue }
-                let units = value("UNITS", in: body).flatMap(ImportParsing.amount) ?? 0
-                let price = value("UNITPRICE", in: body).flatMap(ImportParsing.amount) ?? 0
-                let commission = value("COMMISSION", in: body).flatMap(ImportParsing.amount) ?? 0
-                let total = value("TOTAL", in: body).flatMap(ImportParsing.amount) ?? 0
-                let uniqueID = value("UNIQUEID", in: body) ?? ""
-                let listed = directory[uniqueID]
-                let security = listed?.ticker ?? listed?.name ?? uniqueID
-                result.append(StagedTransaction(
-                    date: date, amount: total, payee: security,
-                    memo: value("MEMO", in: body) ?? "",
-                    reference: value("FITID", in: body) ?? "",
-                    investment: InvestmentDetail(action: action, security: security,
-                                                 quantity: abs(units), pricePerShare: price,
-                                                 commission: commission)))
+        for statement in statements(in: text) {
+            let accountID = identifier(inStatement: statement)
+            for (tag, action) in investmentWrappers {
+                for chunk in statement.components(separatedBy: "<\(tag)>").dropFirst() {
+                    let body = chunk.components(separatedBy: "</\(tag)>").first ?? chunk
+                    guard let traded = value("DTTRADE", in: body) ?? value("DTPOSTED", in: body),
+                          let date = parseDate(traded) else { continue }
+                    let units = value("UNITS", in: body).flatMap(ImportParsing.amount) ?? 0
+                    let price = value("UNITPRICE", in: body).flatMap(ImportParsing.amount) ?? 0
+                    let commission = value("COMMISSION", in: body).flatMap(ImportParsing.amount) ?? 0
+                    let total = value("TOTAL", in: body).flatMap(ImportParsing.amount) ?? 0
+                    let uniqueID = value("UNIQUEID", in: body) ?? ""
+                    let listed = directory[uniqueID]
+                    let security = listed?.ticker ?? listed?.name ?? uniqueID
+                    result.append(StagedTransaction(
+                        date: date, amount: total, payee: security,
+                        memo: value("MEMO", in: body) ?? "",
+                        reference: value("FITID", in: body) ?? "",
+                        referenceIsBankUnique: value("FITID", in: body)?.isEmpty == false,
+                        investment: InvestmentDetail(action: action, security: security,
+                                                     quantity: abs(units), pricePerShare: price,
+                                                     commission: commission),
+                        sourceAccountID: accountID))
+                }
             }
         }
         return result

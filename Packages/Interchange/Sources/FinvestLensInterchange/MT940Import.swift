@@ -62,7 +62,10 @@ public enum MT940Importer {
     }
 
     public static func accountIdentifier(_ text: String) -> String? {
-        guard let value = fields(text).first(where: { $0.tag == "25" })?.value else { return nil }
+        // 25 or 25P, matching `parse` — otherwise a 25P file reports no account
+        // here while its rows are labelled, and the two disagree.
+        guard let value = fields(text).first(where: { $0.tag == "25" || $0.tag == "25P" })?.value
+        else { return nil }
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
     }
@@ -71,9 +74,30 @@ public enum MT940Importer {
         let fields = fields(text)
         var result: [StagedTransaction] = []
         var index = 0
+        // A download may hold several statements back to back, each opening
+        // with its own `:25:`. Carrying the current one onto every row is what
+        // lets the import sheet tell them apart instead of posting all of them
+        // into whichever account happened to be selected.
+        var account: String?
         while index < fields.count {
             let field = fields[index]
             index += 1
+            // `:20:` opens every statement and is mandatory, so it — not the
+            // account tag — is the boundary. Resetting here means a statement
+            // whose `:25:` is missing, blank, or written as the field-25a
+            // variant `:25P:` degrades to *unlabelled* rather than silently
+            // inheriting the previous statement's account, which would post
+            // its rows into the wrong account under a confidently wrong label.
+            if field.tag == "20" {
+                account = nil
+                continue
+            }
+            // 25 or 25P (field 25a): both identify the statement's account.
+            if field.tag == "25" || field.tag == "25P" {
+                let trimmed = field.value.trimmingCharacters(in: .whitespacesAndNewlines)
+                account = trimmed.isEmpty ? nil : trimmed
+                continue
+            }
             guard field.tag == "61", var row = statementLine(field.value) else { continue }
             // The narrative for a :61: is the :86: that immediately follows it.
             if index < fields.count, fields[index].tag == "86" {
@@ -82,6 +106,7 @@ public enum MT940Importer {
                 row.memo = memo
                 index += 1
             }
+            row.sourceAccountID = account
             result.append(row)
         }
         return result
@@ -127,12 +152,25 @@ public enum MT940Importer {
         let customer = references.first?.trimmingCharacters(in: .whitespaces) ?? ""
         let bank = references.count > 1
             ? references[1].trimmingCharacters(in: .whitespaces) : ""
-        let reference = !bank.isEmpty ? bank
+        // `NONREF` is the SWIFT sentinel for "there isn't one", and it appears
+        // on either half. Blanking it only on the customer side let a
+        // `…//NONREF` line be treated as a bank-unique id, after which the
+        // literal string "NONREF" went into `online_id` and matched every
+        // later row that also had no reference — an unconditional duplicate
+        // for the whole statement.
+        let bankRef = bank.uppercased() == "NONREF" ? "" : bank
+        let reference = !bankRef.isEmpty ? bankRef
             : (customer.uppercased() == "NONREF" ? "" : customer)
+        // Only the bank's own reference (the half after `//`) is an identifier
+        // the bank guarantees. The customer reference is whatever the payer
+        // typed and repeats month to month, so it must not be treated as a
+        // unique id or written to `online_id`.
+        let unique = !bankRef.isEmpty
 
         return StagedTransaction(date: date,
                                  amount: negative ? -magnitude : magnitude,
-                                 reference: reference)
+                                 reference: reference,
+                                 referenceIsBankUnique: unique)
     }
 
     /// Splits an `:86:` narrative into (payee, memo). German-convention `?nn`

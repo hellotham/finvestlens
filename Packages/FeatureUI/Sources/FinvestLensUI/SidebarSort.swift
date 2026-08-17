@@ -278,8 +278,53 @@ extension AppModel {
         }
     }
 
+    /// Where a dragged row is being dropped, relative to the row under it.
+    public enum SiblingPlacement: Sendable {
+        case before(GncGUID)
+        case after(GncGUID)
+
+        var neighbour: GncGUID {
+            switch self {
+            case .before(let id), .after(let id): return id
+            }
+        }
+    }
+
+    /// Moves `id` so it sits immediately before or after `placement`'s
+    /// neighbour among its siblings.
+    ///
+    /// Named rather than numbered on purpose. The drop handler knows the
+    /// *visible* list, `siblings(of:)` returns the full one, and an integer
+    /// carried between them was wrong in two independent ways: a hidden
+    /// sibling above the target shifted every index, and a downward drop
+    /// overshot by one, because the caller's index counted the dragged row
+    /// while ``reorderAccount(_:to:)`` removes it before inserting. Resolving
+    /// the neighbour *after* the removal makes both impossible to express.
+    public func reorderAccount(_ id: GncGUID, _ placement: SiblingPlacement) {
+        guard let book, book.account(with: id) != nil, id != placement.neighbour else { return }
+        guard var siblings = siblings(of: id) else { return }
+        guard let from = siblings.firstIndex(where: { $0.guid == id }) else { return }
+        let scope = siblings.map(\.guid)
+        let moved = siblings.remove(at: from)
+        guard let at = siblings.firstIndex(where: { $0.guid == placement.neighbour }) else { return }
+        let destination: Int
+        if case .after = placement { destination = at + 1 } else { destination = at }
+        guard destination != from else { return }   // already there; no undo entry
+        editingAccounts(scope, named: "Reorder Accounts") {
+            siblings.insert(moved, at: destination)
+            for (index, sibling) in siblings.enumerated() {
+                sibling.sidebarOrder = index
+            }
+        }
+    }
+
     /// Moves `id` to sit at `position` among its siblings, writing the whole
     /// level's order so the result does not depend on what was there before.
+    ///
+    /// `position` is the index the account should end up at **once it has been
+    /// lifted out** — the shape ``nudgeAccount(_:by:)`` wants, since "one place
+    /// down" is exactly "current index + 1" under that reading. A drop target
+    /// is not that shape; use ``reorderAccount(_:_:)`` for those.
     ///
     /// A book edit, and undoable — the order round-trips through GnuCash XML in
     /// the account's kvp, so it is part of the document rather than desk state.

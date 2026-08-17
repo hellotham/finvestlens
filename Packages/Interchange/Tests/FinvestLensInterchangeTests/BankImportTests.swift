@@ -304,9 +304,11 @@ struct ImportMatcherTests {
         // A re-imported row with the same FITID but a wildly different amount
         // and a date months away — GnuCash still dedupes it on online_id.
         let offAmount = StagedTransaction(date: day(2026, 6, 30),
-            amount: Decimal(string: "-999")!, payee: "SomethingElse", reference: "FIT-12345")
+            amount: Decimal(string: "-999")!, payee: "SomethingElse", reference: "FIT-12345",
+            referenceIsBankUnique: true)
         let fresh = StagedTransaction(date: day(2026, 6, 30),
-            amount: Decimal(string: "-77")!, payee: "New", reference: "FIT-99999")
+            amount: Decimal(string: "-77")!, payee: "New", reference: "FIT-99999",
+            referenceIsBankUnique: true)
         let results = ImportMatcher.match([offAmount, fresh], into: bank, book: book)
         #expect(results[0].isDuplicate)          // online_id definitive
         #expect(!results[1].isDuplicate)         // different id + amount
@@ -321,7 +323,24 @@ struct ImportMatcherTests {
         // This statement's row: same amount, next day — but its own FITID.
         // A bank never re-issues an event under a new id: not a duplicate.
         let staged = [StagedTransaction(date: day(2026, 1, 16), amount: Decimal(string: "-52.30")!,
-                                        payee: "Woolworths", reference: "FIT-NEW")]
+                                        payee: "Woolworths", reference: "FIT-NEW",
+                                        referenceIsBankUnique: true)]
+        let results = ImportMatcher.match(staged, into: bank, book: book)
+        #expect(!results[0].isDuplicate)
+    }
+
+    @Test("A repeating free-text reference is not a duplicate on its own")
+    func freeTextReferenceIsNotAnIdentifier() {
+        let (book, bank, _) = makeBook()
+        // A CSV "Reference" column lands in the same `online_id` slot, but it
+        // is whatever the payer typed and repeats every month.
+        book.splits(for: bank).first!.kvp["online_id"] = .string("RENT")
+
+        // Next month's rent: same reference text, different amount and date.
+        // Treating the text as an identifier skipped this payment entirely.
+        let staged = [StagedTransaction(date: day(2026, 2, 16),
+                                        amount: Decimal(string: "-2600")!,
+                                        payee: "Landlord", reference: "RENT")]
         let results = ImportMatcher.match(staged, into: bank, book: book)
         #expect(!results[0].isDuplicate)
     }
@@ -541,5 +560,211 @@ struct ImportTransferMatchTests {
         let results = ImportMatcher.match([payment, charge], into: card, book: book)
         #expect(results[0].suggestedAccountID == everyday.guid)   // funded from Everyday Card
         #expect(results[1].suggestedAccountID == nil)         // charges don't infer funding
+    }
+}
+
+@Suite("Amount notation")
+struct AmountNotationTests {
+
+    @Test("DR and CR name the side, outranking the bare magnitude")
+    func debitCreditMarkers() {
+        // The character filter used to strip the letters and read a debit as
+        // a deposit — every withdrawal in such a file imported with the wrong
+        // sign.
+        #expect(ImportParsing.amount("500.00 DR") == Decimal(-500))
+        #expect(ImportParsing.amount("500.00 CR") == Decimal(500))
+        #expect(ImportParsing.amount("500.00DR") == Decimal(-500))
+        #expect(ImportParsing.amount("DR 500.00") == Decimal(-500))
+        #expect(ImportParsing.amount("Cr. 1,250.50") == Decimal(string: "1250.50"))
+        #expect(ImportParsing.amount("$500.00 DB") == Decimal(-500))
+        // Authoritative: a DR marker wins over a magnitude already signed.
+        #expect(ImportParsing.amount("-500.00 CR") == Decimal(500))
+    }
+
+    @Test("A currency code is not a side marker")
+    func currencyCodesSurvive() {
+        // "IDR" ends in "DR" and "DRAWINGS" starts with one; neither names a
+        // side, and treating them as one flipped good rows.
+        #expect(ImportParsing.amount("500.00 IDR") == Decimal(500))
+        #expect(ImportParsing.amount("500.00 EUR") == Decimal(500))
+        // A bare number is untouched.
+        #expect(ImportParsing.amount("500.00") == Decimal(500))
+        #expect(ImportParsing.amount("-500.00") == Decimal(-500))
+    }
+}
+
+@Suite("Multi-statement files")
+struct MultiStatementTests {
+
+    @Test("An OFX response carrying two accounts labels each row with its own")
+    func ofxTwoStatements() {
+        let ofx = """
+        <OFX><BANKMSGSRSV1><STMTTRNRS>
+        <STMTRS><CURDEF>AUD</CURDEF>
+        <BANKACCTFROM><BANKID>062000</BANKID><ACCTID>11111111</ACCTID></BANKACCTFROM>
+        <BANKTRANLIST>
+        <STMTTRN><TRNTYPE>DEBIT<DTPOSTED>20260115<TRNAMT>-25.00<FITID>A1<NAME>Cafe</STMTTRN>
+        </BANKTRANLIST></STMTRS>
+        <STMTRS><CURDEF>AUD</CURDEF>
+        <BANKACCTFROM><BANKID>062000</BANKID><ACCTID>22222222</ACCTID></BANKACCTFROM>
+        <BANKTRANLIST>
+        <STMTTRN><TRNTYPE>CREDIT<DTPOSTED>20260116<TRNAMT>900.00<FITID>B1<NAME>Salary</STMTTRN>
+        </BANKTRANLIST></STMTRS>
+        </STMTTRNRS></BANKMSGSRSV1></OFX>
+        """
+        let rows = OFXImporter.parse(ofx)
+        #expect(rows.count == 2)
+        // Before this, both rows arrived unlabelled and the import sheet
+        // posted the salary into whichever account was selected for the cafe.
+        #expect(rows.first { $0.reference == "A1" }?.sourceAccountID == "062000/11111111")
+        #expect(rows.first { $0.reference == "B1" }?.sourceAccountID == "062000/22222222")
+        // The file-level identifier still names the first statement.
+        #expect(OFXImporter.accountIdentifier(ofx) == "062000/11111111")
+    }
+
+    @Test("An MT940 file with two :25: blocks labels each statement's rows")
+    func mt940TwoStatements() {
+        let mt940 = """
+        :20:STMT001
+        :25:062000/11111111
+        :60F:C260101AUD1000,00
+        :61:2601150115D25,00NTRFNONREF
+        :86:Cafe purchase
+        :62F:C260131AUD975,00
+        :20:STMT002
+        :25:062000/22222222
+        :60F:C260101AUD500,00
+        :61:2601160116C900,00NTRFNONREF
+        :86:Salary
+        :62F:C260131AUD1400,00
+        """
+        let rows = MT940Importer.parse(mt940)
+        #expect(rows.count == 2)
+        #expect(rows[0].sourceAccountID == "062000/11111111")
+        #expect(rows[1].sourceAccountID == "062000/22222222")
+        #expect(MT940Importer.accountIdentifier(mt940) == "062000/11111111")
+    }
+
+    @Test("A single-statement file still labels its rows, and parses as before")
+    func singleStatementUnchanged() {
+        let ofx = """
+        <OFX><STMTRS><BANKACCTFROM><ACCTID>999</ACCTID></BANKACCTFROM>
+        <STMTTRN><DTPOSTED>20260115<TRNAMT>-25.00<FITID>A1<NAME>Cafe</STMTTRN>
+        </STMTRS></OFX>
+        """
+        let rows = OFXImporter.parse(ofx)
+        #expect(rows.count == 1)
+        #expect(rows[0].sourceAccountID == "999")
+        #expect(rows[0].amount == Decimal(-25))
+    }
+
+    @Test("A CAMT document with two statements keeps their entries apart")
+    func camtTwoStatements() {
+        let camt = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <Document><BkToCstmrStmt>
+        <Stmt><Acct><Id><IBAN>AU11AAAA</IBAN></Id></Acct>
+        <Ntry><Amt Ccy="AUD">25.00</Amt><CdtDbtInd>DBIT</CdtDbtInd><Sts>BOOK</Sts>
+        <BookgDt><Dt>2026-01-15</Dt></BookgDt><AcctSvcrRef>E1</AcctSvcrRef></Ntry>
+        </Stmt>
+        <Stmt><Acct><Id><IBAN>AU22BBBB</IBAN></Id></Acct>
+        <Ntry><Amt Ccy="AUD">900.00</Amt><CdtDbtInd>CRDT</CdtDbtInd><Sts>BOOK</Sts>
+        <BookgDt><Dt>2026-01-16</Dt></BookgDt><AcctSvcrRef>E2</AcctSvcrRef></Ntry>
+        </Stmt>
+        </BkToCstmrStmt></Document>
+        """
+        let rows = CAMTImporter.parse(camt)
+        #expect(rows.count == 2)
+        #expect(rows.first { $0.reference == "E1" }?.sourceAccountID == "AU11AAAA")
+        #expect(rows.first { $0.reference == "E2" }?.sourceAccountID == "AU22BBBB")
+        #expect(CAMTImporter.accountIdentifier(camt) == "AU11AAAA")
+    }
+}
+
+@Suite("Side markers at either end")
+struct SideMarkerEndTests {
+
+    @Test("A leading DR is seen even when a currency code ends the string")
+    func prefixSurvivesRejectedSuffix() {
+        // "DR 500 IDR" ends in "DR" via the currency code. The boundary guard
+        // correctly refuses that, but written as `if suffix … else if prefix`
+        // the refusal consumed the iteration and the real leading marker was
+        // never tested — the debit parsed as +500.
+        #expect(ImportParsing.amount("DR 500 IDR") == Decimal(-500))
+        #expect(ImportParsing.amount("CR 500 IDR") == Decimal(500))
+        #expect(ImportParsing.amount("DR. 1,250.50 EUR") == Decimal(string: "-1250.50"))
+    }
+
+    @Test("Neither end marked leaves the amount alone")
+    func noMarker() {
+        #expect(ImportParsing.amount("500 IDR") == Decimal(500))
+        #expect(ImportParsing.amount("DRAWINGS 500") == Decimal(500))
+        #expect(ImportParsing.amount("500.00") == Decimal(500))
+    }
+}
+
+@Suite("Statement order and account labelling")
+struct StatementOrderTests {
+
+    @Test("A card statement written before the bank statement keeps document order")
+    func documentOrderNotWrapperOrder() {
+        // Looping the wrapper list put every <STMTRS> before every <CCSTMTRS>
+        // however the file was written, so the sheet's default statement and
+        // its suggested target account came from different accounts — the
+        // cheque account's rows posting into the credit card.
+        let ofx = """
+        <OFX>
+        <CREDITCARDMSGSRSV1><CCSTMTRS>
+        <CCACCTFROM><ACCTID>4111111111111111</ACCTID></CCACCTFROM>
+        <STMTTRN><DTPOSTED>20260115<TRNAMT>-25.00<FITID>C1<NAME>Cafe</STMTTRN>
+        </CCSTMTRS></CREDITCARDMSGSRSV1>
+        <BANKMSGSRSV1><STMTRS>
+        <BANKACCTFROM><BANKID>062000</BANKID><ACCTID>99999999</ACCTID></BANKACCTFROM>
+        <STMTTRN><DTPOSTED>20260116<TRNAMT>900.00<FITID>B1<NAME>Salary</STMTTRN>
+        </STMTRS></BANKMSGSRSV1>
+        </OFX>
+        """
+        let rows = OFXImporter.parse(ofx)
+        #expect(rows.first { $0.reference == "C1" }?.sourceAccountID == "4111111111111111")
+        #expect(rows.first { $0.reference == "B1" }?.sourceAccountID == "062000/99999999")
+        // The file-level id must name the FIRST statement in the document —
+        // the card — not a splice of the card's ACCTID and the bank's BANKID.
+        #expect(OFXImporter.accountIdentifier(ofx) == "4111111111111111")
+    }
+
+    @Test("An MT940 statement whose account tag is the 25P variant is not mislabelled")
+    func mt940VariantAccountTag() {
+        // `:20:` opens each statement, so a missing or variant `:25:` must
+        // degrade to unlabelled rather than inheriting the previous account.
+        let mt940 = """
+        :20:STMT001
+        :25:062000/11111111
+        :61:2601150115D25,00NTRFNONREF
+        :86:Cafe
+        :20:STMT002
+        :25P:062000/22222222
+        :61:2601160116C900,00NTRFNONREF
+        :86:Salary
+        """
+        let rows = MT940Importer.parse(mt940)
+        #expect(rows.count == 2)
+        #expect(rows[0].sourceAccountID == "062000/11111111")
+        #expect(rows[1].sourceAccountID == "062000/22222222")
+    }
+
+    @Test("A statement with no account tag at all is unlabelled, not inherited")
+    func missingAccountTagIsNotInherited() {
+        let mt940 = """
+        :20:STMT001
+        :25:062000/11111111
+        :61:2601150115D25,00NTRFNONREF
+        :86:Cafe
+        :20:STMT002
+        :61:2601160116C900,00NTRFNONREF
+        :86:Salary
+        """
+        let rows = MT940Importer.parse(mt940)
+        #expect(rows[0].sourceAccountID == "062000/11111111")
+        #expect(rows[1].sourceAccountID == nil)   // not "062000/11111111"
     }
 }

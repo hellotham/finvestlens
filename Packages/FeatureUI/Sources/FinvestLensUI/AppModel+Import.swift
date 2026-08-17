@@ -348,7 +348,8 @@ extension AppModel {
             date: row.date,
             description: inv.security.isEmpty ? "Imported investment" : inv.security,
             memo: row.memo,
-            reference: row.reference)
+            reference: row.reference,
+            referenceIsBankUnique: row.referenceIsBankUnique)
     }
 
     /// The broker references (`FITID`s) already posted as investment
@@ -401,7 +402,8 @@ extension AppModel {
         var referenced: [(split: Split, reference: String)] = []
         for result in results {
             if skipDuplicates && result.isDuplicate {
-                if !result.staged.reference.isEmpty, let matchID = result.matchedSplitID,
+                if result.staged.referenceIsBankUnique, !result.staged.reference.isEmpty,
+                   let matchID = result.matchedSplitID,
                    let split = book.split(with: matchID), split.kvp["online_id"] == nil {
                     referenced.append((split, result.staged.reference))
                 }
@@ -439,7 +441,7 @@ extension AppModel {
                     let targetSplit = transaction.addSplit(
                         account: target, value: staged.amount,
                         memo: name == rawName ? staged.memo : narrative)
-                    if !staged.reference.isEmpty {
+                    if staged.referenceIsBankUnique, !staged.reference.isEmpty {
                         targetSplit.kvp["online_id"] = .string(staged.reference)
                     }
                     for (leg, categoryAccount) in legs {
@@ -467,7 +469,11 @@ extension AppModel {
                 memo: name == rawName ? staged.memo : narrative)
             // Record the bank's FITID in the split's `online_id` slot, GnuCash's
             // convention, so a re-import (here or in GnuCash) recognises it.
-            if !staged.reference.isEmpty {
+            // Only a genuinely bank-unique id may go here: that slot is read as
+            // definitive duplicate evidence, and a CSV "Reference" column is
+            // free text the payer chose. The reference is still kept on the
+            // transaction's `number`, so nothing is lost by withholding it.
+            if staged.referenceIsBankUnique, !staged.reference.isEmpty {
                 targetSplit.kvp["online_id"] = .string(staged.reference)
             }
             transaction.addSplit(account: destination, value: -staged.amount)
@@ -487,7 +493,7 @@ extension AppModel {
                             ? (staged.payee.isEmpty ? staged.memo : staged.payee)
                             : staged.memo
                     }
-                    if !staged.reference.isEmpty {
+                    if staged.referenceIsBankUnique, !staged.reference.isEmpty {
                         split.kvp["online_id"] = .string(staged.reference)
                     }
                 }

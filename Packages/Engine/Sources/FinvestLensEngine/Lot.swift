@@ -50,5 +50,17 @@ public final class Lot: Identifiable, @unchecked Sendable {
         splits.reduce(Decimal(0)) { $0 + $1.value }
     }
 
+    /// The lot's balance as it stood on `date`, counting only splits posted on
+    /// or before it. An aging or statement "as of" a past date needs this:
+    /// using ``balance`` reports today's settlement against that date's
+    /// buckets, so an invoice paid last week vanishes from an aging run for
+    /// the month before it was paid.
+    public func balance(asOf date: Date) -> Decimal {
+        splits.reduce(Decimal(0)) { total, split in
+            guard let posted = split.transaction?.datePosted, posted <= date else { return total }
+            return total + split.value
+        }
+    }
+
     public var isEmpty: Bool { splits.isEmpty }
 }

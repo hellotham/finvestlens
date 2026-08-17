@@ -116,6 +116,39 @@ public struct QuoteService: Sendable {
         "NASDAQ": "", "NYSE": "", "NYQ": "", "NMS": "", "AMEX": "", "ARCA": "",
     ]
 
+    /// Yahoo suffix → the timezone the exchange keeps its own hours in.
+    ///
+    /// The keys are the values of ``yahooSuffix``: the suffix is what the
+    /// ticker actually carries by the time a provider sees it, so this reads
+    /// the exchange straight off the symbol rather than needing the book's
+    /// namespace. Only the venues already named there appear here — this adds
+    /// no geography the app did not already claim to know.
+    static let exchangeTimeZones: [String: String] = [
+        "AX": "Australia/Sydney", "NZ": "Pacific/Auckland", "L": "Europe/London",
+        "TO": "America/Toronto", "V": "America/Toronto", "HK": "Asia/Hong_Kong",
+        "SI": "Asia/Singapore", "T": "Asia/Tokyo", "DE": "Europe/Berlin",
+        "PA": "Europe/Paris", "AS": "Europe/Amsterdam", "SW": "Europe/Zurich",
+    ]
+
+    /// The timezone to read a bare instant's civil day in, for a provider that
+    /// reports no exchange of its own.
+    ///
+    /// An unsuffixed ticker is a US listing by the convention every provider
+    /// here uses, so it reads in New York — which matters for an after-hours
+    /// quote, where 20:00 in New York is already tomorrow in UTC. An unknown
+    /// suffix falls to UTC: every listed venue closes during its own daytime,
+    /// so UTC lands on the right civil day for a close even when the exchange
+    /// is not recognised, and unlike the reader's timezone it does not drift
+    /// with who happens to be looking.
+    static func exchangeTimeZone(forSymbol symbol: String) -> TimeZone {
+        let utc = TimeZone(identifier: "UTC") ?? .gmt
+        guard let dot = symbol.lastIndex(of: ".") else {
+            return TimeZone(identifier: "America/New_York") ?? utc
+        }
+        let suffix = String(symbol[symbol.index(after: dot)...]).uppercased()
+        return exchangeTimeZones[suffix].flatMap(TimeZone.init(identifier:)) ?? utc
+    }
+
     /// Fetches the latest quote and returns a `Price` of `commodity` in
     /// `currency`.
     public func latestPrice(
@@ -360,10 +393,17 @@ public struct QuoteService: Sendable {
         //    the provider says which one — Yahoo's 16:00 New York close is the
         //    14th in New York and 06:00 on the 15th in Sydney, and reading it
         //    in the reader's calendar dated every US close a day late.
-        //    Date-only providers send no offset and are already neutral.
+        //    Date-only providers send no offset and are already neutral, but
+        //    three — EODHD, Finnhub and Twelve Data — send a bare Unix
+        //    timestamp, which is an instant with no offset at all. Reading
+        //    those in `.current` dated every US close a day late for a Sydney
+        //    reader, so the exchange is inferred from the symbol instead. The
+        //    reader's own timezone is never the answer: it says nothing about
+        //    where the security trades.
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = quote.exchangeOffsetFromGMT
-            .flatMap { TimeZone(secondsFromGMT: $0) } ?? .current
+            .flatMap { TimeZone(secondsFromGMT: $0) }
+            ?? exchangeTimeZone(forSymbol: quote.symbol)
         let day = Price.dayNeutral(quote.date, calendar: calendar)
 
         return Price(

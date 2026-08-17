@@ -97,6 +97,9 @@ extension AppModel {
         guard list.contains(where: { $0.isEnabled && !$0.dueDates(through: through).isEmpty })
         else { return 0 }
         var created = 0
+        /// Schedules that refused to post — an unbalanced instance, typically a
+        /// template whose formula this parser cannot evaluate.
+        var blocked: [String] = []
         // ONE whole-book undoable action: the posted transactions and the
         // schedules' advanced `lastPosted` must rewind together. Registering
         // only the kvp restore left the transactions in the book — ⌘Z made
@@ -111,7 +114,17 @@ extension AppModel {
                 var postedThrough: Date?
                 for date in dueDates {
                     guard ScheduledTransactionService.post(list[index], date: date, into: book, variables: variables) != nil
-                    else { break }
+                    else {
+                        // A refusal is permanent until the template is fixed:
+                        // `lastPosted` does not advance, so this same date is
+                        // due again next time and the schedule never moves. It
+                        // used to fail here in total silence — the bill simply
+                        // stopped appearing — which is the same invisible-stop
+                        // failure the recurrence-horizon fix was written to
+                        // remove. Name the schedule so it can be repaired.
+                        blocked.append(list[index].name)
+                        break
+                    }
                     created += 1
                     postedThrough = date
                 }
@@ -123,6 +136,11 @@ extension AppModel {
                 scheduledTransactions = list
                 persistKvpCollections()   // lastPosted rides the same undo snapshot
             }
+        }
+        if !blocked.isEmpty {
+            let names = Set(blocked).sorted().joined(separator: ", ")
+            showToast(.failure, "Could not post \(names): the transaction does not balance. "
+                      + "Check its amounts or formulas — it will stay due until it is fixed.")
         }
         return created
     }

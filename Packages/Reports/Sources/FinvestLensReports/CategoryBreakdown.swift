@@ -49,8 +49,10 @@ public extension FinancialReports {
     static func categoryBreakdown(_ book: Book, from: Date, to: Date,
                                   currency: Commodity,
                                   calendar: Calendar = .current) -> CategoryBreakdown {
-        // One walk for every category's period total.
-        let map = balanceMap(book, from: from, to: to)
+        // One walk for every category's period total. Closing entries are
+        // excluded — this reports income and expense categories, which Close
+        // Book zeroes, so a closed year otherwise showed no spending at all.
+        let map = balanceMap(book, from: from, to: to, excludingClosing: true)
 
         /// A subtree's converted, presentation-signed total over the period.
         func rolled(_ account: Account) -> Decimal {

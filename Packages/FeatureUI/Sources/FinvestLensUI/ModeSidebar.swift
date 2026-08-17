@@ -1045,13 +1045,16 @@ struct AccountRowDrop: DropDelegate {
             // Between siblings only. Dropping between two rows of *another*
             // parent is a re-parent wearing a reorder's clothes, so it moves
             // the account there first and then orders it.
-            guard let index = siblings.firstIndex(where: { $0.id == node.id }) else { return false }
-            let target = (drag.target?.zone == .after) ? index + 1 : index
             if !siblings.contains(where: { $0.id == dragged }) {
                 let parent = model.book?.account(with: node.id)?.parent?.guid
                 guard model.moveAccount(dragged, under: parent) else { return false }
             }
-            model.reorderAccount(dragged, to: target)
+            // The row it was dropped against, not an index into the rows on
+            // screen: hidden siblings do not appear here but do appear in the
+            // level being reordered, so any integer computed from this list
+            // meant something different by the time it arrived.
+            model.reorderAccount(dragged, drag.target?.zone == .after
+                                 ? .after(node.id) : .before(node.id))
             return true
         }
     }

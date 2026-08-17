@@ -47,3 +47,35 @@ struct IntentSupportTests {
         #expect(IntentSupport.netWorthSummary().contains("No FinvestLens book"))
     }
 }
+
+@MainActor
+@Suite("Lock transitions keep the widget honest")
+struct LockWidgetSyncTests {
+
+    private func makeBook() throws -> (model: AppModel, url: URL) {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
+        let model = AppModel()
+        try model.newDocument(at: url)
+        return (model, url)
+    }
+
+    @Test("Locking and unlocking both republish, so the widget cannot contradict the lock")
+    func bothTransitionsPublish() async throws {
+        // Locking mid-session used to leave real net worth and bill totals on
+        // the Lock Screen until the next save, and unlocking never restored
+        // the widget or the alert schedule that opening a protected book had
+        // cleared. Both transitions now go through `publishWidgetData`.
+        let (model, url) = try makeBook()
+        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+
+        model.requireAuthentication = true
+        model.lockNow()
+        #expect(model.isLocked)
+
+        // Unlock succeeds without LocalAuthentication in tests, by design.
+        let ok = await model.unlock()
+        #expect(ok)
+        #expect(!model.isLocked)
+    }
+}

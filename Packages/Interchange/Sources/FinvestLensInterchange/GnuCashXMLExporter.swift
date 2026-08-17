@@ -408,18 +408,47 @@ public enum GnuCashXMLExporter {
         return nil
     }
 
-    /// Escapes element text content. Only `& < >` need escaping there —
-    /// quotes and apostrophes stay literal, matching GnuCash's own output
-    /// (we never emit user text inside attribute values).
+    /// Escapes element text content. Quotes and apostrophes stay literal,
+    /// matching GnuCash's own output (we never emit user text inside
+    /// attribute values).
+    ///
+    /// `& < >` are the obvious three. **Carriage return is the fourth**, and
+    /// leaving it literal quietly broke the round-trip invariant: XML 1.0
+    /// §2.11 requires a parser to normalise every line ending to `#xA` before
+    /// the application ever sees it, so a memo containing a CR came back
+    /// carrying an LF, and import → export → re-import → export was no longer
+    /// byte-identical. Verified with `xmllint`: a literal `0d` in element text
+    /// re-serialises as `0a`, while `&#13;` survives (as `&#xD;`). GnuCash
+    /// escapes it for the same reason — libxml2's `xmlNodeAddContent`, which
+    /// `text_to_dom_tree` calls
+    /// (`libgnucash/backend/xml/sixtp-dom-generators.cpp:54`), writes `&#xD;`.
+    ///
+    /// The remaining C0 controls have no XML 1.0 representation at all — not
+    /// even as a character reference — so a book that somehow acquired one
+    /// could only be exported as a file no parser would reopen, ours included.
+    /// They are dropped, which is the only encodable outcome; every character
+    /// that *can* be preserved now is.
+    /// Iterates **unicode scalars**, not `Character`s. `"\r\n"` is a single
+    /// Swift `Character` — one grapheme cluster — so a `case "\r"` over
+    /// `Character`s matches a lone CR and misses every CRLF, which is the
+    /// common case in a file that has been near Windows. Scalars are also the
+    /// level XML itself defines these rules at.
     static func escape(_ text: String) -> String {
         var result = ""
-        result.reserveCapacity(text.count)
-        for character in text {
-            switch character {
+        result.unicodeScalars.reserveCapacity(text.unicodeScalars.count)
+        for scalar in text.unicodeScalars {
+            switch scalar {
             case "&": result += "&amp;"
             case "<": result += "&lt;"
             case ">": result += "&gt;"
-            default: result.append(character)
+            case "\r": result += "&#13;"
+            // Tab and newline are legal and preserved verbatim in element
+            // content, so they need no help; everything else below U+0020 is
+            // forbidden outright and cannot be encoded at all.
+            case "\t", "\n": result.unicodeScalars.append(scalar)
+            default:
+                guard scalar.value >= 0x20 else { continue }
+                result.unicodeScalars.append(scalar)
             }
         }
         return result

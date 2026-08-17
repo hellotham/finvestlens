@@ -65,6 +65,12 @@ extension AppModel {
     public func lockNow() {
         guard isOpen else { return }
         isLocked = true
+        // Both transitions have to republish, or the widget contradicts the
+        // lock. Locking mid-session left the real net worth and bill totals
+        // sitting on the Lock Screen until the next save — exactly what the
+        // gate in `publishWidgetData` exists to prevent — because nothing told
+        // the widget the state had changed.
+        publishWidgetData()
     }
 
     /// Attempts to unlock via device biometrics/password. Returns `true` on
@@ -73,7 +79,14 @@ extension AppModel {
     @discardableResult
     public func unlock(reason: String = "Unlock your book") async -> Bool {
         let ok = await authenticator.authenticate(reason: reason)
-        if ok { isLocked = false }
+        if ok {
+            isLocked = false
+            // …and the other half. Without this the widget and the alert
+            // schedule stayed blank for the whole session after unlocking:
+            // opening a protected book publishes the placeholder and cancels
+            // every scheduled alert, and nothing restored them.
+            publishWidgetData()
+        }
         return ok
     }
 }

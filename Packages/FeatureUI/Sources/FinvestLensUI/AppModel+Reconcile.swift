@@ -57,8 +57,15 @@ extension AppModel {
         guard let book, let account = book.account(with: accountID) else { return }
         let startingBalance = book.balance(of: account, filter: .reconciled).amount
 
+        // Frozen (`f`) splits are already inside `startingBalance` — GnuCash's
+        // reconciled balance counts `YREC || FREC`, and `BalanceFilter
+        // .reconciled` matches that. Offering them as unticked items too let
+        // the user tick one and count it twice, after which the difference
+        // could only be closed by leaving a genuine transaction unticked.
         let items = book.splits(for: account)
-            .filter { $0.reconcileState != .reconciled && $0.reconcileState != .voided }
+            .filter { $0.reconcileState != .reconciled
+                      && $0.reconcileState != .frozen
+                      && $0.reconcileState != .voided }
             .filter { ($0.transaction?.datePosted ?? .distantPast) <= statementDate }
             .sorted { ($0.transaction?.datePosted ?? .distantPast) < ($1.transaction?.datePosted ?? .distantPast) }
             .map { split in

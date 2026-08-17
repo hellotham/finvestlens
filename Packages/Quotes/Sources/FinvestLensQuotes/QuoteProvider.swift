@@ -78,6 +78,29 @@ public enum QuoteProviderKind: String, CaseIterable, Codable, Sendable, Identifi
     /// about a mnemonic it has never heard of and report "not found" forever.
     public var matchesByIdentifier: Bool { self == .fiig }
 
+    /// Whether the provider can be handed an **arbitrary** security's symbol
+    /// and be expected to answer about that security, or refuse.
+    ///
+    /// `false` for the two narrow-catalogue providers, and for opposite
+    /// reasons. FIIG is keyed by ISIN over its own bond index. Wilson is keyed
+    /// by a **fund page slug** — `…/trusts/<slug>/` — so a ticker sent there
+    /// addresses whatever page that word happens to name, and the provider
+    /// cannot tell: it echoes back the symbol it was asked about and hard-codes
+    /// `AUD`, so the currency guard passes trivially and another fund's unit
+    /// price would be stored as this security's.
+    ///
+    /// This gates the cross-provider recovery sweep, which otherwise sent every
+    /// unpriced holding's ticker to wilsonassetmanagement.com.au one request at
+    /// a time — disclosing the user's portfolio to an unrelated fund manager.
+    /// Both remain reachable as a security's explicitly chosen provider, which
+    /// is a deliberate act rather than a guess.
+    public var acceptsArbitrarySymbols: Bool {
+        switch self {
+        case .fiig, .wilson: return false
+        case .yahoo, .twelveData, .eodhd, .alphaVantage, .finnhub, .stooq: return true
+        }
+    }
+
     /// Whether the provider states the currency its prices are in.
     ///
     /// Four do not — EODHD, Alpha Vantage, Finnhub and Stooq all answer with a

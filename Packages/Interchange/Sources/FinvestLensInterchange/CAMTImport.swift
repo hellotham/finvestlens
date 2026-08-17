@@ -66,10 +66,15 @@ public enum CAMTImporter {
 
 private final class Delegate: NSObject, XMLParserDelegate {
     var rows: [StagedTransaction] = []
-    /// The statement's account, taken from the first `<Acct>` outside any
-    /// entry. A document can carry several statements; the first is the one
-    /// whose entries follow.
+    /// The **first** statement's account, taken from the first `<Acct>`
+    /// outside any entry — what ``CAMTImporter/accountIdentifier(_:)`` reports
+    /// for the document as a whole.
     var accountID: String?
+    /// The account of the statement currently being read. A document may carry
+    /// several `<Stmt>` blocks, one per account; keeping only the first meant
+    /// every later statement's entries arrived unlabelled and the import sheet
+    /// posted them into whichever account the user had picked.
+    private var currentAccountID: String?
 
     private var path: [String] = []
     private var text = ""
@@ -105,6 +110,10 @@ private final class Delegate: NSObject, XMLParserDelegate {
         let name = Self.local(name)
         path.append(name)
         text = ""
+        // A new statement block starts a new account. `Stmt` is camt.053,
+        // `Rpt` camt.052, `Ntfctn` camt.054 — all three repeat per account
+        // inside one document.
+        if name == "Stmt" || name == "Rpt" || name == "Ntfctn" { currentAccountID = nil }
         if name == "Ntry" {
             inEntry = true
             amount = nil; isDebit = false; isReversal = false; status = ""
@@ -127,15 +136,16 @@ private final class Delegate: NSObject, XMLParserDelegate {
         // The statement's own account sits outside <Ntry>, so it has to be read
         // before the entry guard. Party accounts (CdtrAcct/DbtrAcct) are inside
         // an entry and so can never be mistaken for it.
-        if !inEntry, accountID == nil, path.contains("Acct") {
+        if !inEntry, currentAccountID == nil, path.contains("Acct") {
             let value = text.trimmingCharacters(in: .whitespacesAndNewlines)
             if !value.isEmpty {
                 if name == "IBAN" {
-                    accountID = value
+                    currentAccountID = value
                 } else if name == "Id", path.dropLast().last == "Othr" {
-                    accountID = value
+                    currentAccountID = value
                 }
             }
+            if accountID == nil { accountID = currentAccountID }
         }
         guard inEntry else { return }
         let value = text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -197,17 +207,36 @@ private final class Delegate: NSObject, XMLParserDelegate {
         // every CAMT refund with an inverted sign).
         let negative = isDebit
 
-        let reference = !entryReference.isEmpty ? entryReference
-            : !detailReference.isEmpty ? detailReference
-            : !transactionID.isEmpty ? transactionID
-            : (endToEndID.uppercased() != "NOTPROVIDED" ? endToEndID : "")
+        // `NOTPROVIDED` is ISO 20022's "there isn't one" and banks write it in
+        // any of these fields, not just `EndToEndId`. Filtering it there alone
+        // let an `<AcctSvcrRef>NOTPROVIDED</AcctSvcrRef>` count as a
+        // bank-unique id: the literal string went into `online_id` and every
+        // later entry carrying the same sentinel was then an unconditional
+        // duplicate — the exact failure the flag exists to prevent.
+        func provided(_ value: String) -> String {
+            value.uppercased() == "NOTPROVIDED" ? "" : value
+        }
+        let entryRef = provided(entryReference)
+        let detailRef = provided(detailReference)
+        let txID = provided(transactionID)
+        let reference = !entryRef.isEmpty ? entryRef
+            : !detailRef.isEmpty ? detailRef
+            : !txID.isEmpty ? txID
+            : provided(endToEndID)
+        // The first three are the account servicer's own references, which the
+        // bank assigns and does not reuse. `EndToEndId` is the *payer's* — a
+        // remittance string that legitimately repeats — so it is corroborating
+        // evidence only, never an identifier.
+        let referenceIsBankUnique = !entryRef.isEmpty || !detailRef.isEmpty || !txID.isEmpty
         let payee = isDebit ? creditorName : debtorName
         let memo = remittance.isEmpty ? additionalInfo : remittance.joined(separator: " ")
 
         rows.append(StagedTransaction(date: date,
                                       amount: negative ? -amount : amount,
                                       payee: payee, memo: memo,
-                                      reference: reference))
+                                      reference: reference,
+                                      referenceIsBankUnique: referenceIsBankUnique,
+                                      sourceAccountID: currentAccountID))
     }
 
     private static func date(_ raw: String) -> Date? {

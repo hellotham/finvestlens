@@ -96,8 +96,8 @@ extension SQLiteDocumentStore {
             try db.execute(sql: """
                 INSERT INTO invoice (guid, id, kind, isCreditNote, ownerType, ownerGuid, dateOpened,
                     datePosted, dueDate, termsGuid, billingID, notes, currencyNamespace,
-                    currencyMnemonic, postedAccountGuid, postedTxnGuid, postedLotGuid, active)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                    currencyMnemonic, postedAccountGuid, postedTxnGuid, postedLotGuid, active, kvp)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                 """, arguments: [invoice.guid.hexString, invoice.id, invoice.kind.rawValue,
                     invoice.isCreditNote,
                     invoice.owner.type.rawValue, invoice.owner.guid.hexString, invoice.dateOpened,
@@ -105,7 +105,8 @@ extension SQLiteDocumentStore {
                     invoice.billingID, invoice.notes,
                     Serialize.namespace(invoice.currency.namespace), invoice.currency.mnemonic,
                     invoice.postedAccount?.guid.hexString, invoice.postedTransaction?.guid.hexString,
-                    invoice.postedLot?.guid.hexString, invoice.active])
+                    invoice.postedLot?.guid.hexString, invoice.active,
+                    Serialize.kvp(invoice.kvp)])
             for (position, entry) in invoice.entries.enumerated() {
                 try db.execute(sql: """
                     INSERT INTO invoice_entry (guid, invoiceGuid, date, entered, entryDescription,
@@ -130,12 +131,30 @@ extension SQLiteDocumentStore {
                              commodity: (String, String) -> Commodity) throws {
         func acct(_ hex: String?) -> Account? { hex.flatMap { GncGUID(hex: $0) }.flatMap { accounts[$0] } }
 
+        /// Rows of `table`, or none when the table is not in this schema.
+        ///
+        /// A read-only connection runs no migration (see
+        /// ``SQLiteDocumentStore/init(readOnlyPath:)``), and the app migrates
+        /// only its working copy — so the shared file keeps its old schema
+        /// until the first save. `finlens` opening a book written by an earlier
+        /// version therefore met `no such table: billterm` after loading every
+        /// account, transaction and price, and failed the whole command.
+        func rows(_ table: String, orderedBy order: String? = nil) throws -> [Row] {
+            guard try db.tableExists(table) else { return [] }
+            let clause = order.map { " ORDER BY \($0)" } ?? ""
+            return try Row.fetchAll(db, sql: "SELECT * FROM \(table)\(clause)")
+        }
+
         var termsByGUID: [GncGUID: BillTerm] = [:]
-        for row in try Row.fetchAll(db, sql: "SELECT * FROM billterm") {
+        for row in try rows("billterm") {
             guard let guid = GncGUID(hex: row["guid"]) else { continue }
             let term = BillTerm(guid: guid, name: row["name"], termDescription: row["termDescription"],
                 kind: BillTerm.Kind(rawValue: row["kind"]) ?? .days, dueDays: row["dueDays"],
-                discountDays: row["discountDays"], cutoff: row["cutoff"],
+                // `cutoff` arrived in a later migration than the table itself,
+                // and `BillTerm.cutoff` is non-optional — GRDB's non-optional
+                // subscript traps on a missing column, so a book on the schema
+                // window between the two crashed rather than degraded.
+                discountDays: row["discountDays"], cutoff: (row["cutoff"] as Int?) ?? 0,
                 discountPercent: Serialize.parseDecimal(row["discountPercent"]), active: row["active"])
             termsByGUID[guid] = term
             book.addBillTerm(term)
@@ -143,10 +162,10 @@ extension SQLiteDocumentStore {
 
         var tablesByGUID: [GncGUID: TaxTable] = [:]
         var entryRows: [String: [Row]] = [:]
-        for row in try Row.fetchAll(db, sql: "SELECT * FROM taxtable_entry ORDER BY position") {
+        for row in try rows("taxtable_entry", orderedBy: "position") {
             entryRows[row["taxtableGuid"], default: []].append(row)
         }
-        for row in try Row.fetchAll(db, sql: "SELECT * FROM taxtable") {
+        for row in try rows("taxtable") {
             guard let guid = GncGUID(hex: row["guid"]) else { continue }
             let entries: [TaxTableEntry] = (entryRows[row["guid"]] ?? []).compactMap { e in
                 guard let account = acct(e["accountGuid"]) else { return nil }
@@ -162,7 +181,7 @@ extension SQLiteDocumentStore {
         func term(_ hex: String?) -> BillTerm? { hex.flatMap { GncGUID(hex: $0) }.flatMap { termsByGUID[$0] } }
 
         var customersByGUID: [GncGUID: Customer] = [:]
-        for row in try Row.fetchAll(db, sql: "SELECT * FROM customer") {
+        for row in try rows("customer") {
             guard let guid = GncGUID(hex: row["guid"]) else { continue }
             let customer = Customer(guid: guid, id: row["id"], name: row["name"],
                 address: decodeAddress(row["address"]), notes: row["notes"], active: row["active"],
@@ -175,7 +194,7 @@ extension SQLiteDocumentStore {
             book.addCustomer(customer)
         }
         var vendorsByGUID: [GncGUID: Vendor] = [:]
-        for row in try Row.fetchAll(db, sql: "SELECT * FROM vendor") {
+        for row in try rows("vendor") {
             guard let guid = GncGUID(hex: row["guid"]) else { continue }
             let vendor = Vendor(guid: guid, id: row["id"], name: row["name"],
                 address: decodeAddress(row["address"]), notes: row["notes"], active: row["active"],
@@ -186,7 +205,7 @@ extension SQLiteDocumentStore {
             book.addVendor(vendor)
         }
         var employeesByGUID: [GncGUID: Employee] = [:]
-        for row in try Row.fetchAll(db, sql: "SELECT * FROM employee") {
+        for row in try rows("employee") {
             guard let guid = GncGUID(hex: row["guid"]) else { continue }
             let employee = Employee(guid: guid, id: row["id"], username: row["username"],
                 address: decodeAddress(row["address"]), notes: row["notes"], active: row["active"],
@@ -198,7 +217,7 @@ extension SQLiteDocumentStore {
         }
         // Jobs: resolve owner (customer or vendor).
         var jobsByGUID: [GncGUID: Job] = [:]
-        for row in try Row.fetchAll(db, sql: "SELECT * FROM job") {
+        for row in try rows("job") {
             guard let guid = GncGUID(hex: row["guid"]),
                   let ownerGuid = GncGUID(hex: row["ownerGuid"]),
                   let owner = owner(type: row["ownerType"], guid: ownerGuid,
@@ -212,11 +231,11 @@ extension SQLiteDocumentStore {
 
         // Lots, with their split membership.
         var lotSplitRows: [String: [Row]] = [:]
-        for row in try Row.fetchAll(db, sql: "SELECT * FROM lot_split ORDER BY position") {
+        for row in try rows("lot_split", orderedBy: "position") {
             lotSplitRows[row["lotGuid"], default: []].append(row)
         }
         var lotsByGUID: [GncGUID: Lot] = [:]
-        for row in try Row.fetchAll(db, sql: "SELECT * FROM lot") {
+        for row in try rows("lot") {
             guard let guid = GncGUID(hex: row["guid"]) else { continue }
             let lot = Lot(guid: guid, account: acct(row["accountGuid"]), title: row["title"],
                           notes: row["notes"], isClosed: row["isClosed"],
@@ -230,11 +249,11 @@ extension SQLiteDocumentStore {
 
         // Invoices and entries.
         var invEntryRows: [String: [Row]] = [:]
-        for row in try Row.fetchAll(db, sql: "SELECT * FROM invoice_entry ORDER BY position") {
+        for row in try rows("invoice_entry", orderedBy: "position") {
             invEntryRows[row["invoiceGuid"], default: []].append(row)
         }
         let txnsByGUID = Dictionary(book.transactions.map { ($0.guid, $0) }, uniquingKeysWith: { a, _ in a })
-        for row in try Row.fetchAll(db, sql: "SELECT * FROM invoice") {
+        for row in try rows("invoice") {
             guard let guid = GncGUID(hex: row["guid"]),
                   let ownerGuid = GncGUID(hex: row["ownerGuid"]),
                   let owner = owner(type: row["ownerType"], guid: ownerGuid,
@@ -246,7 +265,8 @@ extension SQLiteDocumentStore {
                 dateOpened: row["dateOpened"], datePosted: row["datePosted"], dueDate: row["dueDate"],
                 terms: term(row["termsGuid"]), billingID: row["billingID"], notes: row["notes"],
                 currency: commodity(row["currencyNamespace"], row["currencyMnemonic"]),
-                active: row["active"])
+                active: row["active"],
+                kvp: Serialize.parseKvp(row["kvp"]))
             invoice.entries = (invEntryRows[row["guid"]] ?? []).map { e in
                 InvoiceEntry(guid: Serialize.parseGUID(e["guid"]), date: e["date"],
                     entered: e["entered"],

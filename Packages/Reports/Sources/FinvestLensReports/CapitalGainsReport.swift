@@ -43,6 +43,13 @@ public struct CapitalGainsReport: Sendable {
     public var to: Date
     public var lines: [CapitalGainLine]
     public var openLots: [OpenLotLine]
+    /// Currencies whose figures could **not** be converted to the report
+    /// currency, because the book holds no rate for the pair on the relevant
+    /// date. Those disposals and lots are left out of `lines`/`openLots` rather
+    /// than added at face value — a foreign number summed as if it were the
+    /// report currency is a wrong tax figure that looks right. Non-empty means
+    /// the report is incomplete and the UI should say so.
+    public var unconvertedCurrencyCodes: [String] = []
 
     public var shortTermGain: Decimal {
         lines.filter { $0.longTerm == false }.reduce(0) { $0 + $1.gain }
@@ -75,6 +82,7 @@ public extension FinancialReports {
     ) -> CapitalGainsReport {
         var lines: [CapitalGainLine] = []
         var openLots: [OpenLotLine] = []
+        var unconverted: Set<String> = []
 
         for account in book.accounts where account.type.isSecurityType && !account.isPlaceholder {
             let result = book.costBasis(for: account, method: method,
@@ -87,14 +95,25 @@ public extension FinancialReports {
             // each to the report currency (dated at the disposal / acquisition)
             // so the totals aren't a meaningless sum across currencies.
             let trade = book.splits(for: account).lazy.compactMap { $0.transaction?.currency }.first ?? currency
-            func toReport(_ amount: Decimal, on date: Date) -> Decimal {
+            // `nil` when the book has no rate for the pair on that date. It is
+            // returned rather than falling back to the unconverted figure: the
+            // fallback silently added, say, USD 10,000 of proceeds into an AUD
+            // total, understating the gain by a third on the report people file
+            // tax from — the exact "meaningless sum across currencies" the
+            // conversion above exists to prevent.
+            func toReport(_ amount: Decimal, on date: Date) -> Decimal? {
                 guard trade != currency else { return amount }
-                return book.convert(amount, from: trade, to: currency, on: date) ?? amount
+                return book.convert(amount, from: trade, to: currency, on: date)
             }
 
             for gain in result.realizedGains where gain.disposalDate >= from && gain.disposalDate <= to {
-                let proceeds = currency.round(toReport(gain.proceeds, on: gain.disposalDate))
-                let costBasis = currency.round(toReport(gain.costBasis, on: gain.disposalDate))
+                guard let rawProceeds = toReport(gain.proceeds, on: gain.disposalDate),
+                      let rawCostBasis = toReport(gain.costBasis, on: gain.disposalDate) else {
+                    unconverted.insert(trade.mnemonic)
+                    continue
+                }
+                let proceeds = currency.round(rawProceeds)
+                let costBasis = currency.round(rawCostBasis)
                 lines.append(CapitalGainLine(
                     id: .random(), symbol: symbol, accountName: account.name,
                     disposalDate: gain.disposalDate, acquisitionDate: gain.acquisitionDate,
@@ -107,16 +126,21 @@ public extension FinancialReports {
 
             for lot in result.openLots {
                 let on = lot.acquisitionDate ?? to
+                guard let costBasis = toReport(lot.costBasis, on: on) else {
+                    unconverted.insert(trade.mnemonic)
+                    continue
+                }
                 openLots.append(OpenLotLine(
                     id: .random(), symbol: symbol, accountName: account.name,
                     acquisitionDate: lot.acquisitionDate, quantity: lot.quantity,
-                    costBasis: currency.round(toReport(lot.costBasis, on: on))))
+                    costBasis: currency.round(costBasis)))
             }
         }
 
         return CapitalGainsReport(
             currencyCode: currency.mnemonic, method: method, from: from, to: to,
             lines: lines.sorted { $0.disposalDate < $1.disposalDate },
-            openLots: openLots.sorted { ($0.acquisitionDate ?? .distantPast) < ($1.acquisitionDate ?? .distantPast) })
+            openLots: openLots.sorted { ($0.acquisitionDate ?? .distantPast) < ($1.acquisitionDate ?? .distantPast) },
+            unconvertedCurrencyCodes: unconverted.sorted())
     }
 }

@@ -281,6 +281,15 @@ public final class SQLiteDocumentStore {
                 t.add(column: "entered", .datetime)
             }
         }
+        // Invoice slots this app has no column for — GnuCash's document links
+        // and any slot a user added. The importer used to read them and drop
+        // them, so they vanished on the next export; now they are carried, and
+        // carrying them through a *save* needs somewhere to put them.
+        migrator.registerMigration("v5_invoice_kvp") { db in
+            try db.alter(table: "invoice") { t in
+                t.add(column: "kvp", .text)
+            }
+        }
         return migrator
     }
 
@@ -322,64 +331,77 @@ public final class SQLiteDocumentStore {
                     ])
             }
 
+            // Prepared once, reused per row. `db.execute(sql:arguments:)`
+            // compiles its SQL on every call — it hands the string to an
+            // `SQLStatementCursor`, which builds a fresh `Statement` each time
+            // (GRDB 7, `Database+Statements.swift:324`). The rows below are the
+            // whole book: on the reference book that is 559 accounts, 46,553
+            // transactions, ~100,000 splits and 30,000 prices, so every save
+            // was compiling well over a hundred thousand identical statements.
+            // The arguments still change per row; only the compilation is
+            // hoisted.
+            let accountInsert = try db.makeStatement(sql: """
+                INSERT INTO account
+                (guid, name, type, code, accountDescription, notes,
+                 commodityNamespace, commodityMnemonic, placeholder, hidden, parentGuid, kvp)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """)
             for account in [book.rootAccount] + book.rootAccount.descendants {
-                try db.execute(sql: """
-                    INSERT INTO account
-                    (guid, name, type, code, accountDescription, notes,
-                     commodityNamespace, commodityMnemonic, placeholder, hidden, parentGuid, kvp)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """, arguments: [
-                        account.guid.hexString, account.name, account.type.rawValue,
-                        account.code, account.accountDescription, account.notes,
-                        Serialize.namespace(account.commodity.namespace), account.commodity.mnemonic,
-                        account.isPlaceholder, account.isHidden,
-                        account.parent.map { $0.guid.hexString }, Serialize.kvp(account.kvp),
-                    ])
+                try accountInsert.execute(arguments: [
+                    account.guid.hexString, account.name, account.type.rawValue,
+                    account.code, account.accountDescription, account.notes,
+                    Serialize.namespace(account.commodity.namespace), account.commodity.mnemonic,
+                    account.isPlaceholder, account.isHidden,
+                    account.parent.map { $0.guid.hexString }, Serialize.kvp(account.kvp),
+                ])
             }
 
             reporter?.startTransactions()
             var splitsWritten = 0
+            let txnInsert = try db.makeStatement(sql: """
+                INSERT INTO txn
+                (guid, currencyNamespace, currencyMnemonic, datePosted, dateEntered,
+                 num, transactionDescription, notes, kvp)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """)
+            let splitInsert = try db.makeStatement(sql: """
+                INSERT INTO split
+                (guid, txnGuid, accountGuid, value, quantity,
+                 reconcileState, reconcileDate, memo, action, kvp)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """)
             for (txnIndex, txn) in book.transactions.enumerated() {
-                try db.execute(sql: """
-                    INSERT INTO txn
-                    (guid, currencyNamespace, currencyMnemonic, datePosted, dateEntered,
-                     num, transactionDescription, notes, kvp)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """, arguments: [
-                        txn.guid.hexString, Serialize.namespace(txn.currency.namespace),
-                        txn.currency.mnemonic, txn.datePosted, txn.dateEntered,
-                        txn.number, txn.transactionDescription, txn.notes, Serialize.kvp(txn.kvp),
-                    ])
+                try txnInsert.execute(arguments: [
+                    txn.guid.hexString, Serialize.namespace(txn.currency.namespace),
+                    txn.currency.mnemonic, txn.datePosted, txn.dateEntered,
+                    txn.number, txn.transactionDescription, txn.notes, Serialize.kvp(txn.kvp),
+                ])
                 for split in txn.splits {
-                    try db.execute(sql: """
-                        INSERT INTO split
-                        (guid, txnGuid, accountGuid, value, quantity,
-                         reconcileState, reconcileDate, memo, action, kvp)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        """, arguments: [
-                            split.guid.hexString, txn.guid.hexString, split.account?.guid.hexString,
-                            Serialize.decimal(split.value), Serialize.decimal(split.quantity),
-                            split.reconcileState.rawValue, split.reconcileDate,
-                            split.memo, split.action, Serialize.kvp(split.kvp),
-                        ])
+                    try splitInsert.execute(arguments: [
+                        split.guid.hexString, txn.guid.hexString, split.account?.guid.hexString,
+                        Serialize.decimal(split.value), Serialize.decimal(split.quantity),
+                        split.reconcileState.rawValue, split.reconcileDate,
+                        split.memo, split.action, Serialize.kvp(split.kvp),
+                    ])
                 }
                 splitsWritten += txn.splits.count
                 reporter?.builtTransactions(txnIndex + 1, splitsCompleted: splitsWritten)
             }
 
             reporter?.startPrices()
+            let priceInsert = try db.makeStatement(sql: """
+                INSERT INTO price
+                (guid, commodityNamespace, commodityMnemonic, currencyNamespace, currencyMnemonic,
+                 date, value, source, type)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """)
             for (priceIndex, price) in book.prices.enumerated() {
-                try db.execute(sql: """
-                    INSERT INTO price
-                    (guid, commodityNamespace, commodityMnemonic, currencyNamespace, currencyMnemonic,
-                     date, value, source, type)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """, arguments: [
-                        price.guid.hexString,
-                        Serialize.namespace(price.commodity.namespace), price.commodity.mnemonic,
-                        Serialize.namespace(price.currency.namespace), price.currency.mnemonic,
-                        price.date, Serialize.decimal(price.value), price.source, price.type,
-                    ])
+                try priceInsert.execute(arguments: [
+                    price.guid.hexString,
+                    Serialize.namespace(price.commodity.namespace), price.commodity.mnemonic,
+                    Serialize.namespace(price.currency.namespace), price.currency.mnemonic,
+                    price.date, Serialize.decimal(price.value), price.source, price.type,
+                ])
                 reporter?.builtPrices(priceIndex + 1)
             }
 

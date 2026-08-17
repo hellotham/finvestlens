@@ -297,16 +297,27 @@ public struct LockView: View {
 /// counts are known, and a bar sitting at zero says "stuck" where a spinner
 /// says "working".
 private struct BookProgressView: View {
-    let title: String
-    let indeterminateDetail: String
+    /// `LocalizedStringKey`, not `String`. Every caller passes a literal, and
+    /// a `String` parameter picks `Text`'s verbatim initialiser — the compiler
+    /// emits no key for it, so nothing here was ever offered for translation
+    /// and all eight languages saw English. This is the trap CLAUDE.md ▸
+    /// Localization names, caught by reading the type rather than the screen.
+    let title: LocalizedStringKey
+    let indeterminateDetail: LocalizedStringKey
     let progress: BookLoadProgress?
 
     /// "Reading transactions… 12,000 of 46,553" — the count is what makes the
     /// wait legible: it says the book is big, not that the app is hung.
-    private var detail: String {
-        guard let progress else { return indeterminateDetail }
-        guard progress.total > 0 else { return progress.label + "…" }
-        return "\(progress.label)… \(progress.completed.formatted(.number)) of \(progress.total.formatted(.number))"
+    ///
+    /// Built as `Text` rather than `String` for the same reason: interpolating
+    /// into a `LocalizedStringKey` literal emits a key with placeholders, while
+    /// concatenating into a `String` emits nothing. (`progress.label` is the
+    /// stage name the store reports; the sentence around it is now
+    /// translatable even though that word is not.)
+    private var detail: Text {
+        guard let progress else { return Text(indeterminateDetail) }
+        guard progress.total > 0 else { return Text("\(progress.label)…") }
+        return Text("\(progress.label)… \(progress.completed.formatted(.number)) of \(progress.total.formatted(.number))")
     }
 
     var body: some View {
@@ -329,11 +340,14 @@ private struct BookProgressView: View {
             }
             Text(title)
                 .scaledFont(.title3, weight: .semibold)
-            Text(detail)
+            detail
                 .foregroundStyle(.secondary)
                 .scaledFont(.callout)
                 .monospacedDigit()
-                .animation(nil, value: detail)   // the digits update, not slide
+                // The digits update, not slide. Keyed on the progress itself
+                // now that `detail` is a `Text`: it is `Equatable` and is the
+                // only thing the line is derived from.
+                .animation(nil, value: progress)
         }
         .padding(48)
         .frame(maxWidth: .infinity, maxHeight: .infinity)

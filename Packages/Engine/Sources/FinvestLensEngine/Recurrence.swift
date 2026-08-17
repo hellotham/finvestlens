@@ -184,6 +184,14 @@ public struct Recurrence: Codable, Hashable, Sendable {
 
     /// Occurrence dates strictly after `since` (exclusive) and on/before
     /// `through` (inclusive), anchored at ``startDate``.
+    ///
+    /// `limit` caps the number of dates **returned**. It used to cap the
+    /// number of steps *taken*, which is not the same thing and silently broke
+    /// long-running daily schedules: the walk always starts at ``startDate``,
+    /// so a daily rule begun more than `limit` days ago spent its whole budget
+    /// crossing history that `since` then discarded, returned nothing, and the
+    /// schedule stopped firing with no error anywhere. At the old default of
+    /// 5000 that arrived after 13 years and 8 months.
     public func occurrences(since: Date?, through: Date,
                             limit: Int = 5000, calendar: Calendar? = nil) -> [Date] {
         let cal = calendar ?? Self.utcCalendar
@@ -199,7 +207,7 @@ public struct Recurrence: Codable, Hashable, Sendable {
         var date = seed.date(timeFrom: startDate, calendar: cal)
         guard date <= through else { return [] }
         var iterations = 0
-        while date <= through, iterations < limit {
+        while date <= through, result.count < limit, iterations < Self.maxSteps {
             if since == nil || date > since! { result.append(date) }
             if period == .once { break }
             guard let nxt = nextInstance(after: date, calendar: cal), nxt > date else { break }
@@ -208,6 +216,13 @@ public struct Recurrence: Codable, Hashable, Sendable {
         }
         return result
     }
+
+    /// A backstop on the walk itself, distinct from `limit`. It exists only so
+    /// a period that somehow failed to advance cannot spin forever; at one
+    /// step per day it is over five centuries, so no real schedule reaches it
+    /// and none is truncated by it. Stepping is calendar arithmetic — crossing
+    /// even fifty years of a daily rule is a few milliseconds.
+    private static let maxSteps = 200_000
 
     /// The next occurrence strictly after `date`.
     public func next(after date: Date, calendar: Calendar? = nil) -> Date? {
