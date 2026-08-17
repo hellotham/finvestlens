@@ -13,12 +13,12 @@ import Foundation
 /// Build metadata shown on the splash screen.
 enum BuildInfo {
     /// Marketing version (matches MARKETING_VERSION in the project).
-    static let version = "1.0"
+    static let version = "1.1"
     /// Short git commit the build was cut from.
-    static let commit = "02789ef"
+    static let commit = "822808b"
     /// Human-readable build date.
-    static let buildDate = "11 August 2026"
+    static let buildDate = "17 August 2026"
 
-    /// e.g. "Version 1.0 (02789ef)".
+    /// e.g. "Version 1.0 (822808b)".
     static var versionString: String { "Version \(version) (\(commit))" }
 }
