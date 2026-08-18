@@ -2351,11 +2351,29 @@ public final class AppModel {
     /// (autosave) success stays quiet.
     public func saveWithStatus(interactive: Bool) async {
         guard hasUnsavedChanges || interactive else { return }
+        // One save at a time. Autosave can fire while an earlier one is still
+        // writing back, and two `replaceItem`s racing on the same destination
+        // is not a race worth having.
+        guard !isSaving, let document else { return }
         isSaving = true
         defer { isSaving = false }
-        await Task.yield()   // commit the chip before the write blocks
+        await Task.yield()   // commit the chip before the staging walk
         do {
-            try save()
+            // Phase 1 on the main actor, because it reads the book. Phase 2 —
+            // the write-back to the shared file — touches no book state, so it
+            // goes to a background thread: on a NAS or a cloud-synced folder
+            // that is where the seconds are, and doing it here froze the
+            // window for the whole autosave. Phase 3 records the result back
+            // on the main actor.
+            let token = try document.stageSave()
+            let workingCopy = document.workingCopyURL
+            let target = document.fileURL
+            let fingerprint = try await Task.detached(priority: .userInitiated) {
+                try FinvestLensDocument.commitSave(workingCopy: workingCopy, to: target)
+            }.value
+            document.finishSave(fingerprint: fingerprint, stagedAt: token)
+            refreshAll()
+            publishWidgetData()
             if interactive { showToast(.success, "Saved.") }
         } catch {
             if interactive {

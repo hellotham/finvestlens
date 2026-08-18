@@ -72,7 +72,10 @@ public final class FinvestLensDocument {
     /// picker grant covers only the document itself. The document still
     /// opens; saves are guarded by fingerprint conflict detection instead.
     public private(set) var advisoryLockHeld: Bool
-    private let workingCopyURL: URL
+    /// The local scratch file the book is written to before the atomic
+    /// write-back. Readable so a caller can run the write-back itself, off the
+    /// main actor — see ``commitSave(workingCopy:to:)``.
+    public let workingCopyURL: URL
     private var store: SQLiteDocumentStore
     /// Hash of the shared file as of open / last successful save — for conflict
     /// detection (`FR-DAT-08`).
@@ -278,7 +281,17 @@ public final class FinvestLensDocument {
     // MARK: Editing
 
     /// Marks the in-memory book as modified (call after mutating ``book``).
-    public func markDirty() { hasUnsavedChanges = true }
+    /// Bumped by every ``markDirty()``. A save that writes back in the
+    /// background records this before it stages and compares it after: an edit
+    /// that lands while the write-back is in flight is in neither the file nor
+    /// the dirty flag unless the flag is left alone, and the next autosave
+    /// would then skip it.
+    public private(set) var changeToken: UInt64 = 0
+
+    public func markDirty() {
+        hasUnsavedChanges = true
+        changeToken &+= 1
+    }
 
     /// Swaps in a different in-memory book (undo/redo snapshot restore).
     public func replaceBook(_ newBook: Book) {
@@ -295,6 +308,20 @@ public final class FinvestLensDocument {
     /// GnuCash import writing a book it just parsed, notably) — see
     /// ``SQLiteDocumentStore/write(_:progress:)``.
     public func save(progress: (@Sendable (BookLoadProgress) -> Void)? = nil) throws {
+        let token = try stageSave(progress: progress)
+        let fingerprint = try Self.commitSave(workingCopy: workingCopyURL, to: fileURL)
+        finishSave(fingerprint: fingerprint, stagedAt: token)
+    }
+
+    /// Phase 1 — the guards, then the in-memory book walked into the **local**
+    /// working copy. Returns the change token to pass to ``finishSave``.
+    ///
+    /// This reads `book`, a non-`Sendable` object graph the main actor edits,
+    /// so it has to run wherever those edits happen. It writes only to the
+    /// working copy, which is local even when the document is not: on APFS a
+    /// copy is a clone, so this is the cheap half.
+    @discardableResult
+    public func stageSave(progress: (@Sendable (BookLoadProgress) -> Void)? = nil) throws -> UInt64 {
         // A read-only session never touches the shared file (FR-DAT-06).
         if isReadOnly { throw DocumentError.readOnly }
         // Detect an out-of-band change to the shared file (bypassed lock, etc.).
@@ -305,10 +332,21 @@ public final class FinvestLensDocument {
                 throw DocumentError.conflict
             }
         }
-
+        let token = changeToken
         try store.write(book, progress: progress)                // in-memory → working copy
-        try Self.replaceItem(at: fileURL, withContentsOf: workingCopyURL)  // atomic write-back
+        return token
+    }
 
+    /// Phase 2 — the atomic write-back to the shared file, and the fingerprint
+    /// of what landed.
+    ///
+    /// **Touches no `Book` and no document state** — two URLs and the file
+    /// system, nothing else — which is precisely why it may run off the main
+    /// actor. On a network or cloud-synced volume this is the slow half (the
+    /// bytes go over the wire), and running it on the main actor is what made
+    /// an autosave freeze the window.
+    public static func commitSave(workingCopy: URL, to fileURL: URL) throws -> Data? {
+        try replaceItem(at: fileURL, withContentsOf: workingCopy)  // atomic write-back
         // The write-back has landed; everything below is bookkeeping. It must
         // not be able to throw. Re-reading the file we just wrote goes through
         // NSFileCoordinator on a NAS/iCloud path, and a failure there used to
@@ -318,8 +356,18 @@ public final class FinvestLensDocument {
         // rest of the session. A fingerprint we cannot take is recorded as
         // "no baseline"; conflict detection then re-baselines on the next save
         // rather than accusing the user of a conflict that never happened.
-        baselineFingerprint = try? Self.fingerprint(of: fileURL)
-        hasUnsavedChanges = false
+        return try? fingerprint(of: fileURL)
+    }
+
+    /// Phase 3 — record what landed, back where the document lives.
+    ///
+    /// `stagedAt` is the token ``stageSave`` returned. The dirty flag is
+    /// cleared only if nothing was edited in between: a change made while the
+    /// write-back was in flight is not in the file, so calling it saved would
+    /// lose it at the next autosave.
+    public func finishSave(fingerprint: Data?, stagedAt stagedToken: UInt64) {
+        baselineFingerprint = fingerprint
+        if changeToken == stagedToken { hasUnsavedChanges = false }
         if advisoryLockHeld { heartbeat() }
     }
 

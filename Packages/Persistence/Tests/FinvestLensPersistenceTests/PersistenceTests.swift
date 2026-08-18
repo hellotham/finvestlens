@@ -426,3 +426,70 @@ struct ReadOnlyStoreTests {
         #expect(!FileManager.default.fileExists(atPath: lockURL.path))
     }
 }
+
+@Suite("Save phases")
+struct SavePhaseTests {
+
+    private func makeDoc() throws -> (doc: FinvestLensDocument, url: URL) {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
+        let doc = try FinvestLensDocument.create(at: url, baseCurrency: .aud)
+        return (doc, url)
+    }
+
+    @Test("Staging then committing lands the same bytes as a whole save")
+    func phasesEqualWholeSave() throws {
+        let (doc, url) = try makeDoc()
+        defer { try? FileManager.default.removeItem(at: url) }
+        let bank = doc.book.addAccount(Account(name: "Bank", type: .bank, commodity: .aud))
+        _ = bank
+        doc.markDirty()
+
+        let token = try doc.stageSave()
+        let fingerprint = try FinvestLensDocument.commitSave(
+            workingCopy: doc.workingCopyURL, to: doc.fileURL)
+        doc.finishSave(fingerprint: fingerprint, stagedAt: token)
+
+        #expect(!doc.hasUnsavedChanges)
+        // Release the advisory lock before reopening — one writer at a time is
+        // the whole point of it.
+        doc.discard()
+        let reread = try FinvestLensDocument.open(at: url)
+        defer { reread.discard() }
+        #expect(reread.book.accounts.contains { $0.name == "Bank" })
+    }
+
+    @Test("An edit landing during the write-back leaves the document dirty")
+    func editDuringWriteBackStaysDirty() throws {
+        // The whole reason the write-back can move off the main actor safely.
+        // Phase 2 carries only URLs, so the user keeps editing while it runs —
+        // and those edits are in neither the file nor the working copy. If the
+        // dirty flag were cleared unconditionally the next autosave would skip
+        // them and the work would be lost at close.
+        let (doc, url) = try makeDoc()
+        defer { doc.discard(); try? FileManager.default.removeItem(at: url) }
+        doc.markDirty()
+
+        let token = try doc.stageSave()
+        // …the user types while the bytes are going over the wire.
+        _ = doc.book.addAccount(Account(name: "Typed during save", type: .bank, commodity: .aud))
+        doc.markDirty()
+
+        let fingerprint = try FinvestLensDocument.commitSave(
+            workingCopy: doc.workingCopyURL, to: doc.fileURL)
+        doc.finishSave(fingerprint: fingerprint, stagedAt: token)
+
+        #expect(doc.hasUnsavedChanges, "an edit made mid-write must survive as unsaved")
+    }
+
+    @Test("With no interleaved edit the document goes clean")
+    func noEditGoesClean() throws {
+        let (doc, url) = try makeDoc()
+        defer { doc.discard(); try? FileManager.default.removeItem(at: url) }
+        doc.markDirty()
+        let token = try doc.stageSave()
+        let fp = try FinvestLensDocument.commitSave(workingCopy: doc.workingCopyURL, to: doc.fileURL)
+        doc.finishSave(fingerprint: fp, stagedAt: token)
+        #expect(!doc.hasUnsavedChanges)
+    }
+}
