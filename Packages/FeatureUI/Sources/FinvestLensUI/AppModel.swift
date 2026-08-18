@@ -2374,6 +2374,10 @@ public final class AppModel {
             document.finishSave(fingerprint: fingerprint, stagedAt: token)
             refreshAll()
             publishWidgetData()
+            // A book opened from Box is pushed back as a new version. After
+            // the local write-back, so the bytes uploaded are the ones on
+            // disk, and awaited so a failure is reported rather than lost.
+            await uploadToBoxIfLinked()
             if interactive { showToast(.success, "Saved.") }
         } catch {
             if interactive {

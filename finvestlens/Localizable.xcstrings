@@ -19941,6 +19941,100 @@
         }
       }
     },
+    "Box client ID": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box-Client-ID"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ID de cliente de Box"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ID client Box"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ID client Box"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box クライアント ID"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ID do cliente do Box"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box 客户端 ID"
+          }
+        }
+      }
+    },
+    "Box": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box"
+          }
+        }
+      }
+    },
     "Break Lock and Import": {
       "extractionState": "manual",
       "localizations": {
@@ -26302,6 +26396,100 @@
         }
       }
     },
+    "Connected": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verbunden"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conectado"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connecté"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connesso"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "接続済み"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conectado"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已连接"
+          }
+        }
+      }
+    },
+    "Connect to Box…": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mit Box verbinden…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conectar con Box…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se connecter à Box…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connetti a Box…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box に接続…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conectar ao Box…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "连接到 Box…"
+          }
+        }
+      }
+    },
     "Contact": {
       "extractionState": "manual",
       "localizations": {
@@ -28032,6 +28220,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "提前创建"
+          }
+        }
+      }
+    },
+    "Create an app at developer.box.com with OAuth 2.0 and redirect URI %@, then paste its client ID here. Sign-in happens on Box's own page — this app never sees your password, and the token is kept in the Keychain. A book opened from Box is cached locally while you work on it (SQLite cannot run over a web API) and uploaded back as a new version on each save.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erstellen Sie unter developer.box.com eine App mit OAuth 2.0 und der Weiterleitungs-URI %@ und fügen Sie deren Client-ID hier ein. Die Anmeldung erfolgt auf der Box-eigenen Seite – diese App sieht Ihr Passwort nie, und das Token liegt im Schlüsselbund. Ein aus Box geöffnetes Buch wird zum Bearbeiten lokal zwischengespeichert (SQLite kann nicht über eine Web-API laufen) und bei jedem Sichern als neue Version zurückgeladen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cree una app en developer.box.com con OAuth 2.0 y la URI de redirección %@, y pegue aquí su ID de cliente. El inicio de sesión ocurre en la propia página de Box: esta app nunca ve su contraseña y el token se guarda en el Llavero. Un libro abierto desde Box se almacena en caché localmente mientras trabaja (SQLite no puede funcionar sobre una API web) y se sube como una versión nueva en cada guardado."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Créez une app sur developer.box.com avec OAuth 2.0 et l’URI de redirection %@, puis collez son ID client ici. La connexion se fait sur la page de Box — cette app ne voit jamais votre mot de passe, et le jeton est conservé dans le trousseau. Un livre ouvert depuis Box est mis en cache localement pendant que vous travaillez (SQLite ne peut pas fonctionner via une API web) et renvoyé comme nouvelle version à chaque enregistrement."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crea un’app su developer.box.com con OAuth 2.0 e URI di reindirizzamento %@, poi incolla qui il suo ID client. L’accesso avviene sulla pagina di Box: questa app non vede mai la tua password e il token resta nel portachiavi. Un libro aperto da Box viene memorizzato localmente mentre ci lavori (SQLite non può funzionare su un’API web) e ricaricato come nuova versione a ogni salvataggio."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "developer.box.com で OAuth 2.0 とリダイレクト URI %@ を設定したアプリを作成し、そのクライアント ID をここに貼り付けてください。サインインは Box 自身のページで行われ、このアプリがパスワードを見ることはなく、トークンはキーチェーンに保管されます。Box から開いた帳簿は作業中ローカルにキャッシュされ（SQLite は Web API 上では動作できません）、保存のたびに新しいバージョンとしてアップロードされます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crie um app em developer.box.com com OAuth 2.0 e URI de redirecionamento %@ e cole aqui o ID do cliente. O login acontece na própria página do Box — este app nunca vê sua senha, e o token fica nas Chaves. Um livro aberto do Box é armazenado em cache localmente enquanto você trabalha (o SQLite não pode rodar sobre uma API web) e enviado de volta como uma nova versão a cada gravação."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请在 developer.box.com 创建一个使用 OAuth 2.0、重定向 URI 为 %@ 的应用，然后将其客户端 ID 粘贴到此处。登录在 Box 自己的页面完成——本应用绝不会看到你的密码，令牌保存在钥匙串中。从 Box 打开的账簿在你工作期间会缓存在本地（SQLite 无法通过 Web API 运行），并在每次保存时作为新版本上传。"
           }
         }
       }
@@ -31693,6 +31928,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "方向"
+          }
+        }
+      }
+    },
+    "Disconnect": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trennen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desconectar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Déconnecter"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Disconnetti"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "接続を解除"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desconectar"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "断开连接"
           }
         }
       }

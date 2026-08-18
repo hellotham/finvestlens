@@ -8,7 +8,7 @@ FinvestLens is a native Apple double-entry accounting app (macOS 26 / iPadOS 26 
 
 ## Commands
 
-Everything needs Swift 6.2 (Xcode 26). Eleven local SPM packages live under `Packages/`; each builds and tests on its own.
+Everything needs Swift 6.2 (Xcode 26). Twelve local SPM packages live under `Packages/`; each builds and tests on its own.
 
 ```bash
 swift test --package-path Packages/Engine                      # one package's suite
@@ -18,7 +18,7 @@ swift test --package-path Packages/Engine --filter AutoClearTests   # one suite 
 The full pre-commit sweep:
 
 ```bash
-for p in Engine Persistence Interchange Quotes Rules Reports Intelligence FeatureUI CLI Lab; do
+for p in Engine Persistence Interchange Quotes Rules Reports Cloud Intelligence FeatureUI CLI Lab; do
   swift test --package-path "Packages/$p" || break
 done
 swift test --package-path Packages/Shared --skip writeReadRoundTripThroughAppGroup
@@ -57,7 +57,7 @@ Live harnesses in the FeatureUI test target skip themselves unless env vars are 
 
 ## Architecture
 
-- **Dependencies point strictly downward.** `Engine` (pure accounting model — no UI or persistence imports) sits under `Persistence` (GRDB document store, NAS locking), `Interchange` (GnuCash XML, Ledger, bank-statement importers + the import matcher), `Quotes`, `Rules`, and `Reports`; `Intelligence` and `FeatureUI` (all SwiftUI surfaces) sit above those; the app target is a thin shell over `FeatureUI`. `Shared` holds App Group/widget plumbing; `CLI` wraps Engine + Persistence + Interchange read-only.
+- **Dependencies point strictly downward.** `Engine` (pure accounting model — no UI or persistence imports) sits under `Persistence` (GRDB document store, NAS locking), `Interchange` (GnuCash XML, Ledger, bank-statement importers + the import matcher), `Quotes`, `Rules`, and `Reports`; `Cloud` (Box OAuth + file API) depends on **nothing** — a transport needs no accounting model, and keeping it empty-handed stops the Engine acquiring a network dependency by accident; `Intelligence` and `FeatureUI` (all SwiftUI surfaces) sit above those; the app target is a thin shell over `FeatureUI`. `Shared` holds App Group/widget plumbing; `CLI` wraps Engine + Persistence + Interchange read-only.
 - **The in-memory `Book` is the source of truth.** Everything on screen derives from it, invalidated by `derivedRevision`; expensive derivations (report functions, register rows, autocomplete) are memoised on that revision. Pass stable parameters to memoised report calls — a live `Date()` in the key defeats the cache.
 - **Undo captures only what an edit is about to change** — never whole-book snapshots.
 - **Two invariants never move:** every transaction's splits balance to zero, and GnuCash XML round-trips losslessly (import → export → re-import → export is byte-identical).

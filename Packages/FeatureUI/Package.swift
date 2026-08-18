@@ -26,6 +26,7 @@ let package = Package(
         .package(path: "../Reports"),
         .package(path: "../Rules"),
         .package(path: "../Quotes"),
+        .package(path: "../Cloud"),
         .package(path: "../Intelligence"),
         .package(path: "../Shared"),
     ],
@@ -39,6 +40,7 @@ let package = Package(
                 .product(name: "FinvestLensReports", package: "Reports"),
                 .product(name: "FinvestLensRules", package: "Rules"),
                 .product(name: "FinvestLensQuotes", package: "Quotes"),
+                .product(name: "FinvestLensCloud", package: "Cloud"),
                 .product(name: "FinvestLensIntelligence", package: "Intelligence"),
                 .product(name: "FinvestLensShared", package: "Shared"),
             ]

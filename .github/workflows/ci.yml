@@ -33,6 +33,7 @@ jobs:
           - Quotes
           - Rules
           - Reports
+          - Cloud
           - Shared
           - Intelligence
           - FeatureUI

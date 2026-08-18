@@ -2,20 +2,6 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>NSFaceIDUsageDescription</key>
-	<string>Authenticate to unlock your FinvestLens book.</string>
-	<key>NSUbiquitousContainers</key>
-	<dict>
-		<key>iCloud.com.hellotham.finvestlensapp</key>
-		<dict>
-			<key>NSUbiquitousContainerIsDocumentScopePublic</key>
-			<true/>
-			<key>NSUbiquitousContainerName</key>
-			<string>FinvestLens</string>
-			<key>NSUbiquitousContainerSupportedFolderLevels</key>
-			<string>Any</string>
-		</dict>
-	</dict>
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>
@@ -33,46 +19,45 @@
 			<string>$(PRODUCT_BUNDLE_IDENTIFIER).document</string>
 		</dict>
 		<dict>
-			<!-- The sibling .lock file is a "related item" of the book: the
-			     sandbox extends user-selected access to it (FileLock uses
-			     NSFileCoordinator with a related-item presenter). -->
-			<key>CFBundleTypeName</key>
-			<string>FinvestLens Lock File</string>
-			<key>CFBundleTypeRole</key>
-			<string>None</string>
 			<key>CFBundleTypeExtensions</key>
 			<array>
 				<string>lock</string>
 			</array>
+			<key>CFBundleTypeName</key>
+			<string>FinvestLens Lock File</string>
+			<key>CFBundleTypeRole</key>
+			<string>None</string>
 			<key>NSIsRelatedItemType</key>
 			<true/>
 		</dict>
 	</array>
-	<key>UTImportedTypeDeclarations</key>
+	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
-			<!-- Imported, not exported: the type is GnuCash's, we only read it.
-			     Declared so the Quick Look extension has a UTI to name, and so
-			     File > Import GnuCash... can filter on one. `public.data`
-			     rather than `public.xml` because GnuCash compresses by default
-			     and also writes this extension for its SQLite backend. -->
-			<key>UTTypeConformsTo</key>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.hellotham.finvestlens.box-auth</string>
+			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>public.data</string>
+				<string>finvestlens</string>
 			</array>
-			<key>UTTypeDescription</key>
-			<string>GnuCash Book</string>
-			<key>UTTypeIdentifier</key>
-			<string>org.gnucash.book</string>
-			<key>UTTypeTagSpecification</key>
-			<dict>
-				<key>public.filename-extension</key>
-				<array>
-					<string>gnucash</string>
-				</array>
-			</dict>
 		</dict>
 	</array>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Authenticate to unlock your FinvestLens book.</string>
+	<key>NSUbiquitousContainers</key>
+	<dict>
+		<key>iCloud.com.hellotham.finvestlensapp</key>
+		<dict>
+			<key>NSUbiquitousContainerIsDocumentScopePublic</key>
+			<true/>
+			<key>NSUbiquitousContainerName</key>
+			<string>FinvestLens</string>
+			<key>NSUbiquitousContainerSupportedFolderLevels</key>
+			<string>Any</string>
+		</dict>
+	</dict>
 	<key>UTExportedTypeDeclarations</key>
 	<array>
 		<dict>
@@ -101,6 +86,26 @@
 			<string>FinvestLens Account Row</string>
 			<key>UTTypeIdentifier</key>
 			<string>com.hellotham.finvestlens.account-row</string>
+		</dict>
+	</array>
+	<key>UTImportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>GnuCash Book</string>
+			<key>UTTypeIdentifier</key>
+			<string>org.gnucash.book</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>gnucash</string>
+				</array>
+			</dict>
 		</dict>
 	</array>
 </dict>

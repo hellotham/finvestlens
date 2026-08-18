@@ -12,7 +12,7 @@ pass. Claims carry receipts: quote the failing output verbatim.
 ## 1. Package suites
 
 ```bash
-for p in Engine Persistence Interchange Quotes Rules Reports Intelligence FeatureUI CLI Lab; do
+for p in Engine Persistence Interchange Quotes Rules Reports Cloud Intelligence FeatureUI CLI Lab; do
   swift test --package-path "Packages/$p" || break
 done
 swift test --package-path Packages/Shared --skip writeReadRoundTripThroughAppGroup
