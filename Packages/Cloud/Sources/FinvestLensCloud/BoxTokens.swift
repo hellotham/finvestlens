@@ -59,6 +59,60 @@ public final class InMemoryBoxTokenStore: BoxTokenStoring, @unchecked Sendable {
 }
 
 #if canImport(Security)
+/// The Box application's client secret.
+///
+/// Box has no PKCE, so the `authorization_code` exchange requires a secret.
+/// It is the *user's own* app secret rather than one shipped in the binary,
+/// but it is still a credential: it belongs in the Keychain, never in
+/// `UserDefaults` beside the client id.
+public struct BoxClientSecretStore {
+    private let service: String
+    private let account: String
+
+    public init(service: String = "com.hellotham.finvestlens.box",
+                account: String = "client-secret") {
+        self.service = service
+        self.account = account
+    }
+
+    private var baseQuery: [String: Any] {
+        [kSecClass as String: kSecClassGenericPassword,
+         kSecAttrService as String: service,
+         kSecAttrAccount as String: account]
+    }
+
+    public func secret() -> String? {
+        var query = baseQuery
+        query[kSecReturnData as String] = true
+        query[kSecMatchLimit as String] = kSecMatchLimitOne
+        var item: CFTypeRef?
+        guard SecItemCopyMatching(query as CFDictionary, &item) == errSecSuccess,
+              let data = item as? Data else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+
+    public func setSecret(_ secret: String?) throws {
+        guard let secret, !secret.isEmpty else {
+            SecItemDelete(baseQuery as CFDictionary)
+            return
+        }
+        let data = Data(secret.utf8)
+        let status = SecItemUpdate(baseQuery as CFDictionary,
+                                   [kSecValueData as String: data] as CFDictionary)
+        if status == errSecItemNotFound {
+            var add = baseQuery
+            add[kSecValueData as String] = data
+            add[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
+            let addStatus = SecItemAdd(add as CFDictionary, nil)
+            guard addStatus == errSecSuccess else {
+                throw BoxError.malformedResponse("keychain add failed (\(addStatus))")
+            }
+        } else if status != errSecSuccess {
+            throw BoxError.malformedResponse("keychain update failed (\(status))")
+        }
+    }
+}
+
 /// The production store: one generic-password item in the login keychain.
 public struct KeychainBoxTokenStore: BoxTokenStoring {
     private let service: String

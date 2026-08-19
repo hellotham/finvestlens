@@ -20035,6 +20035,53 @@
         }
       }
     },
+    "Box client secret": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box-Client-Geheimnis"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Secreto de cliente de Box"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Secret client Box"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Segreto client Box"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box クライアントシークレット"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Segredo do cliente do Box"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box 客户端密钥"
+          }
+        }
+      }
+    },
     "Break Lock and Import": {
       "extractionState": "manual",
       "localizations": {
@@ -28224,49 +28271,49 @@
         }
       }
     },
-    "Create an app at developer.box.com with OAuth 2.0 and redirect URI %@, then paste its client ID here. Sign-in happens on Box's own page — this app never sees your password, and the token is kept in the Keychain. A book opened from Box is cached locally while you work on it (SQLite cannot run over a web API) and uploaded back as a new version on each save.": {
+    "Create an app at developer.box.com (User Authentication, OAuth 2.0) with redirect URI %@, then paste its client ID and secret here. Box does not support PKCE, so the secret is required; it is kept in the Keychain, not in preferences. Sign-in happens on Box's own page — this app never sees your Box password, and the tokens are kept in the Keychain too. A book opened from Box is cached locally while you work on it (SQLite cannot run over a web API) and uploaded back as a new version on each save.": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Erstellen Sie unter developer.box.com eine App mit OAuth 2.0 und der Weiterleitungs-URI %@ und fügen Sie deren Client-ID hier ein. Die Anmeldung erfolgt auf der Box-eigenen Seite – diese App sieht Ihr Passwort nie, und das Token liegt im Schlüsselbund. Ein aus Box geöffnetes Buch wird zum Bearbeiten lokal zwischengespeichert (SQLite kann nicht über eine Web-API laufen) und bei jedem Sichern als neue Version zurückgeladen."
+            "value": "Erstellen Sie unter developer.box.com eine App (User Authentication, OAuth 2.0) mit der Weiterleitungs-URI %@ und fügen Sie deren Client-ID und Geheimnis hier ein. Box unterstützt kein PKCE, daher ist das Geheimnis erforderlich; es liegt im Schlüsselbund, nicht in den Einstellungen. Die Anmeldung erfolgt auf der Box-eigenen Seite – diese App sieht Ihr Box-Passwort nie, und die Token liegen ebenfalls im Schlüsselbund. Ein aus Box geöffnetes Buch wird zum Bearbeiten lokal zwischengespeichert (SQLite kann nicht über eine Web-API laufen) und bei jedem Sichern als neue Version zurückgeladen."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cree una app en developer.box.com con OAuth 2.0 y la URI de redirección %@, y pegue aquí su ID de cliente. El inicio de sesión ocurre en la propia página de Box: esta app nunca ve su contraseña y el token se guarda en el Llavero. Un libro abierto desde Box se almacena en caché localmente mientras trabaja (SQLite no puede funcionar sobre una API web) y se sube como una versión nueva en cada guardado."
+            "value": "Cree una app en developer.box.com (User Authentication, OAuth 2.0) con la URI de redirección %@ y pegue aquí su ID de cliente y su secreto. Box no admite PKCE, por lo que el secreto es obligatorio; se guarda en el Llavero, no en las preferencias. El inicio de sesión ocurre en la propia página de Box: esta app nunca ve su contraseña de Box, y los tokens también se guardan en el Llavero. Un libro abierto desde Box se almacena en caché localmente mientras trabaja (SQLite no puede funcionar sobre una API web) y se sube como una versión nueva en cada guardado."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Créez une app sur developer.box.com avec OAuth 2.0 et l’URI de redirection %@, puis collez son ID client ici. La connexion se fait sur la page de Box — cette app ne voit jamais votre mot de passe, et le jeton est conservé dans le trousseau. Un livre ouvert depuis Box est mis en cache localement pendant que vous travaillez (SQLite ne peut pas fonctionner via une API web) et renvoyé comme nouvelle version à chaque enregistrement."
+            "value": "Créez une app sur developer.box.com (User Authentication, OAuth 2.0) avec l’URI de redirection %@, puis collez ici son ID client et son secret. Box ne prend pas en charge PKCE, le secret est donc requis ; il est conservé dans le trousseau, pas dans les préférences. La connexion se fait sur la page de Box — cette app ne voit jamais votre mot de passe Box, et les jetons sont également dans le trousseau. Un livre ouvert depuis Box est mis en cache localement pendant que vous travaillez (SQLite ne peut pas fonctionner via une API web) et renvoyé comme nouvelle version à chaque enregistrement."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Crea un’app su developer.box.com con OAuth 2.0 e URI di reindirizzamento %@, poi incolla qui il suo ID client. L’accesso avviene sulla pagina di Box: questa app non vede mai la tua password e il token resta nel portachiavi. Un libro aperto da Box viene memorizzato localmente mentre ci lavori (SQLite non può funzionare su un’API web) e ricaricato come nuova versione a ogni salvataggio."
+            "value": "Crea un’app su developer.box.com (User Authentication, OAuth 2.0) con URI di reindirizzamento %@, poi incolla qui il suo ID client e il segreto. Box non supporta PKCE, quindi il segreto è necessario; resta nel portachiavi, non nelle preferenze. L’accesso avviene sulla pagina di Box: questa app non vede mai la tua password Box e anche i token restano nel portachiavi. Un libro aperto da Box viene memorizzato localmente mentre ci lavori (SQLite non può funzionare su un’API web) e ricaricato come nuova versione a ogni salvataggio."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "developer.box.com で OAuth 2.0 とリダイレクト URI %@ を設定したアプリを作成し、そのクライアント ID をここに貼り付けてください。サインインは Box 自身のページで行われ、このアプリがパスワードを見ることはなく、トークンはキーチェーンに保管されます。Box から開いた帳簿は作業中ローカルにキャッシュされ（SQLite は Web API 上では動作できません）、保存のたびに新しいバージョンとしてアップロードされます。"
+            "value": "developer.box.com で User Authentication（OAuth 2.0）のアプリをリダイレクト URI %@ で作成し、そのクライアント ID とシークレットをここに貼り付けてください。Box は PKCE に対応していないためシークレットが必要です。シークレットは環境設定ではなくキーチェーンに保管されます。サインインは Box 自身のページで行われ、このアプリが Box のパスワードを見ることはなく、トークンもキーチェーンに保管されます。Box から開いた帳簿は作業中ローカルにキャッシュされ（SQLite は Web API 上では動作できません）、保存のたびに新しいバージョンとしてアップロードされます。"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Crie um app em developer.box.com com OAuth 2.0 e URI de redirecionamento %@ e cole aqui o ID do cliente. O login acontece na própria página do Box — este app nunca vê sua senha, e o token fica nas Chaves. Um livro aberto do Box é armazenado em cache localmente enquanto você trabalha (o SQLite não pode rodar sobre uma API web) e enviado de volta como uma nova versão a cada gravação."
+            "value": "Crie um app em developer.box.com (User Authentication, OAuth 2.0) com URI de redirecionamento %@ e cole aqui o ID do cliente e o segredo. O Box não oferece suporte a PKCE, então o segredo é obrigatório; ele fica nas Chaves, não nas preferências. O login acontece na própria página do Box — este app nunca vê sua senha do Box, e os tokens também ficam nas Chaves. Um livro aberto do Box é armazenado em cache localmente enquanto você trabalha (o SQLite não pode rodar sobre uma API web) e enviado de volta como uma nova versão a cada gravação."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "请在 developer.box.com 创建一个使用 OAuth 2.0、重定向 URI 为 %@ 的应用，然后将其客户端 ID 粘贴到此处。登录在 Box 自己的页面完成——本应用绝不会看到你的密码，令牌保存在钥匙串中。从 Box 打开的账簿在你工作期间会缓存在本地（SQLite 无法通过 Web API 运行），并在每次保存时作为新版本上传。"
+            "value": "请在 developer.box.com 创建一个 User Authentication（OAuth 2.0）应用，重定向 URI 设为 %@，然后将其客户端 ID 和密钥粘贴到此处。Box 不支持 PKCE，因此必须提供密钥；密钥保存在钥匙串中，而非偏好设置中。登录在 Box 自己的页面完成——本应用绝不会看到你的 Box 密码，令牌同样保存在钥匙串中。从 Box 打开的账簿在你工作期间会缓存在本地（SQLite 无法通过 Web API 运行），并在每次保存时作为新版本上传。"
           }
         }
       }

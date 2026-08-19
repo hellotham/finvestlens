@@ -54,13 +54,13 @@ struct StubPresenter: BoxAuthorizationPresenting {
     }
 }
 
-private let config = BoxAppConfiguration(clientID: "abc123",
+private let config = BoxAppConfiguration(clientID: "abc123", clientSecret: "s3cret",
                                          redirectURI: "finvestlens://box-auth")
 
 @Suite("Box OAuth")
 struct BoxOAuthTests {
 
-    @Test("Sign-in exchanges the code with a PKCE verifier and stores the tokens")
+    @Test("Sign-in exchanges the code with the client secret and stores the tokens")
     func signInStoresTokens() async throws {
         let transport = StubTransport([
             .ok(#"{"access_token":"AT","refresh_token":"RT","expires_in":3600}"#)
@@ -73,11 +73,17 @@ struct BoxOAuthTests {
 
         #expect(store.tokens()?.accessToken == "AT")
         #expect(store.tokens()?.refreshToken == "RT")
-        // No client secret is sent — PKCE exists so a desktop app needs none.
+        // Box has no PKCE — verified against its API reference on 18 Aug 2026:
+        // /authorize takes no code_challenge and /oauth2/token no
+        // code_verifier, and client_secret is required for this grant. These
+        // assertions pin that contract so the flow cannot drift back to a
+        // PKCE shape that Box would reject at the first exchange.
         let body = String(data: transport.sent[0].httpBody ?? Data(), encoding: .utf8) ?? ""
-        #expect(body.contains("code_verifier="))
         #expect(body.contains("grant_type=authorization_code"))
-        #expect(!body.contains("client_secret"))
+        #expect(body.contains("client_secret=s3cret"))
+        #expect(!body.contains("code_verifier"))
+        // …and the authorize URL likewise carries no challenge.
+        #expect(!transport.sent.contains { ($0.url?.absoluteString ?? "").contains("code_challenge") })
     }
 
     @Test("A mismatched state is refused")
@@ -92,7 +98,7 @@ struct BoxOAuthTests {
         await #expect(throws: BoxError.self) { try await auth.signIn() }
     }
 
-    @Test("An expired access token refreshes before use")
+    @Test("An expired access token refreshes before use, with the secret")
     func refreshesWhenExpired() async throws {
         let store = InMemoryBoxTokenStore(BoxTokens(accessToken: "OLD", refreshToken: "RT",
                                                     expiresAt: Date(timeIntervalSince1970: 10)))
@@ -104,6 +110,9 @@ struct BoxOAuthTests {
                                     now: { Date(timeIntervalSince1970: 1000) })
         #expect(try await auth.accessToken() == "NEW")
         #expect(store.tokens()?.refreshToken == "RT2")
+        let body = String(data: transport.sent[0].httpBody ?? Data(), encoding: .utf8) ?? ""
+        #expect(body.contains("grant_type=refresh_token"))
+        #expect(body.contains("client_secret=s3cret"), "Box requires the secret on refresh too")
     }
 
     @Test("A revoked refresh token clears the stored grant rather than looping")
@@ -118,10 +127,10 @@ struct BoxOAuthTests {
         #expect(store.tokens() == nil, "a dead grant must not stay on disk")
     }
 
-    @Test("No client id configured is refused before any network call")
+    @Test("No client id or secret configured is refused before any network call")
     func notConfigured() async {
         let transport = StubTransport([])
-        let auth = BoxAuthenticator(configuration: BoxAppConfiguration(clientID: "", redirectURI: "x://y"),
+        let auth = BoxAuthenticator(configuration: BoxAppConfiguration(clientID: "", clientSecret: "", redirectURI: "x://y"),
                                     transport: transport, store: InMemoryBoxTokenStore(),
                                     presenter: StubPresenter(callback: URL(string: "x://y")!))
         await #expect(throws: BoxError.notConfigured) { try await auth.signIn() }

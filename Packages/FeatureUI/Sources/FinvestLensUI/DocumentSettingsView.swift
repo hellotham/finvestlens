@@ -81,6 +81,7 @@ public struct GeneralSettingsView: View {
     @Bindable var model: AppModel
     @AppStorage("finvestlens.autosaveIntervalSeconds") private var autosaveSeconds = 300
     @AppStorage("finvestlens.box.clientID") private var boxClientID = ""
+    @State private var boxClientSecret = ""
     @AppStorage(AppModel.reopenLastBookDefaultsKey) private var reopenLastBook = true
     @AppStorage(AppDateFormat.orderKey) private var dateOrderRaw = DateOrder.dmy.rawValue
 
@@ -148,16 +149,24 @@ public struct GeneralSettingsView: View {
             Section("Box") {
                 TextField("Box client ID", text: $boxClientID)
                     .textFieldStyle(.roundedBorder)
+                // SecureField, and it goes to the Keychain rather than
+                // @AppStorage: Box has no PKCE, so the token exchange needs a
+                // real secret.
+                SecureField("Box client secret", text: $boxClientSecret)
+                    .textFieldStyle(.roundedBorder)
+                    .onSubmit { model.boxClientSecret = boxClientSecret }
+                    .onChange(of: boxClientSecret) { model.boxClientSecret = boxClientSecret }
                 HStack {
                     if model.isBoxSignedIn {
                         Button("Disconnect") { model.disconnectBox() }
                         Text("Connected").scaledFont(.caption).foregroundStyle(.secondary)
                     } else {
                         Button("Connect to Box…") { Task { await model.connectBox() } }
-                            .disabled(boxClientID.trimmingCharacters(in: .whitespaces).isEmpty)
+                            .disabled(boxClientID.trimmingCharacters(in: .whitespaces).isEmpty
+                                      || boxClientSecret.isEmpty)
                     }
                 }
-                Text("Create an app at developer.box.com with OAuth 2.0 and redirect URI \(AppModel.boxRedirectURI), then paste its client ID here. Sign-in happens on Box's own page — this app never sees your password, and the token is kept in the Keychain. A book opened from Box is cached locally while you work on it (SQLite cannot run over a web API) and uploaded back as a new version on each save.")
+                Text("Create an app at developer.box.com (User Authentication, OAuth 2.0) with redirect URI \(AppModel.boxRedirectURI), then paste its client ID and secret here. Box does not support PKCE, so the secret is required; it is kept in the Keychain, not in preferences. Sign-in happens on Box's own page — this app never sees your Box password, and the tokens are kept in the Keychain too. A book opened from Box is cached locally while you work on it (SQLite cannot run over a web API) and uploaded back as a new version on each save.")
                     .scaledFont(.caption)
                     .foregroundStyle(.secondary)
             }

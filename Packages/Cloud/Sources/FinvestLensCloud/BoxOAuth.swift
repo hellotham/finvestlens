@@ -11,18 +11,27 @@ import CryptoKit
 
 /// Identifies this app to Box.
 ///
-/// Box requires every client to be a registered application, so the id and the
-/// redirect URI come from the user's own Box developer console rather than
-/// being baked in: a shipped client secret is not a secret, and a shipped
-/// client id tied to one developer account would make every user's traffic
-/// look like ours. PKCE is used precisely so **no client secret is needed**.
+/// Box requires every client to be a registered application, so these come
+/// from the user's **own** Box developer console rather than being baked in: a
+/// client secret shipped in a binary is not a secret, and a shipped client id
+/// would make every user's traffic look like one developer's.
+///
+/// A secret is unavoidable here. Box does not implement PKCE — verified
+/// against its API reference on 18 Aug 2026: `GET /authorize` accepts only
+/// `response_type`, `client_id`, `redirect_uri`, `state` and `scope` (no
+/// `code_challenge`), and `POST /oauth2/token` has no `code_verifier` and
+/// requires `client_secret` for the `authorization_code` grant. So the secret
+/// is the user's own, kept in their Keychain, never in `UserDefaults` or a
+/// file.
 public struct BoxAppConfiguration: Equatable, Sendable {
     public var clientID: String
+    public var clientSecret: String
     /// Must match the redirect URI registered on the Box application exactly.
     public var redirectURI: String
 
-    public init(clientID: String, redirectURI: String) {
+    public init(clientID: String, clientSecret: String, redirectURI: String) {
         self.clientID = clientID
+        self.clientSecret = clientSecret
         self.redirectURI = redirectURI
     }
 
@@ -44,19 +53,11 @@ public protocol BoxAuthorizationPresenting: Sendable {
     func authorize(url: URL, callbackScheme: String) async throws -> URL
 }
 
-/// PKCE (RFC 7636) verifier/challenge pair.
-struct PKCEPair {
-    let verifier: String
-    let challenge: String
-
-    init(verifier: String = PKCEPair.randomVerifier()) {
-        self.verifier = verifier
-        let digest = SHA256.hash(data: Data(verifier.utf8))
-        self.challenge = Data(digest).base64URLEncodedString()
-    }
-
-    /// 64 unreserved characters, comfortably inside RFC 7636's 43–128.
-    static func randomVerifier() -> String {
+/// A random, URL-safe nonce — used for the OAuth `state` value, which Box
+/// *does* support and which is what stops a redirect the user did not start
+/// from planting someone else's Box account in their app.
+enum Nonce {
+    static func make() -> String {
         var bytes = [UInt8](repeating: 0, count: 48)
         for index in bytes.indices { bytes[index] = UInt8.random(in: 0...255) }
         return Data(bytes).base64URLEncodedString()
@@ -64,7 +65,7 @@ struct PKCEPair {
 }
 
 extension Data {
-    /// base64url without padding — what PKCE and JWT both want.
+    /// base64url without padding — URL-safe, so it survives a query string.
     func base64URLEncodedString() -> String {
         base64EncodedString()
             .replacingOccurrences(of: "+", with: "-")
@@ -102,21 +103,20 @@ public actor BoxAuthenticator {
     /// the application from their Box account if they want that.
     public func signOut() throws { try store.setTokens(nil) }
 
-    /// Runs the full authorization-code + PKCE flow and stores the result.
+    /// Runs the authorization-code flow and stores the resulting tokens.
     public func signIn() async throws {
-        guard !configuration.clientID.isEmpty else { throw BoxError.notConfigured }
+        guard !configuration.clientID.isEmpty, !configuration.clientSecret.isEmpty else {
+            throw BoxError.notConfigured
+        }
         guard let scheme = configuration.callbackScheme else { throw BoxError.notConfigured }
 
-        let pkce = PKCEPair()
-        let state = PKCEPair.randomVerifier()
+        let state = Nonce.make()
         var components = URLComponents(url: Self.authorizeEndpoint, resolvingAgainstBaseURL: false)!
         components.queryItems = [
             .init(name: "response_type", value: "code"),
             .init(name: "client_id", value: configuration.clientID),
             .init(name: "redirect_uri", value: configuration.redirectURI),
             .init(name: "state", value: state),
-            .init(name: "code_challenge", value: pkce.challenge),
-            .init(name: "code_challenge_method", value: "S256"),
         ]
 
         let callback = try await presenter.authorize(url: components.url!, callbackScheme: scheme)
@@ -133,8 +133,8 @@ public actor BoxAuthenticator {
             "grant_type": "authorization_code",
             "code": code,
             "client_id": configuration.clientID,
+            "client_secret": configuration.clientSecret,
             "redirect_uri": configuration.redirectURI,
-            "code_verifier": pkce.verifier,
         ])
     }
 
@@ -146,6 +146,7 @@ public actor BoxAuthenticator {
             "grant_type": "refresh_token",
             "refresh_token": tokens.refreshToken,
             "client_id": configuration.clientID,
+            "client_secret": configuration.clientSecret,
         ])
         guard let refreshed = store.tokens() else { throw BoxError.notAuthenticated }
         return refreshed.accessToken

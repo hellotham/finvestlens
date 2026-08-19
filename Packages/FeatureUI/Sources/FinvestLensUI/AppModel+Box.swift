@@ -86,8 +86,17 @@ extension AppModel {
     /// Must match the redirect URI registered on that Box application.
     public static let boxRedirectURI = "finvestlens://box-auth"
 
+    /// The Box app's client secret, in the Keychain — Box has no PKCE, so the
+    /// token exchange needs one, and a credential does not belong beside the
+    /// client id in `UserDefaults`.
+    public var boxClientSecret: String {
+        get { BoxClientSecretStore().secret() ?? "" }
+        set { try? BoxClientSecretStore().setSecret(newValue) }
+    }
+
     public var boxConfiguration: BoxAppConfiguration {
-        BoxAppConfiguration(clientID: boxClientID, redirectURI: Self.boxRedirectURI)
+        BoxAppConfiguration(clientID: boxClientID, clientSecret: boxClientSecret,
+                            redirectURI: Self.boxRedirectURI)
     }
 
     /// Which Box file the open book came from, if it came from Box at all.
@@ -124,9 +133,9 @@ extension AppModel {
 
     /// Signs in to Box. The sheet is Box's; this never sees a password.
     public func connectBox() async {
-        guard !boxClientID.isEmpty else {
+        guard !boxClientID.isEmpty, !boxClientSecret.isEmpty else {
             documentError = DocumentError(
-                message: "Set a Box client ID in Settings ▸ Document first. Create a Box app at developer.box.com with redirect URI \(Self.boxRedirectURI).")
+                message: "Set the Box client ID and secret in Settings first. Create a Box app at developer.box.com with redirect URI \(Self.boxRedirectURI).")
             return
         }
         do {
