@@ -22,31 +22,83 @@ import AuthenticationServices
 /// ever sees the user's Box credentials.
 final class WebAuthBoxPresenter: NSObject, BoxAuthorizationPresenting,
                                  ASWebAuthenticationPresentationContextProviding, @unchecked Sendable {
+
+    /// The live session, held for as long as it is running.
+    ///
+    /// `ASWebAuthenticationSession` is not retained by the system: drop the
+    /// last reference and the sheet closes with no callback. The lock also
+    /// guards ``finished``, because the completion arrives on one of Box's XPC
+    /// reply queues rather than a queue of ours.
+    private let lock = NSLock()
+    private var session: ASWebAuthenticationSession?
+    private var finished = false
+
     func authorize(url: URL, callbackScheme: String) async throws -> URL {
         try await withCheckedThrowingContinuation { continuation in
-            let session = ASWebAuthenticationSession(url: url, callbackURLScheme: callbackScheme) { callback, error in
-                if let callback {
-                    continuation.resume(returning: callback)
-                } else if let error = error as? ASWebAuthenticationSessionError,
-                          error.code == .canceledLogin {
-                    continuation.resume(throwing: BoxError.signInCancelled)
-                } else {
-                    continuation.resume(throwing: error ?? BoxError.signInCancelled)
+            // `ASWebAuthenticationSession` must be created and started on the
+            // main actor — the presentation-context protocol is
+            // `NS_SWIFT_UI_ACTOR` — while `BoxAuthenticator` is an actor, so
+            // this is reached from its executor, not the main thread.
+            Task { @MainActor in
+                let created = ASWebAuthenticationSession(
+                    url: url,
+                    callback: .customScheme(callbackScheme),
+                    completionHandler: Self.completion(for: self, continuation: continuation))
+                created.presentationContextProvider = self
+                created.prefersEphemeralWebBrowserSession = false
+                self.lock.withLock { self.session = created }
+                if !created.start() {
+                    self.complete(continuation, with: .failure(BoxError.signInCancelled))
                 }
-            }
-            session.presentationContextProvider = self
-            // The user's Box session in Safari is deliberately *not* reused:
-            // an ephemeral sheet means signing out of the app really signs out.
-            session.prefersEphemeralWebBrowserSession = false
-            if !session.start() {
-                continuation.resume(throwing: BoxError.signInCancelled)
             }
         }
     }
 
+    /// The completion body, built by a **`nonisolated`** factory so the
+    /// returned closure is not main-actor isolated.
+    ///
+    /// This is the crash that shipped: conforming to
+    /// `ASWebAuthenticationPresentationContextProviding` — which the SDK marks
+    /// `NS_SWIFT_UI_ACTOR` — makes this whole class `@MainActor`, so a closure
+    /// written inline here inherited that isolation. AuthenticationServices
+    /// then invoked it on `com.apple.NSXPCConnection…SafariLaunchAgent`, the
+    /// runtime's isolation check failed, and the app died with
+    /// `EXC_BREAKPOINT` in `dispatch_assert_queue_fail` the moment Box
+    /// redirected back. Built here, the closure carries no isolation and any
+    /// queue may call it.
+    private nonisolated static func completion(
+        for presenter: WebAuthBoxPresenter,
+        continuation: CheckedContinuation<URL, Error>
+    ) -> @Sendable (URL?, Error?) -> Void {
+        { callback, error in
+            if let callback {
+                presenter.complete(continuation, with: .success(callback))
+            } else if let error = error as? ASWebAuthenticationSessionError,
+                      error.code == .canceledLogin {
+                presenter.complete(continuation, with: .failure(BoxError.signInCancelled))
+            } else {
+                presenter.complete(continuation, with: .failure(error ?? BoxError.signInCancelled))
+            }
+        }
+    }
+
+    /// Resumes exactly once. `start()` returning false *and* the completion
+    /// firing would otherwise resume twice, which is a fatal error in itself.
+    private nonisolated func complete(_ continuation: CheckedContinuation<URL, Error>,
+                                      with result: Result<URL, Error>) {
+        let shouldResume: Bool = lock.withLock {
+            guard !finished else { return false }
+            finished = true
+            session = nil
+            return true
+        }
+        guard shouldResume else { return }
+        continuation.resume(with: result)
+    }
+
     func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
         #if canImport(AppKit)
-        return NSApplication.shared.keyWindow ?? ASPresentationAnchor()
+        return NSApplication.shared.keyWindow ?? NSApplication.shared.windows.first ?? ASPresentationAnchor()
         #else
         return UIApplication.shared.connectedScenes
             .compactMap { ($0 as? UIWindowScene)?.keyWindow }.first ?? ASPresentationAnchor()
