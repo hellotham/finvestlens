@@ -90,6 +90,9 @@ struct PriceIndexEquivalenceTests {
     }
 
     private func day(_ d: Int) -> Date { Date(timeIntervalSince1970: TimeInterval(d) * 86_400) }
+    /// A cut-off safely inside day `d`'s day-neutral instant (10:59Z of its
+    /// local day), which `day(d)` — midnight UTC — can fall before.
+    private func noon(_ d: Int) -> Date { day(d).addingTimeInterval(12 * 3_600) }
 
     /// A book of pseudo-random prices with deliberate duplicate dates.
     private func book(seed: UInt64) -> (Book, [Commodity]) {
@@ -155,5 +158,157 @@ struct PriceIndexEquivalenceTests {
 
         // An unknown pair is nil, not a stale hit.
         #expect(b.latestPrice(of: cba, in: .usd) == nil)
+    }
+
+    /// The index is now maintained in place rather than rebuilt, so every
+    /// mutation after it exists has to leave it equal to a rebuild — adds on
+    /// new and existing days (the later arrival winning its day), removals by
+    /// GUID and by predicate, and a removal big enough to take the rebuild path.
+    @Test("Adds and removes after the index is built match the linear scan")
+    func incrementalMaintenance() {
+        for seed in [UInt64(7), 77, 7_777] {
+            let (b, commodities) = book(seed: seed)
+            // Build the index, then mutate behind it.
+            for c in commodities { _ = b.latestPrice(of: c, in: .aud) }
+            var state = seed &* 31
+            func next(_ bound: Int) -> Int {
+                state ^= state << 13; state ^= state >> 7; state ^= state << 17
+                return Int(state % UInt64(bound))
+            }
+            for _ in 0..<60 {
+                let c = commodities[next(commodities.count)]
+                let cur = next(2) == 0 ? Commodity.aud : Commodity.usd
+                guard c != cur else { continue }
+                b.addPrice(Price(commodity: c, currency: cur, date: day(next(24)),
+                                 value: Decimal(next(1000) + 1)))
+                if next(3) == 0, let victim = b.prices.dropFirst(next(b.prices.count)).first {
+                    b.removePrice(victim.guid)
+                }
+            }
+            _ = b.removePrices { $0.value < 50 }
+            check(b, commodities, "seed \(seed)")
+
+            // A bulk removal is maintained in place too.
+            let removed = b.removePrices { $0.currency == .usd }
+            #expect(removed > 0)
+            check(b, commodities, "seed \(seed) after bulk removal")
+            // A commodity metadata edit is the one mutation that drops the
+            // index; the lazy rebuild after incremental maintenance has to
+            // agree with the scan as well.
+            b.updateCommodityMetadata(commodities[0], fullName: "Renamed", smallestFraction: nil)
+            b.addPrice(Price(commodity: commodities[0], currency: .aud, date: day(3), value: 5))
+            check(b, commodities, "seed \(seed) after rebuild")
+        }
+    }
+
+    /// `addPrices(deduplicating:)` now answers from the index rather than a
+    /// set of every identity; GnuCash's rule (same day, same value → the same
+    /// row) must hold both before the index exists and after.
+    @Test("Deduplication through the index matches the identity rule")
+    func dedupeThroughIndex() {
+        for warm in [false, true] {
+            let b = Book(baseCurrency: .aud)
+            let cba = Commodity(namespace: .security("ASX"), mnemonic: "CBA",
+                                fullName: "CBA", smallestFraction: 10000)
+            b.addPrice(Price(commodity: cba, currency: .aud, date: day(1), value: 10))
+            b.addPrice(Price(commodity: cba, currency: .aud, date: day(2), value: 11))
+            if warm { _ = b.latestPrice(of: cba, in: .aud) }
+            let added = b.addPrices(deduplicating: [
+                Price(commodity: cba, currency: .aud, date: day(1), value: 10),   // duplicate
+                Price(commodity: cba, currency: .aud, date: day(2), value: 12),   // new value, same day
+                Price(commodity: cba, currency: .aud, date: day(3), value: 13),   // new day
+                Price(commodity: cba, currency: .aud, date: day(3), value: 13),   // duplicate within the batch
+                Price(commodity: cba, currency: .usd, date: day(1), value: 10),   // other currency
+            ])
+            #expect(added.count == 3, "warm index: \(warm)")
+            #expect(b.prices.count == 5)
+            #expect(b.latestPrice(of: cba, in: .aud, on: noon(2))?.value == 12)
+            #expect(b.latestPrice(of: cba, in: .aud)?.value == 13)
+            #expect(b.latestPrice(of: cba, in: .usd)?.value == 10)
+        }
+    }
+
+    @Test("A recorded edit reverts to the prices before it, and the revert records the redo")
+    func changeLogRevert() {
+        let b = Book(baseCurrency: .aud)
+        let cba = Commodity(namespace: .security("ASX"), mnemonic: "CBA",
+                            fullName: "CBA", smallestFraction: 10000)
+        let kept = b.addPrice(Price(commodity: cba, currency: .aud, date: day(1), value: 10))
+        let replaced = b.addPrice(Price(commodity: cba, currency: .aud, date: day(2), value: 11))
+        _ = b.latestPrice(of: cba, in: .aud)   // index built, so the edit maintains it
+        let before = b.prices
+
+        b.beginRecordingPriceChanges()
+        b.removePrice(replaced.guid)
+        b.addPrice(Price(guid: replaced.guid, commodity: cba, currency: .aud, date: day(2), value: 12))
+        b.addPrice(Price(commodity: cba, currency: .aud, date: day(3), value: 13))
+        let changes = b.endRecordingPriceChanges()
+        #expect(changes.count == 3)
+        #expect(b.latestPrice(of: cba, in: .aud)?.value == 13)
+
+        b.beginRecordingPriceChanges()
+        b.revertPriceChanges(changes)
+        let redo = b.endRecordingPriceChanges()
+        #expect(Set(b.prices.map(\.guid)) == Set(before.map(\.guid)))
+        #expect(b.latestPrice(of: cba, in: .aud, on: noon(2))?.value == 11)
+        #expect(b.latestPrice(of: cba, in: .aud)?.value == 11)
+        #expect(b.prices.contains { $0.guid == kept.guid })
+
+        b.revertPriceChanges(redo)
+        #expect(b.latestPrice(of: cba, in: .aud, on: noon(2))?.value == 12)
+        #expect(b.latestPrice(of: cba, in: .aud)?.value == 13)
+        #expect(b.prices.count == 3)
+
+        // Nothing recorded outside a recording.
+        b.addPrice(Price(commodity: cba, currency: .aud, date: day(4), value: 14))
+        #expect(b.endRecordingPriceChanges().isEmpty)
+    }
+
+    /// Two prices on one day keep their order through a bulk removal and its
+    /// undo: the later arrival is the day's latest before and after.
+    @Test("Undoing a bulk removal restores the within-day order")
+    func bulkRemovalRevertKeepsOrder() {
+        let b = Book(baseCurrency: .aud)
+        let cba = Commodity(namespace: .security("ASX"), mnemonic: "CBA",
+                            fullName: "CBA", smallestFraction: 10000)
+        b.addPrice(Price(commodity: cba, currency: .aud, date: day(2), value: 10))
+        b.addPrice(Price(commodity: cba, currency: .aud, date: day(2), value: Decimal(string: "10.5")!))
+        _ = b.latestPrice(of: cba, in: .aud)
+        #expect(b.latestPrice(of: cba, in: .aud)?.value == Decimal(string: "10.5")!)
+
+        b.beginRecordingPriceChanges()
+        _ = b.removePrices { $0.commodity == cba }
+        b.addPrice(Price(commodity: cba, currency: .aud, date: day(3), value: 11))
+        let changes = b.endRecordingPriceChanges()
+        b.revertPriceChanges(changes)
+        #expect(b.prices.map(\.value) == [10, Decimal(string: "10.5")!])
+        #expect(b.latestPrice(of: cba, in: .aud)?.value == Decimal(string: "10.5")!)
+    }
+
+    @Test("Removing a pair's last price removes the pair from the index")
+    func emptiedBucketGoes() {
+        let b = Book(baseCurrency: .aud)
+        let cba = Commodity(namespace: .security("ASX"), mnemonic: "CBA",
+                            fullName: "CBA", smallestFraction: 10000)
+        b.addPrice(Price(commodity: cba, currency: .aud, date: day(1), value: 10))
+        let usd = b.addPrice(Price(commodity: cba, currency: .usd, date: day(1), value: 7))
+        #expect(b.pricedAgainst(cba) == [.aud, .usd])
+        b.removePrice(usd.guid)
+        #expect(b.pricedAgainst(cba) == [.aud])
+    }
+
+    private func check(_ b: Book, _ commodities: [Commodity], _ label: String) {
+        for c in commodities {
+            for cur in [Commodity.aud, .usd] {
+                for d in [nil, day(-1), day(0), day(5), day(10), day(19), day(23), day(50)] as [Date?] {
+                    #expect(b.latestPrice(of: c, in: cur, on: d)?.guid == scan(b, c, cur, d)?.guid,
+                            "\(label) \(c.mnemonic)/\(cur.mnemonic) on \(String(describing: d))")
+                }
+            }
+            for d in [nil, day(0), day(7), day(19), day(23)] as [Date?] {
+                #expect(b.latestPriceInAnyCurrency(of: c, on: d)?.guid == scanAny(b, c, d)?.guid,
+                        "\(label) any-currency \(c.mnemonic) on \(String(describing: d))")
+            }
+        }
     }
 }

@@ -55,6 +55,23 @@ Quality limits of the on-device import layer (PRD §5.18), caught by the review 
 | Statement sign inference without a balance column | FR-AI-01 / P4 | Signs re-derived from the running balance; statements with unsigned debit/credit columns *and* no balance column may import with wrong signs (the review screen catches it). |
 | iOS file pickers on-device | FR-AI-01/03/04/07 / P4–P7 | iOS keeps `.fileImporter`; not yet exercised on a device. |
 
+## 3a — Foundation Models 27 — consciously not adopted (9 Oct 2026)
+
+What the 27 SDK added (Apple's *Foundation Models updates* page and the SDK
+interface, both read 9 Oct 2026) and why the Intelligence package does not
+use it. The doctrine in architecture.md stands: everything runs on the
+on-device model and no financial data leaves the device.
+
+| Feature | Why not (yet) |
+|---|---|
+| `PrivateCloudComputeLanguageModel` — more reasoning, larger context | Sends the prompt to Apple's Private Cloud Compute. Off-device by definition; ruled out by the doctrine, not by capability. |
+| `LanguageModel` protocol, `CoreAILanguageModel`, `MLXLanguageModel` | Lets any model stand in for the system one. Nothing to gain while the on-device model does the job; a third-party model would need its own privacy case. |
+| Image attachments in prompts + Vision `OCRTool` / `BarcodeReaderTool` | The import pipeline already OCRs with Vision and feeds *text* to the model, which is what the real-document harnesses validate. A multimodal rewrite needs re-validation against the real bank files before it could replace that. |
+| `LanguageModelSession.DynamicProfile` (agentic sessions), `GenerationOptions.ToolCallingMode` | No session here uses tools or multi-turn agency; every call is one guided-generation request. |
+| `SystemLanguageModel.Variant` (`core3`, `coreAdvanced3`) | Read-only: it *reports* which on-device model backs the instance (Apple's doc page, read 9 Oct 2026); there is no initializer to choose one. |
+| `Guardrails.permissiveContentTransformations` | Tried and reverted the same day: Apple's safety article says it applies only to string responses, and every session here is guided generation, which keeps the default guardrails regardless. The classifier's guardrail refusals were fixed by re-phrasing instead (see implemented.md). |
+| `SystemLanguageModel.contextSize` / `tokenCount(for:)` (26.4) for pre-sizing statement chunks | The extractor's split-and-retry on `contextOverflow` already works, and the 27 model's context is 8,192 tokens (measured 9 Oct 2026), twice the 4,096 the loop was tuned on. Worth revisiting only if overflow retries show up in real imports. |
+
 ## 4 — Platform & HIG — deferred decisions
 
 | Item | Notes |

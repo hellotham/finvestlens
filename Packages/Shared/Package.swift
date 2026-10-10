@@ -16,8 +16,8 @@ import PackageDescription
 let package = Package(
     name: "FinvestLensShared",
     platforms: [
-        .macOS("26.0"),
-        .iOS("26.0"),
+        .macOS("27.0"),
+        .iOS("27.0"),
         .macCatalyst("26.0"),
     ],
     products: [

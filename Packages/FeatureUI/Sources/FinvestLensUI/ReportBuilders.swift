@@ -33,6 +33,12 @@ extension AppModel {
     /// draws, generalised to any period.
     func netWorthPoints(from: Date, to: Date) -> [NetWorthPoint] {
         guard let book else { return [] }
+        return cachedReport("nwp:\(from.timeIntervalSinceReferenceDate):\(to.timeIntervalSinceReferenceDate)") {
+            netWorthPointsUncached(book: book, from: from, to: to)
+        } ?? []
+    }
+
+    private func netWorthPointsUncached(book: Book, from: Date, to: Date) -> [NetWorthPoint] {
         // All-time starts where the book does, not at the epoch.
         let earliest = book.transactions.map(\.datePosted).min() ?? to
         let start = max(from, earliest)

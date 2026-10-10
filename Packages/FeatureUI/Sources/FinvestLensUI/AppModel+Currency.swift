@@ -86,10 +86,12 @@ extension AppModel {
         // destination currency (the amount actually received).
         txn.addSplit(account: to, value: sourceAmount, quantity: destAmount)
 
-        // Whole-book, not `editing`: the implied rate is a price, which lives
-        // outside any transaction, and the trading accounts are created on
-        // demand — both have to happen inside the snapshot to be undone.
-        editingWholeBook(named: "Record Currency Transfer") {
+        // The implied rate is a price, which lives outside any transaction,
+        // and the trading accounts are created on demand — the scoped edit
+        // snapshots the price database and records any new account, so both
+        // rewind with the transaction.
+        editing(accounts: [], transactions: [txn.guid], prices: true,
+                named: "Record Currency Transfer") {
             // Optional trading accounts make the transaction balance in *each*
             // currency (not just by value), so the balance sheet stays balanced
             // and unrealised FX is captured (`FR-REG-07`).

@@ -14,8 +14,8 @@
 //
 //   1. Opens with nothing selected.
 //   2. Selecting a transaction highlights it (an even lavender row wash — the
-//      app accent at 18% — painted at the NSTableView row level, never the
-//      dark emphasized fill) and does not expand or edit anything.
+//      app accent at 18%, never a dark emphasized fill; the macOS sheet paints
+//      its own) and does not expand or edit anything.
 //   3. Multi-/shift-selection is native Table behaviour.
 //   4. Clicking a field inside the already-selected transaction edits that
 //      field in place with zero layout shift; ⇥/⇧⇥ walk the visible fields
@@ -117,6 +117,12 @@ private struct RegisterMainBase {
     var runningBalance: Decimal?
 }
 
+private struct UnreconciledRotorEntry {
+    let splitID: GncGUID
+    let rowID: RegisterRowID
+    let label: String
+}
+
 /// Body-owned memo: identical keys return the cached array with zero work.
 /// A reference type on purpose — refreshing it during a body pass must not
 /// write SwiftUI state.
@@ -129,8 +135,11 @@ private struct RegisterMainBase {
 private final class RegisterRowCache {
     private var baseKey: Int = .min
     private var base: [RegisterBaseRow] = []
-    private var composedKey: Int = .min
+    private var composedStructure: Int = .min
+    private var composedContent: Int = .min
     private var composed: [RegisterTableRow] = []
+    private var rotorKey: Int = .min
+    private var rotor: [UnreconciledRotorEntry] = []
 
     /// `defaults write <bundle-id> FLRegisterTrace -bool true` logs base and
     /// compose timings from real usage to /tmp/fl-register-perf.log.
@@ -144,12 +153,33 @@ private final class RegisterRowCache {
         return base
     }
 
-    func composed(for key: Int, build: () -> [RegisterTableRow]) -> [RegisterTableRow] {
-        if key != composedKey {
+    /// The composed rows. `structure` decides which rows exist and which are
+    /// selected, editable or disclosed; `content` is the draft's text. When
+    /// only the content moved (a keystroke), `patch` is offered the previous
+    /// rows to splice the drafted transaction's block into, so a keystroke
+    /// recomposes one transaction instead of every row of the register
+    /// (Performance Review 2, R10). A `nil` from `patch` means a full compose.
+    func composed(structure: Int, content: Int,
+                  patch: ([RegisterTableRow]) -> [RegisterTableRow]?,
+                  build: () -> [RegisterTableRow]) -> [RegisterTableRow] {
+        if structure == composedStructure, content == composedContent { return composed }
+        if structure == composedStructure, let patched = timed("patch", { patch(composed) }) {
+            composed = patched
+        } else {
             composed = timed("compose") { build() }
-            composedKey = key
+            composedStructure = structure
         }
+        composedContent = content
         return composed
+    }
+
+    func rotorEntries(for key: Int,
+                      build: () -> [UnreconciledRotorEntry]) -> [UnreconciledRotorEntry] {
+        if key != rotorKey {
+            rotor = build()
+            rotorKey = key
+        }
+        return rotor
     }
 
     private func timed<T>(_ label: String, _ work: () -> T) -> T {
@@ -362,8 +392,9 @@ struct RegisterTableView: View {
     }
 
     var body: some View {
-        let rows = buildRows()
-        table(rows, code: currencyCode)
+        let baseKey = cacheKey
+        let rows = buildRows(baseKey: baseKey)
+        table(rows, code: currencyCode, baseKey: baseKey)
             .captureTabs(while: draft != nil) { moveCursor(backwards: $0) }
             .onSubmit(of: .text) { saveEdit() }
             #if os(macOS)
@@ -405,7 +436,7 @@ struct RegisterTableView: View {
 
     // MARK: Table
 
-    private func table(_ rows: [RegisterTableRow], code: String) -> some View {
+    private func table(_ rows: [RegisterTableRow], code: String, baseKey: Int) -> some View {
         ScrollViewReader { proxy in
             Table(rows, selection: $selection, sortOrder: tableSortOrder) {
                 // The row's height floor rides on the first column: a `Table`
@@ -433,33 +464,23 @@ struct RegisterTableView: View {
             }
             .environment(\.appFontScale, rowFontScale)
             .scrollEdgeEffectStyle(.hard, for: .top)
-            #if os(macOS)
-            // Selection *interaction* stays native; drawing is ours: the
-            // probe paints zebra and the even lavender selection wash at the
-            // NSTableRowView level, from SwiftUI's own selection (AppKit's
-            // index set goes stale once its drawing is disabled).
-            .background(RegisterTableStyleProbe(
-                selectedIndices: IndexSet(rows.enumerated().compactMap {
-                    selection.contains($0.element.id) ? $0.offset : nil
-                }),
-                tick: paintTick(rows)))
-            #endif
             .contextMenu(forSelectionType: RegisterRowID.self) { ids in
                 let splitIDs = Set(ids.compactMap(splitID(of:)))
                 TransactionActions(model: model, splitID: splitIDs.first,
                                    selectionSplitIDs: splitIDs)
             }
             .accessibilityRotor("Unreconciled") {
-                ForEach(model.unreconciledRegisterRows) { row in
-                    if let txn = model.transactionID(ofSplit: row.id) {
-                        AccessibilityRotorEntry(row.description, id: RegisterRowID.txn(txn))
-                    }
+                // Rows without a transaction are dropped *before* the builder
+                // rather than with an `if let` inside it, so the rotor's
+                // content type stays a plain `ForEach` instead of an `Optional`.
+                ForEach(unreconciledRotorEntries(baseKey: baseKey), id: \.splitID) { entry in
+                    AccessibilityRotorEntry(entry.label, id: entry.rowID)
                 }
             }
             .onAppear { showPendingOrNewest(proxy, rows: rows) }
             .onChange(of: model.selectedAccountID) {
                 settleAndReset()
-                Task { @MainActor in showPendingOrNewest(proxy, rows: buildRows()) }
+                Task { @MainActor in showPendingOrNewest(proxy, rows: buildRows(baseKey: cacheKey)) }
             }
             .onChange(of: model.pendingRegisterSplitID) {
                 showPendingOrNewest(proxy, rows: rows)
@@ -479,11 +500,22 @@ struct RegisterTableView: View {
         }
     }
 
-    private func paintTick(_ rows: [RegisterTableRow]) -> Int {
-        var tick = selection.hashValue
-        tick = tick &* 31 &+ rows.count
-        tick = tick &* 31 &+ (draft != nil ? 1 : 0)
-        return tick
+    /// One rotor entry per unreconciled row that still resolves to a
+    /// transaction, keyed by the split so a transaction posting twice to this
+    /// account keeps both rows (the entry itself selects the transaction).
+    ///
+    /// Memoised on the base key: the rotor's `ForEach` is rebuilt on every
+    /// body pass, and resolving each unreconciled row to its transaction —
+    /// thousands of lookups on a large account — is a function of the base
+    /// rows alone (Performance Review 2, R10).
+    private func unreconciledRotorEntries(baseKey: Int) -> [UnreconciledRotorEntry] {
+        cache.rotorEntries(for: baseKey) {
+            model.unreconciledRegisterRows.compactMap { row in
+                model.transactionID(ofSplit: row.id).map {
+                    UnreconciledRotorEntry(splitID: row.id, rowID: .txn($0), label: row.description)
+                }
+            }
+        }
     }
 
     /// Click-to-sort, kept honest with the Sort menu: both read and write
@@ -874,11 +906,14 @@ struct RegisterTableView: View {
     // MARK: Base rows (once per data change)
 
     /// Everything that shapes the base structure, folded to one comparison.
-    /// `bookRevision` covers edits; the row-count/end fingerprints cover
+    /// `registerRevision` covers edits; the row-count/end fingerprints cover
     /// account, sort, and filter changes.
     private var cacheKey: Int {
         var hasher = Hasher()
-        hasher.combine(model.bookRevision)
+        // Not `bookRevision`: an account register moves with
+        // `registerRevision`, the whole-book journal with
+        // `transactionRevision`; a price-only edit moves neither.
+        hasher.combine(wholeBook ? model.transactionRevision : model.registerRevision)
         hasher.combine(wholeBook)
         hasher.combine(disclosesEveryRow)
         if wholeBook {
@@ -956,22 +991,40 @@ struct RegisterTableView: View {
 
     // MARK: Per-pass compose (no book lookups, no formatting)
 
-    private func buildRows() -> [RegisterTableRow] {
-        let baseKey = cacheKey
-        var hasher = Hasher()
-        hasher.combine(baseKey)
-        hasher.combine(selection)
-        hasher.combine(editGeneration)
-        // Disclosure is composed, not based: Auto Details and a hand-opened
-        // Basic row change which rows exist without changing the base.
-        hasher.combine(style)
-        hasher.combine(currentExpanded)
-        return cache.composed(for: hasher.finalize()) {
-            composeRows(base: cache.base(for: baseKey) { buildBase() })
-        }
+    /// `baseKey` is `cacheKey`, computed once per body pass by the caller —
+    /// it reads several model properties, and the rotor needs it too.
+    private func buildRows(baseKey: Int) -> [RegisterTableRow] {
+        // The structure: which rows exist and which are selected, editable or
+        // disclosed. Disclosure is composed, not based: Auto Details and a
+        // hand-opened Basic row change which rows exist without changing the
+        // base. The drafted transaction's identity is structure too; its
+        // content (`editGeneration`) is the only thing left out.
+        var structure = Hasher()
+        structure.combine(baseKey)
+        structure.combine(selection)
+        structure.combine(style)
+        structure.combine(currentExpanded)
+        structure.combine(draft?.transactionID)
+        let base = cache.base(for: baseKey) { buildBase() }
+        return cache.composed(structure: structure.finalize(), content: editGeneration,
+                              patch: { previous in recomposeDraft(in: previous, base: base) },
+                              build: { composeRows(base: base[...]) })
     }
 
-    private func composeRows(base: [RegisterBaseRow]) -> [RegisterTableRow] {
+    /// A keystroke changes the drafted transaction's rows and no other, so
+    /// only its block is recomposed — from its own base rows — and spliced
+    /// into the previous pass's rows in place of the old block. `nil` when
+    /// there is no draft or its heading is not among the rows.
+    private func recomposeDraft(in previous: [RegisterTableRow],
+                                base: [RegisterBaseRow]) -> [RegisterTableRow]? {
+        guard let txn = draft?.transactionID,
+              let start = base.firstIndex(where: { $0.txn == txn }) else { return nil }
+        var end = start + 1
+        while end < base.count, base[end].txn == txn { end += 1 }
+        return previous.replacingBlock(of: txn, with: composeRows(base: base[start..<end]))
+    }
+
+    private func composeRows(base: ArraySlice<RegisterBaseRow>) -> [RegisterTableRow] {
         let selectedTxn = singleSelectedTransaction
         let draftTxn = draft?.transactionID
         var out: [RegisterTableRow] = []
@@ -1405,6 +1458,9 @@ struct RegisterTableView: View {
         }
         d.lines.append(line)
         draft = d
+        // The draft gained a row, so the composed cache's content key moves —
+        // the selection alone may end where it began.
+        editGeneration &+= 1
         selection = anchorRow.map { [$0] } ?? []
         // Entry starts at the memo (the leg's own text), then ⇥ walks on to
         // account and amount.
@@ -1529,102 +1585,37 @@ struct RegisterTableView: View {
     }
 }
 
-// MARK: - Row painting (selection wash + zebra, even, at the row level)
+// MARK: - The cell
 
-#if os(macOS)
-/// Owns the NSTableView's row drawing: switches off the emphasized selection
-/// fill (spec: never a dark selection), then paints every available row
-/// view's `backgroundColor` itself — zebra from the system's alternating
-/// colors, selection as one flat lavender wash (base blended 18% toward the
-/// accent) per row. Native selection *interaction* is untouched.
-private struct RegisterTableStyleProbe: NSViewRepresentable {
-    /// SwiftUI's selection as row indices — the paint source of truth.
-    var selectedIndices: IndexSet
-    var tick: Int
-
-    @MainActor
-    final class Coordinator {
-        weak var table: NSTableView?
-        var selected = IndexSet()
-        nonisolated(unsafe) var boundsObserver: NSObjectProtocol?
-        private let accent = NSColor(Color.appAccent)
-
-        func attach(near view: NSView) {
-            if table == nil || table?.window == nil {
-                var node: NSView? = view
-                var depth = 0
-                while let current = node, depth < 12, table?.window == nil {
-                    if let found = Self.findTable(in: current) {
-                        adopt(found)
-                        break
-                    }
-                    node = current.superview
-                    depth += 1
-                }
-            }
-            paint()
-        }
-
-        private func adopt(_ t: NSTableView) {
-            guard table !== t else { return }
-            table = t
-            t.selectionHighlightStyle = .none
-            if let clip = t.enclosingScrollView?.contentView {
-                clip.postsBoundsChangedNotifications = true
-                boundsObserver = NotificationCenter.default.addObserver(
-                    forName: NSView.boundsDidChangeNotification, object: clip,
-                    queue: .main) { [weak self] _ in
-                    MainActor.assumeIsolated { self?.paint() }
-                }
-            }
-        }
-
-        func paint() {
-            guard let table else { return }
-            let bases = NSColor.alternatingContentBackgroundColors
-            let selectionBase = bases.first ?? NSColor.controlBackgroundColor
-            let wash = selectionBase.blended(withFraction: 0.18, of: accent)
-                ?? selectionBase
-            table.enumerateAvailableRowViews { rowView, row in
-                rowView.backgroundColor = selected.contains(row)
-                    ? wash
-                    : bases.isEmpty ? NSColor.controlBackgroundColor
-                                    : bases[row % bases.count]
-            }
-        }
-
-        deinit {
-            if let boundsObserver {
-                NotificationCenter.default.removeObserver(boundsObserver)
-            }
-        }
-
-        private static func findTable(in view: NSView) -> NSTableView? {
-            if let table = view as? NSTableView { return table }
-            for sub in view.subviews {
-                if let found = findTable(in: sub) { return found }
-            }
-            return nil
-        }
-    }
-
-    func makeCoordinator() -> Coordinator { Coordinator() }
-
-    func makeNSView(context: Context) -> NSView {
-        let view = NSView()
-        context.coordinator.selected = selectedIndices
-        DispatchQueue.main.async { context.coordinator.attach(near: view) }
-        return view
-    }
-
-    func updateNSView(_ view: NSView, context: Context) {
-        context.coordinator.selected = selectedIndices
-        DispatchQueue.main.async { context.coordinator.attach(near: view) }
+extension RegisterTableRow {
+    /// A transaction's heading row — the row every other row of its block
+    /// (notes, tags, legs, Add Split) follows.
+    var isHeading: Bool {
+        if case .txn = id { true } else { false }
     }
 }
-#endif
 
-// MARK: - The cell
+extension Array where Element == RegisterTableRow {
+    /// `self` with the block that belongs to `txn` — its heading and every
+    /// row up to the next heading — replaced by `fresh`, or `nil` when `txn`
+    /// has no heading here. The per-keystroke path of the table's compose.
+    func replacingBlock(of txn: GncGUID, with fresh: [RegisterTableRow]) -> [RegisterTableRow]? {
+        let heading = RegisterRowID.txn(txn)
+        guard let start = firstIndex(where: { $0.id == heading }) else { return nil }
+        var end = start + 1
+        while end < count, !self[end].isHeading { end += 1 }
+        // A transaction with two legs in the focus account has two headings
+        // — one per split — and under some sorts they are not even adjacent.
+        // One block cannot stand in for both, so the caller composes in full.
+        guard !self[end...].contains(where: { $0.id == heading }) else { return nil }
+        var out: [RegisterTableRow] = []
+        out.reserveCapacity(count - (end - start) + fresh.count)
+        out.append(contentsOf: self[..<start])
+        out.append(contentsOf: fresh)
+        out.append(contentsOf: self[end...])
+        return out
+    }
+}
 
 /// One register cell: a real TextField, always present so editing never
 /// changes the layout — but **hit-transparent unless its transaction is the

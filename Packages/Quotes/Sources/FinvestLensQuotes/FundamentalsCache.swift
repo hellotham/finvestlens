@@ -106,7 +106,7 @@ public struct FundamentalsCache: Sendable {
         return names.reduce(0) { total, name in
             let path = directory.appendingPathComponent(name).path
             let size = (try? fileManager.attributesOfItem(atPath: path)[.size] as? Int) ?? 0
-            return total + (size ?? 0)
+            return total + size
         }
     }
 

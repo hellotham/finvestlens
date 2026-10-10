@@ -4,8 +4,11 @@
 <dict>
 	<!--
 	  FinvestLens app entitlements. App Sandbox is intentionally OFF (see
-	  docs/deferred.md §6). Bundle-ID base is com.hellotham.finvestlensapp
-	  because com.hellotham.finvestlens is held by an inaccessible team.
+	  docs/deferred.md §6). The bundle ID is com.hellotham.finvestlens; the
+	  App Group and iCloud container below deliberately keep the older
+	  …finvestlensapp base. They are separately registered identifiers that
+	  already hold this team's data, so renaming them is a portal change in
+	  its own right (see docs/provisioning.md), not part of the bundle-ID rename.
 	-->
 
 	<!-- App Group: shared container the app writes widget/Quick Look snapshots

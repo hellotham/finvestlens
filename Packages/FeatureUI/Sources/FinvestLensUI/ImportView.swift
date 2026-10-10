@@ -622,25 +622,19 @@ struct ImportView: View {
 
     private func createInvestments() {
         invError = nil
-        // Track exactly which rows were posted so a mid-batch failure can't leave
-        // an already-created row in the list — re-clicking would post it twice.
-        var createdIDs: [UUID] = []
-        for row in investments {
-            guard creatableInvestments.contains(where: { $0.id == row.id }) else { continue }
-            do {
-                if try model.recordStagedInvestment(
-                    row, securityID: invSecurity[row.id], settlementID: invSettlement,
-                    incomeID: invIncome) != nil {
-                    createdIDs.append(row.id)
-                }
-            } catch {
-                invError = "Couldn't create “\(row.investment?.security ?? "")”: \(error.localizedDescription)"
-            }
+        // One edit for the whole batch: every row built first, then posted
+        // together, so a file of hundreds of rows refreshes once.
+        let creatable = investments.filter { row in creatableInvestments.contains { $0.id == row.id } }
+        let outcome = model.recordStagedInvestments(
+            creatable.map { (row: $0, securityID: invSecurity[$0.id]) },
+            settlementID: invSettlement, incomeID: invIncome)
+        if let failure = outcome.failures.last {
+            invError = "Couldn't create “\(failure.row.investment?.security ?? "")”: \(failure.error.localizedDescription)"
         }
-        invCreated = createdIDs.count
-        // Drop the ones that were actually created (even if a later row failed) so
-        // the list reflects what's left and nothing is posted a second time.
-        let done = Set(createdIDs)
+        invCreated = outcome.created.count
+        // Drop the ones that were actually created (even if another row failed)
+        // so the list reflects what's left and nothing is posted a second time.
+        let done = Set(outcome.created)
         investments.removeAll { done.contains($0.id) }
     }
 

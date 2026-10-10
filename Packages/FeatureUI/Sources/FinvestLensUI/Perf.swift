@@ -16,7 +16,7 @@ import os
 
 enum Perf {
     static let signposter = OSSignposter(
-        subsystem: "com.hellotham.finvestlensapp", category: "perf")
+        subsystem: "com.hellotham.finvestlens", category: "perf")
 
     /// Wraps a unit of work in a signpost interval. In DEBUG, work that takes
     /// longer than `budget` (default: half a 60Hz frame) is printed with its

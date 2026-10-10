@@ -37,7 +37,7 @@ extension AppModel {
     public func renameSecurity(_ commodity: Commodity, fullName: String, smallestFraction: Int? = nil) {
         guard let book else { return }
         let trimmed = fullName.trimmingCharacters(in: .whitespaces)
-        editingWholeBook(named: "Rename Security") {
+        editingCommodity(commodity, named: "Rename Security") {
             book.updateCommodityMetadata(commodity, fullName: trimmed, smallestFraction: smallestFraction)
             for index in watchlist.indices where watchlist[index] == commodity {
                 if !trimmed.isEmpty { watchlist[index].fullName = trimmed }

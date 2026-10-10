@@ -956,9 +956,14 @@ struct AccountBranch: View {
                 .modifier(AccountDropFeedback(zone: drag.zone(for: node.id)))
                 .onDrag {
                     drag.dragging = node.id
-                    return NSItemProvider(
-                        item: node.id.hexString.data(using: .utf8) as NSData?,
-                        typeIdentifier: UTType.finvestLensAccountRow.identifier)
+                    // The provider only has to *advertise* the row's own content
+                    // type so the drop zones below accept it — the delegate reads
+                    // `drag.dragging`, never the payload. `AccountDragPayload` is
+                    // the Transferable declared for exactly this; registering it
+                    // replaces `init(item:typeIdentifier:)`, deprecated in macOS 27.
+                    let provider = NSItemProvider()
+                    provider.register(AccountDragPayload(id: node.id))
+                    return provider
                 }
                 .onDrop(of: [UTType.finvestLensAccountRow],
                         delegate: AccountRowDrop(node: node, siblings: nodes,
@@ -1021,7 +1026,7 @@ struct AccountRowDrop: DropDelegate {
         return !isDescendant(node.id, ofOrEqualTo: dragged)
     }
 
-    func dropEntered(info: DropInfo) { dropUpdated(info: info) }
+    func dropEntered(info: DropInfo) { _ = dropUpdated(info: info) }
 
     func dropUpdated(info: DropInfo) -> DropProposal? {
         // `DropInfo` has no size, so the row height is taken from the metrics

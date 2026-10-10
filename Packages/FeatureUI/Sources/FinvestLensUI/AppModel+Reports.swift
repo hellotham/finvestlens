@@ -54,28 +54,36 @@ extension AppModel {
     /// Every account's balance in debit/credit columns (`FR-RPT-01`).
     public func trialBalance(asOf: Date) -> TrialBalanceReport? {
         guard let book else { return nil }
-        return FinancialReports.trialBalance(book, asOf: asOf, currency: reportCurrency)
+        return cachedReport("tb:\(asOf.timeIntervalSinceReferenceDate)") {
+            FinancialReports.trialBalance(book, asOf: asOf, currency: reportCurrency)
+        }
     }
 
     /// The movement of capital over a period (`FR-RPT-01`).
     public func equityStatement(from: Date, to: Date) -> EquityStatement? {
         guard let book else { return nil }
-        return FinancialReports.equityStatement(book, from: from, to: to,
-                                                currency: reportCurrency)
+        return cachedReport("eq:\(from.timeIntervalSinceReferenceDate):\(to.timeIntervalSinceReferenceDate)") {
+            FinancialReports.equityStatement(book, from: from, to: to, currency: reportCurrency)
+        }
     }
 
     /// The chart of accounts with balances, cut at a depth (`FR-RPT-01`).
     public func accountSummary(asOf: Date, depthLimit: Int) -> AccountSummaryReport? {
         guard let book else { return nil }
-        return FinancialReports.accountSummary(book, asOf: asOf, currency: reportCurrency,
-                                               depthLimit: depthLimit)
+        return cachedReport("as:\(asOf.timeIntervalSinceReferenceDate):\(depthLimit)") {
+            FinancialReports.accountSummary(book, asOf: asOf, currency: reportCurrency,
+                                            depthLimit: depthLimit)
+        }
     }
 
     /// Money into and out of a set of accounts over a period (`FR-RPT-01`).
     public func cashFlow(accountIDs: Set<GncGUID>, from: Date, to: Date) -> CashFlowReport? {
         guard let book, !accountIDs.isEmpty else { return nil }
-        return FinancialReports.cashFlow(book, accountIDs: accountIDs, from: from, to: to,
-                                         currency: reportCurrency)
+        let ids = accountIDs.map(\.hexString).sorted().joined(separator: ",")
+        return cachedReport("cf:\(ids):\(from.timeIntervalSinceReferenceDate):\(to.timeIntervalSinceReferenceDate)") {
+            FinancialReports.cashFlow(book, accountIDs: accountIDs, from: from, to: to,
+                                      currency: reportCurrency)
+        }
     }
 
     /// The daily-weighted average balance of a set of accounts over a period,
@@ -85,9 +93,12 @@ extension AppModel {
         guard let book, !accountIDs.isEmpty else { return nil }
         let accounts = accountIDs.compactMap { book.account(with: $0) }
         guard !accounts.isEmpty else { return nil }
-        return FinancialReports.averageBalance(book, accounts: accounts,
-                                               currency: reportCurrency,
-                                               from: from, to: to, step: step)
+        let ids = accountIDs.map(\.hexString).sorted().joined(separator: ",")
+        return cachedReport("avg:\(ids):\(from.timeIntervalSinceReferenceDate):\(to.timeIntervalSinceReferenceDate):\(step)") {
+            FinancialReports.averageBalance(book, accounts: accounts,
+                                            currency: reportCurrency,
+                                            from: from, to: to, step: step)
+        }
     }
 
     /// Income and spending by category and by month (`FR-RPT-03`).

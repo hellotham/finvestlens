@@ -15,6 +15,7 @@
 import Foundation
 import Testing
 import FinvestLensEngine
+import FinvestLensQuotes
 @testable import FinvestLensUI
 
 private func tempURL() -> URL {
@@ -509,4 +510,147 @@ private func rename(_ model: AppModel, _ id: GncGUID, to name: String) {
                         notes: account.notes,
                         isPlaceholder: account.isPlaceholder,
                         isHidden: account.isHidden)
+}
+
+@MainActor
+@Suite("Undo / redo — scoped account and commodity operations (Performance Review 2, R2)")
+struct UndoScopedOperationTests {
+
+    @Test("Add account undoes to nothing and redoes back with the same identity")
+    func addAccount() throws {
+        let f = try Fixture()
+        defer { f.tearDown() }
+        let book = try #require(f.model.book)
+
+        let id = try #require(f.model.addAccount(name: "Savings", type: .bank))
+        #expect(book.account(with: id)?.parent === book.rootAccount)
+
+        f.undo.undo()
+        #expect(book.account(with: id) == nil)
+
+        f.undo.redo()
+        let back = try #require(book.account(with: id))
+        #expect(back.name == "Savings")
+        #expect(back.parent === book.rootAccount)
+    }
+
+    @Test("Delete account undoes: the account, its child and its postings all come back")
+    func deleteAccount() throws {
+        let f = try Fixture()
+        defer { f.tearDown() }
+        let book = try #require(f.model.book)
+        let utilities = try #require(f.model.addAccount(name: "Utilities", type: .expense))
+        let power = try #require(f.model.addAccount(name: "Power", type: .expense, parentID: utilities))
+        _ = try f.model.addTransaction(
+            date: Date(), description: "Gas", currency: .aud,
+            splits: [SplitInput(accountID: f.bank, value: -80), SplitInput(accountID: utilities, value: 80)])
+        _ = try f.model.addTransaction(
+            date: Date(), description: "Water", currency: .aud,
+            splits: [SplitInput(accountID: f.bank, value: -30), SplitInput(accountID: utilities, value: 30)])
+        f.undo.removeAllActions()
+        let utilitiesIndex = try #require(book.rootAccount.children.firstIndex { $0.guid == utilities })
+
+        try f.model.deleteAccount(utilities, movingTransactionsTo: f.food, movingChildrenTo: f.food)
+        #expect(book.account(with: utilities) == nil)
+        #expect(book.account(with: power)?.parent?.guid == f.food)
+        #expect(book.splits(for: try #require(book.account(with: f.food))).count == 2)
+
+        f.undo.undo()
+        let restored = try #require(book.account(with: utilities))
+        #expect(restored.name == "Utilities")
+        #expect(book.rootAccount.children.firstIndex { $0 === restored } == utilitiesIndex)
+        #expect(book.account(with: power)?.parent === restored)
+        #expect(book.splits(for: restored).map(\.value).sorted() == [30, 80])
+        #expect(book.splits(for: try #require(book.account(with: f.food))).isEmpty)
+
+        f.undo.redo()
+        #expect(book.account(with: utilities) == nil)
+        #expect(book.account(with: power)?.parent?.guid == f.food)
+    }
+
+    @Test("Rename security round-trips through the commodity-scoped undo")
+    func renameSecurity() throws {
+        let f = try Fixture()
+        defer { f.tearDown() }
+        let book = try #require(f.model.book)
+        let cba = Commodity(namespace: .security("ASX"), mnemonic: "CBA",
+                            fullName: "Commonwealth Bank", smallestFraction: 10000)
+        let stock = try #require(f.model.addAccount(name: "CBA", type: .stock, commodity: cba))
+        f.undo.removeAllActions()
+
+        f.model.renameSecurity(cba, fullName: "CBA Group")
+        #expect(book.account(with: stock)?.commodity.fullName == "CBA Group")
+        #expect(book.commodities.first { $0 == cba }?.fullName == "CBA Group")
+
+        f.undo.undo()
+        #expect(book.account(with: stock)?.commodity.fullName == "Commonwealth Bank")
+        #expect(book.commodities.first { $0 == cba }?.fullName == "Commonwealth Bank")
+
+        f.undo.redo()
+        #expect(book.account(with: stock)?.commodity.fullName == "CBA Group")
+    }
+
+    @Test("Add security undoes by unregistering the commodity")
+    func addSecurity() throws {
+        let f = try Fixture()
+        defer { f.tearDown() }
+        let book = try #require(f.model.book)
+        let result = SecuritySearchResult(symbol: "WES.AX", exchange: "ASX", name: "Wesfarmers", kind: "EQUITY")
+        let commodity = try #require(f.model.createSecurity(from: result))
+        #expect(book.commodities.contains(commodity))
+
+        f.undo.undo()
+        #expect(!book.commodities.contains(commodity))
+
+        f.undo.redo()
+        #expect(book.commodities.contains(commodity))
+    }
+
+    @Test("A currency transfer undoes its transaction, its implied rate and the trading accounts it made")
+    func currencyTransfer() throws {
+        let f = try Fixture()
+        defer { f.tearDown() }
+        let book = try #require(f.model.book)
+        let usd = try #require(f.model.addAccount(name: "USD Account", type: .bank, commodity: .usd))
+        f.model.useTradingAccounts = true
+        f.undo.removeAllActions()
+        let accountsBefore = book.accounts.count
+        let pricesBefore = book.prices.count
+
+        let id = try f.model.recordCurrencyTransfer(
+            fromID: f.bank, toID: usd, sourceAmount: 100, destAmount: 65,
+            date: Date(), description: "FX")
+        #expect(book.transaction(with: id) != nil)
+        #expect(book.prices.count == pricesBefore + 1)
+        #expect(book.accounts.count > accountsBefore, "trading accounts were created on demand")
+
+        f.undo.undo()
+        #expect(book.transaction(with: id) == nil)
+        #expect(book.prices.count == pricesBefore)
+        #expect(book.accounts.count == accountsBefore)
+
+        f.undo.redo()
+        #expect(book.transaction(with: id)?.splits.count == 4)
+        #expect(book.prices.count == pricesBefore + 1)
+        #expect(book.accounts.count > accountsBefore)
+    }
+
+    @Test("Grouped edits take one ⌘Z")
+    func groupedEdits() throws {
+        let f = try Fixture()
+        defer { f.tearDown() }
+        let book = try #require(f.model.book)
+
+        f.model.groupingUndo(named: "Edit Account") {
+            f.model.updateAccount(id: f.food, name: "Groceries", code: "", description: "", notes: "",
+                                  isPlaceholder: false, isHidden: false)
+            f.model.setAccountColor(f.food, colorString: "#8fbc8f")
+        }
+        #expect(book.account(with: f.food)?.name == "Groceries")
+        #expect(f.model.accountColor(f.food) == "#8fbc8f")
+
+        f.undo.undo()
+        #expect(book.account(with: f.food)?.name == "Food")
+        #expect(f.model.accountColor(f.food) == nil)
+    }
 }

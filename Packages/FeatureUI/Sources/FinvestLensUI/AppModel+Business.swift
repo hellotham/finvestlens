@@ -216,8 +216,16 @@ extension AppModel {
     // MARK: Aging
 
     /// Receivables (`receivable`) or payables aging, per owner, as of a date.
-    public func aging(receivable: Bool, asOf: Date = Date())
+    ///
+    /// Memoised per (side, date): the Overview's Receivables card asks on every
+    /// body pass, and `asOf` defaults (`nil`) to the end of today rather than
+    /// a live `Date()` so the key is stable within a day (Performance Review
+    /// 2, R9).
+    public func aging(receivable: Bool, asOf: Date? = nil)
         -> [(name: String, buckets: AgingBuckets)] {
-        book?.agingByOwner(receivable: receivable, asOf: asOf) ?? []
+        let asOf = asOf ?? Self.endOfToday()
+        return cachedReport("aging:\(receivable):\(asOf.timeIntervalSinceReferenceDate)") {
+            book?.agingByOwner(receivable: receivable, asOf: asOf)
+        } ?? []
     }
 }

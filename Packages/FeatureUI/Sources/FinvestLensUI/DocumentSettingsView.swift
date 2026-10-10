@@ -189,7 +189,7 @@ public struct FinvestLensSettingsView: View {
                 .tabItem { Label("General", systemImage: "gearshape") }
             AppearanceSettingsView()
                 .tabItem { Label("Appearance", systemImage: "paintpalette") }
-            PricingSettingsView()
+            PricingSettingsView(model: model)
                 .tabItem { Label("Pricing", systemImage: "chart.line.uptrend.xyaxis") }
             DocumentSettingsView()
                 .tabItem { Label("Documents", systemImage: "paperclip") }
@@ -198,20 +198,19 @@ public struct FinvestLensSettingsView: View {
 }
 
 /// Price-provider API keys. Keys live in the system Keychain — app-wide and
-/// device-only, independent of any open book — so this pane owns its own store
-/// rather than needing the document model.
+/// device-only, independent of any open book. Reads and writes go through the
+/// model all the same, because it memoises which providers have a key
+/// (``AppModel/availableProviders``) and has to be told when one changes;
+/// this pane used to own a second store the model could not see.
 public struct PricingSettingsView: View {
-    private let store = KeychainAPIKeyStore()
+    @Bindable var model: AppModel
     @State private var drafts: [QuoteProviderKind: String] = [:]
-    /// Whether a key is currently saved, cached so the Keychain isn't read on
-    /// every redraw.
-    @State private var present: [QuoteProviderKind: Bool] = [:]
     /// What the company-data cache holds, measured on appear rather than on
     /// every redraw — it is a directory listing, not a value.
     @State private var cachedSecurities = 0
     @State private var cachedBytes = 0
 
-    public init() {}
+    public init(model: AppModel) { self.model = model }
 
     public var body: some View {
         Form {
@@ -275,7 +274,7 @@ public struct PricingSettingsView: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Text(kind.displayName)
-                if present[kind] == true {
+                if model.availableProviders.contains(kind) {
                     Image(systemName: "checkmark.seal.fill")
                         .foregroundStyle(.green).help("A key is saved")
                         // Whether a key is stored is carried by this glyph
@@ -293,8 +292,8 @@ public struct PricingSettingsView: View {
                     set: { drafts[kind] = $0 }))
                     .textFieldStyle(.roundedBorder)
                 Button("Save") { save(kind) }
-                    .disabled((drafts[kind] ?? "").isEmpty && present[kind] != true)
-                if present[kind] == true {
+                    .disabled((drafts[kind] ?? "").isEmpty && !model.availableProviders.contains(kind))
+                if model.availableProviders.contains(kind) {
                     Button("Clear", role: .destructive) { clear(kind) }
                 }
             }
@@ -304,21 +303,17 @@ public struct PricingSettingsView: View {
 
     private func reload() {
         for kind in QuoteProviderKind.allCases where kind.requiresAPIKey {
-            let key = store.key(for: kind)
-            drafts[kind] = key ?? ""
-            present[kind] = (key?.isEmpty == false)
+            drafts[kind] = model.apiKey(for: kind) ?? ""
         }
     }
 
     private func save(_ kind: QuoteProviderKind) {
         let value = drafts[kind]?.isEmpty == false ? drafts[kind] : nil
-        try? store.setKey(value, for: kind)
-        present[kind] = (value != nil)
+        try? model.setAPIKey(value, for: kind)
     }
 
     private func clear(_ kind: QuoteProviderKind) {
-        try? store.setKey(nil, for: kind)
+        try? model.setAPIKey(nil, for: kind)
         drafts[kind] = ""
-        present[kind] = false
     }
 }

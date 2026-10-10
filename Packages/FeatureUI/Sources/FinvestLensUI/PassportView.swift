@@ -40,7 +40,7 @@ extension AppModel {
 
     /// Assembles the passport from the same machinery the statements use.
     func passportData() -> PassportData? {
-        guard let book else { return nil }
+        guard book != nil else { return nil }
         let now = Self.endOfToday()
         let calendar = Calendar.current
         let yearAgo = calendar.date(byAdding: .year, value: -1, to: now) ?? now

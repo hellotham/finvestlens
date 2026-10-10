@@ -17,7 +17,7 @@ import PackageDescription
 let package = Package(
     name: "FinvestLensCLI",
     platforms: [
-        .macOS("26.0"),
+        .macOS("27.0"),
     ],
     products: [
         .executable(name: "finlens", targets: ["finlens"]),

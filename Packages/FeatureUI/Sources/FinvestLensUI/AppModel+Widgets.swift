@@ -71,15 +71,23 @@ extension AppModel {
         }
         let currency = reportCurrency
         let now = Date()
+        // Report as of the end of today, not the exact second: that is the key
+        // every dashboard memo already uses, so a publish after a save finds
+        // the net worth, bills and alerts already built (Performance Review
+        // 2, R8). `now` stays the snapshot's timestamp.
+        let asOf = Self.endOfToday()
 
-        let netWorth = FinancialReports.netWorthSeries(book, dates: [now], currency: currency)
-            .last?.netWorth ?? 0
+        let netWorthSeries = cachedReport("nw:\(asOf.timeIntervalSinceReferenceDate)") {
+            FinancialReports.netWorthSeries(book, dates: [asOf], currency: currency)
+        } ?? []
+        let netWorth = netWorthSeries.last?.netWorth ?? 0
 
-        let bills = FinancialReports.billReminders(
-            book, scheduled: scheduledTransactions,
-            from: now.addingTimeInterval(-30 * 86_400),
-            to: now.addingTimeInterval(60 * 86_400), asOf: now
-        ).filter { $0.status != .paid }
+        let bills = (cachedReport("widgetbills:\(asOf.timeIntervalSinceReferenceDate)") {
+            FinancialReports.billReminders(
+                book, scheduled: scheduledTransactions,
+                from: asOf.addingTimeInterval(-30 * 86_400),
+                to: asOf.addingTimeInterval(60 * 86_400), asOf: asOf)
+        } ?? []).filter { $0.status != .paid }
         let billsLine: String
         if bills.isEmpty {
             billsLine = String(localized: "No upcoming bills")
@@ -94,7 +102,7 @@ extension AppModel {
 
         // Computed once on the main actor and reused for both the snapshot and
         // the notifications, so the non-`Sendable` book never crosses actors.
-        let allAlerts = alerts(asOf: now)
+        let allAlerts = alerts()
         let alertItems = allAlerts.prefix(5).map {
             WidgetSnapshot.Alert(title: $0.title, message: $0.message, severity: $0.severity.rawValue)
         }

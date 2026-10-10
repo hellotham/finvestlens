@@ -62,7 +62,7 @@ extension AppModel {
         guard let book else { return }
         let cleaned = code.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
         guard cleaned != exchangeCode(for: commodity) else { return }
-        editingWholeBook(named: "Set Identifier") {
+        editingCommodity(commodity, named: "Set Identifier") {
             book.updateCommodityMetadata(commodity, fullName: nil, smallestFraction: nil,
                                          exchangeCode: cleaned)
         }

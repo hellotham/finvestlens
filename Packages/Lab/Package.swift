@@ -34,7 +34,7 @@ import PackageDescription
 let package = Package(
     name: "FinvestLensLab",
     platforms: [
-        .macOS("26.0"),
+        .macOS("27.0"),
     ],
     products: [
         .executable(name: "finlab", targets: ["finlab"]),

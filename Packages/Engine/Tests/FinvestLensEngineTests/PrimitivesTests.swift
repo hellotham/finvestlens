@@ -21,6 +21,23 @@ struct GncGUIDTests {
         #expect(guid.hexString == guid.hexString.lowercased())
     }
 
+    @Test("The table-driven hex matches the printf form, and the parser rejects what it should")
+    func encoderMatchesReference() throws {
+        for _ in 0..<200 {
+            let guid = GncGUID.random()
+            let reference = guid.bytes.reduce(into: "") { $0 += String(format: "%02x", $1) }
+            #expect(guid.hexString == reference)
+            #expect(GncGUID(hex: reference) == guid)
+            #expect(GncGUID(hex: reference.uppercased()) == guid)
+        }
+        #expect(GncGUID(hex: "0123456789abcdef0123456789abcde") == nil, "31 digits")
+        #expect(GncGUID(hex: "0123456789abcdef0123456789abcdef0") == nil, "33 digits")
+        #expect(GncGUID(hex: "0123456789abcdef0123456789abcdeg") == nil, "not hex")
+        #expect(GncGUID(hex: "0123456789abcdef 0123456789abcdef") == nil, "space")
+        #expect(GncGUID(hex: "-0123456789abcdef-0123456789abcdef-")?.hexString
+                == "0123456789abcdef0123456789abcdef", "dashes anywhere are skipped")
+    }
+
     @Test("Hex round-trips byte-for-byte")
     func hexRoundTrip() throws {
         let original = "0123456789abcdef0123456789abcdef"

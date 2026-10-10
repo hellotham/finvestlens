@@ -13,7 +13,7 @@ import FoundationModels
 
 /// Whether Apple Intelligence features can run on this device, and if not, why.
 ///
-/// The on-device model requires macOS 26 / iOS 26 on Apple silicon with
+/// The on-device model requires Apple silicon with
 /// Apple Intelligence enabled in System Settings. Callers use this to hide or
 /// disable AI features rather than surfacing errors after the fact.
 public enum IntelligenceAvailability: Sendable, Equatable {
@@ -26,9 +26,6 @@ public enum IntelligenceAvailability: Sendable, Equatable {
     /// Probes the system model. Cheap enough to call whenever a menu is built.
     public static func current() -> IntelligenceAvailability {
         #if canImport(FoundationModels)
-        guard #available(macOS 26.0, iOS 26.0, *) else {
-            return .unavailable(reason: "Apple Intelligence requires macOS 26 or iOS 26.")
-        }
         switch SystemLanguageModel.default.availability {
         case .available:
             return .available
@@ -76,19 +73,29 @@ public enum IntelligenceError: LocalizedError {
     /// Wraps a FoundationModels error, keeping IntelligenceErrors as-is and
     /// translating guardrail refusals and context overflow into cases callers
     /// can branch on.
+    ///
+    /// Foundation Models 27 split what was one `GenerationError` into three:
+    /// `LanguageModelError` for the model's own refusals and limits,
+    /// `SystemLanguageModel.Error` for the on-device model's assets, and
+    /// `LanguageModelSession.Error` for misuse of a session. Only the first
+    /// two carry anything a user can act on.
     static func wrap(_ error: any Error) -> IntelligenceError {
         if let error = error as? IntelligenceError { return error }
         #if canImport(FoundationModels)
-        if #available(macOS 26.0, iOS 26.0, *),
-           let generation = error as? LanguageModelSession.GenerationError {
-            switch generation {
+        if let model = error as? LanguageModelError {
+            switch model {
             case .guardrailViolation, .refusal:
                 return .guardrailDeclined
-            case .exceededContextWindowSize:
+            case .contextSizeExceeded:
                 return .contextOverflow
             default:
-                break
+                return .modelFailure(model.localizedDescription)
             }
+        }
+        if error is SystemLanguageModel.Error {
+            // `.assetsUnavailable`: the model is installed but its assets are
+            // not on the device right now — the same remedy as `.modelNotReady`.
+            return .unavailable("The Apple Intelligence model is still downloading. Try again shortly.")
         }
         #endif
         return .modelFailure(error.localizedDescription)

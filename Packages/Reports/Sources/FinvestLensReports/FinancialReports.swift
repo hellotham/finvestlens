@@ -341,6 +341,19 @@ public enum FinancialReports {
         displayBalance(of: account, in: book, from: from, to: to, excludingClosing: true)
     }
 
+    /// ``periodActual(of:in:from:to:)`` for many accounts from **one** walk of
+    /// the book — the same figures, keyed by account. A caller asking per
+    /// account over a window paid a walk per account: the Suggest Budget
+    /// sheet asked six windows × every income account × every transaction on
+    /// each body pass, two seconds on the reference book (Performance Review
+    /// 2, R3).
+    public static func periodActuals(of accounts: [Account], in book: Book,
+                                     from: Date, to: Date) -> [GncGUID: Decimal] {
+        let map = balanceMap(book, from: from, to: to, excludingClosing: true)
+        return Dictionary(accounts.map { ($0.guid, displayBalance(in: map, of: $0)) },
+                          uniquingKeysWith: { first, _ in first })
+    }
+
     /// The account's sign-adjusted balance converted into `currency` at
     /// `rateDate`, or `nil` when a foreign account cannot be valued.
     static func convertedDisplayBalance(of account: Account, in book: Book,

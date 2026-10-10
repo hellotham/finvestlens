@@ -137,24 +137,37 @@ public enum DocumentClassifier {
     /// Classifies with the on-device model, falling back to keywords.
     public static func classify(text: String) async -> FinancialDocumentKind {
         #if canImport(FoundationModels)
-        guard #available(macOS 26.0, iOS 26.0, *),
-              IntelligenceAvailability.current().isAvailable
-        else {
+        guard IntelligenceAvailability.current().isAvailable else {
             return classifyByKeywords(text)
         }
-        let session = LanguageModelSession(instructions: """
-            You identify what kind of financial document a text is. Answer with \
-            exactly one of: bank statement, dividend statement, invoice or \
-            receipt, something else. A bank or credit card statement lists many \
-            dated transactions with a balance. A dividend statement reports a \
-            single dividend or distribution payment. An invoice or receipt \
-            bills line items with a total.
-            """)
+        // No session instructions, on purpose. Against the macOS 27 model
+        // (9 Oct 2026) *any* instructions — the original definitions, or a
+        // bare "you are an assistant for a personal finance app" role line —
+        // made the guardrail refuse a synthetic tax invoice as "May contain
+        // sensitive content", and the original wording refused a plain bank
+        // statement too; the classifier then fell back to keywords without
+        // anyone noticing. With the same guidance carried in the prompt, all
+        // three LiveModelTests fixtures classify correctly. Apple's advice
+        // for a built-in prompt that trips a guardrail is exactly this:
+        // re-phrase until it does not (Improving the safety of generative
+        // model output, read 9 Oct 2026). `permissiveContentTransformations`
+        // is no alternative — it applies only to string responses, and this
+        // is guided generation.
+        let session = LanguageModelSession()
         do {
             let answer = try await session.respond(
-                to: "Document:\n\n\(String(text.prefix(1500)))\n\nWhat kind of document is this?",
+                to: """
+                    Which kind of financial document is this text: bank statement, \
+                    dividend statement, invoice or receipt, or something else? A bank \
+                    or credit card statement lists many dated transactions with a \
+                    running balance. A dividend statement reports a single dividend or \
+                    distribution payment. An invoice or receipt lists purchased items \
+                    with a total.
+
+                    \(String(text.prefix(1500)))
+                    """,
                 generating: ModelKind.self,
-                options: GenerationOptions(sampling: .greedy)
+                options: .greedy
             ).content
             let kind = FinancialDocumentKind(rawValue: answer.kind.lowercased()) ?? .unknown
             return kind == .unknown ? classifyByKeywords(text) : kind

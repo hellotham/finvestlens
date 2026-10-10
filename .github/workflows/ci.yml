@@ -1,11 +1,15 @@
 name: CI
 
-# Tests every package and builds the app on every push / PR (NFR-08). All
-# macOS jobs run on macos-26: the test bundles link macOS-26-only frameworks
-# (FoundationModels) and Swift 6.2 runtime symbols, so they refuse to load on
-# older hosts — and the image's default toolchain is already the current
-# Xcode 26, so no explicit selection is needed. Intelligence's live-model
-# tests skip themselves when Apple Intelligence is unavailable.
+# Tests every package and builds the app on every push / PR (NFR-08).
+#
+# KNOWN RED since 9 Oct 2026: the deployment targets are 27.0, which needs
+# Xcode 27 to compile and a macOS 27 host to load the test bundles, and
+# GitHub hosts neither — actions/runner-images' README lists macOS 26
+# (Xcode 26.0–26.6) as its newest label, and its `xcode-27` image was
+# migrated to macOS 27 on 7 Sep 2026 without a public runner label yet. The
+# macOS jobs therefore fail at the first compile until `runs-on` can name a
+# macOS 27 image (or a self-hosted Mac). Intelligence's live-model tests skip
+# themselves when Apple Intelligence is unavailable.
 
 on:
   push:

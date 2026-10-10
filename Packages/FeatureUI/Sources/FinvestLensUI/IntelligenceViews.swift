@@ -476,6 +476,9 @@ struct BudgetSuggestSheet: View {
     @State private var suggestion: BudgetSuggestion?
     @State private var included: Set<GncGUID> = []
     @State private var errorMessage: String?
+    /// Computed once when the sheet opens: six walks of the book, which the
+    /// Summary row used to re-run on every checkbox.
+    @State private var incomeAverage: Decimal = 0
 
     var body: some View {
         NavigationStack {
@@ -491,7 +494,7 @@ struct BudgetSuggestSheet: View {
                                            value: AmountFormat.string(includedTotal(suggestion),
                                                                       code: model.reportCurrency.mnemonic))
                             LabeledContent("Average monthly income",
-                                           value: AmountFormat.string(model.monthlyIncomeAverage(),
+                                           value: AmountFormat.string(incomeAverage,
                                                                       code: model.reportCurrency.mnemonic))
                         }
                         Section("Proposed monthly amounts") {
@@ -557,6 +560,7 @@ struct BudgetSuggestSheet: View {
     }
 
     private func suggest() async {
+        incomeAverage = model.monthlyIncomeAverage()
         do {
             let result = try await model.suggestBudget()
             suggestion = result

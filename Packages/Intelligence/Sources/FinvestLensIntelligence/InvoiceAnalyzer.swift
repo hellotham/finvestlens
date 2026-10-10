@@ -108,7 +108,7 @@ public enum InvoiceAnalyzer {
             invoice = try await session.respond(
                 to: "Invoice text:\n\n\(String(text.prefix(6000)))",
                 generating: ModelInvoice.self,
-                options: GenerationOptions(sampling: .greedy)
+                options: .greedy
             ).content
         } catch {
             throw IntelligenceError.wrap(error)

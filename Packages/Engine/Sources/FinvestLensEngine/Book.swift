@@ -30,12 +30,16 @@ public final class Book {
 
     /// The price database (`FR-ENG-09`).
     ///
-    /// Any change drops the lookup index rather than updating it: invalidation
-    /// is O(1), so reading a book's 100k prices stays linear, and the rebuild
-    /// is paid once on the next lookup.
-    public private(set) var prices: [Price] {
-        didSet { invalidatePriceIndex() }
-    }
+    /// Every mutation goes through the methods under *Prices* below, which
+    /// keep the lookup index in step: an added price is inserted into its two
+    /// buckets in date order, a removed one is taken out of them. This used to
+    /// be a `didSet` that dropped the index on any change, so each price
+    /// edit — one quote refresh, one exchange rate — was followed by a full
+    /// rebuild (bucket and sort 163k prices) inside the next account-tree
+    /// refresh: 0.35 s on the reference book for a 20 ms refresh. The index is
+    /// still built lazily, so loading a book (100k appends before any lookup)
+    /// inserts nothing; and a wholesale replacement still drops it.
+    public private(set) var prices: [Price]
 
     /// Preserved book-level key-value slots.
     public var kvp: KvpFrame
@@ -117,6 +121,20 @@ public final class Book {
 
     // MARK: Commodities
 
+    /// Removes a commodity from the table — only when no account, price or
+    /// transaction refers to it, which is the state a just-added security is
+    /// in when its addition is undone. Returns whether it was removed.
+    @discardableResult
+    public func unregisterCommodity(_ commodity: Commodity) -> Bool {
+        guard !accounts.contains(where: { $0.commodity == commodity }),
+              !prices.contains(where: { $0.commodity == commodity || $0.currency == commodity }),
+              !transactions.contains(where: { $0.currency == commodity })
+        else { return false }
+        let count = commodities.count
+        commodities.removeAll { $0 == commodity }
+        return commodities.count != count
+    }
+
     /// Adds a commodity to the table if not already present.
     public func registerCommodity(_ commodity: Commodity) {
         if !commodities.contains(commodity) {
@@ -145,6 +163,8 @@ public final class Book {
         for account in accounts where account.commodity == commodity { apply(&account.commodity) }
         for index in prices.indices where prices[index].commodity == commodity { apply(&prices[index].commodity) }
         for index in commodities.indices where commodities[index] == commodity { apply(&commodities[index]) }
+        // The index is keyed by commodity, and the keys just changed in place.
+        invalidatePriceIndex()
     }
 
     /// Adds a price to the database (and registers its commodities).
@@ -153,39 +173,74 @@ public final class Book {
         registerCommodity(price.commodity)
         registerCommodity(price.currency)
         prices.append(price)
+        indexInsert(price)
+        priceChangeLog?.append(.added(price))
         return price
     }
 
     /// Adds every price in `incoming` that the book does not already hold,
     /// under GnuCash's own duplicate rule (see ``Price/Identity``), and returns
-    /// the ones actually added.
+    /// the ones actually added. Duplicates *within* `incoming` are collapsed
+    /// too — a fallback sweep can legitimately fetch the same day twice from
+    /// two providers.
     ///
-    /// One pass, one hash set: a caller that tested each candidate against
-    /// `prices` itself would be O(n·m) over a database that reaches six figures
-    /// on a real book. Duplicates *within* `incoming` are collapsed too — a
-    /// fallback sweep can legitimately fetch the same day twice from two
-    /// providers.
+    /// Each candidate is checked against its own `(commodity, currency)`
+    /// bucket of the lookup index — a binary search to its day, then the
+    /// handful of prices on that day. This used to build a set of every
+    /// price's identity first, and an identity is two calendar computations
+    /// (`dayNeutral`), so one quote refresh of forty securities began with
+    /// 163k calendar operations on the reference book.
     @discardableResult
     public func addPrices(deduplicating incoming: [Price]) -> [Price] {
         guard !incoming.isEmpty else { return [] }
-        var seen = Set(prices.map(\.identity))
+        buildIndexIfNeeded()
+        var seen: Set<Price.Identity> = []
         var added: [Price] = []
-        for price in incoming where seen.insert(price.identity).inserted {
+        for price in incoming {
+            let identity = price.identity
+            guard seen.insert(identity).inserted, !holdsPrice(matching: identity) else { continue }
             addPrice(price)
             added.append(price)
         }
         return added
     }
 
-    /// Replaces the whole price database — the undo primitive for scoped
-    /// price edits (a snapshot of `prices` is cheap: value types).
+    /// Whether a price with this identity is already in the database.
+    private func holdsPrice(matching identity: Price.Identity) -> Bool {
+        let pair = PricePair(commodity: identity.commodity, currency: identity.currency)
+        guard let bucket = pairIndex?[pair] else { return false }
+        // Buckets are date-sorted and `dayNeutral` is monotonic in the date,
+        // so a day's prices are one contiguous run: binary-search to its
+        // start, then walk it.
+        var low = 0, high = bucket.count
+        while low < high {
+            let mid = (low + high) / 2
+            if Price.dayNeutral(bucket[mid].date) < identity.day { low = mid + 1 } else { high = mid }
+        }
+        var index = low
+        while index < bucket.count, Price.dayNeutral(bucket[index].date) == identity.day {
+            if bucket[index].value == identity.value { return true }
+            index += 1
+        }
+        return false
+    }
+
+    /// Replaces the whole price database. Not an undo primitive any more —
+    /// scoped price edits undo through ``PriceChange`` — but the one price
+    /// mutation that is cheaper to follow with a lazy rebuild of the index
+    /// than to mirror.
     public func replaceAllPrices(_ newPrices: [Price]) {
+        if priceChangeLog != nil {
+            priceChangeLog?.append(contentsOf: prices.map(PriceChange.removed))
+            priceChangeLog?.append(contentsOf: newPrices.map(PriceChange.added))
+        }
         prices = newPrices
+        invalidatePriceIndex()
     }
 
     /// Removes a price by GUID.
     public func removePrice(_ guid: GncGUID) {
-        prices.removeAll { $0.guid == guid }
+        removePrices { $0.guid == guid }
     }
 
     /// Removes every price matching `predicate` in a single pass. Used to wipe a
@@ -193,8 +248,66 @@ public final class Book {
     @discardableResult
     public func removePrices(where predicate: (Price) -> Bool) -> Int {
         let before = prices.count
-        prices.removeAll(where: predicate)
+        if pairIndex == nil, priceChangeLog == nil {
+            prices.removeAll(where: predicate)
+        } else {
+            // One pass: the removed rows are collected as they go, for the
+            // index and the change log.
+            var removed: [Price] = []
+            prices.removeAll { price in
+                guard predicate(price) else { return false }
+                removed.append(price)
+                return true
+            }
+            guard !removed.isEmpty else { return 0 }
+            indexRemove(removed)
+            priceChangeLog?.append(contentsOf: removed.map(PriceChange.removed))
+        }
         return before - prices.count
+    }
+
+    // MARK: Price change recording
+
+    /// One price added or removed while the book was recording
+    /// (``beginRecordingPriceChanges()``). An edit's undo is the inverse of
+    /// its log — what it added is removed, what it removed is put back — so
+    /// undo captures only what the edit changed, never the whole database:
+    /// snapshotting `prices` cost a copy of 163k rows on the reference book
+    /// the moment the edit appended to it.
+    public enum PriceChange: Sendable, Equatable {
+        case added(Price)
+        case removed(Price)
+    }
+
+    private var priceChangeLog: [PriceChange]?
+
+    /// Starts recording price mutations. Not reentrant: a nested begin
+    /// restarts the log.
+    public func beginRecordingPriceChanges() {
+        priceChangeLog = []
+    }
+
+    /// Stops recording and returns what happened since the begin, in order.
+    public func endRecordingPriceChanges() -> [PriceChange] {
+        defer { priceChangeLog = nil }
+        return priceChangeLog ?? []
+    }
+
+    /// Applies the inverse of `changes`: every added price is removed (by
+    /// GUID, in one pass) and every removed price is added back, in the order
+    /// they were logged — a removal pass logs them in database order, and
+    /// within a day that order is what decides which price is latest, so it
+    /// must come back as it was. Recorded like any other mutation when the
+    /// book is recording, which is what makes an undo's own log the redo.
+    public func revertPriceChanges(_ changes: [PriceChange]) {
+        var addedGuids: Set<GncGUID> = []
+        for case .added(let price) in changes { addedGuids.insert(price.guid) }
+        if !addedGuids.isEmpty {
+            removePrices { addedGuids.contains($0.guid) }
+        }
+        for case .removed(let price) in changes {
+            addPrice(price)
+        }
     }
 
     // MARK: Price index
@@ -218,6 +331,63 @@ public final class Book {
     func invalidatePriceIndex() {
         pairIndex = nil
         commodityIndex = nil
+    }
+
+    /// Puts a just-appended price into both buckets, after every price of the
+    /// same day already there — the position a rebuild from `prices` would
+    /// give it, so "the last price recorded for the winning day" stays the
+    /// latest arrival (see `latest(in:on:)`). Nothing to do while the index
+    /// has not been built.
+    private func indexInsert(_ price: Price) {
+        guard pairIndex != nil, commodityIndex != nil else { return }
+        // The position is computed on a temporary view of the bucket and the
+        // insert goes through the dictionary's own in-place access — holding
+        // a copy of the bucket across the insert would make the insert copy
+        // it again first.
+        func place<Key: Hashable>(_ key: Key, in index: inout [Key: [Price]]?) {
+            let at = Self.insertionIndex(in: index?[key] ?? [], for: price.date)
+            index?[key, default: []].insert(price, at: at)
+        }
+        place(PricePair(commodity: price.commodity, currency: price.currency), in: &pairIndex)
+        place(price.commodity, in: &commodityIndex)
+    }
+
+    /// Takes removed prices out of their buckets: the removals are grouped by
+    /// bucket and each affected bucket is filtered once, so a security's
+    /// whole history going costs one pass over its own bucket, not one scan
+    /// per removed price.
+    private func indexRemove(_ removed: [Price]) {
+        guard pairIndex != nil, commodityIndex != nil else { return }
+        var byPair: [PricePair: Set<GncGUID>] = [:]
+        var byCommodity: [Commodity: Set<GncGUID>] = [:]
+        for price in removed {
+            byPair[PricePair(commodity: price.commodity, currency: price.currency), default: []]
+                .insert(price.guid)
+            byCommodity[price.commodity, default: []].insert(price.guid)
+        }
+        // An emptied bucket goes, as a rebuild would never have made it:
+        // `pricedAgainst` reads the keys as "pairs with a price".
+        for (pair, guids) in byPair {
+            pairIndex?[pair]?.removeAll { guids.contains($0.guid) }
+            if pairIndex?[pair]?.isEmpty == true { pairIndex?.removeValue(forKey: pair) }
+        }
+        for (commodity, guids) in byCommodity {
+            commodityIndex?[commodity]?.removeAll { guids.contains($0.guid) }
+            if commodityIndex?[commodity]?.isEmpty == true {
+                commodityIndex?.removeValue(forKey: commodity)
+            }
+        }
+    }
+
+    /// Where a price of `date` goes in a date-sorted bucket: after the last
+    /// price on or before it. The same binary search as `latest(in:on:)`.
+    private static func insertionIndex(in bucket: [Price], for date: Date) -> Int {
+        var low = 0, high = bucket.count
+        while low < high {
+            let mid = (low + high) / 2
+            if bucket[mid].date > date { high = mid } else { low = mid + 1 }
+        }
+        return low
     }
 
     /// Sorts a bucket by date, keeping insertion order within a date — so
@@ -259,18 +429,12 @@ public final class Book {
     /// `libgnucash/engine/gnc-pricedb.cpp`), which is arbitrary rather than
     /// wrong; insertion order is at least the answer a person would predict.
     private static func latest(in bucket: [Price], on date: Date?) -> Price? {
-        // First index past the cut-off, by binary search.
-        var low = 0, high = bucket.count
-        if let date {
-            while low < high {
-                let mid = (low + high) / 2
-                if bucket[mid].date > date { high = mid } else { low = mid + 1 }
-            }
-        } else {
-            low = bucket.count
-        }
-        guard low > 0 else { return nil }
-        return bucket[low - 1]
+        // First index past the cut-off — the same search that places a new
+        // price, so where a price is inserted and where a lookup expects it
+        // cannot drift apart.
+        let cut = date.map { insertionIndex(in: bucket, for: $0) } ?? bucket.count
+        guard cut > 0 else { return nil }
+        return bucket[cut - 1]
     }
 
     /// The most recent price of `commodity` in `currency` on or before `date`

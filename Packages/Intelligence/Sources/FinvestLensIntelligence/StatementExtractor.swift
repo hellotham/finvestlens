@@ -148,7 +148,7 @@ public enum StatementExtractor {
                 let response = try await session.respond(
                     to: "Statement page:\n\n\(slice)",
                     generating: ModelPage.self,
-                    options: GenerationOptions(sampling: .greedy)
+                    options: .greedy
                 )
                 if let opening = IntelligenceParsing.amount(response.content.openingBalance) {
                     previousBalance = opening

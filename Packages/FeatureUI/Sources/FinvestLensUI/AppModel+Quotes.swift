@@ -27,10 +27,45 @@ extension AppModel {
     // MARK: API keys
 
     /// Providers that are ready to use: Yahoo always, keyed providers once a
-    /// key is stored. (Key read/write goes straight to the store —
-    /// `DocumentSettingsView` uses `apiKeys.key(for:)`/`setKey` directly.)
+    /// key is stored. Memoised until a key changes (``setAPIKey(_:for:)``): the
+    /// Keychain is consulted once per change rather than per keyed provider
+    /// per read — and a fetch run reads this once per security, the pickers
+    /// once per body pass.
     public var availableProviders: [QuoteProviderKind] {
-        QuoteProviderKind.allCases.filter { !$0.requiresAPIKey || (apiKeys.key(for: $0)?.isEmpty == false) }
+        if let cached = availableProvidersCache, cached.revision == apiKeysRevision {
+            return cached.value
+        }
+        // A read the Keychain refused (locked, or an ACL prompt declined for a
+        // rebuilt app) is answered as "no key" for this read only: memoising
+        // it would pin every keyed provider off for the whole session.
+        var definite = true
+        let value = QuoteProviderKind.allCases.filter { kind in
+            guard kind.requiresAPIKey else { return true }
+            do {
+                return try apiKeys.lookup(for: kind)?.isEmpty == false
+            } catch {
+                definite = false
+                return false
+            }
+        }
+        if definite { availableProvidersCache = (apiKeysRevision, value) }
+        return value
+    }
+
+    /// The stored key for `kind`, straight from the store.
+    public func apiKey(for kind: QuoteProviderKind) -> String? {
+        apiKeys.key(for: kind)
+    }
+
+    /// Stores (or, for `nil`/empty, removes) a provider's key and forgets the
+    /// provider list, so ``availableProviders`` reflects it on the next read.
+    /// The one write path: the Pricing settings pane used its own store, which
+    /// left no way for the model to learn a key had changed. The revision
+    /// moves even when the write throws — the Keychain store deletes the old
+    /// item before adding the new one, so a failed write has changed the set.
+    public func setAPIKey(_ key: String?, for kind: QuoteProviderKind) throws {
+        defer { apiKeysRevision &+= 1 }
+        try apiKeys.setKey(key, for: kind)
     }
 
     /// The provider both unattended paths use: ⌘⇧U and the six-hourly
@@ -455,11 +490,18 @@ extension AppModel {
     }
 
     /// When the newest security price landed, if any — "last updated" for the
-    /// Prices header and the Up Next card.
+    /// Prices header and the Up Next card. Memoised per revision: a scan of
+    /// the whole price database, asked per body pass (Performance Review 2).
     public var lastPriceUpdate: Date? {
-        book?.prices.lazy
-            .filter { $0.commodity.namespace != .currency }
-            .map(\.date).max()
+        // `cachedReport` does not memoise `nil`, and here `nil` is a real
+        // answer (rates but no security prices) — so the scan returns a
+        // sentinel and the memo holds.
+        let stamp = cachedReport("lastPriceUpdate") { () -> Date in
+            book?.prices.lazy
+                .filter { $0.commodity.namespace != .currency }
+                .map(\.date).max() ?? .distantPast
+        }
+        return stamp.flatMap { $0 == .distantPast ? nil : $0 }
     }
 
     /// Rebuilds price history for `commodities` from scratch (`FR-INV-03e`): for

@@ -124,10 +124,18 @@ struct WriteReporter {
     private var lastPercent = -1
 
     init(book: Book, emit: @escaping @Sendable (BookLoadProgress) -> Void) {
+        self.init(transactionCount: book.transactions.count,
+                  splitCount: book.transactions.reduce(0) { $0 + $1.splits.count },
+                  priceCount: book.prices.count, emit: emit)
+    }
+
+    /// From counts alone, for a ``BookSnapshot`` write that has no `Book`.
+    init(transactionCount: Int, splitCount: Int, priceCount: Int,
+         emit: @escaping @Sendable (BookLoadProgress) -> Void) {
         self.emit = emit
-        txnCount = book.transactions.count
-        splitCount = book.transactions.reduce(0) { $0 + $1.splits.count }
-        priceCount = book.prices.count
+        txnCount = transactionCount
+        self.splitCount = splitCount
+        self.priceCount = priceCount
 
         let work = Double(splitCount) * LoadWeight.perSplit
             + Double(txnCount) * LoadWeight.perTransaction

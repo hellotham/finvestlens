@@ -379,7 +379,7 @@ The four-audit usability/performance review ([usability-review.md](usability-rev
 
 ## 11. Apple Intelligence integration (Intelligence package)
 
-All Intelligence features run on the **on-device** Foundation Models framework (macOS 26 / iOS 26) — no financial data ever leaves the device — and follow one contract:
+All Intelligence features run on the **on-device** Foundation Models framework (27.0 minimum) — no financial data ever leaves the device — and follow one contract:
 
 1. **The model proposes; deterministic code disposes.** Model output is typed (`@Generable` guided generation, greedy sampling for extraction), parsed tolerantly (`IntelligenceParsing`), resolved against the real chart of accounts (`AccountNameMatcher`), and cross-checked arithmetically (statement signs re-derived from the running balance column; invoice line sums reconciled against the printed total; review-deck stories rejected by `ReviewStoryValidator` if they quote any number not in the slide's facts pack). Only reviewed results mutate the book.
 2. **Availability-gated.** `IntelligenceAvailability` probes `SystemLanguageModel.default`; menus disable (with the reason as a tooltip) when Apple Intelligence is off, and every entry point degrades gracefully. Guardrail refusals surface a friendly message; the budget advisor retries with simplified phrasing and finally falls back to a deterministic average-based plan.

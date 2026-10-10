@@ -20,8 +20,10 @@ private enum Brand {
 
 // MARK: - Icon mark, reproduced
 
-/// A 4-point sparkle (concave star).
-private struct SparkleShape: Shape {
+/// A 4-point sparkle (concave star). `nonisolated`: pure geometry, and the
+/// app target's default main-actor isolation would otherwise make its
+/// `Shape` conformance actor-isolated, which Swift 6.4 rejects.
+private nonisolated struct SparkleShape: Shape {
     func path(in rect: CGRect) -> Path {
         let cx = rect.midX, cy = rect.midY
         let rx = rect.width / 2, ry = rect.height / 2

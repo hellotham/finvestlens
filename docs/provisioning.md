@@ -1,11 +1,11 @@
 # Provisioning runbook — App Group, iCloud & extensions
 
 > ✅ **Done.** All five targets (app + Widgets + Quick Look + tests) are
-> provisioned and signing under team *Hello Tham Pty. Ltd.* (`RPL5R637DS`) with
-> the `com.hellotham.finvestlensapp` bundle-ID base; iCloud, the App Group, and
-> both extensions are verified working. This runbook is kept as reference for a
-> fresh clone / new machine / re-provisioning. The base is `…finvestlensapp`
-> because `com.hellotham.finvestlens` was held by an inaccessible team.
+> provisioned and signing under team *Hello Tham Pty. Ltd.* (`RPL5R637DS`).
+> The bundle IDs use the `com.hellotham.finvestlens` base (since 9 Oct 2026);
+> the App Group and the iCloud container keep the older `…finvestlensapp`
+> base — see [Two bases, on purpose](#two-bases-on-purpose). This runbook is
+> kept as reference for a fresh clone / new machine / re-provisioning.
 
 One-time setup so the widgets, Quick Look preview, iCloud sync, and the
 app↔extension snapshot hand-off work on a signed build. Everything in the code
@@ -27,9 +27,9 @@ or change them in both the portal and the files.
 | Thing | Value | Where it's declared |
 |---|---|---|
 | Team ID | `RPL5R637DS` | `DEVELOPMENT_TEAM` in `project.pbxproj` |
-| App bundle ID | `com.hellotham.finvestlensapp` | app target |
-| Widget bundle ID | `com.hellotham.finvestlensapp.FinvestLensWidgets` | widget target |
-| Quick Look bundle ID | `com.hellotham.finvestlensapp.FinvestLensQuickLook` | Quick Look target |
+| App bundle ID | `com.hellotham.finvestlens` | app target |
+| Widget bundle ID | `com.hellotham.finvestlens.FinvestLensWidgets` | widget target |
+| Quick Look bundle ID | `com.hellotham.finvestlens.FinvestLensQuickLook` | Quick Look target |
 | App Group | `group.com.hellotham.finvestlensapp` | `finvestlens.entitlements`, `FinvestLensWidgets.entitlements`, `FinvestLensShared.SharedAppGroup` |
 | iCloud container | `iCloud.com.hellotham.finvestlensapp` | `finvestlens.entitlements`, `finvestlens/Info.plist` |
 
@@ -43,6 +43,29 @@ or change them in both the portal and the files.
 
 The Quick Look extension reads the previewed file directly, so it needs no App
 Group and no iCloud — only a registered App ID so its `.appex` can be signed.
+
+### Two bases, on purpose
+
+The bundle IDs and the shared identifiers do not share a base, and that is
+deliberate rather than a leftover:
+
+- **July 2026** — `com.hellotham.finvestlens` was held by an Apple team this
+  account could not reach, so its explicit App ID (which App Groups and iCloud
+  require) could not be registered and the whole identity moved to
+  `…finvestlensapp`: bundle IDs, App Group and iCloud container alike.
+- **9 Oct 2026** — the App ID `com.hellotham.finvestlens` registered under this
+  team without objection (Xcode's automatic signing created *Mac Team
+  Provisioning Profile: com.hellotham.finvestlens*, carrying the existing group
+  and container), and the three bundle IDs moved back. The App Group and the
+  iCloud container stayed put: they are registered identifiers that already
+  carry this team's data — the widget-snapshot container, the "FinvestLens"
+  folder in iCloud Drive — and renaming them is a portal change in its own
+  right, with a data migration (documents do not follow a container rename),
+  not a side effect of renaming the app.
+
+A bundle ID is just a prefix for the *extensions'* IDs; nothing requires the
+group or container to match it. If the shared identifiers are ever renamed,
+follow §B for the new ones and move the data by hand.
 
 ---
 
@@ -106,9 +129,9 @@ capabilities noted, and Register.
 
 | Bundle ID | Enable capabilities |
 |---|---|
-| `com.hellotham.finvestlensapp` | **App Groups** (assign `group.com.hellotham.finvestlensapp`) and **iCloud** (select "Include CloudKit support"? **no** — just iCloud; assign container `iCloud.com.hellotham.finvestlensapp`) |
-| `com.hellotham.finvestlensapp.FinvestLensWidgets` | **App Groups** (assign `group.com.hellotham.finvestlensapp`) |
-| `com.hellotham.finvestlensapp.FinvestLensQuickLook` | none |
+| `com.hellotham.finvestlens` | **App Groups** (assign `group.com.hellotham.finvestlensapp`) and **iCloud** (select "Include CloudKit support"? **no** — just iCloud; assign container `iCloud.com.hellotham.finvestlensapp`) |
+| `com.hellotham.finvestlens.FinvestLensWidgets` | **App Groups** (assign `group.com.hellotham.finvestlensapp`) |
+| `com.hellotham.finvestlens.FinvestLensQuickLook` | none |
 
 Notes:
 - When you enable **App Groups** or **iCloud** on an App ID, you must click

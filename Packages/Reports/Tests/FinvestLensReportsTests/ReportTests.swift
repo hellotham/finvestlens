@@ -48,6 +48,27 @@ private func makeBook() -> Book {
 @Suite("Financial reports")
 struct ReportTests {
 
+    @Test("periodActuals from one walk equals periodActual per account, closing entries excluded")
+    func periodActualsMatchPerAccount() {
+        let book = makeBook()
+        // A closing entry against Salary: both forms must leave it out.
+        let salary = book.accounts.first { $0.name == "Salary" }!
+        let equity = book.addAccount(Account(name: "Equity", type: .equity, commodity: .aud))
+        let closing = Transaction(currency: .aud, datePosted: d2, description: "Closing")
+        closing.addSplit(account: salary, value: dec("1000"))
+        closing.addSplit(account: equity, value: dec("-1000"))
+        closing.kvp["book_closing"] = .int64(1)
+        book.addTransaction(closing)
+
+        let accounts = book.accounts.filter { !$0.isPlaceholder }
+        let batch = FinancialReports.periodActuals(of: accounts, in: book, from: d1, to: asOf)
+        for account in accounts {
+            #expect(batch[account.guid] == FinancialReports.periodActual(of: account, in: book, from: d1, to: asOf),
+                    "\(account.name)")
+        }
+        #expect(batch[salary.guid] == dec("1000"), "income shown positive, the closing entry ignored")
+    }
+
     @Test("Balance sheet balances and sign-adjusts liabilities")
     func balanceSheet() {
         let sheet = FinancialReports.balanceSheet(makeBook(), asOf: asOf, currency: .aud)

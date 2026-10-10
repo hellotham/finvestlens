@@ -105,10 +105,11 @@ extension AppModel {
               })
         else { throw TransactionEntryError.notFound }
 
-        // Whole-book: the dividend legs land on income accounts that may have to
-        // be created, so the chart of accounts can change too.
+        // The dividend legs land on income accounts that may have to be
+        // created; the scoped edit records any newcomer, so the chart of
+        // accounts rewinds with the transaction.
         var imbalance: Decimal?
-        editingWholeBook(named: "Apply Dividend Details") {
+        editing(accounts: [], transactions: [transaction.guid], named: "Apply Dividend Details") {
             for split in transaction.splits where split !== cash {
                 transaction.removeSplit(split)
             }

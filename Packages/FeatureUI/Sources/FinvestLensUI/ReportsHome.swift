@@ -638,6 +638,11 @@ struct ReportScreen: View {
             Divider()
             content
         }
+        // The parameter bar binds the *window's* period; the computation keys
+        // on this screen's configuration, which was seeded from it once and
+        // never followed it — changing the period inside an open report did
+        // not recompute it (Performance Review 2, §3).
+        .onChange(of: model.period) { configuration.period = model.period }
         // **The main window never titles.** The tab strip names this report,
         // and titling it here put the same word twice a few pixels apart. The
         // rule, applied everywhere: a *window* destination shows no title

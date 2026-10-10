@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-FinvestLens is a native Apple double-entry accounting app (macOS 26 / iPadOS 26 / iOS 26): a clean Swift reimplementation of the GnuCash accounting model with its own SQLite document format (`.finvestlens`, via GRDB), GnuCash XML and Ledger 3 journals as round-trip interchange formats, and `finlens`, a strictly read-only ledger-modelled CLI. GPL-3.0-or-later, published by Hello Tham.
+FinvestLens is a native Apple double-entry accounting app (macOS 27 / iPadOS 27 / iOS 27): a clean Swift reimplementation of the GnuCash accounting model with its own SQLite document format (`.finvestlens`, via GRDB), GnuCash XML and Ledger 3 journals as round-trip interchange formats, and `finlens`, a strictly read-only ledger-modelled CLI. GPL-3.0-or-later, published by Hello Tham.
 
 ## Commands
 
-Everything needs Swift 6.2 (Xcode 26). Twelve local SPM packages live under `Packages/`; each builds and tests on its own.
+Everything needs Xcode 27 (Swift 6.4) and the macOS 27 / iOS 27 SDKs: the deployment targets are 27.0 (PRD NFR-04), so nothing older can build it. GitHub hosts no macOS 27 runner yet (checked 9 Oct 2026), so CI's macOS jobs fail at the first compile until `runs-on` can name one. Twelve local SPM packages live under `Packages/`; each builds and tests on its own.
 
 ```bash
 swift test --package-path Packages/Engine                      # one package's suite
@@ -206,4 +206,4 @@ work, not extra scope:
 - Every Swift source in `Packages/`, the app target, and the extensions carries `// SPDX-License-Identifier: GPL-3.0-or-later` — CI gates exactly those roots; the `website/scripts/` tooling sits outside the gate.
 - Commit straight to `main`. Run the package suites and both app builds first. (Branch creation and model-attribution trailers are hook-gated, so they need no rule here.)
 - After adding or changing `Engine` types, clear dependent packages' `.build` directories and the app's DerivedData `Build` folder — stale module caches will happily link old package code.
-- `imports/` (real bank exports) and `Ashley Bears.finvestlens` (a real book used as the standard manual-test fixture; changes to it may be left permanent) are **real financial data**. Staging them is hook-gated; what a hook cannot see is their *contents* reaching fixtures, screenshots, logs or the website, so that judgement stays yours. Public imagery comes from the synthetic generator in `website/scripts/demo-book/`. Before capturing app imagery, disable session restore (`defaults write com.hellotham.finvestlensapp finvestlens.reopenLastBook -bool false`, restore afterwards) — it defaults to on and will silently reopen the last-used real book over a demo book.
+- `imports/` (real bank exports) and `Ashley Bears.finvestlens` (a real book used as the standard manual-test fixture; changes to it may be left permanent) are **real financial data**. Staging them is hook-gated; what a hook cannot see is their *contents* reaching fixtures, screenshots, logs or the website, so that judgement stays yours. Public imagery comes from the synthetic generator in `website/scripts/demo-book/`. Before capturing app imagery, disable session restore (`defaults write com.hellotham.finvestlens finvestlens.reopenLastBook -bool false`, restore afterwards) — it defaults to on and will silently reopen the last-used real book over a demo book.

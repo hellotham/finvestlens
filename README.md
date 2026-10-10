@@ -188,10 +188,13 @@ follow the system locale.
 
 ## Platform requirements
 
-- macOS 26, iPadOS 26, iOS 26 — the packages target 26.0 and the app 26.5. The floor is
-  set by what the product depends on, not by a support window: the on-device model
-  (`FoundationModels`), Vision 26 document reading, and Swift 6.2 concurrency all require 26.
-- Built with Swift and SwiftUI in Xcode.
+- macOS 27, iPadOS 27, iOS 27 — packages and app alike target 27.0. The floor is set by
+  what the product depends on, not by a support window: the Intelligence package is written
+  against the Foundation Models surface that arrived with 27 (its error model and generation
+  options), and its prompts are tested against the 27 on-device model, which answers
+  differently from 26's.
+- Built with Swift and SwiftUI in Xcode 27, with the macOS 27 / iOS 27 SDKs; nothing older
+  can build a 27.0 target.
 
 ## Published by
 

@@ -66,9 +66,11 @@ extension AppModel {
             let monthStart = Calendar.current.dateInterval(of: .month, for: today)?.start ?? today
             var lastReconciled: [GncGUID: (name: String, date: Date)] = [:]
             var postedThisMonth = false
-            for txn in book.transactions {
-                for split in txn.splits {
-                    guard let account = split.account, cashTypes.contains(account.type) else { continue }
+            // Per cash account through the split index, not every split in the
+            // book: 54 ms per revision became a few (Performance Review 2, R5).
+            for account in book.accounts where cashTypes.contains(account.type) {
+                for split in book.splits(for: account) {
+                    guard let txn = split.transaction else { continue }
                     if txn.datePosted >= monthStart, txn.datePosted <= today.addingTimeInterval(86_400) {
                         postedThisMonth = true
                     }
@@ -100,10 +102,19 @@ extension AppModel {
     /// row budget from the tile height.
     var recentJournalHeadings: [JournalRow] {
         cachedReport("recentHeads") {
-            Array(journalRows(forAccountID: nil)
-                .filter { $0.isHeading && $0.date != nil }
-                .sorted { ($0.date ?? .distantPast) > ($1.date ?? .distantPast) }
-                .prefix(40))
+            // The forty newest straight from the book — not the whole general
+            // ledger built and filtered down, which was 198 ms per revision for
+            // a forty-row tile (Performance Review 2, R5).
+            guard let book else { return [JournalRow]() }
+            return book.transactions
+                .sorted { $0.datePosted > $1.datePosted }
+                .prefix(40)
+                .map { txn in
+                    JournalRow(id: txn.guid, transactionID: txn.guid, isHeading: true,
+                               date: txn.datePosted, text: txn.transactionDescription,
+                               amount: nil, currencyCode: txn.currency.mnemonic, isFocusAccount: false,
+                               notes: txn.notes, hasDocument: txn.documentLink != nil)
+                }
         } ?? []
     }
 }
@@ -126,11 +137,11 @@ struct DashboardView: View {
     /// Reports could sit on different months with nothing on screen saying so.
     /// One selector now governs every mode (`FR-NAV-11`); the old key is read
     /// once on open, so a board left on "Last 12 months" stays there.
-    /// Selected sector value for the allocation donut's hover tooltip.
-    @State private var allocationValue: Double?
     /// Per-holding value over the timescale, for the performance area.
     @State private var perfSeries: [PerfPoint] = []
-    @State private var perfHover: PerfHover?
+    // The donut's angle selection and the performance chart's hover live in
+    // `LocalState` wrappers around their cards, not here: as `@State` on the
+    // board every mouse move re-evaluated every card (Performance Review 2, R5).
 
     private var code: String { model.reportCurrency.mnemonic }
 
@@ -241,7 +252,9 @@ struct DashboardView: View {
                 .help("Show a card, hide one, or save this set as a view")
             }
         }
-        .task(id: RangeKey(from: range.from, to: range.to)) {
+        // Keyed on the book revision too: a quote refresh adds prices without
+        // changing the period, and the series must follow it.
+        .task(id: RangeKey(from: range.from, to: range.to, revision: model.bookRevision)) {
             perfSeries = await computePerformance(range)
         }
     }
@@ -485,8 +498,8 @@ struct DashboardView: View {
         case .expenses: expensesCard(range)
         case .cashflow: cashflowCard(range)
         case .savingsRate: savingsRateCard(range)
-        case .allocation: allocationCard(portfolio)
-        case .performance: performanceCard()
+        case .allocation: LocalState(Optional<Double>.none) { allocationCard(portfolio, selection: $0) }
+        case .performance: LocalState(Optional<PerfHover>.none) { performanceCard(hover: $0) }
         case .spendingTrend: spendingTrendCard(range)
         case .topMovers: topMoversCard(range)
         case .goals: goalsCard
@@ -761,7 +774,7 @@ struct DashboardView: View {
             } else {
                 Treemap(items: items)
                     .frame(minHeight: 140, maxHeight: .infinity)
-                    .accessibilityLabel("\(title) by account for \(model.label(for: period))")
+                    .accessibilityLabel("\(Text(title)) by account for \(model.label(for: period))")
             }
         }
     }
@@ -839,9 +852,9 @@ struct DashboardView: View {
     }
 
     @ViewBuilder
-    private func allocationCard(_ portfolio: Portfolio?) -> some View {
+    private func allocationCard(_ portfolio: Portfolio?, selection: Binding<Double?>) -> some View {
         let (slices, total) = allocationSlices(portfolio)
-        let selected = allocationValue.flatMap { value in
+        let selected = selection.wrappedValue.flatMap { value in
             slices.first { value >= $0.start && value < $0.start + asDouble($0.value) }
         }
         Card("Allocation", systemImage: "chart.pie") {
@@ -856,7 +869,7 @@ struct DashboardView: View {
                         .opacity(selected == nil || selected?.symbol == slice.symbol ? 1 : 0.35)
                 }
                 .chartLegend(.hidden)
-                .chartAngleSelection(value: $allocationValue)
+                .chartAngleSelection(value: selection)
                 .frame(minHeight: 160, maxHeight: .infinity)
                 // Selected holding's detail sits in the donut hole.
                 .overlay {
@@ -892,7 +905,9 @@ struct DashboardView: View {
     /// The date the cursor is over; the tooltip reads every series at that date.
     struct PerfHover: Equatable {
         let date: Date
-        let at: CGPoint
+        /// The tooltip's x offset, already clamped — the only thing the
+        /// pointer's position decides.
+        let anchorX: CGFloat
     }
 
     private static let portfolioSeries = "Portfolio"
@@ -964,7 +979,7 @@ struct DashboardView: View {
     }
 
     @ViewBuilder
-    private func performanceCard() -> some View {
+    private func performanceCard(hover: Binding<PerfHover?>) -> some View {
         Card("Performance", systemImage: "chart.line.uptrend.xyaxis.circle") {
             if perfSeries.isEmpty {
                 Text("No priced holdings to value over this period.")
@@ -994,12 +1009,12 @@ struct DashboardView: View {
                     .chartLegend(.hidden)
                     .chartYAxis { AxisMarks(format: FloatingPointFormatStyle<Double>.Percent.percent.precision(.fractionLength(0))) }
                     .frame(minHeight: 150, maxHeight: .infinity)
-                    .chartOverlay { proxy in perfHoverOverlay(proxy) }
+                    .chartOverlay { proxy in perfHoverOverlay(proxy, hover: hover) }
                     .overlay(alignment: .topLeading) {
-                        if let perfHover {
+                        if let perfHover = hover.wrappedValue {
                             perfTooltip(at: perfHover.date)
                                 .fixedSize()
-                                .offset(x: min(perfHover.at.x + 8, 40), y: 8)
+                                .offset(x: perfHover.anchorX, y: 8)
                         }
                     }
                     .accessibilityLabel("Each holding's return over \(model.label(for: period)), rebased to the start; hover for all holdings and the portfolio")
@@ -1020,7 +1035,7 @@ struct DashboardView: View {
         }
     }
 
-    private func perfHoverOverlay(_ proxy: ChartProxy) -> some View {
+    private func perfHoverOverlay(_ proxy: ChartProxy, hover: Binding<PerfHover?>) -> some View {
         GeometryReader { geo in
             Rectangle().fill(.clear).contentShape(Rectangle())
                 .onContinuousHover { phase in
@@ -1028,10 +1043,14 @@ struct DashboardView: View {
                           let frame = proxy.plotFrame.map({ geo[$0] }),
                           let date: Date = proxy.value(atX: location.x - frame.minX),
                           let nearest = nearestPerfDate(to: date) else {
-                        perfHover = nil
+                        if hover.wrappedValue != nil { hover.wrappedValue = nil }
                         return
                     }
-                    perfHover = PerfHover(date: nearest, at: location)
+                    // Only what the tooltip draws — the sample date and where
+                    // it anchors — so a pixel of travel that changes neither
+                    // changes no state.
+                    let next = PerfHover(date: nearest, anchorX: min(location.x + 8, 40))
+                    if next != hover.wrappedValue { hover.wrappedValue = next }
                 }
         }
     }
@@ -1393,7 +1412,7 @@ struct DashboardView: View {
 
     // MARK: Helpers
 
-    private struct RangeKey: Hashable { let from: Date; let to: Date }
+    private struct RangeKey: Hashable { let from: Date; let to: Date; let revision: Int }
 
     private func asDouble(_ d: Decimal) -> Double { NSDecimalNumber(decimal: d).doubleValue }
     private func icon(for s: AlertSeverity) -> String {
@@ -1432,4 +1451,20 @@ private struct Card<Content: View>: View {
         .padding(16)
         .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 12))
     }
+}
+
+
+/// Owns one piece of view state on behalf of a card built by its parent, so
+/// writes to it re-render the card alone rather than the board that holds
+/// every card (Performance Review 2, R5).
+private struct LocalState<Value, Content: View>: View {
+    @State private var value: Value
+    private let content: (Binding<Value>) -> Content
+
+    init(_ initial: Value, @ViewBuilder content: @escaping (Binding<Value>) -> Content) {
+        _value = State(initialValue: initial)
+        self.content = content
+    }
+
+    var body: some View { content($value) }
 }

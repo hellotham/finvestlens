@@ -189,7 +189,7 @@ public enum TransactionCategorizer {
                 let response = try await session.respond(
                     to: "Categorise these transactions:\n\(listing)",
                     generating: ModelSuggestions.self,
-                    options: GenerationOptions(sampling: .greedy)
+                    options: .greedy
                 )
                 result.merge(
                     CategorySuggestionResolver.resolve(answers: response.content.suggestions.map { ($0.number, $0.category) },

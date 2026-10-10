@@ -120,7 +120,7 @@ public extension FinancialReports {
     /// The KVP slot a rule's link-to-bill action stamps on a payment
     /// transaction: the settled schedule's GUID. An exact link outranks the
     /// description heuristic below.
-    public static let billLinkKey = "finvestlens/bill-id"
+    static let billLinkKey = "finvestlens/bill-id"
 
     /// How far a payment may drift from the bill's expected amount and still
     /// settle it by name (utilities vary month to month; ±25% covers that

@@ -110,7 +110,7 @@ extension AppModel {
     public func setAccountColor(_ id: GncGUID, colorString: String?) {
         guard let book, let account = book.account(with: id),
               account.color != colorString else { return }
-        editingWholeBook(named: "Change Account Colour") {
+        editingAccounts([id], named: "Change Account Colour") {
             account.color = colorString
         }
     }

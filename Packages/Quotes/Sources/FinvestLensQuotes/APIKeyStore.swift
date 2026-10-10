@@ -18,6 +18,15 @@ public protocol APIKeyStoring: Sendable {
     func key(for kind: QuoteProviderKind) -> String?
     /// Stores `key` for `kind`, or removes it when `key` is `nil`/empty.
     func setKey(_ key: String?, for kind: QuoteProviderKind) throws
+    /// The stored key for `kind`, `nil` when none is set — and a throw when
+    /// the store could not say. ``key(for:)`` folds the two into `nil`, which
+    /// is right for a single read and wrong for a memo: a Keychain that is
+    /// locked, or denies a rebuilt app, must not be remembered as "no key".
+    func lookup(for kind: QuoteProviderKind) throws -> String?
+}
+
+public extension APIKeyStoring {
+    func lookup(for kind: QuoteProviderKind) throws -> String? { key(for: kind) }
 }
 
 /// In-memory key store for tests and SwiftUI previews.
@@ -54,16 +63,24 @@ public struct KeychainAPIKeyStore: APIKeyStoring {
     }
 
     public func key(for kind: QuoteProviderKind) -> String? {
+        (try? lookup(for: kind)) ?? nil
+    }
+
+    public func lookup(for kind: QuoteProviderKind) throws -> String? {
         var query = baseQuery(for: kind)
         query[kSecReturnData as String] = true
         query[kSecMatchLimit as String] = kSecMatchLimitOne
         var item: CFTypeRef?
-        guard SecItemCopyMatching(query as CFDictionary, &item) == errSecSuccess,
-              let data = item as? Data,
-              let string = String(data: data, encoding: .utf8) else {
+        let status = SecItemCopyMatching(query as CFDictionary, &item)
+        switch status {
+        case errSecSuccess:
+            guard let data = item as? Data else { return nil }
+            return String(data: data, encoding: .utf8)
+        case errSecItemNotFound:
             return nil
+        default:
+            throw QuoteError.providerError("Keychain read failed (\(status))")
         }
-        return string
     }
 
     public func setKey(_ key: String?, for kind: QuoteProviderKind) throws {

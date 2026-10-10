@@ -115,7 +115,7 @@ public enum DividendExtractor {
             let model = try await session.respond(
                 to: "Dividend statement:\n\n\(String(text.prefix(6000)))",
                 generating: ModelDividend.self,
-                options: GenerationOptions(sampling: .greedy)
+                options: .greedy
             ).content
             return DividendReconciler.details(
                 from: RawDividendFigures(

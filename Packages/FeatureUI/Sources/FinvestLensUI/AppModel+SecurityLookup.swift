@@ -50,7 +50,7 @@ extension AppModel {
             fullName: result.name,
             smallestFraction: 10_000)
         guard !(book?.commodities.contains(commodity) ?? false) else { return nil }
-        editingWholeBook(named: "Add Security") {
+        editingCommodity(commodity, named: "Add Security") {
             book?.registerCommodity(commodity)
         }
         return commodity

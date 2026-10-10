@@ -777,7 +777,7 @@ extension AppModel {
     /// exactly the right leg. Nil on the whole-book journal, whose rows are
     /// headings with no single leg — `anySplitID` is the honest answer there.
     public func registerSplitID(ofTransaction id: GncGUID) -> GncGUID? {
-        registerRows.first { transactionID(ofSplit: $0.id) == id }?.id
+        registerSplitByTransaction[id]
     }
 
     /// Every tag in the book. `Book.allTags` has existed and been tested from

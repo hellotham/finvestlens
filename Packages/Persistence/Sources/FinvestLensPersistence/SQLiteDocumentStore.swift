@@ -17,7 +17,13 @@ import FinvestLensEngine
 /// SQLite (`write`) and materialises it back (`read`). Snapshot semantics match
 /// the document model: load into memory, edit, write back on explicit save.
 /// GUIDs and KVP slots are persisted for GnuCash round-trip fidelity.
-public final class SQLiteDocumentStore {
+/// `@unchecked Sendable` so a staged save can carry the store to a background
+/// thread (``FinvestLensDocument/commitStaged(_:progress:)``): the connection
+/// is a GRDB `DatabaseQueue`, which serialises every access, and the only
+/// mutable state — ``changeCounter`` and ``lastLoadWarnings`` — is touched
+/// inside the queue's write closure or on the loading actor before any save
+/// can exist. Two saves never overlap: the document holds a lock around them.
+public final class SQLiteDocumentStore: @unchecked Sendable {
 
     private let dbQueue: DatabaseQueue
 
@@ -304,6 +310,15 @@ public final class SQLiteDocumentStore {
     /// rows) can show a bar instead of a frozen window. Called from whatever
     /// thread `write` runs on; the caller hops to the main actor inside it.
     public func write(_ book: Book, progress: (@Sendable (BookLoadProgress) -> Void)? = nil) throws {
+        try write(BookSnapshot(book), progress: progress)
+    }
+
+    /// The same write from a ``BookSnapshot`` — the half of a save that needs
+    /// no `Book`, and so may run on any thread (Performance Review 2, R1). The
+    /// SQL and the argument order are exactly those the snapshot was taken
+    /// with, so the bytes landing in the file are unchanged.
+    public func write(_ snapshot: BookSnapshot,
+                      progress: (@Sendable (BookLoadProgress) -> Void)? = nil) throws {
         try dbQueue.write { db in
             for table in ["split", "txn", "account", "commodity", "price",
                           "invoice_entry", "invoice", "lot_split", "lot", "job",
@@ -313,23 +328,12 @@ public final class SQLiteDocumentStore {
             }
 
             var reporter: WriteReporter?
-            if let progress { reporter = WriteReporter(book: book, emit: progress) }
-            reporter?.startingAccounts()
-
-            for commodity in book.commodities {
-                try db.execute(sql: """
-                    INSERT OR REPLACE INTO commodity
-                    (namespace, mnemonic, fullName, smallestFraction, roundingMode,
-                     exchangeCode, getQuotes, quoteSource, quoteTimezone, kvp)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """, arguments: [
-                        Serialize.namespace(commodity.namespace), commodity.mnemonic,
-                        commodity.fullName, commodity.smallestFraction, commodity.roundingMode.rawValue,
-                        commodity.exchangeCode, commodity.getQuotes,
-                        commodity.quoteSource, commodity.quoteTimezone,
-                        Serialize.kvp(commodity.kvp),
-                    ])
+            if let progress {
+                reporter = WriteReporter(transactionCount: snapshot.transactionCount,
+                                         splitCount: snapshot.splitCount,
+                                         priceCount: snapshot.priceCount, emit: progress)
             }
+            reporter?.startingAccounts()
 
             // Prepared once, reused per row. `db.execute(sql:arguments:)`
             // compiles its SQL on every call — it hands the string to an
@@ -340,20 +344,24 @@ public final class SQLiteDocumentStore {
             // was compiling well over a hundred thousand identical statements.
             // The arguments still change per row; only the compilation is
             // hoisted.
+            let commodityInsert = try db.makeStatement(sql: """
+                INSERT OR REPLACE INTO commodity
+                (namespace, mnemonic, fullName, smallestFraction, roundingMode,
+                 exchangeCode, getQuotes, quoteSource, quoteTimezone, kvp)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """)
+            for row in snapshot.commodities {
+                try commodityInsert.execute(arguments: row.arguments)
+            }
+
             let accountInsert = try db.makeStatement(sql: """
                 INSERT INTO account
                 (guid, name, type, code, accountDescription, notes,
                  commodityNamespace, commodityMnemonic, placeholder, hidden, parentGuid, kvp)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """)
-            for account in [book.rootAccount] + book.rootAccount.descendants {
-                try accountInsert.execute(arguments: [
-                    account.guid.hexString, account.name, account.type.rawValue,
-                    account.code, account.accountDescription, account.notes,
-                    Serialize.namespace(account.commodity.namespace), account.commodity.mnemonic,
-                    account.isPlaceholder, account.isHidden,
-                    account.parent.map { $0.guid.hexString }, Serialize.kvp(account.kvp),
-                ])
+            for row in snapshot.accounts {
+                try accountInsert.execute(arguments: row.arguments)
             }
 
             reporter?.startTransactions()
@@ -370,19 +378,10 @@ public final class SQLiteDocumentStore {
                  reconcileState, reconcileDate, memo, action, kvp)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """)
-            for (txnIndex, txn) in book.transactions.enumerated() {
-                try txnInsert.execute(arguments: [
-                    txn.guid.hexString, Serialize.namespace(txn.currency.namespace),
-                    txn.currency.mnemonic, txn.datePosted, txn.dateEntered,
-                    txn.number, txn.transactionDescription, txn.notes, Serialize.kvp(txn.kvp),
-                ])
+            for (txnIndex, txn) in snapshot.transactions.enumerated() {
+                try txnInsert.execute(arguments: txn.values.arguments)
                 for split in txn.splits {
-                    try splitInsert.execute(arguments: [
-                        split.guid.hexString, txn.guid.hexString, split.account?.guid.hexString,
-                        Serialize.decimal(split.value), Serialize.decimal(split.quantity),
-                        split.reconcileState.rawValue, split.reconcileDate,
-                        split.memo, split.action, Serialize.kvp(split.kvp),
-                    ])
+                    try splitInsert.execute(arguments: split.arguments)
                 }
                 splitsWritten += txn.splits.count
                 reporter?.builtTransactions(txnIndex + 1, splitsCompleted: splitsWritten)
@@ -395,26 +394,20 @@ public final class SQLiteDocumentStore {
                  date, value, source, type)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """)
-            for (priceIndex, price) in book.prices.enumerated() {
-                try priceInsert.execute(arguments: [
-                    price.guid.hexString,
-                    Serialize.namespace(price.commodity.namespace), price.commodity.mnemonic,
-                    Serialize.namespace(price.currency.namespace), price.currency.mnemonic,
-                    price.date, Serialize.decimal(price.value), price.source, price.type,
-                ])
+            for (priceIndex, row) in snapshot.prices.enumerated() {
+                try priceInsert.execute(arguments: row.arguments)
                 reporter?.builtPrices(priceIndex + 1)
             }
 
-            try Self.writeBusiness(book, into: db)
+            try Self.writeBusiness(snapshot, into: db)
 
             changeCounter += 1
             try db.execute(sql: "INSERT OR REPLACE INTO meta (key, value) VALUES ('changeCounter', ?)",
                            arguments: [changeCounter])
             try db.execute(sql: "INSERT OR REPLACE INTO meta (key, value) VALUES ('bookGuid', ?)",
-                           arguments: [book.guid.hexString])
-            let bookKvp = Serialize.kvp(book.kvp)
+                           arguments: [snapshot.bookGuid])
             try db.execute(sql: "INSERT OR REPLACE INTO meta (key, value) VALUES ('bookKvp', ?)",
-                           arguments: [bookKvp])
+                           arguments: [snapshot.bookKvp])
             reporter?.finished()
         }
     }

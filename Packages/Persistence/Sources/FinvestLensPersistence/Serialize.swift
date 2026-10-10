@@ -41,12 +41,17 @@ enum Serialize {
 
     // MARK: Decimal (exact, locale-independent text)
 
+    /// Built once: `Locale(identifier:)` per call was a measurable share of
+    /// every save and load, which format or parse a decimal for every split
+    /// and every price.
+    private static let posix = Locale(identifier: "en_US_POSIX")
+
     static func decimal(_ value: Decimal) -> String {
-        NSDecimalNumber(decimal: value).description(withLocale: Locale(identifier: "en_US_POSIX"))
+        NSDecimalNumber(decimal: value).description(withLocale: posix)
     }
 
     static func parseDecimal(_ text: String) -> Decimal {
-        guard let value = Decimal(string: text, locale: Locale(identifier: "en_US_POSIX")) else {
+        guard let value = Decimal(string: text, locale: posix) else {
             persistenceLog.warning("Unparseable decimal \"\(text, privacy: .public)\" defaulted to 0")
             LoadWarnings.current?.note(\.decimals)
             return 0

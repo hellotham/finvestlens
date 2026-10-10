@@ -28,10 +28,13 @@ final class WebAuthBoxPresenter: NSObject, BoxAuthorizationPresenting,
     /// `ASWebAuthenticationSession` is not retained by the system: drop the
     /// last reference and the sheet closes with no callback. The lock also
     /// guards ``finished``, because the completion arrives on one of Box's XPC
-    /// reply queues rather than a queue of ours.
+    /// reply queues rather than a queue of ours. Both are `nonisolated(unsafe)`
+    /// for that reason: the class is `@MainActor` by inheritance from the
+    /// presentation-context protocol, but these two are only ever touched
+    /// under `lock`, which the compiler cannot see.
     private let lock = NSLock()
-    private var session: ASWebAuthenticationSession?
-    private var finished = false
+    private nonisolated(unsafe) var session: ASWebAuthenticationSession?
+    private nonisolated(unsafe) var finished = false
 
     func authorize(url: URL, callbackScheme: String) async throws -> URL {
         try await withCheckedThrowingContinuation { continuation in
@@ -100,8 +103,16 @@ final class WebAuthBoxPresenter: NSObject, BoxAuthorizationPresenting,
         #if canImport(AppKit)
         return NSApplication.shared.keyWindow ?? NSApplication.shared.windows.first ?? ASPresentationAnchor()
         #else
-        return UIApplication.shared.connectedScenes
-            .compactMap { ($0 as? UIWindowScene)?.keyWindow }.first ?? ASPresentationAnchor()
+        let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+        if let window = scenes.compactMap(\.keyWindow).first { return window }
+        // iOS 26 deprecated every scene-less `UIWindow` initializer, so the
+        // fallback is a fresh window on a connected scene. A sign-in is only
+        // ever started from a control inside a scene, so one is connected;
+        // the trap records that invariant rather than offering a path.
+        guard let scene = scenes.first else {
+            preconditionFailure("Box sign-in started with no window scene to present in")
+        }
+        return UIWindow(windowScene: scene)
         #endif
     }
 }

@@ -566,7 +566,6 @@ extension AppModel {
         let key = "review.story:\(slide.id):\(bookRevision):\(slide.facts.periodLabel)"
         if let cached = reviewStoryCache[key] { return cached }
         guard isIntelligenceAvailable else { return nil }
-        guard #available(macOS 26.0, iOS 26.0, *) else { return nil }
         do {
             let story = try await ReviewNarrator.story(facts: slide.facts)
             reviewStoryCache[key] = story

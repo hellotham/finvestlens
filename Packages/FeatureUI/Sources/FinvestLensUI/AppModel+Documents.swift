@@ -185,33 +185,38 @@ extension AppModel {
     /// "not found" message should point).
     public func linkedDocumentURL(for transactionID: GncGUID) -> URL? {
         guard let link = book?.transaction(with: transactionID)?.documentLink else { return nil }
-        if link.hasPrefix("file://") {
-            return URL(string: link)
-        }
-        // GnuCash writes `assoc_uri` percent-encoded ("Cba%20atm.png"), so the
-        // decoded form is the primary interpretation; the raw string stays as a
-        // fallback for plain paths we stored ourselves (or names that really
-        // contain a literal "%").
-        var candidates: [String] = []
-        if let decoded = link.removingPercentEncoding, decoded != link {
-            candidates.append(decoded)
-        }
-        candidates.append(link)
+        let candidates = linkedDocumentCandidates(for: link)
+        return Self.firstPresent(candidates) ?? candidates.first
+    }
 
+    /// Where a link's file could be, in the order to try: the pure half of
+    /// the resolution, so the stats can run wherever the caller wants them.
+    /// GnuCash writes `assoc_uri` percent-encoded ("Cba%20atm.png"), so the
+    /// decoded form is the primary interpretation; the raw string stays as a
+    /// fallback for plain paths we stored ourselves (or names that really
+    /// contain a literal "%"). A relative link is tried under the primary
+    /// folder, then the secondary; the first candidate is also where a
+    /// "not found" message should point.
+    func linkedDocumentCandidates(for link: String) -> [URL] {
+        if link.hasPrefix("file://") {
+            return URL(string: link).map { [$0] } ?? []
+        }
+        var names: [String] = []
+        if let decoded = link.removingPercentEncoding, decoded != link {
+            names.append(decoded)
+        }
+        names.append(link)
         if link.hasPrefix("/") {
-            for candidate in candidates
-            where Self.fileIsPresentOrInCloud(URL(fileURLWithPath: candidate)) {
-                return URL(fileURLWithPath: candidate)
-            }
-            return URL(fileURLWithPath: candidates[0])
+            return names.map { URL(fileURLWithPath: $0) }
         }
-        for folder in [effectiveDocumentFolder, secondaryDocumentFolder].compactMap({ $0 }) {
-            for candidate in candidates {
-                let url = folder.appendingPathComponent(candidate)
-                if Self.fileIsPresentOrInCloud(url) { return url }
-            }
-        }
-        return effectiveDocumentFolder?.appendingPathComponent(candidates[0])
+        let folders = [effectiveDocumentFolder, secondaryDocumentFolder].compactMap { $0 }
+        return folders.flatMap { folder in names.map { folder.appendingPathComponent($0) } }
+    }
+
+    /// The first candidate that is present, at its path or as a cloud
+    /// placeholder. Actor-free, so a detached task can run it for a whole list.
+    nonisolated static func firstPresent(_ candidates: [URL]) -> URL? {
+        candidates.first { fileIsPresentOrInCloud($0) }
     }
 
     public func hasLinkedDocument(_ transactionID: GncGUID) -> Bool {
@@ -285,23 +290,64 @@ extension AppModel {
 
     /// Every transaction that carries a document link, newest first — the
     /// roll-up GnuCash offers so links aren't only reachable one register row
-    /// at a time.
+    /// at a time. Synchronous, with the file checks inline: the headless
+    /// tools want it that way. The sheet uses ``linkedDocumentsOffMain()``.
     public func linkedDocuments() -> [LinkedDocument] {
+        let entries = linkedDocumentEntries()
+        return Self.settle(entries, found: entries.map { $0.candidates.isEmpty ? nil : Self.firstPresent($0.candidates) })
+    }
+
+    /// The same list, with every stat run off the main actor: the gather
+    /// (pure — the book and the folder settings) happens here, the detached
+    /// task tries each link's candidate paths, and the list is settled from
+    /// what it found. The reference book links ~770 documents on a
+    /// cloud-synced folder, and each check is a `stat` the file provider may
+    /// answer slowly — the Linked Documents sheet used to run them all inside
+    /// its `body`, and the first version of this ran all but the last one
+    /// there too (Performance Review 2).
+    public func linkedDocumentsOffMain() async -> [LinkedDocument] {
+        let entries = linkedDocumentEntries()
+        let candidates = entries.map(\.candidates)
+        guard candidates.contains(where: { !$0.isEmpty }) else { return entries.map(\.doc) }
+        let found = await Task.detached(priority: .userInitiated) {
+            candidates.map { $0.isEmpty ? nil : Self.firstPresent($0) }
+        }.value
+        return Self.settle(entries, found: found)
+    }
+
+    private typealias LinkedDocumentEntry = (doc: LinkedDocument, candidates: [URL])
+
+    /// Every linked transaction, newest first, each with the paths its file
+    /// could be at (none for a web link) and `exists`/`displayName` still to
+    /// be settled.
+    private func linkedDocumentEntries() -> [LinkedDocumentEntry] {
         guard let book else { return [] }
-        return book.transactions.compactMap { txn -> LinkedDocument? in
+        return book.transactions.compactMap { txn -> LinkedDocumentEntry? in
             guard let link = txn.documentLink else { return nil }
             let isWeb = link.hasPrefix("http://") || link.hasPrefix("https://")
-            let url = isWeb ? nil : linkedDocumentURL(for: txn.guid)
-            return LinkedDocument(
+            let candidates = isWeb ? [] : linkedDocumentCandidates(for: link)
+            return (LinkedDocument(
                 id: txn.guid,
                 date: txn.datePosted,
                 description: txn.transactionDescription,
                 link: link,
-                displayName: isWeb ? link : (url?.lastPathComponent ?? link),
+                displayName: isWeb ? link : (candidates.first?.lastPathComponent ?? link),
                 isWeb: isWeb,
-                exists: isWeb ? true : (url.map { Self.fileIsPresentOrInCloud($0) } ?? false))
+                exists: isWeb), candidates)
         }
-        .sorted { $0.date > $1.date }
+        .sorted { $0.doc.date > $1.doc.date }
+    }
+
+    /// Applies what the stats found: a file link exists when a candidate was
+    /// present, and is named after that candidate.
+    private static func settle(_ entries: [LinkedDocumentEntry], found: [URL?]) -> [LinkedDocument] {
+        zip(entries, found).map { entry, hit in
+            var doc = entry.doc
+            guard !entry.candidates.isEmpty else { return doc }
+            doc.exists = hit != nil
+            if let hit { doc.displayName = hit.lastPathComponent }
+            return doc
+        }
     }
 
     /// Opens the linked document in its default application (macOS). On iOS

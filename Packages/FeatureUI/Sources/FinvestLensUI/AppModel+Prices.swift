@@ -26,12 +26,16 @@ extension AppModel {
     /// Commodities that are held in a security account (candidates to price).
     public var securityCommodities: [Commodity] {
         guard let book else { return [] }
+        // Memoised per revision: every portfolio memo hit paid this walk first
+        // (0.33 ms, several times per dashboard pass; Performance Review 2, R9).
+        if let cached = securityCommoditiesCache, cached.revision == bookRevision { return cached.value }
         var seen = Set<String>()
         var result: [Commodity] = []
         for account in book.accounts where account.type.isSecurityType {
             let key = "\(account.commodity.namespace)|\(account.commodity.mnemonic)"
             if seen.insert(key).inserted { result.append(account.commodity) }
         }
+        securityCommoditiesCache = (bookRevision, result)
         return result
     }
 

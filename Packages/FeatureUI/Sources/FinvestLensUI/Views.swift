@@ -119,9 +119,15 @@ private struct FileExportModifiers: ViewModifier {
             .onChange(of: model.exportRequested) {
                 guard model.exportRequested else { return }
                 model.exportRequested = false
-                guard let data = model.gnuCashExportData() else { return }
-                exportDocument = GnuCashFileDocument(data: data)
-                showingExport = true
+                // The export walks the whole book — seconds on a large one —
+                // so say so and let that frame paint before it starts.
+                model.showToast(.info, "Preparing export…")
+                Task { @MainActor in
+                    await Task.yield()
+                    guard let data = model.gnuCashExportData() else { return }
+                    exportDocument = GnuCashFileDocument(data: data)
+                    showingExport = true
+                }
             }
             .fileExporter(isPresented: $showingExport, document: exportDocument,
                           contentType: GnuCashFileDocument.contentType,
@@ -131,10 +137,14 @@ private struct FileExportModifiers: ViewModifier {
             .onChange(of: model.ledgerExportRequested) {
                 guard model.ledgerExportRequested else { return }
                 model.ledgerExportRequested = false
-                guard let text = model.ledgerExportText() else { return }
-                ledgerFilename = bookName + ".ledger"
-                ledgerDocument = LedgerFileDocument(text: text)
-                showingLedgerExport = true
+                model.showToast(.info, "Preparing export…")
+                Task { @MainActor in
+                    await Task.yield()
+                    guard let text = model.ledgerExportText() else { return }
+                    ledgerFilename = bookName + ".ledger"
+                    ledgerDocument = LedgerFileDocument(text: text)
+                    showingLedgerExport = true
+                }
             }
             .fileExporter(isPresented: $showingLedgerExport, document: ledgerDocument,
                           contentType: .plainText,
@@ -144,9 +154,13 @@ private struct FileExportModifiers: ViewModifier {
             .onChange(of: model.csvExportRequest) {
                 guard let kind = model.csvExportRequest else { return }
                 model.csvExportRequest = nil
-                csvFilename = kind.filename(book: bookName)
-                csvDocument = CSVFileDocument(text: model.csvExport(kind))
-                showingCSVExport = true
+                model.showToast(.info, "Preparing export…")
+                Task { @MainActor in
+                    await Task.yield()
+                    csvFilename = kind.filename(book: bookName)
+                    csvDocument = CSVFileDocument(text: model.csvExport(kind))
+                    showingCSVExport = true
+                }
             }
             .fileExporter(isPresented: $showingCSVExport, document: csvDocument,
                           contentType: .commaSeparatedText,
@@ -1936,7 +1950,7 @@ struct RegisterView: View {
             }
             .scaledFont(.caption)
             .accessibilityElement(children: .combine)
-            .accessibilityLabel("\(label) \(AmountFormat.string(value, code: s.currencyCode))")
+            .accessibilityLabel("\(Text(label)) \(AmountFormat.string(value, code: s.currencyCode))")
         }
         return HStack(spacing: 16) {
             cell("Present:", s.present)
@@ -3843,13 +3857,16 @@ struct EditAccountSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        model.updateAccount(id: accountID, name: name, code: code,
-                                            description: description, notes: notes,
-                                            isPlaceholder: isPlaceholder, isHidden: isHidden)
-                        model.setAccountColor(accountID,
-                                              colorString: hasColor ? GnuCashColor.gnuCashString(from: color) : nil)
-                        if parentID != originalParentID {
-                            model.moveAccount(accountID, under: parentID)
+                        // Three model edits, one ⌘Z: the sheet is one action.
+                        model.groupingUndo(named: "Edit Account") {
+                            model.updateAccount(id: accountID, name: name, code: code,
+                                                description: description, notes: notes,
+                                                isPlaceholder: isPlaceholder, isHidden: isHidden)
+                            model.setAccountColor(accountID,
+                                                  colorString: hasColor ? GnuCashColor.gnuCashString(from: color) : nil)
+                            if parentID != originalParentID {
+                                model.moveAccount(accountID, under: parentID)
+                            }
                         }
                         dismiss()
                     }

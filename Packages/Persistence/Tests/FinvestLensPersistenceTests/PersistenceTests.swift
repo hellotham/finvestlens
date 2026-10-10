@@ -492,4 +492,30 @@ struct SavePhaseTests {
         doc.finishSave(fingerprint: fp, stagedAt: token)
         #expect(!doc.hasUnsavedChanges)
     }
+
+    @Test("A staged snapshot commits from another thread and reads back the same book")
+    func snapshotCommitsOffThread() async throws {
+        // R1 (Performance Review 2): the write is the slow half of a save and
+        // reads only the snapshot, so it runs wherever it likes; the edit made
+        // after the snapshot is not in the file and must stay unsaved.
+        let (doc, url) = try makeDoc()
+        defer { try? FileManager.default.removeItem(at: url) }
+        _ = doc.book.addAccount(Account(name: "Snapshotted", type: .bank, commodity: .aud))
+        doc.markDirty()
+        let staged = try doc.stageSnapshot()
+        _ = doc.book.addAccount(Account(name: "Typed during write", type: .bank, commodity: .aud))
+        doc.markDirty()
+
+        let fingerprint = try await Task.detached {
+            try FinvestLensDocument.commitStaged(staged)
+        }.value
+        doc.finishSave(fingerprint: fingerprint, stagedAt: staged.token)
+        #expect(doc.hasUnsavedChanges, "the edit after the snapshot is not in the file")
+
+        doc.discard()
+        let reread = try FinvestLensDocument.open(at: url)
+        defer { reread.discard() }
+        #expect(reread.book.accounts.contains { $0.name == "Snapshotted" })
+        #expect(!reread.book.accounts.contains { $0.name == "Typed during write" })
+    }
 }

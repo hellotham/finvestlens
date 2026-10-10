@@ -225,11 +225,18 @@ struct ApplyRulesSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var proposals: [RuleApplication] = []
     @State private var applied = false
+    /// The preview walks every historical transaction against every rule.
+    /// It used to run in `onAppear`, so the sheet's first frame waited on it;
+    /// now the sheet opens on a progress indicator and the preview fills it
+    /// in on the next turn of the main actor (Performance Review 2).
+    @State private var previewed = false
 
     var body: some View {
         NavigationStack {
             Group {
-                if applied {
+                if !previewed {
+                    LoadingPlaceholder("Checking your transactions against the rules…")
+                } else if applied {
                     ContentUnavailableView("Done", systemImage: "checkmark.circle",
                                            description: Text("Applied \(proposals.count) changes."))
                 } else if proposals.isEmpty {
@@ -260,7 +267,7 @@ struct ApplyRulesSheet: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(applied ? "Close" : "Cancel") { dismiss() }
                 }
-                if !applied && !proposals.isEmpty {
+                if previewed && !applied && !proposals.isEmpty {
                     ToolbarItem(placement: .confirmationAction) {
                         Button("Apply \(proposals.count)") {
                             model.applyHistoricalRules(proposals)
@@ -269,7 +276,12 @@ struct ApplyRulesSheet: View {
                     }
                 }
             }
-            .onAppear { proposals = model.previewHistoricalRules() }
+            .task {
+                // Let the sheet paint its placeholder before the walk.
+                await Task.yield()
+                proposals = model.previewHistoricalRules()
+                previewed = true
+            }
         }
         .frame(minWidth: 460, minHeight: 360)
     }

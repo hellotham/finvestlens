@@ -22,19 +22,35 @@ struct LinkedDocumentsView: View {
     @Bindable var model: AppModel
     @Environment(\.dismiss) private var dismiss
     @State private var editingTransactionID: GncGUID?
+    /// Gathered off the body: the list stats every linked file, and the
+    /// reference book has ~760 of them on a cloud folder. `nil` until the
+    /// first gather lands; re-gathered when the book changes (an edit made
+    /// from this sheet included).
+    @State private var docs: [AppModel.LinkedDocument]?
 
     var body: some View {
         NavigationStack {
             Group {
-                let docs = model.linkedDocuments()
-                if docs.isEmpty {
-                    ContentUnavailableView("No linked documents", systemImage: "paperclip",
-                        description: Text("Attach a receipt or invoice to a transaction and it appears here."))
-                } else {
-                    List(docs) { doc in
-                        row(doc)
+                if let docs {
+                    if docs.isEmpty {
+                        ContentUnavailableView("No linked documents", systemImage: "paperclip",
+                            description: Text("Attach a receipt or invoice to a transaction and it appears here."))
+                    } else {
+                        List(docs) { doc in
+                            row(doc)
+                        }
                     }
+                } else {
+                    LoadingPlaceholder("Checking linked documents…")
                 }
+            }
+            // `transactionRevision`: a link is a transaction fact, so a quote
+            // refresh must not re-stat every file. The cancellation check keeps
+            // a superseded gather from landing on top of a fresher one.
+            .task(id: model.transactionRevision) {
+                let fresh = await model.linkedDocumentsOffMain()
+                guard !Task.isCancelled else { return }
+                docs = fresh
             }
             .navigationTitle("Linked Documents")
             .onEscapeCommand { dismiss() }
@@ -162,13 +178,38 @@ struct TaxOptionsView: View {
                 .checkboxToggleStyle()
             Spacer()
             if row.taxRelated {
-                TextField("Code", text: Binding(
-                    get: { row.taxCode ?? "" },
-                    set: { model.setAccountTax(id: row.id, related: true,
-                                               code: $0.isEmpty ? nil : $0) }))
-                    .frame(width: 110).scaledFont(.caption)
+                TaxCodeField(code: row.taxCode ?? "") { typed in
+                    // Read the flag live: the field's teardown commit also
+                    // fires when the row is unticked, and a code must not
+                    // re-tick what the user just cleared.
+                    guard model.book?.account(with: row.id)?.taxRelated == true else { return }
+                    model.setAccountTax(id: row.id, related: true, code: typed.isEmpty ? nil : typed)
+                }
+                .frame(width: 110).scaledFont(.caption)
             }
         }
+    }
+}
+
+/// The tax code, committed on Return or when focus leaves — not per
+/// keystroke, which went through an account edit and a full refresh for
+/// every character typed (Performance Review 2, R8).
+private struct TaxCodeField: View {
+    let code: String
+    let commit: (String) -> Void
+    @State private var text = ""
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        TextField("Code", text: $text)
+            .focused($focused)
+            .onAppear { text = code }
+            .onChange(of: code) { text = code }
+            .onSubmit { if text != code { commit(text) } }
+            .onChange(of: focused) { if !focused, text != code { commit(text) } }
+            // Done, Escape, or unticking the row's checkbox tear the field
+            // down while it is focused; what was typed must still land.
+            .onDisappear { if text != code { commit(text) } }
     }
 }
 

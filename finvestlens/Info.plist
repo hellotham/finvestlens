@@ -44,8 +44,6 @@
 			</array>
 		</dict>
 	</array>
-	<key>NSFaceIDUsageDescription</key>
-	<string>Authenticate to unlock your FinvestLens book.</string>
 	<key>NSUbiquitousContainers</key>
 	<dict>
 		<key>iCloud.com.hellotham.finvestlensapp</key>

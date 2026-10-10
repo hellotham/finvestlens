@@ -237,9 +237,14 @@ extension AppModel {
         let yearAgo = calendar.date(byAdding: .year, value: -1, to: now) ?? now
         var assumptions = LifetimeProjection.Assumptions(
             birthYear: calendar.component(.year, from: now) - 45)
-        if let book {
-            let breakdown = FinancialReports.categoryBreakdown(book, from: yearAgo, to: now,
-                                                               currency: reportCurrency)
+        // Memoised: a year's category breakdown is a full-book pass, and the
+        // planner's body asks for its seed on every redraw until something is
+        // saved (Performance Review 2).
+        let key = "lifetimeSeed:\(now.timeIntervalSinceReferenceDate):\(reportCurrency.mnemonic)"
+        if let breakdown = cachedReport(key, compute: { [self] in
+            book.map { FinancialReports.categoryBreakdown($0, from: yearAgo, to: now,
+                                                          currency: reportCurrency) }
+        }) {
             assumptions.annualIncome = breakdown.totalIncome
             assumptions.annualExpenses = breakdown.totalExpenses
         }
@@ -299,7 +304,16 @@ extension AppModel {
     /// The FY-to-date estimate from tax-tagged accounts plus the realised
     /// capital-gains report.
     public func taxEstimateResult(period: ReportPeriod = .currentFinancialYear) -> TaxEstimate.Result {
+        // `resolve` quantises today to day boundaries, so the key is stable
+        // within a day; the estimate is asked per body pass and walks the
+        // tax accounts and the realised-gains report (Performance Review 2).
         let (from, to) = resolve(period)
+        let key = "taxEstimate:\(from.timeIntervalSinceReferenceDate):\(to.timeIntervalSinceReferenceDate)"
+        return cachedReport(key) { computeTaxEstimate(from: from, to: to) }
+            ?? computeTaxEstimate(from: from, to: to)
+    }
+
+    private func computeTaxEstimate(from: Date, to: Date) -> TaxEstimate.Result {
         let accounts = taxAccounts(from: from, to: to).filter(\.taxRelated)
 
         var income: [TaxEstimate.Line] = []

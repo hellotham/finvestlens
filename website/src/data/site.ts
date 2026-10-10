@@ -33,7 +33,7 @@ export const release = {
   sha256: '477d4ccd7bf024f463f083835496f8fd1744ba6eee7793fd788befde069d92d9',
   /** Release assets live on GitHub, not in this repository. */
   url: 'https://github.com/hellotham/finvestlens/releases/latest',
-  requirements: 'macOS 26 or later · Apple silicon and Intel',
+  requirements: 'macOS 27 or later · Apple silicon',
   signedBy: 'Developer ID Application: Hello Tham Pty. Ltd. (RPL5R637DS)',
 } as const;
 

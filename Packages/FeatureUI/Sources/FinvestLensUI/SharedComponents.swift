@@ -180,3 +180,20 @@ struct SidebarFocusScroll<Content: View>: View {
         }
     }
 }
+
+// MARK: - Loading placeholder
+
+/// A pane's "not yet": a centred progress indicator whose label is the
+/// view's own text, so VoiceOver hears what is being waited for rather than
+/// an unlabelled spinner. One place for it — the Linked Documents and Apply
+/// Rules sheets open on it while their gather runs off the first frame.
+struct LoadingPlaceholder: View {
+    let label: LocalizedStringKey
+
+    init(_ label: LocalizedStringKey) { self.label = label }
+
+    var body: some View {
+        ProgressView(label)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}

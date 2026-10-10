@@ -88,6 +88,38 @@ struct StockAssistantTests {
         #expect(try #require(model.capitalGains()).openCostBasis == dec("1000"))
     }
 
+    @Test("A batch of staged rows posts as one edit and one undo step (Performance Review 2, R4)")
+    func stagedInvestmentBatch() throws {
+        let (model, stock, cash, _, _, url) = try model()
+        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        let undo = UndoManager()
+        model.undoManager = undo
+        let rows = [10, 20].map { quantity in
+            StagedTransaction(
+                date: day(0), amount: dec("-\(quantity * 100)"), payee: "CBA",
+                investment: InvestmentDetail(action: .buy, security: "CBA",
+                                             quantity: Decimal(quantity), pricePerShare: dec("100"),
+                                             commission: 0))
+        }
+        let unpostable = StagedTransaction(
+            date: day(0), amount: dec("-1"), payee: "CBA",
+            investment: InvestmentDetail(action: .buy, security: "CBA",
+                                         quantity: 0, pricePerShare: dec("100"), commission: 0))
+
+        let outcome = model.recordStagedInvestments(
+            (rows + [unpostable]).map { (row: $0, securityID: stock) }, settlementID: cash)
+        #expect(outcome.created == rows.map(\.id))
+        #expect(outcome.failures.map(\.row.id) == [unpostable.id])
+        let book = try #require(model.book)
+        #expect(book.transactions.count == 2)
+        #expect(try #require(model.capitalGains()).openCostBasis == dec("3000"))
+
+        undo.undo()
+        #expect(book.transactions.isEmpty, "the whole batch is one undo step")
+        undo.redo()
+        #expect(book.transactions.count == 2)
+    }
+
     @Test("An imported buy with a fee but no commission account folds the fee into cost (FR-XIO-02)")
     func stagedInvestmentFoldsCommission() throws {
         let (model, stock, cash, _, _, url) = try model()

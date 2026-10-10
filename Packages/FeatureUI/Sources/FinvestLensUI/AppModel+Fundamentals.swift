@@ -36,8 +36,14 @@ extension AppModel {
     /// offers Refetch, because a network round trip on every scroll into a
     /// section is how a page earns a spinner it does not need.
     public func fundamentals(for commodity: Commodity) -> SecurityFundamentals? {
-        fundamentalsCache.load(namespace: "\(commodity.namespace)",
-                               mnemonic: commodity.mnemonic)
+        // One read and decode per fetch, not one per body pass: the security
+        // page asked about seven times per pass (Performance Review 2, R9).
+        let key = "\(commodity.namespace)|\(commodity.mnemonic)"
+        if let memo = fundamentalsMemo[key], memo.revision == fundamentalsRevision { return memo.record }
+        let record = fundamentalsCache.load(namespace: "\(commodity.namespace)",
+                                            mnemonic: commodity.mnemonic)
+        fundamentalsMemo[key] = (fundamentalsRevision, record)
+        return record
     }
 
     /// Fetches whatever is missing or stale, merges it over what is cached, and

@@ -581,7 +581,7 @@ struct WellbeingSheet: View {
                                     HStack {
                                         Text(component.component.title)
                                         Spacer()
-                                        Text("\(component.points) pts").monospacedDigit()
+                                        Text("\(component.points, format: .number) pts").monospacedDigit()
                                             .foregroundStyle(.secondary)
                                     }
                                     ProgressView(value: NSDecimalNumber(decimal: component.points).doubleValue,

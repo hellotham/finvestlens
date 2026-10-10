@@ -238,84 +238,92 @@ extension AppModel {
             let end = Self.endOfToday()
             return (Calendar.current.date(byAdding: .day, value: -chosen.days, to: end) ?? end)...end
         } ?? sparkWindow
-        let asOf = Self.endOfToday()
-        let advanced = advancedPortfolio(asOf: asOf)
+        // Memoised per revision, window and the closed-positions flag: the hub
+        // reads this several times per body pass and its body re-runs on every
+        // quote-progress tick — 15 ms warm, 430 ms cold, each time
+        // (Performance Review 2, R6).
+        let key = "invrows:\(window.lowerBound.timeIntervalSinceReferenceDate)"
+            + ":\(window.upperBound.timeIntervalSinceReferenceDate):\(showsClosedPositions)"
+        return cachedReport(key) { () -> [InvestmentRow] in
+            let asOf = Self.endOfToday()
+            let advanced = advancedPortfolio(asOf: asOf)
 
-        // Return and allocation come from the lot engine, per *account*; a
-        // commodity can be held in more than one, so money-weight the returns
-        // and sum the allocations rather than taking the first match.
-        //
-        // Cost comes along for the ride, and for the same reason: a security
-        // held through two brokers arrives as two holdings, and what was paid
-        // for it is the sum of both. `shares` rides along only to tell a live
-        // holding from one that has been sold out of — a closed position has a
-        // cost basis of zero, which is not a purchase amount of zero.
-        var returns: [String: (weight: Decimal, weighted: Double, allocation: Double,
-                               cost: Decimal, shares: Decimal)] = [:]
-        for holding in advanced?.holdings ?? [] {
-            let weight = abs(holding.marketValue ?? holding.costBasis)
-            var entry = returns[holding.symbol] ?? (0, 0, 0, 0, 0)
-            if let fraction = holding.returnFraction {
-                entry.weighted += fraction * NSDecimalNumber(decimal: weight).doubleValue
-                entry.weight += weight
+            // Return and allocation come from the lot engine, per *account*; a
+            // commodity can be held in more than one, so money-weight the returns
+            // and sum the allocations rather than taking the first match.
+            //
+            // Cost comes along for the ride, and for the same reason: a security
+            // held through two brokers arrives as two holdings, and what was paid
+            // for it is the sum of both. `shares` rides along only to tell a live
+            // holding from one that has been sold out of — a closed position has a
+            // cost basis of zero, which is not a purchase amount of zero.
+            var returns: [String: (weight: Decimal, weighted: Double, allocation: Double,
+                                   cost: Decimal, shares: Decimal)] = [:]
+            for holding in advanced?.holdings ?? [] {
+                let weight = abs(holding.marketValue ?? holding.costBasis)
+                var entry = returns[holding.symbol] ?? (0, 0, 0, 0, 0)
+                if let fraction = holding.returnFraction {
+                    entry.weighted += fraction * NSDecimalNumber(decimal: weight).doubleValue
+                    entry.weight += weight
+                }
+                entry.allocation += holding.allocation ?? 0
+                entry.cost += holding.costBasis
+                entry.shares += holding.shares
+                returns[holding.symbol] = entry
             }
-            entry.allocation += holding.allocation ?? 0
-            entry.cost += holding.costBasis
-            entry.shares += holding.shares
-            returns[holding.symbol] = entry
-        }
 
-        let watched = Set(watchlist.map { "\($0.namespace)|\($0.mnemonic)" })
-        let series = sparkSeries(book: book, window: window)
+            let watched = Set(watchlist.map { "\($0.namespace)|\($0.mnemonic)" })
+            let series = sparkSeries(book: book, window: window)
 
-        var rows: [InvestmentRow] = []
-        for security in health.securities {
-            let key = "\(security.commodity.namespace)|\(security.commodity.mnemonic)"
-            let group: InvestmentGroup
-            if security.isHeld {
-                group = security.isQuotable ? .held : .manual
-            } else if watched.contains(key) {
-                group = .watching
-            } else {
-                group = .closed
+            var rows: [InvestmentRow] = []
+            for security in health.securities {
+                let key = "\(security.commodity.namespace)|\(security.commodity.mnemonic)"
+                let group: InvestmentGroup
+                if security.isHeld {
+                    group = security.isQuotable ? .held : .manual
+                } else if watched.contains(key) {
+                    group = .watching
+                } else {
+                    group = .closed
+                }
+                let stats = returns[security.commodity.mnemonic]
+                rows.append(InvestmentRow(
+                    id: key,
+                    commodity: security.commodity,
+                    symbol: security.commodity.mnemonic,
+                    name: security.commodity.fullName,
+                    group: group,
+                    units: security.units,
+                    price: book.securityUnitValue(security.commodity, in: reportCurrency, on: asOf),
+                    purchaseAmount: (stats?.shares ?? 0) == 0 ? nil : stats!.cost,
+                    marketValue: security.marketValue,
+                    returnFraction: (stats?.weight ?? 0) == 0 ? nil
+                        : (stats!.weighted / NSDecimalNumber(decimal: stats!.weight).doubleValue),
+                    allocation: stats?.allocation,
+                    freshness: security.freshness,
+                    tradingDaysBehind: security.tradingDaysBehind,
+                    lastPriceDate: security.lastPriceDate,
+                    missingWhileHeld: security.missingWhileHeld,
+                    spark: series[security.commodity] ?? []))
             }
-            let stats = returns[security.commodity.mnemonic]
-            rows.append(InvestmentRow(
-                id: key,
-                commodity: security.commodity,
-                symbol: security.commodity.mnemonic,
-                name: security.commodity.fullName,
-                group: group,
-                units: security.units,
-                price: book.securityUnitValue(security.commodity, in: reportCurrency, on: asOf),
-                purchaseAmount: (stats?.shares ?? 0) == 0 ? nil : stats!.cost,
-                marketValue: security.marketValue,
-                returnFraction: (stats?.weight ?? 0) == 0 ? nil
-                    : (stats!.weighted / NSDecimalNumber(decimal: stats!.weight).doubleValue),
-                allocation: stats?.allocation,
-                freshness: security.freshness,
-                tradingDaysBehind: security.tradingDaysBehind,
-                lastPriceDate: security.lastPriceDate,
-                missingWhileHeld: security.missingWhileHeld,
-                spark: series[security.commodity] ?? []))
-        }
 
-        // Watch-list entries with no price and no history never reach the
-        // health report (it is built from prices and movements), so add them.
-        for commodity in watchlist where !rows.contains(where: { $0.commodity == commodity }) {
-            rows.append(InvestmentRow(
-                id: "\(commodity.namespace)|\(commodity.mnemonic)",
-                commodity: commodity, symbol: commodity.mnemonic, name: commodity.fullName,
-                group: .watching, units: 0, price: nil, purchaseAmount: nil, marketValue: nil,
-                returnFraction: nil, allocation: nil, freshness: .missing,
-                tradingDaysBehind: 0, lastPriceDate: nil, missingWhileHeld: 0, spark: []))
-        }
+            // Watch-list entries with no price and no history never reach the
+            // health report (it is built from prices and movements), so add them.
+            for commodity in watchlist where !rows.contains(where: { $0.commodity == commodity }) {
+                rows.append(InvestmentRow(
+                    id: "\(commodity.namespace)|\(commodity.mnemonic)",
+                    commodity: commodity, symbol: commodity.mnemonic, name: commodity.fullName,
+                    group: .watching, units: 0, price: nil, purchaseAmount: nil, marketValue: nil,
+                    returnFraction: nil, allocation: nil, freshness: .missing,
+                    tradingDaysBehind: 0, lastPriceDate: nil, missingWhileHeld: 0, spark: []))
+            }
 
-        return rows.sorted {
-            let value = { (row: InvestmentRow) in abs(row.marketValue ?? 0) }
-            if value($0) != value($1) { return value($0) > value($1) }
-            return $0.symbol < $1.symbol
-        }
+            return rows.sorted {
+                let value = { (row: InvestmentRow) in abs(row.marketValue ?? 0) }
+                if value($0) != value($1) { return value($0) > value($1) }
+                return $0.symbol < $1.symbol
+            }
+        } ?? []
     }
 
     /// Sparkline segments per commodity over `window` (`FR-INV-12`).
@@ -500,12 +508,13 @@ extension AppModel {
     /// book's holdings behave, not to the app.
     public var sparkRange: SparkRange {
         get {
+            _ = preferencesRevision   // a preference edit redraws without a refresh
             if case let .string(raw)? = book?.kvp["finvestlens/sparkRange"],
                let range = SparkRange(rawValue: raw) { return range }
             return .quarter
         }
         set {
-            editingBookKvp(named: "Change Sparkline Period") {
+            editingBookKvp(named: "Change Sparkline Period", scope: .preference) {
                 book?.kvp["finvestlens/sparkRange"] = .string(newValue.rawValue)
             }
         }
@@ -535,11 +544,12 @@ extension AppModel {
     /// a property of this book's history rather than of the app.
     public var showsClosedPositions: Bool {
         get {
+            _ = preferencesRevision   // a preference edit redraws without a refresh
             if case let .int64(value)? = book?.kvp["finvestlens/showClosedPositions"] { return value != 0 }
             return false
         }
         set {
-            editingBookKvp(named: "Show Closed Positions") {
+            editingBookKvp(named: "Show Closed Positions", scope: .preference) {
                 book?.kvp["finvestlens/showClosedPositions"] = .int64(newValue ? 1 : 0)
             }
         }

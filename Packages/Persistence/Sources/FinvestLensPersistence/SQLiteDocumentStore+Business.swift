@@ -17,109 +17,87 @@ extension SQLiteDocumentStore {
 
     // MARK: - Write
 
-    static func writeBusiness(_ book: Book, into db: Database) throws {
-        for term in book.billTerms {
-            try db.execute(sql: """
-                INSERT INTO billterm (guid, name, termDescription, kind, dueDays,
-                    discountDays, cutoff, discountPercent, active) VALUES (?,?,?,?,?,?,?,?,?)
-                """, arguments: [term.guid.hexString, term.name, term.termDescription,
-                    term.kind.rawValue, term.dueDays, term.discountDays, term.cutoff,
-                    Serialize.decimal(term.discountPercent), term.active])
+    static func writeBusiness(_ snapshot: BookSnapshot, into db: Database) throws {
+        let termInsert = try db.makeStatement(sql: """
+            INSERT INTO billterm (guid, name, termDescription, kind, dueDays,
+                discountDays, cutoff, discountPercent, active) VALUES (?,?,?,?,?,?,?,?,?)
+            """)
+        for row in snapshot.billTerms {
+            try termInsert.execute(arguments: row.arguments)
         }
-        for table in book.taxTables {
-            try db.execute(sql: "INSERT INTO taxtable (guid, name, active) VALUES (?,?,?)",
-                           arguments: [table.guid.hexString, table.name, table.active])
-            for (position, entry) in table.entries.enumerated() {
-                try db.execute(sql: """
-                    INSERT INTO taxtable_entry (taxtableGuid, accountGuid, kind, amount, position)
-                    VALUES (?,?,?,?,?)
-                    """, arguments: [table.guid.hexString, entry.account.guid.hexString,
-                        entry.kind.rawValue, Serialize.decimal(entry.amount), position])
+        let taxTableInsert = try db.makeStatement(
+            sql: "INSERT INTO taxtable (guid, name, active) VALUES (?,?,?)")
+        let taxEntryInsert = try db.makeStatement(sql: """
+            INSERT INTO taxtable_entry (taxtableGuid, accountGuid, kind, amount, position)
+            VALUES (?,?,?,?,?)
+            """)
+        for table in snapshot.taxTables {
+            try taxTableInsert.execute(arguments: table.values.arguments)
+            for entry in table.entries {
+                try taxEntryInsert.execute(arguments: entry.arguments)
             }
         }
-        for customer in book.customers {
-            try db.execute(sql: """
-                INSERT INTO customer (guid, id, name, address, notes, active,
-                    currencyNamespace, currencyMnemonic, termsGuid, taxTableGuid,
-                    taxTableOverride, taxIncluded, discountPercent, creditLimit)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-                """, arguments: [customer.guid.hexString, customer.id, customer.name,
-                    encodeAddress(customer.address), customer.notes, customer.active,
-                    Serialize.namespace(customer.currency.namespace), customer.currency.mnemonic,
-                    customer.terms?.guid.hexString, customer.taxTable?.guid.hexString,
-                    customer.taxTableOverride, customer.taxIncluded,
-                    Serialize.decimal(customer.discountPercent),
-                    Serialize.decimal(customer.creditLimit)])
+        let customerInsert = try db.makeStatement(sql: """
+            INSERT INTO customer (guid, id, name, address, notes, active,
+                currencyNamespace, currencyMnemonic, termsGuid, taxTableGuid,
+                taxTableOverride, taxIncluded, discountPercent, creditLimit)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            """)
+        for row in snapshot.customers {
+            try customerInsert.execute(arguments: row.arguments)
         }
-        for vendor in book.vendors {
-            try db.execute(sql: """
-                INSERT INTO vendor (guid, id, name, address, notes, active,
-                    currencyNamespace, currencyMnemonic, termsGuid, taxTableGuid,
-                    taxTableOverride, taxIncluded, discountPercent, creditLimit)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-                """, arguments: [vendor.guid.hexString, vendor.id, vendor.name,
-                    encodeAddress(vendor.address), vendor.notes, vendor.active,
-                    Serialize.namespace(vendor.currency.namespace), vendor.currency.mnemonic,
-                    vendor.terms?.guid.hexString, vendor.taxTable?.guid.hexString,
-                    vendor.taxTableOverride, vendor.taxIncluded, "0", "0"])
+        let vendorInsert = try db.makeStatement(sql: """
+            INSERT INTO vendor (guid, id, name, address, notes, active,
+                currencyNamespace, currencyMnemonic, termsGuid, taxTableGuid,
+                taxTableOverride, taxIncluded, discountPercent, creditLimit)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            """)
+        for row in snapshot.vendors {
+            try vendorInsert.execute(arguments: row.arguments)
         }
-        for employee in book.employees {
-            try db.execute(sql: """
-                INSERT INTO employee (guid, id, username, address, notes, active,
-                    currencyNamespace, currencyMnemonic, hourlyRate, creditAccountGuid)
-                VALUES (?,?,?,?,?,?,?,?,?,?)
-                """, arguments: [employee.guid.hexString, employee.id, employee.username,
-                    encodeAddress(employee.address), employee.notes, employee.active,
-                    Serialize.namespace(employee.currency.namespace), employee.currency.mnemonic,
-                    Serialize.decimal(employee.hourlyRate), employee.creditAccount?.guid.hexString])
+        let employeeInsert = try db.makeStatement(sql: """
+            INSERT INTO employee (guid, id, username, address, notes, active,
+                currencyNamespace, currencyMnemonic, hourlyRate, creditAccountGuid)
+            VALUES (?,?,?,?,?,?,?,?,?,?)
+            """)
+        for row in snapshot.employees {
+            try employeeInsert.execute(arguments: row.arguments)
         }
-        for job in book.jobs {
-            try db.execute(sql: """
-                INSERT INTO job (guid, id, name, reference, active, ownerType, ownerGuid)
-                VALUES (?,?,?,?,?,?,?)
-                """, arguments: [job.guid.hexString, job.id, job.name, job.reference,
-                    job.active, job.owner.type.rawValue, job.owner.guid.hexString])
+        let jobInsert = try db.makeStatement(sql: """
+            INSERT INTO job (guid, id, name, reference, active, ownerType, ownerGuid)
+            VALUES (?,?,?,?,?,?,?)
+            """)
+        for row in snapshot.jobs {
+            try jobInsert.execute(arguments: row.arguments)
         }
-        for lot in book.lots {
-            try db.execute(sql: """
-                INSERT INTO lot (guid, accountGuid, title, notes, isClosed, kvp)
-                VALUES (?,?,?,?,?,?)
-                """, arguments: [lot.guid.hexString, lot.account?.guid.hexString, lot.title,
-                    lot.notes, lot.isClosed, Serialize.kvp(lot.kvp)])
-            for (position, split) in lot.splits.enumerated() {
-                try db.execute(sql: """
-                    INSERT INTO lot_split (lotGuid, splitGuid, position) VALUES (?,?,?)
-                    """, arguments: [lot.guid.hexString, split.guid.hexString, position])
+        let lotInsert = try db.makeStatement(sql: """
+            INSERT INTO lot (guid, accountGuid, title, notes, isClosed, kvp)
+            VALUES (?,?,?,?,?,?)
+            """)
+        let lotSplitInsert = try db.makeStatement(
+            sql: "INSERT INTO lot_split (lotGuid, splitGuid, position) VALUES (?,?,?)")
+        for lot in snapshot.lots {
+            try lotInsert.execute(arguments: lot.values.arguments)
+            for split in lot.splits {
+                try lotSplitInsert.execute(arguments: split.arguments)
             }
         }
-        for invoice in book.invoices {
-            try db.execute(sql: """
-                INSERT INTO invoice (guid, id, kind, isCreditNote, ownerType, ownerGuid, dateOpened,
-                    datePosted, dueDate, termsGuid, billingID, notes, currencyNamespace,
-                    currencyMnemonic, postedAccountGuid, postedTxnGuid, postedLotGuid, active, kvp)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-                """, arguments: [invoice.guid.hexString, invoice.id, invoice.kind.rawValue,
-                    invoice.isCreditNote,
-                    invoice.owner.type.rawValue, invoice.owner.guid.hexString, invoice.dateOpened,
-                    invoice.datePosted, invoice.dueDate, invoice.terms?.guid.hexString,
-                    invoice.billingID, invoice.notes,
-                    Serialize.namespace(invoice.currency.namespace), invoice.currency.mnemonic,
-                    invoice.postedAccount?.guid.hexString, invoice.postedTransaction?.guid.hexString,
-                    invoice.postedLot?.guid.hexString, invoice.active,
-                    Serialize.kvp(invoice.kvp)])
-            for (position, entry) in invoice.entries.enumerated() {
-                try db.execute(sql: """
-                    INSERT INTO invoice_entry (guid, invoiceGuid, date, entered, entryDescription,
-                        action, accountGuid, quantity, price, discount, discountType,
-                        discountHow, taxable, taxIncluded, taxTableGuid, position)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-                    """, arguments: [entry.guid.hexString, invoice.guid.hexString, entry.date,
-                        entry.entered,
-                        entry.entryDescription, entry.action, entry.account?.guid.hexString,
-                        Serialize.decimal(entry.quantity), Serialize.decimal(entry.price),
-                        Serialize.decimal(entry.discount), entry.discountType.rawValue,
-                        entry.discountHow.rawValue,
-                        entry.taxable, entry.taxIncluded, entry.taxTable?.guid.hexString, position])
+        let invoiceInsert = try db.makeStatement(sql: """
+            INSERT INTO invoice (guid, id, kind, isCreditNote, ownerType, ownerGuid, dateOpened,
+                datePosted, dueDate, termsGuid, billingID, notes, currencyNamespace,
+                currencyMnemonic, postedAccountGuid, postedTxnGuid, postedLotGuid, active, kvp)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            """)
+        let entryInsert = try db.makeStatement(sql: """
+            INSERT INTO invoice_entry (guid, invoiceGuid, date, entered, entryDescription,
+                action, accountGuid, quantity, price, discount, discountType,
+                discountHow, taxable, taxIncluded, taxTableGuid, position)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            """)
+        for invoice in snapshot.invoices {
+            try invoiceInsert.execute(arguments: invoice.values.arguments)
+            for entry in invoice.entries {
+                try entryInsert.execute(arguments: entry.arguments)
             }
         }
     }
@@ -301,7 +279,7 @@ extension SQLiteDocumentStore {
 
     // MARK: - Address (JSON)
 
-    private static func encodeAddress(_ address: BusinessAddress) -> String? {
+    static func encodeAddress(_ address: BusinessAddress) -> String? {
         (try? JSONEncoder().encode(address)).flatMap { String(data: $0, encoding: .utf8) }
     }
     private static func decodeAddress(_ text: String?) -> BusinessAddress {

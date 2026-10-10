@@ -418,6 +418,29 @@ public final class AppModel {
     /// even though the rows themselves are not stored observed properties.
     private var derivedRevision = 0
 
+    /// Bumped by a `.preference`-scoped kvp edit (see ``KvpEditScope``); read
+    /// by the getters of the settings it covers so their views redraw.
+    public private(set) var preferencesRevision = 0
+
+    /// Bumped whenever the document's dirty state may have changed — an edit,
+    /// a save — so ``hasUnsavedChanges``' readers (the Save menu) re-evaluate
+    /// without a full refresh after every save (Performance Review 2, R8).
+    public private(set) var documentStateRevision = 0
+
+    /// Bumped whenever ``registerRows`` (or the journal caches the whole-book
+    /// register reads) are actually rebuilt — not on every ``derivedRevision``
+    /// move. The register surfaces key their base rows on this rather than on
+    /// ``bookRevision``, so a price-only edit, which changes valuations but
+    /// not one register row, no longer costs them a rebuild (Performance
+    /// Review 2, R8).
+    public private(set) var registerRevision = 0
+
+    /// Bumped by every `.book`-scoped refresh — whenever transactions, splits
+    /// or accounts may have changed — and never by a price-only edit. The
+    /// whole-book register keys its rows on it, and so do memos of facts that
+    /// are about transactions alone (`legRows`, the linked-document list).
+    public private(set) var transactionRevision = 0
+
     /// The book-state revision, for views that key async work off "did the
     /// book change" (P3's `.task(id:)` pattern). Observable: bumping it is
     /// what redraws report views after an edit.
@@ -446,8 +469,24 @@ public final class AppModel {
     /// observed state that does drive the redraw. Writing them from a getter
     /// must not notify observers, or reading a row inside a view's body would
     /// invalidate that body.
+    @ObservationIgnored var securityCommoditiesCache: (revision: Int, value: [Commodity])?
     @ObservationIgnored private var priceRowCache: [PriceRow]?
     @ObservationIgnored private var rateRowCache: [RateRow]?
+
+    /// ``availableProviders``' memo and the revision that drops it. A keyed
+    /// provider is "available" when the Keychain holds a key for it, and the
+    /// Keychain is a round trip to `securityd` — which the list used to make
+    /// per keyed provider on every read, and a fetch run read it once per
+    /// security (Performance Review 2, R9). Keys change only through
+    /// ``setAPIKey(_:for:)`` in this process, which bumps the revision.
+    @ObservationIgnored var availableProvidersCache: (revision: Int, value: [QuoteProviderKind])?
+    public internal(set) var apiKeysRevision = 0
+
+    /// ``legRows(ofTransaction:)``' memo, dropped when ``transactionRevision``
+    /// moves: a leg's account `fullName` is a recursive string build per split,
+    /// and every register surface asks for the same legs again and again.
+    @ObservationIgnored var legRowsCache: [GncGUID: [AutoSplitRow]] = [:]
+    @ObservationIgnored var legRowsRevision = -1
 
     /// Memoised results of the pure report functions (balance sheet, income
     /// statement, portfolio, net-worth series…), keyed by a per-call signature.
@@ -498,16 +537,31 @@ public final class AppModel {
 
     @ObservationIgnored private var descriptionRecencyCache: [(text: String, folded: String)] = []
     @ObservationIgnored private var descriptionRecencyRevision = -1
+    /// Each transaction's folded description, kept across revisions: an edit
+    /// changes one description, so re-folding all 46k on the next keystroke
+    /// was the avoidable half of a 139 ms hitch (Performance Review 2, R7).
+    @ObservationIgnored private var descriptionFolds: [GncGUID: (text: String, folded: String)] = [:]
 
     var recentDistinctDescriptions: [(text: String, folded: String)] {
         if descriptionRecencyRevision != derivedRevision {
             var seen = Set<String>()
             var entries: [(text: String, folded: String)] = []
+            var folds: [GncGUID: (text: String, folded: String)] = [:]
+            folds.reserveCapacity(descriptionFolds.count)
             for txn in (book?.transactions ?? []).sorted(by: { $0.datePosted > $1.datePosted }) {
                 let description = txn.transactionDescription
-                guard !description.isEmpty, seen.insert(description).inserted else { continue }
-                entries.append((description, description.lowercased()))
+                guard !description.isEmpty else { continue }
+                let entry: (text: String, folded: String)
+                if let known = descriptionFolds[txn.guid], known.text == description {
+                    entry = known
+                } else {
+                    entry = (description, description.lowercased())
+                }
+                folds[txn.guid] = entry
+                guard seen.insert(description).inserted else { continue }
+                entries.append(entry)
             }
+            descriptionFolds = folds
             descriptionRecencyCache = entries
             descriptionRecencyRevision = derivedRevision
         }
@@ -913,7 +967,27 @@ public final class AppModel {
             // state file — sorting a register is not an edit, and must not
             // mark the document dirty or show up in an export.
             persistRegisterViewState(for: oldAccount)
-            restoreRegisterViewState(for: newAccount)
+            // Only an account destination needs its register built. Leaving
+            // for Overview or Reports keeps the rows — nothing shows them
+            // there — so coming back to the same account finds them, and the
+            // view-state restore below is applied under one suspended refresh
+            // rather than one rebuild per setter (Performance Review 2, R7).
+            if newAccount != nil {
+                isRestoringRegisterView = true
+                restoreRegisterViewState(for: newAccount)
+                isRestoringRegisterView = false
+                refreshRegister()
+            }
+        }
+        if case .generalLedger = sidebarSelection, old != sidebarSelection {
+            // All Transactions is a register destination too: it opens in the
+            // default arrangement — never under the last account's sort or
+            // filter — and reads an empty `registerRows`, so the account's
+            // rows must go, whichever way here was taken (through Overview
+            // included).
+            isRestoringRegisterView = true
+            resetRegisterView()
+            isRestoringRegisterView = false
             refreshRegister()
         }
         persistSessionSelection()
@@ -1004,21 +1078,43 @@ public final class AppModel {
 
     /// Display order of the register (`FR-REG-01`).
     public var registerSort: RegisterSort = .standard {
-        didSet { if oldValue != registerSort { refreshRegister() } }
+        didSet { if oldValue != registerSort, !isRestoringRegisterView { refreshRegister() } }
     }
     /// Reverses ``registerSort``.
     public var registerSortReversed = false {
-        didSet { if oldValue != registerSortReversed { refreshRegister() } }
+        didSet { if oldValue != registerSortReversed, !isRestoringRegisterView { refreshRegister() } }
     }
     /// Which rows the register shows (`FR-REG-01`).
     public var registerFilter: RegisterFilter = .showAll {
-        didSet { if oldValue != registerFilter { refreshRegister() } }
+        didSet { if oldValue != registerFilter, !isRestoringRegisterView { refreshRegister() } }
     }
     /// GnuCash's Open Subaccounts: show the selected account's whole subtree in
     /// one register, not just its own postings (`FR-ACC-03`).
     public var registerIncludesSubaccounts = false {
-        didSet { if oldValue != registerIncludesSubaccounts { refreshRegister() } }
+        didSet { if oldValue != registerIncludesSubaccounts, !isRestoringRegisterView { refreshRegister() } }
     }
+
+    /// Suspends the view-state setters' own refreshes while a saved register
+    /// arrangement is applied field by field; the caller refreshes once after.
+    @ObservationIgnored private var isRestoringRegisterView = false
+
+    /// What the current `registerRows` were built from. A rebuild asked for
+    /// the same inputs — returning to an account whose rows are still there,
+    /// a view-state restore that changed nothing — is skipped.
+    struct RegisterBuildKey: Equatable {
+        let account: GncGUID
+        let revision: Int
+        let sort: RegisterSort
+        let reversed: Bool
+        let filter: RegisterFilter
+        let subaccounts: Bool
+        /// The summary's present/future split is taken at build time, so a
+        /// build from yesterday is not the same build today.
+        let day: Date
+    }
+    @ObservationIgnored private var lastRegisterBuildKey: RegisterBuildKey?
+    /// The first register row of each transaction in `registerRows`.
+    @ObservationIgnored var registerSplitByTransaction: [GncGUID: GncGUID] = [:]
 
     /// Resets the register's view options — called when the book closes, so a
     /// filter set on one book can't quietly hide rows in the next.
@@ -1044,7 +1140,7 @@ public final class AppModel {
         var subaccounts: Bool
     }
 
-    private static func registerViewKey(_ id: GncGUID) -> String {
+    static func registerViewKey(_ id: GncGUID) -> String {
         "registerView.\(id.hexString)"
     }
 
@@ -1521,6 +1617,7 @@ public final class AppModel {
     /// Bumped when the sidecar changes. The cache is a file, not an observed
     /// object, so without this a freshly fetched profile would sit on disk
     /// while the page kept drawing the absence of one.
+    @ObservationIgnored var fundamentalsMemo: [String: (revision: UInt64, record: SecurityFundamentals?)] = [:]
     public internal(set) var fundamentalsRevision: UInt64 = 0
 
     /// The running periodic quote-refresh loop, if any.
@@ -1556,7 +1653,10 @@ public final class AppModel {
     /// The open document's file URL (window title / titlebar proxy icon).
     public var documentURL: URL? { document?.fileURL }
     /// `true` when there are unsaved changes.
-    public var hasUnsavedChanges: Bool { document?.hasUnsavedChanges ?? false }
+    public var hasUnsavedChanges: Bool {
+        _ = documentStateRevision   // the document's flag is not observable; this is
+        return document?.hasUnsavedChanges ?? false
+    }
 
     /// True when the open book was opened read-only (`FR-DAT-06`) — editing and
     /// saving are refused; the shared file is never touched.
@@ -1723,27 +1823,50 @@ public final class AppModel {
     public func editingPrices(named: String, _ body: () -> Void) {
         if isReadOnly { return }
         auditLog(named)
-        let before = book?.prices ?? []
+        // The book records what the body adds and removes; the undo is the
+        // inverse of that log. Snapshotting `prices` instead cost a copy of
+        // the whole database — 163k rows on the reference book — the moment
+        // the body appended to it (Performance Review 2, R8).
+        book?.beginRecordingPriceChanges()
         body()
-        refreshAfterChange()
-        guard isOpen else { return }
+        let changes = book?.endRecordingPriceChanges() ?? []
+        // Price-scoped: the register, the journal caches and the search stay
+        // (see ``RefreshScope``). Every body routed here mutates `book.prices`
+        // alone — that is also what makes the undo below sufficient.
+        refreshAfterChange(scope: .prices)
+        guard isOpen, !changes.isEmpty else { return }
         undoManager?.registerUndo(withTarget: self) { model in
-            model.editingPrices(named: named) { model.book?.replaceAllPrices(before) }
+            model.editingPrices(named: named) { model.book?.revertPriceChanges(changes) }
         }
         undoManager?.setActionName(named)
     }
 
     /// Scoped undo for edits that touch only the **book's kvp frame**
     /// (settings, serialized collections). Same rationale as ``editingPrices``.
-    func editingBookKvp(named: String, _ body: () -> Void) {
+    /// What a kvp edit invalidates. `.book` is the default and drops every
+    /// derived cache. `.preference` is for a display setting the book happens
+    /// to store — the sparkline window, Show Closed Positions — which changes
+    /// no balance, row or report: it marks the document dirty and bumps
+    /// ``preferencesRevision``, which the setting's readers observe, and
+    /// nothing else (Performance Review 2, R6/R8).
+    enum KvpEditScope { case book, preference }
+
+    func editingBookKvp(named: String, scope: KvpEditScope = .book, _ body: () -> Void) {
         if isReadOnly { return }
         auditLog(named)
         let before = book?.kvp
         body()
-        refreshAfterChange()
+        switch scope {
+        case .book:
+            refreshAfterChange()
+        case .preference:
+            document?.markDirty()
+            documentStateRevision &+= 1
+            preferencesRevision &+= 1
+        }
         guard isOpen, let before else { return }
         undoManager?.registerUndo(withTarget: self) { model in
-            model.editingBookKvp(named: named) {
+            model.editingBookKvp(named: named, scope: scope) {
                 model.book?.kvp = before
                 // The published collections mirror kvp slots; without a reload
                 // the next persist would re-write the undone values.
@@ -1805,8 +1928,8 @@ public final class AppModel {
             // Off the main actor: materialising the book is seconds of CPU on a
             // large file, and the window cannot repaint while it runs.
             document = try await FinvestLensDocument.load(at: accessURL,
-                                                          breakStaleLock: breakStaleLock) { progress in
-                Task { @MainActor [weak self] in self?.recordLoadProgress(progress) }
+                                                          breakStaleLock: breakStaleLock) { [weak self] progress in
+                Task { @MainActor in self?.recordLoadProgress(progress) }
             }
         } catch {
             endBookAccess()
@@ -1848,8 +1971,8 @@ public final class AppModel {
         defer { openingURL = nil; loadProgress = nil }
         let accessURL = beginBookAccess(to: url)
         do {
-            document = try await FinvestLensDocument.loadReadOnly(at: accessURL) { progress in
-                Task { @MainActor [weak self] in self?.recordLoadProgress(progress) }
+            document = try await FinvestLensDocument.loadReadOnly(at: accessURL) { [weak self] progress in
+                Task { @MainActor in self?.recordLoadProgress(progress) }
             }
         } catch {
             endBookAccess()
@@ -2244,8 +2367,8 @@ public final class AppModel {
     public func importGnuCash(from source: URL, saveAs destination: URL,
                               breakStaleLock: Bool = false) async throws -> ImportSummary {
         let (doc, summary) = try await performGnuCashImport(
-            source: source, destination: destination, breakStaleLock: breakStaleLock) { progress in
-                Task { @MainActor [weak self] in self?.recordLoadProgress(progress) }
+            source: source, destination: destination, breakStaleLock: breakStaleLock) { [weak self] progress in
+                Task { @MainActor in self?.recordLoadProgress(progress) }
             }
         document = doc
         reloadKvpCollections()
@@ -2338,7 +2461,9 @@ public final class AppModel {
 
     public func save() throws {
         try document?.save()
-        refreshAll()
+        // A save changes the file, not the book: nothing derived needs
+        // rebuilding, only the dirty flag's readers need to look again.
+        documentStateRevision &+= 1
         publishWidgetData()
     }
 
@@ -2359,20 +2484,21 @@ public final class AppModel {
         defer { isSaving = false }
         await Task.yield()   // commit the chip before the staging walk
         do {
-            // Phase 1 on the main actor, because it reads the book. Phase 2 —
-            // the write-back to the shared file — touches no book state, so it
-            // goes to a background thread: on a NAS or a cloud-synced folder
-            // that is where the seconds are, and doing it here froze the
-            // window for the whole autosave. Phase 3 records the result back
-            // on the main actor.
-            let token = try document.stageSave()
-            let workingCopy = document.workingCopyURL
-            let target = document.fileURL
+            // Phase 1 on the main actor, because it reads the book — but only
+            // into a value snapshot, a fraction of a second. Phase 2 — the
+            // SQLite rewrite of the working copy and the write-back to the
+            // shared file — reads nothing but that snapshot, so it goes to a
+            // background thread: that is where the seconds are (9.6 s for the
+            // whole save on the reference book, measured 9 Oct 2026), and
+            // doing the rewrite here froze the window for every autosave.
+            // Phase 3 records the result back on the main actor; an edit made
+            // meanwhile leaves the document dirty for the next save.
+            let staged = try document.stageSnapshot()
             let fingerprint = try await Task.detached(priority: .userInitiated) {
-                try FinvestLensDocument.commitSave(workingCopy: workingCopy, to: target)
+                try FinvestLensDocument.commitStaged(staged)
             }.value
-            document.finishSave(fingerprint: fingerprint, stagedAt: token)
-            refreshAll()
+            document.finishSave(fingerprint: fingerprint, stagedAt: staged.token)
+            documentStateRevision &+= 1
             publishWidgetData()
             // A book opened from Box is pushed back as a new version. After
             // the local write-back, so the bytes uploaded are the ones on
@@ -2470,7 +2596,7 @@ public final class AppModel {
         guard let book else { return nil }
         let parent = parentID.flatMap { book.account(with: $0) } ?? book.rootAccount
         let account = Account(name: name, type: type, commodity: commodity ?? parent.commodity)
-        editingWholeBook(named: "Add Account") {
+        editing(accounts: [account.guid], named: "Add Account") {
             book.addAccount(account, under: parent)
         }
         return account.guid
@@ -2615,7 +2741,11 @@ public final class AppModel {
             moveChildrenTo = target
         }
 
-        editingWholeBook(named: "Delete Account") {
+        // The account, the children it hands on (parents first), and every
+        // transaction whose postings move — nothing else changes.
+        let childIDs = account.children.map(\.guid)
+        let touched = Array(Set(book.splits(for: account).compactMap { $0.transaction?.guid }))
+        editing(accounts: [id] + childIDs, transactions: touched, named: "Delete Account") {
             if let moveSplitsTo {
                 for split in book.splits(for: account) { split.account = moveSplitsTo }
             }
@@ -2642,7 +2772,7 @@ public final class AppModel {
         }
         guard !children.isEmpty else { return }
         let width = String((children.count) * max(interval, 1)).count
-        editingWholeBook(named: "Renumber Accounts") {
+        editing(accounts: children.map(\.guid), named: "Renumber Accounts") {
             for (index, child) in children.enumerated() {
                 let number = (index + 1) * max(interval, 1)
                 child.code = prefix + String(format: "%0\(width)d", number)
@@ -2670,16 +2800,32 @@ public final class AppModel {
 
     // MARK: Snapshots
 
-    func refreshAll() {
-        // Splits are added/removed on their transactions inside edit closures,
-        // which the book cannot observe — drop its GUID lookup indexes here.
-        book?.invalidateLookupIndexes()
-        journalTransactionCache = [:]
-        journalRowCache = [:]
+    /// What an edit invalidates (Performance Review 2, R8).
+    ///
+    /// `.book` drops everything derived. `.prices` is for an edit that touches
+    /// only the price database — a quote refresh, a hand-entered price, an
+    /// exchange rate. That changes valuations: the account tree's converted
+    /// balances, every report memo, the price editor's rows. It changes no
+    /// register row, journal row or search result — those are built from
+    /// splits and transaction currencies, never from prices — and it cannot
+    /// stale the book's split lookup indexes, so none of that is touched.
+    enum RefreshScope { case book, prices }
+
+    func refreshAll(scope: RefreshScope = .book) {
+        if scope == .book {
+            // Splits are added/removed on their transactions inside edit
+            // closures, which the book cannot observe — drop its GUID lookup
+            // indexes here.
+            book?.invalidateLookupIndexes()
+            journalTransactionCache = [:]
+            journalRowCache = [:]
+        }
         priceRowCache = nil
         rateRowCache = nil
         derivedRevision &+= 1
+        if scope == .book { transactionRevision &+= 1 }
         rebuildAccountTree()
+        guard scope == .book else { return }
         refreshRegister()
         // Whichever search is showing has to survive an edit: editing a result
         // from the results table must leave the other results on screen. The
@@ -2694,10 +2840,12 @@ public final class AppModel {
     /// the undo stack, so it is *not* how a user's edit gets applied — those go
     /// through ``editing(_:named:)`` or ``editingWholeBook(named:)``, which call
     /// this for you.
-    func refreshAfterChange() {
+    func refreshAfterChange(scope: RefreshScope = .book) {
         document?.markDirty()
-        refreshAll()
-        pruneDeadTabs()
+        documentStateRevision &+= 1
+        refreshAll(scope: scope)
+        // A price cannot delete anything a tab shows.
+        if scope == .book { pruneDeadTabs() }
     }
 
     /// Closes any tab whose subject the book no longer has.
@@ -2822,13 +2970,22 @@ public final class AppModel {
         undoManager?.setActionName(named)
     }
 
-    /// An account's restorable state before an edit: its value fields plus where
-    /// it sat in the tree. Transactions are untouched, so an account edit never
-    /// needs the whole-book snapshot — the same reason ``editing(_:named:)``
-    /// exists for transactions. The parent slot preserves placement so an undone
-    /// move returns the account to its exact former position.
+    /// An account's restorable state before an edit — its value fields plus
+    /// where it sat in the tree — or `nil` when it did not exist, which makes
+    /// undo-of-add and redo-of-delete the same operation, as
+    /// ``TransactionSnapshot`` does for transactions. Transactions are not
+    /// captured here; an edit that moves postings names them separately
+    /// (``editing(accounts:transactions:prices:named:_:)``), so an account edit
+    /// never needs the whole-book serialisation ``editingWholeBook`` costs.
     struct AccountSnapshot {
         let id: GncGUID
+        let state: AccountState?
+    }
+
+    struct AccountState {
+        /// The live object itself, so an account the edit took out of the tree
+        /// goes back with its identity — and its GUID — intact.
+        let object: Account
         let name: String
         let type: AccountType
         let code: String
@@ -2842,16 +2999,16 @@ public final class AppModel {
         let indexInParent: Int
     }
 
-    private func accountSnapshot(_ id: GncGUID) -> AccountSnapshot? {
-        guard let account = book?.account(with: id) else { return nil }
+    private func accountSnapshot(_ id: GncGUID) -> AccountSnapshot {
+        guard let account = book?.account(with: id) else { return AccountSnapshot(id: id, state: nil) }
         let siblings = account.parent?.children ?? []
-        return AccountSnapshot(
-            id: id, name: account.name, type: account.type, code: account.code,
+        return AccountSnapshot(id: id, state: AccountState(
+            object: account, name: account.name, type: account.type, code: account.code,
             accountDescription: account.accountDescription, notes: account.notes,
             commodity: account.commodity, isPlaceholder: account.isPlaceholder,
             isHidden: account.isHidden, kvp: account.kvp,
             parentID: account.parent?.guid,
-            indexInParent: siblings.firstIndex { $0 === account } ?? 0)
+            indexInParent: siblings.firstIndex { $0 === account } ?? 0))
     }
 
     /// Applies `body` as one undoable edit of the accounts named by `ids`.
@@ -2861,39 +3018,148 @@ public final class AppModel {
     /// captured — transactions and other accounts are not — so an account edit
     /// no longer pays the whole-book serialisation ``editingWholeBook`` costs.
     func editingAccounts(_ ids: [GncGUID], named: String, _ body: () -> Void) {
+        editing(accounts: ids, named: named, body)
+    }
+
+    /// Applies `body` as one undoable edit of named accounts and transactions,
+    /// and optionally the price database — the scoped alternative to
+    /// ``editingWholeBook(named:_:)`` for everything that is not structural
+    /// (Performance Review 2, R2: the whole-book snapshot was 6.65 s on the
+    /// reference book, paid by New Account and Change Colour alike).
+    ///
+    /// `accounts` must name every *existing* account `body` changes — for a
+    /// deletion, the account and the children it re-parents, parents before
+    /// children. Accounts `body` creates need not be named: the account set is
+    /// compared before and after, and any newcomer is recorded as "did not
+    /// exist", so undoing the edit removes it. `transactions` must name every
+    /// transaction `body` touches, including ones it creates. `prices`
+    /// snapshots the price database — a value array, free until mutated — for
+    /// an edit that records a rate alongside.
+    func editing(accounts accountIDs: [GncGUID], transactions transactionIDs: [GncGUID] = [],
+                 prices snapshotsPrices: Bool = false, named: String, _ body: () -> Void) {
         if isReadOnly { return }   // read-only session: edits are refused (FR-DAT-06)
         auditLog(named)
-        let before = ids.compactMap { accountSnapshot($0) }
+        let idsBefore = Set(book?.accounts.map(\.guid) ?? [])
+        // An account that brings a new security registers its commodity, which
+        // removing the account does not undo — so the ones the body adds are
+        // unregistered again (when nothing else uses them) on the way back.
+        let commoditiesBefore = Set(book?.commodities ?? [])
+        var accountsBefore = accountIDs.map { accountSnapshot($0) }
+        let transactionsBefore = transactionIDs.map {
+            TransactionSnapshot(id: $0, state: book?.transaction(with: $0)?.detachedCopy())
+        }
+        if snapshotsPrices { book?.beginRecordingPriceChanges() }
         body()
+        let priceChanges = snapshotsPrices ? (book?.endRecordingPriceChanges() ?? []) : []
+        let created = (book?.accounts.map(\.guid) ?? []).filter {
+            !idsBefore.contains($0) && !accountIDs.contains($0)
+        }
+        accountsBefore += created.map { AccountSnapshot(id: $0, state: nil) }
+        let allAccountIDs = accountIDs + created
         refreshAfterChange()
         guard isOpen else { return }
+        let snapshots = accountsBefore
         undoManager?.registerUndo(withTarget: self) { model in
-            model.editingAccounts(ids, named: named) { model.restoreAccounts(before) }
+            model.editing(accounts: allAccountIDs, transactions: transactionIDs,
+                          prices: snapshotsPrices, named: named) {
+                // Accounts first: a restored transaction re-resolves its splits'
+                // accounts by GUID, so an account the edit removed must be back
+                // in the tree before the postings that pointed at it are.
+                model.restoreAccounts(snapshots)
+                model.restore(transactionsBefore)
+                if !priceChanges.isEmpty { model.book?.revertPriceChanges(priceChanges) }
+                for commodity in model.book?.commodities ?? [] where !commoditiesBefore.contains(commodity) {
+                    _ = model.book?.unregisterCommodity(commodity)
+                }
+            }
         }
         undoManager?.setActionName(named)
     }
 
-    /// Puts snapshotted accounts back as they were, including their tree slot.
+    /// Puts snapshotted accounts back as they were, including their tree slot;
+    /// re-inserts the ones the edit removed and removes the ones it created.
     private func restoreAccounts(_ snapshots: [AccountSnapshot]) {
         guard let book else { return }
+        // Pass 1 — membership. An account the edit removed goes back under its
+        // former parent *before* anything is placed relative to it; one the
+        // edit created leaves the tree. Callers list parents before children,
+        // so a removed subtree comes back top-down.
         for snapshot in snapshots {
-            guard let account = book.account(with: snapshot.id) else { continue }
-            account.name = snapshot.name
-            account.type = snapshot.type
-            account.code = snapshot.code
-            account.accountDescription = snapshot.accountDescription
-            account.notes = snapshot.notes
-            account.commodity = snapshot.commodity
-            account.isPlaceholder = snapshot.isPlaceholder
-            account.isHidden = snapshot.isHidden
-            account.kvp = snapshot.kvp
-            // Re-parent only if it actually moved, restoring the former slot.
-            let parent = snapshot.parentID.flatMap { book.account(with: $0) } ?? book.rootAccount
-            if account.parent !== parent
-                || (account.parent?.children.firstIndex { $0 === account }) != snapshot.indexInParent {
-                parent.addChild(account, at: snapshot.indexInParent)
+            let live = book.account(with: snapshot.id)
+            guard let state = snapshot.state else {
+                if let live { live.parent?.removeChild(live) }
+                continue
+            }
+            if live == nil {
+                let parent = state.parentID.flatMap { book.account(with: $0) } ?? book.rootAccount
+                parent.addChild(state.object, at: state.indexInParent)
+                // `addChild` is the tree alone; `Book.addAccount` would also
+                // have registered the commodity, and a redo of Add Account
+                // (whose undo unregistered it) must do the same, or the saved
+                // commodity table loses it and the loader guesses a fraction.
+                book.registerCommodity(state.object.commodity)
             }
         }
+        // Pass 2 — fields and placement, for everything that exists now.
+        for snapshot in snapshots {
+            guard let state = snapshot.state, let account = book.account(with: snapshot.id) else { continue }
+            account.name = state.name
+            account.type = state.type
+            account.code = state.code
+            account.accountDescription = state.accountDescription
+            account.notes = state.notes
+            account.commodity = state.commodity
+            account.isPlaceholder = state.isPlaceholder
+            account.isHidden = state.isHidden
+            account.kvp = state.kvp
+            // Re-parent only if it actually moved, restoring the former slot.
+            let parent = state.parentID.flatMap { book.account(with: $0) } ?? book.rootAccount
+            if account.parent !== parent
+                || (account.parent?.children.firstIndex { $0 === account }) != state.indexInParent {
+                parent.addChild(account, at: state.indexInParent)
+            }
+        }
+    }
+
+    /// Scoped undo for an edit of one commodity — a rename, an identifier, a
+    /// newly added security. The inverse is replayed rather than a snapshot
+    /// restored: the metadata lives on every account and price that uses the
+    /// commodity, and `Book.updateCommodityMetadata` is the one way to write
+    /// it everywhere. The book's kvp frame rides along for the watch-list
+    /// mirror that a rename updates.
+    func editingCommodity(_ commodity: Commodity, named: String, _ body: () -> Void) {
+        if isReadOnly { return }
+        auditLog(named)
+        let stored = book?.commodities.first { $0 == commodity }
+        let kvpBefore = book?.kvp
+        body()
+        refreshAfterChange()
+        guard isOpen, let kvpBefore else { return }
+        undoManager?.registerUndo(withTarget: self) { model in
+            model.editingCommodity(commodity, named: named) {
+                guard let book = model.book else { return }
+                if let stored {
+                    book.registerCommodity(stored)
+                    book.updateCommodityMetadata(stored, fullName: stored.fullName,
+                                                 smallestFraction: stored.smallestFraction,
+                                                 exchangeCode: stored.exchangeCode ?? "")
+                } else {
+                    book.unregisterCommodity(commodity)
+                }
+                book.kvp = kvpBefore
+                model.reloadKvpCollections()
+            }
+        }
+        undoManager?.setActionName(named)
+    }
+
+    /// Runs `body` as one undo step. For a sheet whose Save makes several
+    /// model calls, each undoable on its own, so one ⌘Z takes back the save.
+    public func groupingUndo(named: String, _ body: () -> Void) {
+        undoManager?.beginUndoGrouping()
+        body()
+        undoManager?.endUndoGrouping()
+        undoManager?.setActionName(named)
     }
 
     /// Applies `body` as one undoable edit of the whole book, exporting it
@@ -3082,22 +3348,35 @@ public final class AppModel {
         unreconciledRowsRevision = -1
         guard let book, let id = selectedAccountID, let account = book.account(with: id) else {
             registerRows = []
+            registerSplitByTransaction = [:]
             registerSummary = nil
+            lastRegisterBuildKey = nil
+            // No bump: the whole-book register keys its rows on
+            // `transactionRevision`, so arriving at All Transactions with no
+            // edit in between rebuilds nothing.
             return
         }
+        let buildKey = RegisterBuildKey(account: id, revision: derivedRevision, sort: registerSort,
+                                        reversed: registerSortReversed, filter: registerFilter,
+                                        subaccounts: registerIncludesSubaccounts,
+                                        day: Calendar.current.startOfDay(for: Date()))
+        if buildKey == lastRegisterBuildKey, !registerRows.isEmpty { return }
+        lastRegisterBuildKey = buildKey
+        registerRevision &+= 1
         // GnuCash's Open Subaccounts shows the subtree's postings in one
         // register. The accounts, not just the one, decide which splits belong.
         let focus = registerIncludesSubaccounts ? [account] + account.descendants : [account]
-        let focusSet = Set(focus.map { ObjectIdentifier($0) })
 
         // Canonical order first, and the balance with it: a row's balance is the
         // account's balance as of that posting, so it must be accumulated over
         // *every* split in date order — before any filter hides rows and before
         // any sort moves them. GnuCash does the same: sort its register by
         // amount and each row still shows the balance it had in date order.
-        let splits = book.transactions
-            .flatMap(\.splits)
-            .filter { $0.account.map { focusSet.contains(ObjectIdentifier($0)) } ?? false }
+        // Through the per-account index, not every split in the book: the old
+        // gather was 13 ms of O(book) for an O(account) question on every
+        // click and edit (Performance Review 2, R7).
+        let splits = focus
+            .flatMap { book.splits(for: $0) }
             .sorted { a, b in
                 // GnuCash's canonical order, so same-date rows and their running
                 // balances match its register (date, num/action, entered, …).
@@ -3168,6 +3447,13 @@ public final class AppModel {
             )
         }
         registerRows = ordered(filtered(rows))
+        // First row per transaction, for `registerSplitID(ofTransaction:)` —
+        // a dictionary built once per rebuild where the iPad's selection path
+        // scanned the rows per selected row, quadratic on select-all
+        // (Performance Review 2, R10).
+        registerSplitByTransaction = Dictionary(
+            registerRows.compactMap { row in transactionID(ofSplit: row.id).map { ($0, row.id) } },
+            uniquingKeysWith: { first, _ in first })
 
         // Same gate as the running balance: a mixed-commodity sum means
         // nothing, so the strip is withheld rather than wrong. The filter is

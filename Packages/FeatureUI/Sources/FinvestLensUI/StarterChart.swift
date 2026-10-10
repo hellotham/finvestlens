@@ -54,7 +54,7 @@ extension AppModel {
     /// (`FR-COA-03`). Returns the number of accounts created.
     @discardableResult
     public func createStarterAccounts() -> Int {
-        guard let book else { return 0 }
+        guard book != nil else { return 0 }
         var ids: [GncGUID?] = []
         for node in StarterChart.nodes {
             let parentID = node.parent.flatMap { ids[$0] }

@@ -164,7 +164,7 @@ public enum BudgetAdvisor {
                     \(listing)
                     """,
                 generating: ModelBudget.self,
-                options: GenerationOptions(sampling: .greedy)
+                options: .greedy
             ).content
 
             var lines: [BudgetSuggestionLine] = []

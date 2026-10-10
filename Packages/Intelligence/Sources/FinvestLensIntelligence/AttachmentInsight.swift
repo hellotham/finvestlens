@@ -75,7 +75,7 @@ public enum AttachmentInsight {
                     \(documentText)
                     """,
                 generating: ModelAnswer.self,
-                options: GenerationOptions(sampling: .greedy)
+                options: .greedy
             )
             guard let hit = AccountNameMatcher.match(response.content.category, in: offered) else {
                 return nil

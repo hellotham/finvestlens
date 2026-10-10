@@ -116,8 +116,8 @@ public extension FinancialReports {
     /// Public because every "compare against the period before" surface needs
     /// the same answer — ``AppModel/spendingInsights(period:)`` kept its own
     /// seconds-based copy and so drew March against 29 January – 28 February.
-    public static func periodStart(before from: Date, coveringThrough through: Date,
-                                   calendar cal: Calendar = .current) -> Date {
+    static func periodStart(before from: Date, coveringThrough through: Date,
+                            calendar cal: Calendar = .current) -> Date {
         // Measure to the *exclusive* end so a whole month reads as exactly one
         // month rather than "30 days, 23 hours, 59 minutes and 59 seconds".
         // Measured *backwards*, so the calendar hands back the negated span

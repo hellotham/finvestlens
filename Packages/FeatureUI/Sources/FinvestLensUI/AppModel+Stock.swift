@@ -143,6 +143,39 @@ extension AppModel {
         referenceIsBankUnique: Bool = true
     ) throws -> GncGUID {
         guard let book else { throw StockEntryError.noBook }
+        let txn = try buildStockTransaction(action: action, securityID: securityID, settlementID: settlementID, incomeID: incomeID, commissionID: commissionID, shares: shares, pricePerShare: pricePerShare, amount: amount, commission: commission, splitNew: splitNew, splitOld: splitOld, date: date, description: description, memo: memo, reference: reference, referenceIsBankUnique: referenceIsBankUnique)
+        editing([txn.guid], named: "Add Stock Transaction") {
+            book.addTransaction(txn)
+        }
+        return txn.guid
+    }
+
+    /// The transaction ``recordStockTransaction`` would post, built and
+    /// stamped but not yet in the book — so a batch can build every row
+    /// first and post them all as one edit (Performance Review 2, R4).
+    func buildStockTransaction(
+        action: StockActionKind,
+        securityID: GncGUID?,
+        settlementID: GncGUID?,
+        incomeID: GncGUID? = nil,
+        commissionID: GncGUID? = nil,
+        shares: Decimal = 0,
+        pricePerShare: Decimal = 0,
+        amount: Decimal = 0,
+        commission: Decimal = 0,
+        splitNew: Decimal = 0,
+        splitOld: Decimal = 0,
+        date: Date,
+        description: String,
+        memo: String = "",
+        reference: String = "",
+        // Whether `reference` is a broker-unique id. `true` for a reference a
+        // person typed into the Stock Transaction sheet, which is a deliberate
+        // act; the import path passes the staged row's own flag, because QIF
+        // puts the *action verb* in that field — see below.
+        referenceIsBankUnique: Bool = true
+    ) throws -> Transaction {
+        guard let book else { throw StockEntryError.noBook }
         let commissionAccount = commissionID.flatMap { book.account(with: $0) }
 
         let txn: Transaction
@@ -210,24 +243,21 @@ extension AppModel {
         }
 
         guard txn.isBalanced else { throw StockEntryError.invalidInput }
-        editing([txn.guid], named: "Add Stock Transaction") {
-            // The broker's FITID rides in `online_id`, exactly as cash imports
-            // stamp it — it is the only thing that lets a re-imported
-            // overlapping statement recognise an already-posted trade
-            // (investment rows never pass through the cash matcher).
-            //
-            // Only a genuinely unique id may go there, for the same reason the
-            // cash path checks: `importedInvestmentReferences()` harvests every
-            // `online_id` in the book and the review sheet drops any row whose
-            // reference is among them. QIF writes the action verb into that
-            // field, so the first imported "Buy" used to claim the slot and
-            // every later Buy in every later file was silently dropped as
-            // already-recorded.
-            if referenceIsBankUnique, !reference.isEmpty {
-                txn.splits.first?.kvp["online_id"] = .string(reference)
-            }
-            book.addTransaction(txn)
+        // The broker's FITID rides in `online_id`, exactly as cash imports
+        // stamp it — it is the only thing that lets a re-imported
+        // overlapping statement recognise an already-posted trade
+        // (investment rows never pass through the cash matcher).
+        //
+        // Only a genuinely unique id may go there, for the same reason the
+        // cash path checks: `importedInvestmentReferences()` harvests every
+        // `online_id` in the book and the review sheet drops any row whose
+        // reference is among them. QIF writes the action verb into that
+        // field, so the first imported "Buy" used to claim the slot and
+        // every later Buy in every later file was silently dropped as
+        // already-recorded.
+        if referenceIsBankUnique, !reference.isEmpty {
+            txn.splits.first?.kvp["online_id"] = .string(reference)
         }
-        return txn.guid
+        return txn
     }
 }

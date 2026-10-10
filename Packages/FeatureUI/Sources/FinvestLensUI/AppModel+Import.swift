@@ -316,6 +316,50 @@ extension AppModel {
         _ row: StagedTransaction, securityID: GncGUID?, settlementID: GncGUID?,
         incomeID: GncGUID? = nil, commissionID: GncGUID? = nil
     ) throws -> GncGUID? {
+        guard let book,
+              let txn = try buildStagedInvestment(row, securityID: securityID, settlementID: settlementID,
+                                                  incomeID: incomeID, commissionID: commissionID)
+        else { return nil }
+        editing([txn.guid], named: "Add Stock Transaction") { book.addTransaction(txn) }
+        return txn.guid
+    }
+
+    /// Posts a batch of staged investment rows as **one** undoable edit — one
+    /// refresh for the file rather than one per row (Performance Review 2, R4:
+    /// a broker file can carry hundreds of rows, each of which paid the full
+    /// per-edit refresh and a register rebuild). A row that cannot be built
+    /// is reported and the rest still post, as the row-by-row loop did.
+    public func recordStagedInvestments(
+        _ rows: [(row: StagedTransaction, securityID: GncGUID?)],
+        settlementID: GncGUID?, incomeID: GncGUID? = nil, commissionID: GncGUID? = nil
+    ) -> (created: [UUID], failures: [(row: StagedTransaction, error: any Error)]) {
+        guard let book else { return ([], rows.map { ($0.row, StockEntryError.noBook) }) }
+        var built: [(rowID: UUID, txn: Transaction)] = []
+        var failures: [(row: StagedTransaction, error: any Error)] = []
+        for (row, securityID) in rows {
+            do {
+                if let txn = try buildStagedInvestment(row, securityID: securityID,
+                                                       settlementID: settlementID,
+                                                       incomeID: incomeID, commissionID: commissionID) {
+                    built.append((row.id, txn))
+                }
+            } catch {
+                failures.append((row, error))
+            }
+        }
+        guard !built.isEmpty else { return ([], failures) }
+        editing(built.map(\.txn.guid), named: "Import Investments") {
+            for (_, txn) in built { book.addTransaction(txn) }
+        }
+        return (built.map(\.rowID), failures)
+    }
+
+    /// The transaction a staged investment row posts, built but not in the
+    /// book; `nil` for an action that cannot be posted (e.g. `.other`).
+    private func buildStagedInvestment(
+        _ row: StagedTransaction, securityID: GncGUID?, settlementID: GncGUID?,
+        incomeID: GncGUID?, commissionID: GncGUID?
+    ) throws -> Transaction? {
         guard let inv = row.investment else { return nil }
         let action: StockActionKind
         switch inv.action {
@@ -340,7 +384,7 @@ extension AppModel {
             commission = 0
         }
 
-        return try recordStockTransaction(
+        return try buildStockTransaction(
             action: action, securityID: securityID, settlementID: settlementID,
             incomeID: incomeID, commissionID: commissionID,
             shares: inv.quantity, pricePerShare: price,

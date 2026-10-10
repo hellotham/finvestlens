@@ -88,7 +88,7 @@ the honest completion report; on-screen claims require having seen the screen.
 ## If imagery is being captured this session
 
 Session restore defaults to on and will silently reopen the last-used real
-book: `defaults write com.hellotham.finvestlensapp finvestlens.reopenLastBook
+book: `defaults write com.hellotham.finvestlens finvestlens.reopenLastBook
 -bool false` first, restore afterwards, and only ever capture the synthetic
 demo book (`website/scripts/demo-book/`) — never `Ashley Bears.finvestlens` or
 anything from `imports/`.

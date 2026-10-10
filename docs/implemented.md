@@ -3516,3 +3516,191 @@ divergences so it is not re-raised as a bug. The places where the shortfall
 genuinely bit were not left: a figure coloured by its sign and the planning
 disclaimer are both fixed above, because those carry meaning that nothing else
 on the row repeats.
+
+## Bundle identifier → `com.hellotham.finvestlens`; Xcode 27 and the 27 SDKs (9 Oct 2026)
+
+Two changes asked for in one session, done as one pass.
+
+**Bundle identifier.** The three `PRODUCT_BUNDLE_IDENTIFIER`s moved off the
+`…finvestlensapp` base (July's workaround — see *Platform enablement*, 18 Jul
+2026) to `com.hellotham.finvestlens`, `.FinvestLensWidgets` and
+`.FinvestLensQuickLook`. The App ID registered under team `RPL5R637DS` at the
+first signed build: Xcode's automatic signing created *Mac Team Provisioning
+Profile: com.hellotham.finvestlens* carrying the existing App Group and iCloud
+container, and the signed app passes `codesign --verify --deep --strict`. The
+App Group `group.com.hellotham.finvestlensapp` and the iCloud container
+`iCloud.com.hellotham.finvestlensapp` were deliberately **not** renamed — they
+are separately registered identifiers with this team's data under them;
+[provisioning.md ▸ Two bases, on purpose](provisioning.md#two-bases-on-purpose)
+records why. The `defaults` domain and the `os.log` subsystem follow the bundle
+ID (`Perf.swift`, CLAUDE.md, the relaunch skill).
+
+What a machine that ran the old identity sees: preferences live in a new
+domain (carried across on the maintainer's machine with `defaults export` /
+`import`; the old domain is untouched), TipKit state likewise, the Box token in
+the login keychain may prompt once because the app's code-signing identity
+changed, placed widgets must be re-added because the extension's identifier
+changed, and TCC folder grants are per bundle ID. The widget extension was
+signed under the team *wildcard* profile this time rather than an explicit one
+carrying the App Group; whether widgets still read the snapshot under that
+signature is **unverified**.
+
+**Xcode 27 / macOS 27 / iOS 27 SDKs.** The maintainer's machine moved to Xcode
+27.0 (Swift 6.4). Deployment targets stay at 26.5 (NFR-04), and CI's `macos-26`
+image carries only Xcode 26.0–26.6 (checked 9 Oct 2026), so the tree must keep
+compiling against the 26 SDK too. What the 27 SDK and Swift 6.4 turned up, all
+fixed:
+
+- `Optional`'s `AccessibilityRotorContent` conformance is 27-only, so the
+  register's Unreconciled rotor no longer builds an `Optional` inside the
+  builder (`RegisterTable.swift`: entries pre-filtered, keyed by split).
+- `GenerationOptions(sampling:)` is deprecated for `samplingMode:`, which is
+  `@backDeployed(before: 27.0)` and therefore absent from the 26 SDK: one gated
+  helper (`GenerationOptions+Greedy.swift`) serves the seven call sites.
+- Swift 6.4's conformance-isolation check rejected `SparkleShape: Shape` under
+  the app target's default main-actor isolation (`WelcomeView.swift`:
+  `nonisolated`).
+- The deprecated catch-all `LocalizedStringKey` interpolation exposed two real
+  VoiceOver defects: the dashboard treemap card and the register summary bar
+  interpolated a `LocalizedStringKey` into another key, which reads out the
+  key's *debug description*. Both now interpolate `Text`, keeping their catalog
+  keys. A `Decimal` in the planning score goes through `format: .number`.
+- The rest of the new diagnostics: redundant `public` in public extensions,
+  unused bindings, an unnecessary `nonisolated(unsafe)`, `??` on a non-optional,
+  weak-versus-strong capture mismatches, the lock-guarded Box presenter state
+  (now `nonisolated(unsafe)`, which is what the lock already meant), and the
+  iOS sign-in anchor's scene-less `UIWindow()` (deprecated in iOS 26).
+
+Receipts, all on Xcode 27.0: signed macOS, iOS Simulator and unsigned macOS
+builds succeed with zero errors and zero source warnings. Package suites on
+Swift 6.4: 11 of 12 pass (Engine 294 tests, Persistence 39, Interchange 166,
+Quotes 171, Rules 13, Reports 180, Cloud 10, FeatureUI 730, CLI 58, Lab 18,
+Shared 6 with the usual App Group skip). Intelligence fails one of 76: the live
+on-device model now classifies the synthetic bank-statement fixture at
+`LiveModelTests.swift:105` as something other than `.bankStatement`. It fails
+identically with the old `sampling:` spelling, so it is the macOS 27 model's
+answer, not the SDK edit. **Open:** that expectation, and Xcode 27's "update to
+recommended settings" pass (`LastUpgradeCheck` is still 2660).
+
+First launch under the new identity, same day: the process came up as
+`com.hellotham.finvestlens` and created its window, but the screen was locked
+(`CGSSessionScreenIsLocked`), the window never reached the screen, and the
+book-opening task stayed blocked in `open(2)` on the Box Drive book — first
+while Box Drive hydrated the evicted (`dataless`) file, then for minutes more
+after it had. No prompt was observable from the shell. The on-screen result,
+and whether a Files-and-Folders consent for the renamed app is what was
+waiting behind the lock screen, are **unverified**.
+
+## Deployment target 27.0, and Foundation Models 27 (9 Oct 2026)
+
+Asked for in two sentences: raise the target to 27, and accommodate the new
+Foundation Models framework after reading Apple's *Foundation Models updates*
+page. Both done the same day as the bundle-ID and Xcode 27 pass above.
+
+**Target.** `MACOSX_`/`IPHONEOS_`/`XROS_DEPLOYMENT_TARGET` 26.5 → 27.0 and every
+`Package.swift` platform 26.0 → 27.0 (PRD NFR-04 and Q1 updated). The sixteen
+`#available(macOS 26.0, iOS 26.0, *)` guards became dead and are gone, with
+their "requires macOS 26" branches; the SDK gate in `GenerationOptions+Greedy`
+is gone too, since the 26 SDK can no longer build the tree. Apple's macOS 27
+page (read 9 Oct 2026) lists only Apple-silicon Macs as compatible, so the
+website's requirements line dropped "and Intel". **CI is knowingly red**: a
+27.0 target needs Xcode 27 to compile and a macOS 27 host to load test
+bundles; actions/runner-images offers macOS 26 (Xcode 26.0–26.6) as its newest
+label, with an `xcode-27` image migrated to macOS 27 on 7 Sep 2026 but no
+public runner label (README and issues, read 9 Oct 2026). The ci.yml comment
+says so; `runs-on` moves when a label exists.
+
+**Foundation Models 27 — what changed and what was done.** Sources: the
+Updates page, Apple's *Improving the safety of generative model output*
+article, the `SystemLanguageModel.Guardrails` and `.Variant` doc pages, and the
+27 SDK's `FoundationModels.swiftinterface`, all read 9 Oct 2026.
+
+- *Error model.* `LanguageModelSession.GenerationError` is deprecated in
+  favour of `LanguageModelError` (model limits and refusals),
+  `SystemLanguageModel.Error` (`assetsUnavailable`) and
+  `LanguageModelSession.Error` (session misuse). A probe binary built for
+  macOS 27 confirmed the runtime now throws `LanguageModelError` on overflow
+  and never the old type — so the old `wrap` would have reported
+  `.modelFailure` instead of `.contextOverflow`, and `StatementExtractor`'s
+  split-and-retry would never have fired. `IntelligenceError.wrap` now maps
+  the three new types. The same probe measured the context at 8,192 tokens
+  (the loop was tuned on 4,096).
+- *New model, re-tested prompts.* Apple says the on-device model changes with
+  27 and prompts must be re-tested. `LiveModelTests` found the one casualty:
+  the document classifier's bank-statement and tax-invoice fixtures were
+  refused as "May contain sensitive content" (`LanguageModelError.
+  guardrailViolation`), and the classifier fell back to keywords silently.
+  Isolated with a standalone probe over nine phrasings: *any* session
+  instructions — the original definitions, a reworded version, or a bare
+  "you are an assistant for a personal finance app" role line, which is
+  Apple's own suggested remedy — tripped the guardrail for the invoice; with
+  no instructions and the same guidance carried in the prompt, all three
+  fixtures classify correctly. `DocumentClassifier` now does that. Live
+  suite: 8 of 8 pass.
+- *`permissiveContentTransformations`*: tried on the six document sessions
+  and reverted the same day — Apple's safety article states it applies only
+  to string responses, and every session here is guided generation.
+- *Not adopted*, with reasons, in deferred.md §3a: Private Cloud Compute,
+  the `LanguageModel` protocol and MLX/CoreAI models, image prompts with
+  Vision tools, `DynamicProfile`, `ToolCallingMode`, `Variant` (read-only),
+  `tokenCount`/`contextSize` pre-sizing.
+
+Receipts, all on Xcode 27.0 and the 27.0 targets: every package suite passes
+(Engine 294 tests, Persistence 39, Interchange 166, Quotes 171, Rules 13,
+Reports 180, Cloud 10, CLI 58, Intelligence 76 with the live suite 8 of 8,
+FeatureUI 730, Lab 18, Shared 6 with the usual App Group skip); signed macOS,
+iOS Simulator and unsigned macOS builds succeed with zero errors and zero
+source warnings — the one deprecation the 27 target surfaced,
+`NSItemProvider(item:typeIdentifier:)` in the sidebar's drag source, now
+registers the `AccountDragPayload` transferable that had been declared for it
+and never used. Relaunched signed: the app came up as
+`com.hellotham.finvestlens` with `LSMinimumSystemVersion` 27.0, its window on
+screen and the book's lock back within fifteen seconds. Visual result
+unverified; over to the maintainer.
+
+## Performance Review 2 — fixes R1–R10 (9 Oct 2026, session cut short)
+
+[performance-review-2.md](performance-review-2.md) is the record: measurements
+on a copy of the reference book in Release, ten ranked findings, each with its
+status and receipt. In this session: the save's SQLite rewrite moved off the
+main actor behind a `BookSnapshot` (0.18 s on the actor, from 9.6 s; byte-
+identical round trip of the real book); the GUID hex encoder and decimal
+locale (export 6.65 s → 1.54 s); thirteen whole-book undo snapshots replaced
+by scoped ones; the budget income average, broker-import batching, the
+dashboard's Recent Activity and Up Next tiles, chart hover isolation, the
+Investments hub memo and preference-scoped toggles, the register gather, the
+recency fold cache, the summary memo, the mode-switch rebuilds, the save's
+needless refresh, the widget keys, the tax-code field, six cheap memos, the
+iPad select-all, and the report screen's period sync. Not done: the post-fix
+re-measurement, the app relaunch, and the items each finding lists as open.
+
+## Performance Review 2 — R7–R11 closed and reviewed (10–11 Oct 2026)
+
+The items 9 Oct left open, all in [performance-review-2.md](performance-review-2.md)
+with their receipts: price-scoped invalidation (`RefreshScope`, a
+`registerRevision` the register surfaces key on) and, found while measuring
+it, the Engine's price index now maintained in place instead of rebuilt after
+every price edit (an exchange-rate edit 377 → 34 ms); the register sheet's
+lazy legs and resize memo; the provider-list memo behind `setAPIKey`; the
+aging, tax, lifetime-seed and last-price memos; the Linked Documents gather off
+the main actor; Apply Rules previewing behind a placeholder; the security
+page's on-demand CSV export and equatable, thinned price chart; the iPad
+table's per-keystroke block splice, rotor memo and dead-probe removal.
+`Color.appAccent` measured at ~2 µs and deliberately not cached.
+
+The code review of those changes (the review's §4) found and the same day
+fixed: a row-duplicating case in the keystroke splice, the chart keeping an
+old accent behind `.equatable()`, All Transactions inheriting an account's
+filter (a 9 Oct regression), a day-stale register summary, Add Account's
+undo leaving its security registered, a cancellation race and main-actor
+stats in the document gather, a refused Keychain read memoised as "no key",
+a tax code lost on teardown, and — measured — the undo snapshot's 163k-row
+copy on every price edit (now a change log, `Book.PriceChange`) and the
+145 ms identity set at the start of every quote fetch (now 62 µs through the
+index). An exchange-rate edit end to end: 377 ms on 9 Oct, 19 ms now.
+
+Receipts (11 Oct): Engine 299 tests, Quotes 171, FeatureUI 747 and Lab 18
+pass; the live harnesses and throwaway receipt tests ran in Release against
+a temp copy of the reference book (figures in the review's §1, §4 and §5;
+the throwaway tests were deleted). Builds and the signed relaunch are
+recorded in the session's final report.

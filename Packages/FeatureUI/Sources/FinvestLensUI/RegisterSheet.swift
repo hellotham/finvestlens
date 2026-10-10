@@ -109,7 +109,12 @@ struct RegisterSheet: View {
     /// (and so refreshes the sheet) when any of them change.
     private var rowsKey: Int {
         var hasher = Hasher()
-        hasher.combine(model.bookRevision)
+        // Not `bookRevision`: an account register's rows move with
+        // `registerRevision` (only when they were rebuilt) and the whole-book
+        // journal's with `transactionRevision` (only on a `.book` edit), so a
+        // price-only edit — which bumps the book revision for the reports'
+        // sake — leaves both alone, and so does arriving here by navigation.
+        hasher.combine(wholeBook ? model.transactionRevision : model.registerRevision)
         hasher.combine(wholeBook)
         if wholeBook {
             hasher.combine(model.journalTransactions(forAccountID: nil).count)
@@ -237,10 +242,15 @@ private enum SheetTap {
 
 // MARK: - Rows (book facts only; rebuilt per rowsKey)
 
+/// A row's book facts. Its legs are **not** here: they are fetched the first
+/// time a row is disclosed, from the model's own per-transaction memo
+/// (`legRows(ofTransaction:)`), because building them for every row — a
+/// recursive `fullName` per split — was 57 ms of the base build on All
+/// Transactions, in Basic style, where at most one row ever shows them
+/// (Performance Review 2, R7).
 private struct SheetRow {
     let txn: GncGUID
     let base: SheetMainBase
-    let legs: [AutoSplitRow]
 }
 
 private struct SheetMainBase {
@@ -268,8 +278,7 @@ private struct SheetMainBase {
 /// `defaults write <bundle-id> FLRegisterTrace -bool true` logs sheet timings
 /// to /tmp/fl-register-perf.log — no book contents, only counts and durations.
 private enum SheetTrace {
-    nonisolated(unsafe) static let enabled =
-        UserDefaults.standard.bool(forKey: "FLRegisterTrace")
+    static let enabled = UserDefaults.standard.bool(forKey: "FLRegisterTrace")
 
     static func note(_ text: @autoclosure () -> String) {
         guard enabled else { return }
@@ -666,11 +675,17 @@ private enum SheetSymbols {
     /// a plain red disc with no visible ✕. Measured, it scored exactly the
     /// same ink mass as `circle.fill` (151.8) with a red centre pixel. Passing
     /// two colours puts the mark back.
-    private static func make(_ name: String, _ color: NSColor, _ size: CGFloat,
+    ///
+    /// `color` is an autoclosure so that a cache hit — every draw after the
+    /// first — never evaluates it: the accent callers pass
+    /// `NSColor(Color.appAccent)`, a defaults read and a colour conversion
+    /// that used to run per paperclip, pencil and caret drawn (R9).
+    private static func make(_ name: String, _ color: @autoclosure () -> NSColor, _ size: CGFloat,
                              _ weight: NSFont.Weight = .regular,
                              knockout: NSColor? = nil) -> NSImage? {
         let key = "\(name)|\(Int(size.rounded()))|\(weight.rawValue)|\(knockout != nil)"
         if let hit = cache[key] { return hit }
+        let color = color()
         let palette = knockout.map { [$0, color] } ?? [color]
         let image = NSImage(systemSymbolName: name, accessibilityDescription: nil)?
             .withSymbolConfiguration(
@@ -1341,8 +1356,7 @@ private final class SheetView: NSView, NSTextFieldDelegate {
                                         transferName: summary.accounts,
                                         amount: summary.total, runningBalance: nil,
                                         foreignCurrencyCode: model.foreignCurrencyCode(
-                                            ofTransaction: txn.guid)),
-                    legs: model.legRows(ofTransaction: txn.guid)))
+                                            ofTransaction: txn.guid))))
             }
             return out
         }
@@ -1365,10 +1379,15 @@ private final class SheetView: NSView, NSTextFieldDelegate {
                                     transferName: main.transfer,
                                     amount: main.amount,
                                     runningBalance: main.runningBalance,
-                                    foreignCurrencyCode: main.foreignCurrencyCode),
-                legs: model.legRows(ofTransaction: txn)))
+                                    foreignCurrencyCode: main.foreignCurrencyCode)))
         }
         return out
+    }
+
+    /// A row's book legs, fetched on first use (see ``SheetRow``) from the
+    /// model's memo, which `transactionRevision` keeps honest.
+    private func legs(_ row: SheetRow) -> [AutoSplitRow] {
+        model.legRows(ofTransaction: row.txn)
     }
 
     // MARK: Line plan
@@ -1408,7 +1427,7 @@ private final class SheetView: NSView, NSTextFieldDelegate {
         // it; that invariant is worth two quiet lines.
         lines.append(.notes)
         lines.append(.tags)
-        let legCount = drafting ? (draft?.lines.count ?? 0) : row.legs.count
+        let legCount = drafting ? (draft?.lines.count ?? 0) : legs(row).count
         for index in 0..<legCount { lines.append(.leg(index)) }
         if drafting, draft?.isExpanded == true { lines.append(.addSplit) }
         return lines
@@ -1583,30 +1602,53 @@ private final class SheetView: NSView, NSTextFieldDelegate {
     /// are monospaced-digit, the rest are not — because a column sized in the
     /// wrong face is a column that ellipsises at some Text Sizes and not
     /// others.
-    private func measureNaturalWidths(_ rows: [SheetRow]) -> [SheetColumn: CGFloat] {
-        guard !rows.isEmpty else { return [:] }
-        let body = [NSAttributedString.Key.font: bodyFont]
-        let mono = [NSAttributedString.Key.font: monoFont]
-
+    /// What the rows contribute to the column widths: the distinct transfer
+    /// names' measured widths, the date range, the biggest amount and balance.
+    /// Memoised on the rows and the font, because `relayoutColumns` walks the
+    /// date-form ladder on **every** width change of a live window resize, and
+    /// each rung re-walked all 46k rows of a large register to rediscover the
+    /// same four facts (Performance Review 2, R7). Only the date form varies
+    /// between rungs, and the per-rung measurement below is a dozen strings.
+    private struct RowFacts {
         var transferWidths: [CGFloat] = []
-        var earliest = rows[0].base.date, latest = rows[0].base.date
-        var biggestAmount = Decimal(0), biggestBalance = Decimal(0)
+        var earliest = Date.distantFuture
+        var latest = Date.distantPast
+        var biggestAmount = Decimal(0)
+        var biggestBalance = Decimal(0)
+    }
+    private var rowFactsMemo: (rowsKey: Int, fontScale: CGFloat, facts: RowFacts)?
+
+    private func rowFacts(_ rows: [SheetRow]) -> RowFacts {
+        if let memo = rowFactsMemo, memo.rowsKey == rowsKey, memo.fontScale == fontScale {
+            return memo.facts
+        }
+        let body = [NSAttributedString.Key.font: bodyFont]
+        var facts = RowFacts()
         var transferSeen: Set<String> = []
         for row in rows {
             let base = row.base
             // Account names repeat across thousands of rows; measure each
             // distinct one once.
             if !base.transferName.isEmpty, transferSeen.insert(base.transferName).inserted {
-                transferWidths.append((base.transferName as NSString)
+                facts.transferWidths.append((base.transferName as NSString)
                     .size(withAttributes: body).width)
             }
-            if base.date < earliest { earliest = base.date }
-            if base.date > latest { latest = base.date }
-            if abs(base.amount) > biggestAmount { biggestAmount = abs(base.amount) }
-            if let balance = base.runningBalance, abs(balance) > biggestBalance {
-                biggestBalance = abs(balance)
+            if base.date < facts.earliest { facts.earliest = base.date }
+            if base.date > facts.latest { facts.latest = base.date }
+            if abs(base.amount) > facts.biggestAmount { facts.biggestAmount = abs(base.amount) }
+            if let balance = base.runningBalance, abs(balance) > facts.biggestBalance {
+                facts.biggestBalance = abs(balance)
             }
         }
+        rowFactsMemo = (rowsKey, fontScale, facts)
+        return facts
+    }
+
+    private func measureNaturalWidths(_ rows: [SheetRow]) -> [SheetColumn: CGFloat] {
+        guard !rows.isEmpty else { return [:] }
+        let body = [NSAttributedString.Key.font: bodyFont]
+        let mono = [NSAttributedString.Key.font: monoFont]
+        let facts = rowFacts(rows)
 
         func text(_ string: String, _ attributes: [NSAttributedString.Key: Any]) -> CGFloat {
             ceil((string as NSString).size(withAttributes: attributes).width)
@@ -1614,13 +1656,13 @@ private final class SheetView: NSView, NSTextFieldDelegate {
         let pad = 2 * SheetMetrics.textInset
         // A negative amount is the widest an amount gets, and both ends of the
         // date range are measured because "9 Mar" is not "31 December".
-        let amount = max(text(AmountFormat.string(-biggestAmount, code: currencyCode), mono),
-                         text(AmountFormat.string(biggestAmount, code: currencyCode), mono))
-        let balance = max(text(AmountFormat.string(-biggestBalance, code: currencyCode), mono),
-                          text(AmountFormat.string(biggestBalance, code: currencyCode), mono))
+        let amount = max(text(AmountFormat.string(-facts.biggestAmount, code: currencyCode), mono),
+                         text(AmountFormat.string(facts.biggestAmount, code: currencyCode), mono))
+        let balance = max(text(AmountFormat.string(-facts.biggestBalance, code: currencyCode), mono),
+                          text(AmountFormat.string(facts.biggestBalance, code: currencyCode), mono))
         // Measured in the form currently chosen, and at both ends of the range,
         // because "9/3/2026" is not "24/12/2026".
-        let date = max(text(dateText(earliest), body), text(dateText(latest), body))
+        let date = max(text(dateText(facts.earliest), body), text(dateText(facts.latest), body))
 
         var natural: [SheetColumn: CGFloat] = [
             // The disclosure gutter lives inside Date (HIG *Outline views*:
@@ -1628,7 +1670,7 @@ private final class SheetView: NSView, NSTextFieldDelegate {
             .date: date + caretGutter + editGutter + pad,
             .amount: amount + pad,
             .balance: balance + pad,
-            .transfer: transferWidth(transferWidths) + pad,
+            .transfer: transferWidth(facts.transferWidths) + pad,
         ]
         // A column is never narrower than its own heading, or the header reads
         // as truncated while the rows look fine.
@@ -1854,7 +1896,8 @@ private final class SheetView: NSView, NSTextFieldDelegate {
         if drafting, let d = draft, d.lines.indices.contains(index) {
             return (d.lines[index], nil)
         }
-        return (nil, row.legs.indices.contains(index) ? row.legs[index] : nil)
+        let legs = legs(row)
+        return (nil, legs.indices.contains(index) ? legs[index] : nil)
     }
 
     private func skipForCursor(_ row: SheetRow, _ field: TransactionEditField?) -> Bool {
@@ -2951,7 +2994,7 @@ private final class SheetView: NSView, NSTextFieldDelegate {
     }
 
     private func bookLegCount(of txn: GncGUID) -> Int {
-        indexByTxn[txn].map { rows[$0].legs.count } ?? 0
+        indexByTxn[txn].map { legs(rows[$0]).count } ?? 0
     }
 
     private func leaveDraft() -> Bool {

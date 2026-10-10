@@ -91,10 +91,12 @@ struct finvestlensApp: App {
                 // Save the open book (and release its lock) on ⌘Q, so quitting
                 // never loses data. Wired here because the adaptor instance —
                 // not NSApp.delegate, which is SwiftUI's proxy — is the real
-                // delegate object.
+                // delegate object. The model is the app's own state and
+                // outlives every window, so the handler holds it strongly —
+                // a weak capture here only contradicts the enclosing scope.
                 .onAppear {
-                    appDelegate.terminationHandler = { [weak model] in
-                        model?.saveAndCloseIfOpen() ?? true
+                    appDelegate.terminationHandler = {
+                        model.saveAndCloseIfOpen()
                     }
                 }
             #endif

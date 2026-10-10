@@ -30,6 +30,10 @@ struct SecurityDetailView: View {
     @Environment(\.isEmbeddedDestination) private var embedded
     @State private var range: DetailRange = .year
     @State private var exportingCSV = false
+    /// Built when Export is pressed, not per body pass: `.fileExporter` takes
+    /// its document by value, so building it inline serialised every price of
+    /// the security to CSV on each redraw of the page (Performance Review 2).
+    @State private var exportDocument: CSVFileDocument?
     @State private var importingCSV = false
     @State private var showingTarget = false
     @State private var showingAddPrice = false
@@ -38,6 +42,11 @@ struct SecurityDetailView: View {
 
     private var detail: SecurityDetail? { model.securityDetail(for: commodity) }
     private var code: String { model.reportCurrency.mnemonic }
+
+    private func beginExport() {
+        exportDocument = CSVFileDocument(text: model.priceCSV(for: commodity))
+        exportingCSV = true
+    }
 
     var body: some View {
         List {
@@ -64,7 +73,7 @@ struct SecurityDetailView: View {
         .sheet(isPresented: $showingAddPrice) { AddPriceSheet(model: model, commodity: commodity) }
         .sheet(isPresented: $showingEdit) { EditSecuritySheet(model: model, commodity: commodity) }
         .fileExporter(isPresented: $exportingCSV,
-                      document: CSVFileDocument(text: model.priceCSV(for: commodity)),
+                      document: exportDocument,
                       contentType: .commaSeparatedText,
                       defaultFilename: model.priceCSVFilename(for: commodity)) { _ in }
         // `importPrices(csv:)` satisfies `FR-XIO-03` and had no caller at all —
@@ -159,7 +168,7 @@ struct SecurityDetailView: View {
                 Button("Edit Security…", systemImage: "pencil") { showingEdit = true }
                 Divider()
                 Button("Import Prices…", systemImage: "square.and.arrow.down") { importingCSV = true }
-                Button("Export Prices…", systemImage: "square.and.arrow.up") { exportingCSV = true }
+                Button("Export Prices…", systemImage: "square.and.arrow.up") { beginExport() }
                 Divider()
                 Toggle("No Longer Trading", isOn: Binding(
                     get: { model.isDelisted(commodity) },
@@ -311,6 +320,9 @@ struct SecurityDetailView: View {
             } else {
                 PriceHistoryChart(detail: detail, window: window, points: points,
                                   currencyCode: code)
+                    // Its marks are a value; the same value need not lay out
+                    // again because something else on the page redrew.
+                    .equatable()
                     .frame(height: 220)
                     .padding(.vertical, 4)
                 chartLegend(detail, window: window)
@@ -725,7 +737,7 @@ struct SecurityDetailView: View {
                 Text("Prices")
                 Text("\(detail.prices.count)").foregroundStyle(.secondary)
                 Spacer()
-                Button("Export…") { exportingCSV = true }
+                Button("Export…") { beginExport() }
                     .buttonStyle(.borderless)
                     .disabled(detail.prices.isEmpty)
             }
@@ -884,11 +896,27 @@ private extension FinancialPeriod.Statement {
 
 /// The price line with the book drawn on it: your buys and sells, your average
 /// cost, and the periods you actually held it (`FR-INV-16`).
-private struct PriceHistoryChart: View {
-    let detail: SecurityDetail
+struct PriceHistoryChart: View, Equatable {
     let window: ClosedRange<Date>
-    let points: [SecurityPriceRow]
     let currencyCode: String
+    let averageCost: Decimal?
+    /// Derived once, in `init`, rather than per body pass — and `Equatable`
+    /// over exactly these, so `.equatable()` at the call site lets SwiftUI
+    /// skip the chart's body (and Swift Charts' layout of every mark) when the
+    /// page redraws for some other reason (Performance Review 2).
+    let shadedPeriods: [ClosedRange<Date>]
+    let segments: [Segment]
+    let markers: [Marker]
+
+    init(detail: SecurityDetail, window: ClosedRange<Date>, points: [SecurityPriceRow],
+         currencyCode: String) {
+        self.window = window
+        self.currencyCode = currencyCode
+        averageCost = detail.averageCost
+        shadedPeriods = Self.shadedPeriods(detail.holdingPeriods, in: window)
+        segments = Self.segments(of: points)
+        markers = Self.markers(detail.events, in: window)
+    }
 
     var body: some View {
         Chart {
@@ -896,7 +924,11 @@ private struct PriceHistoryChart: View {
             ForEach(Array(shadedPeriods.enumerated()), id: \.offset) { _, period in
                 RectangleMark(xStart: .value("From", period.lowerBound),
                               xEnd: .value("To", period.upperBound))
-                    .foregroundStyle(Color.appAccent.opacity(0.10))
+                    // `.tint`, not `Color.appAccent`: the chart is `.equatable()`,
+                    // and a colour read inside the body is outside that
+                    // comparison — an accent change would leave the old one
+                    // painted. The environment resolves `.tint` regardless.
+                    .foregroundStyle(.tint.opacity(0.10))
             }
 
             // The price line, broken at gaps so an absence reads as an absence
@@ -904,15 +936,15 @@ private struct PriceHistoryChart: View {
             ForEach(segments) { segment in
                 ForEach(segment.rows) { row in
                     LineMark(x: .value("Date", row.date),
-                             y: .value("Price", asDouble(row.value)),
+                             y: .value("Price", Self.asDouble(row.value)),
                              series: .value("Series", segment.id))
-                        .foregroundStyle(Color.appAccent)
+                        .foregroundStyle(.tint)
                         .interpolationMethod(.linear)
                 }
             }
 
-            if let average = detail.averageCost, average > 0 {
-                RuleMark(y: .value("Average cost", asDouble(average)))
+            if let average = averageCost, average > 0 {
+                RuleMark(y: .value("Average cost", Self.asDouble(average)))
                     .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
                     .foregroundStyle(.secondary)
             }
@@ -944,21 +976,22 @@ private struct PriceHistoryChart: View {
         .accessibilityHidden(true)
     }
 
-    private func asDouble(_ value: Decimal) -> Double {
+    private static func asDouble(_ value: Decimal) -> Double {
         NSDecimalNumber(decimal: value).doubleValue
     }
 
     /// Held periods clipped to the visible window, so shading never extends the
     /// x-domain and squashes the line into a corner.
-    private var shadedPeriods: [ClosedRange<Date>] {
-        detail.holdingPeriods.compactMap { period in
+    private static func shadedPeriods(_ periods: [HoldingPeriod],
+                                      in window: ClosedRange<Date>) -> [ClosedRange<Date>] {
+        periods.compactMap { period in
             let start = max(period.start, window.lowerBound)
             let end = min(period.end ?? window.upperBound, window.upperBound)
             return start < end ? start...end : nil
         }
     }
 
-    private struct Segment: Identifiable {
+    struct Segment: Identifiable, Equatable {
         let id: Int
         let rows: [SecurityPriceRow]
     }
@@ -966,31 +999,75 @@ private struct PriceHistoryChart: View {
     /// Contiguous runs, broken where more than a fortnight passes with no
     /// price. Two weeks rather than one: a fortnight is unambiguously a hole
     /// even across a public holiday week, and a shorter threshold shattered
-    /// thin securities into confetti.
-    private var segments: [Segment] {
+    /// thin securities into confetti. Each run is then thinned to at most
+    /// about `maxMarksPerRun` points (see `thinned`).
+    private static func segments(of points: [SecurityPriceRow]) -> [Segment] {
         var out: [Segment] = []
         var current: [SecurityPriceRow] = []
+        func flush() {
+            if current.count > 1 { out.append(Segment(id: out.count, rows: thinned(current))) }
+            current = []
+        }
         for row in points {
             if let last = current.last,
                row.date.timeIntervalSince(last.date) > 14 * 86_400 {
-                if current.count > 1 { out.append(Segment(id: out.count, rows: current)) }
-                current = []
+                flush()
             }
             current.append(row)
         }
-        if current.count > 1 { out.append(Segment(id: out.count, rows: current)) }
+        flush()
         return out
     }
 
-    private struct Marker: Identifiable {
+    /// Swift Charts lays out every mark it is given, so a line through every
+    /// daily close of a twenty-year history costs the page on each pass.
+    /// Above this many points a run is bucketed into equal slices and each
+    /// slice keeps its lowest and highest price, in date order: every peak
+    /// and trough survives, the line is drawn through more points than the
+    /// chart has columns of pixels, and the mark count stops growing with the
+    /// history. A year of daily prices (~250) is never touched.
+    static let maxMarksPerRun = 600
+
+    static func thinned(_ rows: [SecurityPriceRow]) -> [SecurityPriceRow] {
+        guard rows.count > maxMarksPerRun else { return rows }
+        let buckets = maxMarksPerRun / 2
+        var out: [SecurityPriceRow] = []
+        out.reserveCapacity(buckets * 2 + 2)
+        out.append(rows[0])
+        let inner = rows[1..<(rows.count - 1)]
+        // Integer partition: bucket `b` is `[b·n/k, (b+1)·n/k)`, so the last
+        // ends at the run's end and, with n > k, none is empty.
+        let n = inner.count
+        for bucket in 0..<buckets {
+            let start = inner.startIndex + bucket * n / buckets
+            let end = inner.startIndex + (bucket + 1) * n / buckets
+            let slice = inner[start..<end]
+            var low = slice.startIndex, high = slice.startIndex
+            for index in slice.indices {
+                if slice[index].value < slice[low].value { low = index }
+                if slice[index].value > slice[high].value { high = index }
+            }
+            if low == high {
+                out.append(slice[low])
+            } else {
+                out.append(slice[min(low, high)])
+                out.append(slice[max(low, high)])
+            }
+        }
+        out.append(rows[rows.count - 1])
+        return out
+    }
+
+    struct Marker: Identifiable, Equatable {
         let id: String
         let kind: SecurityEvent.Kind
         let date: Date
         let price: Double
     }
 
-    private var markers: [Marker] {
-        detail.events.compactMap { event in
+    private static func markers(_ events: [SecurityEvent],
+                                in window: ClosedRange<Date>) -> [Marker] {
+        events.compactMap { event in
             guard event.kind != .income, window.contains(event.date),
                   let price = event.unitPrice else { return nil }
             return Marker(id: event.id, kind: event.kind, date: event.date,
@@ -1262,12 +1339,9 @@ enum PriceSourceName {
 /// not.
 enum DecimalFormat {
     static func units(_ value: Decimal) -> String {
-        let number = NSDecimalNumber(decimal: value)
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        formatter.maximumFractionDigits = 4
-        formatter.minimumFractionDigits = 0
-        return formatter.string(from: number) ?? number.stringValue
+        // A `FormatStyle`, cached by Foundation, where a `NumberFormatter` was
+        // allocated per call — two or three times per holding row per pass.
+        value.formatted(.number.precision(.fractionLength(0...4)))
     }
 }
 

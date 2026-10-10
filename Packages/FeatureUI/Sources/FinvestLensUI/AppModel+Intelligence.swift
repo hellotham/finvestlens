@@ -73,9 +73,6 @@ extension AppModel {
         onProgress: (@Sendable (Int, Int) -> Void)? = nil
     ) async throws -> [StagedTransaction] {
         try requireIntelligence()
-        guard #available(macOS 26.0, iOS 26.0, *) else {
-            throw IntelligenceError.unavailable("Apple Intelligence requires macOS 26 or iOS 26.")
-        }
         let pages = try await Task.detached { try await DocumentText.extractPages(from: data) }.value
         return try await StatementExtractor.extract(pages: pages, onProgress: onProgress)
     }
@@ -115,7 +112,6 @@ extension AppModel {
     /// view's assignments.
     public func suggestCategories(for results: [MatchResult]) async throws -> [UUID: GncGUID] {
         try requireIntelligence()
-        guard #available(macOS 26.0, iOS 26.0, *) else { return [:] }
         let items = results
             .filter { !$0.isDuplicate }
             .map {
@@ -169,7 +165,6 @@ extension AppModel {
         _ items: [UncategorizedItem]
     ) async throws -> [UUID: GncGUID] {
         try requireIntelligence()
-        guard #available(macOS 26.0, iOS 26.0, *) else { return [:] }
         let categorizables = items.map {
             // The counter-leg of spending is positive in the imbalance account,
             // so flip the sign to present the account holder's perspective.
@@ -286,7 +281,7 @@ extension AppModel {
         urls: [URL],
         onProgress: (@MainActor (Int, Int) -> Void)? = nil
     ) async -> [AttachmentMatch] {
-        guard #available(macOS 26.0, iOS 26.0, *), isIntelligenceAvailable else {
+        guard isIntelligenceAvailable else {
             let note = intelligenceUnavailableReason ?? "Apple Intelligence is unavailable."
             return urls.map { var match = AttachmentMatch(url: $0); match.note = note; return match }
         }
@@ -1143,10 +1138,7 @@ extension AppModel {
         for transactionID: GncGUID
     ) async throws -> AttachmentCategorySuggestion? {
         try requireIntelligence()
-        guard #available(macOS 26.0, iOS 26.0, *) else {
-            throw IntelligenceError.unavailable("Apple Intelligence requires macOS 26 or iOS 26.")
-        }
-        guard let book, let txn = book.transaction(with: transactionID) else { return nil }
+        guard let book, book.transaction(with: transactionID) != nil else { return nil }
         guard let url = linkedDocumentURL(for: transactionID) else {
             throw IntelligenceError.unavailable("The transaction has no readable attachment.")
         }
@@ -1393,7 +1385,6 @@ extension AppModel {
         onProgress: (@MainActor (Int, Int) -> Void)? = nil
     ) async throws -> [UUID: GncGUID] {
         try requireIntelligence()
-        guard #available(macOS 26.0, iOS 26.0, *) else { return [:] }
         let withDocs = items.filter { item in
             guard let url = linkedDocumentURL(for: item.transactionID) else { return false }
             return FileManager.default.fileExists(atPath: url.path)
@@ -1442,8 +1433,7 @@ extension AppModel {
                               into transactionID: GncGUID) async -> ForeignRestructureOutcome {
         // Linked where it lies, not copied into the document folder.
         linkDocument(at: url, to: transactionID)
-        if #available(macOS 26.0, iOS 26.0, *),
-           let suggestion = try? await suggestCategoryFromAttachment(for: transactionID) {
+        if let suggestion = try? await suggestCategoryFromAttachment(for: transactionID) {
             applyAttachmentSuggestion(suggestion, to: transactionID)
         }
         // FX last: categorisation expects the local form.
@@ -1508,9 +1498,6 @@ extension AppModel {
     /// suggestions, for splitting a single card charge across categories.
     public func analyzeInvoicePDF(_ data: Data) async throws -> InvoiceAnalysis {
         try requireIntelligence()
-        guard #available(macOS 26.0, iOS 26.0, *) else {
-            throw IntelligenceError.unavailable("Apple Intelligence requires macOS 26 or iOS 26.")
-        }
         let text = try await Task.detached { try await DocumentText.extractText(from: data) }.value
         return try await InvoiceAnalyzer.analyze(text: text,
                                                  candidates: categoryCandidates(includeIncome: false))
@@ -1521,9 +1508,6 @@ extension AppModel {
     /// Reads a dividend statement PDF (franked/unfranked/franking credits).
     public func extractDividendStatement(_ data: Data) async throws -> DividendStatementDetails {
         try requireIntelligence()
-        guard #available(macOS 26.0, iOS 26.0, *) else {
-            throw IntelligenceError.unavailable("Apple Intelligence requires macOS 26 or iOS 26.")
-        }
         let text = try await Task.detached { try await DocumentText.extractText(from: data) }.value
         return try await DividendExtractor.extract(text: text)
     }
@@ -1633,12 +1617,12 @@ extension AppModel {
         guard let book else { return 0 }
         let windows = monthWindows(back: months)
         guard !windows.isEmpty else { return 0 }
+        let income = book.accounts.filter { $0.type == .income && !$0.isPlaceholder }
+        // One walk of the book per window — not one per income account per
+        // window, which was 1.97 s per call on the reference book.
         let total = windows.reduce(Decimal(0)) { sum, window in
-            sum + book.accounts
-                .filter { $0.type == .income && !$0.isPlaceholder }
-                .reduce(Decimal(0)) {
-                    $0 + FinancialReports.periodActual(of: $1, in: book, from: window.0, to: window.1)
-                }
+            sum + FinancialReports.periodActuals(of: income, in: book, from: window.0, to: window.1)
+                .values.reduce(0, +)
         }
         return reportCurrency.round(total / Decimal(windows.count))
     }
@@ -1646,9 +1630,6 @@ extension AppModel {
     /// Proposes a monthly budget from spending history via the on-device model.
     public func suggestBudget(months: Int = 6) async throws -> BudgetSuggestion {
         try requireIntelligence()
-        guard #available(macOS 26.0, iOS 26.0, *) else {
-            throw IntelligenceError.unavailable("Apple Intelligence requires macOS 26 or iOS 26.")
-        }
         let history = spendingHistory(months: months)
         guard !history.isEmpty else {
             throw IntelligenceError.modelFailure("There is no spending history yet to budget from.")
@@ -1725,9 +1706,6 @@ extension AppModel {
     /// A plain-language outlook on the cash-flow forecast.
     public func forecastInsights(months: Int = 3) async throws -> ForecastInsights {
         try requireIntelligence()
-        guard #available(macOS 26.0, iOS 26.0, *) else {
-            throw IntelligenceError.unavailable("Apple Intelligence requires macOS 26 or iOS 26.")
-        }
         guard let facts = forecastFacts(months: months) else {
             throw IntelligenceError.modelFailure("There is no asset account to forecast yet.")
         }
@@ -1739,9 +1717,6 @@ extension AppModel {
     /// calculates.
     public func reportCommentary(for facts: ReportFacts) async throws -> [String] {
         try requireIntelligence()
-        guard #available(macOS 26.0, iOS 26.0, *) else {
-            throw IntelligenceError.unavailable("Apple Intelligence requires macOS 26 or iOS 26.")
-        }
         return try await ReportNarrator.narrate(facts: facts)
     }
 }

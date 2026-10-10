@@ -87,6 +87,11 @@ public final class FinvestLensDocument {
     /// every subsequent save for the rest of the session.
     private var baselineFingerprint: Data?
 
+    /// Serialises the write-and-copy of every save on this document: a
+    /// quit-time synchronous save must queue behind an autosave still writing
+    /// on its background thread, never interleave with it.
+    private let saveLock = NSLock()
+
     private init(fileURL: URL, book: Book, lock: FileLock, lockHeld: Bool,
                  workingCopyURL: URL, store: SQLiteDocumentStore,
                  fingerprint: Data, dirty: Bool) {
@@ -322,19 +327,52 @@ public final class FinvestLensDocument {
     /// copy is a clone, so this is the cheap half.
     @discardableResult
     public func stageSave(progress: (@Sendable (BookLoadProgress) -> Void)? = nil) throws -> UInt64 {
+        let staged = try stageSnapshot()
+        try staged.saveLock.withLock {
+            try Self.checkForExternalChange(staged)
+            try staged.store.write(staged.snapshot, progress: progress)   // snapshot → working copy
+        }
+        return staged.token
+    }
+
+    /// Phase 1a — the guards, the change token and a value snapshot of the
+    /// book, taken on the actor that owns it (Performance Review 2, R1).
+    ///
+    /// Cheap next to the write: on the reference book the snapshot is a
+    /// fraction of a second where the write is seconds. Everything the result
+    /// carries is `Sendable`, so ``commitStaged(_:progress:)`` can take it to
+    /// a background thread while the book keeps being edited; an edit made
+    /// after this point stays unsaved, exactly as with ``stageSave(progress:)``.
+    public func stageSnapshot() throws -> StagedSave {
         // A read-only session never touches the shared file (FR-DAT-06).
         if isReadOnly { throw DocumentError.readOnly }
-        // Detect an out-of-band change to the shared file (bypassed lock, etc.).
-        if FileManager.default.fileExists(atPath: fileURL.path),
-           let baseline = baselineFingerprint {
-            let current = try Self.fingerprint(of: fileURL)
-            if current != baseline {
-                throw DocumentError.conflict
-            }
+        return StagedSave(token: changeToken, snapshot: BookSnapshot(book), store: store,
+                          fileURL: fileURL, workingCopyURL: workingCopyURL,
+                          baselineFingerprint: baselineFingerprint,
+                          hasSharedFile: FileManager.default.fileExists(atPath: fileURL.path),
+                          saveLock: saveLock)
+    }
+
+    /// Phases 1b and 2 away from the book: the external-change check, the
+    /// write of the snapshot into the working copy, and the write-back to the
+    /// shared file. Touches no `Book` and no document state — a snapshot, a
+    /// store and two URLs — which is why it may run on any thread. Pass the
+    /// fingerprint it returns to ``finishSave(fingerprint:stagedAt:)``.
+    public static func commitStaged(_ staged: StagedSave,
+                                    progress: (@Sendable (BookLoadProgress) -> Void)? = nil) throws -> Data? {
+        try staged.saveLock.withLock {
+            try checkForExternalChange(staged)
+            try staged.store.write(staged.snapshot, progress: progress)
+            return try commitSave(workingCopy: staged.workingCopyURL, to: staged.fileURL)
         }
-        let token = changeToken
-        try store.write(book, progress: progress)                // in-memory → working copy
-        return token
+    }
+
+    /// Detects an out-of-band change to the shared file (bypassed lock, etc.).
+    private static func checkForExternalChange(_ staged: StagedSave) throws {
+        guard staged.hasSharedFile, let baseline = staged.baselineFingerprint else { return }
+        if try fingerprint(of: staged.fileURL) != baseline {
+            throw DocumentError.conflict
+        }
     }
 
     /// Phase 2 — the atomic write-back to the shared file, and the fingerprint
@@ -575,4 +613,22 @@ extension FinvestLensDocument.DocumentError: LocalizedError {
             return nil
         }
     }
+}
+
+/// What ``FinvestLensDocument/stageSnapshot()`` hands to
+/// ``FinvestLensDocument/commitStaged(_:progress:)``: the book as database
+/// values, the store and the two URLs the write-back needs, and the baseline
+/// the external-change check compares against. Nothing in it refers back to
+/// the document, which is what lets it cross to a background thread while
+/// the document keeps being edited.
+public struct StagedSave: Sendable {
+    /// The change token at staging time, for ``FinvestLensDocument/finishSave(fingerprint:stagedAt:)``.
+    public let token: UInt64
+    let snapshot: BookSnapshot
+    let store: SQLiteDocumentStore
+    let fileURL: URL
+    let workingCopyURL: URL
+    let baselineFingerprint: Data?
+    let hasSharedFile: Bool
+    let saveLock: NSLock
 }

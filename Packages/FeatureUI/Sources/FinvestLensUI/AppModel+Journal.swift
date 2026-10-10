@@ -171,9 +171,18 @@ extension AppModel {
     /// Every leg is returned, the focus account's included — an opened-out line
     /// is the transaction journal's view of the transaction, and hiding the leg
     /// you are looking from makes a two-split transaction look one-sided.
+    ///
+    /// Memoised per transaction until ``transactionRevision`` moves: every
+    /// leg carries its account's `fullName`, a recursive string build, and
+    /// Journal style asks for every row's legs on each geometry pass.
     public func legRows(ofTransaction id: GncGUID) -> [AutoSplitRow] {
+        if legRowsRevision != transactionRevision {
+            legRowsCache.removeAll(keepingCapacity: true)
+            legRowsRevision = transactionRevision
+        }
+        if let hit = legRowsCache[id] { return hit }
         guard let book, let txn = book.transaction(with: id) else { return [] }
-        return txn.splits.map { split in
+        let rows = txn.splits.map { split in
             AutoSplitRow(legID: split.guid,
                          account: split.account?.fullName ?? "—",
                          memo: split.memo,
@@ -182,6 +191,8 @@ extension AppModel {
                          amount: split.value,
                          currencyCode: txn.currency.mnemonic)
         }
+        legRowsCache[id] = rows
+        return rows
     }
 
     /// GnuCash's Auto-Split Ledger (`FR-REG-03`): exactly the Basic register —
@@ -379,11 +390,21 @@ extension AppModel {
     /// and the debit total is what the Amount column adds up, on the same
     /// definition the rows use.
     public func wholeBookRegisterSummary() -> (count: Int, debits: Decimal) {
-        let transactions = journalTransactions(forAccountID: nil)
-        let debits = transactions.reduce(Decimal(0)) { running, txn in
-            running + txn.splits.filter { $0.value > 0 }.reduce(0) { $0 + $1.value }
-        }
-        return (transactions.count, debits)
+        // Memoised per revision: the All Transactions body asked on every
+        // click, and the reduce over every split was 21 ms each time
+        // (Performance Review 2, R7).
+        // The journal honours the register filter, so the key carries it.
+        let filter = registerFilter
+        let statuses = filter.statuses.map(\.rawValue).sorted().joined()
+        let key = "wholeBookSummary:\(statuses):\(filter.startDate?.timeIntervalSinceReferenceDate ?? -1)"
+            + ":\(filter.endDate?.timeIntervalSinceReferenceDate ?? -1)"
+        return cachedReport(key) { () -> (count: Int, debits: Decimal) in
+            let transactions = journalTransactions(forAccountID: nil)
+            let debits = transactions.reduce(Decimal(0)) { running, txn in
+                running + txn.splits.filter { $0.value > 0 }.reduce(0) { $0 + $1.value }
+            }
+            return (transactions.count, debits)
+        } ?? (0, 0)
     }
 
     public func wholeBookRowSummary(ofTransaction id: GncGUID) -> WholeBookRowSummary {
