@@ -219,7 +219,17 @@ public enum DocumentText {
         var request = RecognizeTextRequest()
         request.recognitionLevel = .accurate
         request.usesLanguageCorrection = true
-        let observations = try await request.perform(on: image)
+        let observations: [RecognizedTextObservation]
+        do {
+            observations = try await request.perform(on: image)
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            // Vision's own error types stop here: callers branch on
+            // `IntelligenceError`, and an engine that will not run is a
+            // different thing to tell a person than a page with no text.
+            throw IntelligenceError.recognitionFailed(String(describing: error))
+        }
         let reflowed = reflow(observations)
         return reflowed.isEmpty ? nil : reflowed
     }

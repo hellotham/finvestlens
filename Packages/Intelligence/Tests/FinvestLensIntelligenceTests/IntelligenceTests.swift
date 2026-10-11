@@ -310,7 +310,7 @@ struct DocumentTextTests {
         }
     }
 
-    @Test("A blank raster image yields emptyDocument, after an upscaled retry")
+    @Test("A blank raster image yields emptyDocument, or a wrapped recogniser failure, never a raw error")
     func blankImage() async throws {
         // A 300×150 all-white PNG: decodes as an image, contains no text, so
         // recognition (original, then 2× upscale) finds nothing.
@@ -330,8 +330,19 @@ struct DocumentTextTests {
         CGImageDestinationAddImage(destination, image, nil)
         #expect(CGImageDestinationFinalize(destination))
 
-        await #expect(throws: IntelligenceError.self) {
+        // Two honest outcomes, and nothing else. Where the recogniser runs
+        // (any real Mac) a blank page has no text: `emptyDocument`. Where it
+        // cannot run at all (a virtual Mac — GitHub's runner threw Vision's
+        // own `CRImageReaderError` here on 12 Oct 2026) the failure must
+        // arrive wrapped, because that raw error once escaped to callers
+        // that only know `IntelligenceError`.
+        do {
             _ = try await DocumentText.extractPages(from: png as Data)
+            Issue.record("a blank image produced text")
+        } catch IntelligenceError.emptyDocument {
+        } catch IntelligenceError.recognitionFailed {
+        } catch {
+            Issue.record("unwrapped error escaped: \(error)")
         }
     }
 }

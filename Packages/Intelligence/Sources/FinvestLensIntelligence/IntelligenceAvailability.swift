@@ -54,6 +54,13 @@ public enum IntelligenceError: LocalizedError {
     /// one failure a caller can *act* on: send less text (see
     /// ``StatementExtractor``, which halves and retries on exactly this).
     case contextOverflow
+    /// The system's text recogniser itself failed — not "no text on the
+    /// page" (that is ``emptyDocument``) but the engine refusing to run.
+    /// Seen 12 Oct 2026 on a virtual Mac, where Vision threw its own
+    /// `CRImageReaderError` ("e5rt_e5_compiler_compile call failed") and the
+    /// raw error reached callers that only know this type. The associated
+    /// value is the engine's own description, for the log.
+    case recognitionFailed(String)
     case modelFailure(String)
 
     public var errorDescription: String? {
@@ -65,6 +72,8 @@ public enum IntelligenceError: LocalizedError {
             return "Apple Intelligence declined to process this content (safety guardrails). Enter the details manually instead."
         case .contextOverflow:
             return "This document is too long for Apple Intelligence to read in one piece."
+        case .recognitionFailed:
+            return "The text in this document could not be read on this device. Enter the details manually instead."
         case .modelFailure(let detail):
             return "Apple Intelligence could not process this request: \(detail)"
         }

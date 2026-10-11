@@ -14,7 +14,8 @@ let package = Package(
     platforms: [
         .macOS("27.0"),
         .iOS("27.0"),
-        .macCatalyst("26.0"),
+        .macCatalyst("27.0"),
+        .visionOS("27.0"),
     ],
     products: [
         .library(name: "FinvestLensQuotes", targets: ["FinvestLensQuotes"]),
