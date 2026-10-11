@@ -2026,8 +2026,7 @@ public final class AppModel {
         guard let bookmarks = UserDefaults.standard
                 .dictionary(forKey: recentBookmarksKey) as? [String: Data],
               let data = bookmarks[path] else { return nil }
-        var stale = false
-        return try? URL(resolvingBookmarkData: data, bookmarkDataIsStale: &stale)
+        return ScopedBookmark.resolve(data)?.url
     }
 
     /// Defaults key for "reopen the last book on launch" (window/state
@@ -2166,7 +2165,7 @@ public final class AppModel {
         // regain the grant on iOS after a relaunch. Pruned with the list.
         var bookmarks = UserDefaults.standard
             .dictionary(forKey: Self.recentBookmarksKey) as? [String: Data] ?? [:]
-        if let bookmark = try? url.bookmarkData() {
+        if let bookmark = ScopedBookmark.make(url) {
             bookmarks[url.path] = bookmark
         }
         bookmarks = bookmarks.filter { paths.contains($0.key) }
@@ -2191,8 +2190,7 @@ public final class AppModel {
     /// check here: a bookmark to a deleted file throws rather than resolving.
     private static func resolves(_ data: Data?) -> Bool {
         guard let data else { return false }
-        var stale = false
-        return (try? URL(resolvingBookmarkData: data, bookmarkDataIsStale: &stale)) != nil
+        return ScopedBookmark.resolve(data) != nil
     }
 
     /// Drops a book from the recents list and forgets its bookmark. Used when

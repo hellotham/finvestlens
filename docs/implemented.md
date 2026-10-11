@@ -3704,3 +3704,32 @@ pass; the live harnesses and throwaway receipt tests ran in Release against
 a temp copy of the reference book (figures in the review's §1, §4 and §5;
 the throwaway tests were deleted). Builds and the signed relaunch are
 recorded in the session's final report.
+
+## App Store Connect record, App Sandbox on, sidecars as related items (11 Oct 2026)
+
+- **App Store Connect**: the FinvestLens record exists (App ID 6821468191,
+  iOS and macOS, English (Australia), bundle `com.hellotham.finvestlens`, SKU
+  `FINVESTLENS-001`, Full Access), created from the HelloNotes pattern.
+  `ExportOptions-AppStore-macOS.plist` / `-iOS.plist` and
+  `ITSAppUsesNonExemptEncryption = false` follow it too. Runbook:
+  [app-store.md](app-store.md).
+- **App Sandbox on every target.** The lock that `deferred.md` §6 recorded as
+  refused under the sandbox works: its related-item type was declared with
+  role `None`, which the sandbox honours as read-only. Proven with a one-file
+  sandboxed probe app on a local folder and on the Box Drive folder, then in
+  the app itself (the lock held beside the Box Drive book through the first
+  heartbeat; `FileLock` now logs acquisition, release and refusals under
+  `com.hellotham.finvestlens:lock`).
+- **The audit trail is `<Book>.audit`** beside the book — the book's base
+  name, so it is a related item like the lock — through the new
+  `RelatedSidecar` helper in Persistence (coordinated read, append, replace,
+  move; `RelatedSidecarTests`). The old `<Book>.finvestlens.audit.log` shares
+  no base name with the book and stays where it is.
+- **Scoped bookmarks** (`ScopedBookmark`): recents, the last book and the two
+  document folders are stored with `.withSecurityScope` on macOS and resolved
+  the same way; the folders start their access once per session.
+
+Receipts in the session report: Persistence 43 and the FeatureUI
+refresh-scope suite (11, including the audit sidecar) green before the
+preflight; the signed sandboxed build's entitlements read back from the
+bundle; the lock observed beside the Box Drive book with `/usr/bin/log`.

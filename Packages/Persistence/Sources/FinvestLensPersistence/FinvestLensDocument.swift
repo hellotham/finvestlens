@@ -121,6 +121,8 @@ public final class FinvestLensDocument {
             }
             throw error
         } catch {
+            let nsError = error as NSError
+            FileLock.log.error("opening lockless: \(nsError.localizedDescription, privacy: .public) (\(nsError.domain, privacy: .public) \(nsError.code))")
             return false
         }
     }

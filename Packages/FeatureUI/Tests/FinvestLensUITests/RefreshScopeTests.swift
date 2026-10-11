@@ -134,6 +134,21 @@ struct RefreshScopeTests {
         #expect(model.registerFilter == .showAll)
     }
 
+    @Test("An edit's audit line lands in the book's `.audit` sidecar, beside the book")
+    func auditSidecar() throws {
+        let model = AppModel()
+        let url = tempURL()
+        try model.newDocument(at: url)
+        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        _ = try #require(model.addAccount(name: "Bank", type: .bank))
+        let sidecar = url.deletingPathExtension().appendingPathExtension("audit")
+        defer { try? FileManager.default.removeItem(at: sidecar) }
+        #expect(FileManager.default.fileExists(atPath: sidecar.path))
+        #expect(model.auditLogURL == sidecar)
+        let tail = model.auditLogTail()
+        #expect(tail.first?.operation.contains("Account") == true)
+    }
+
     @Test("Redo of Add Account registers the new account's commodity again")
     func redoAddAccountRegistersCommodity() throws {
         let model = AppModel()

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- App Store Connect / TestFlight (macOS). A build appears in TestFlight as
+         soon as it finishes processing, and the same build is what gets
+         attached to a version for review. Not interchangeable with a
+         developer-id export: scripts/release-dmg.sh signs the notarised DMG
+         for distribution outside the store, and using the wrong options
+         signs the build for the wrong channel. -->
+    <key>method</key>            <string>app-store-connect</string>
+    <key>teamID</key>            <string>RPL5R637DS</string>
+    <key>destination</key>       <string>upload</string>
+    <key>signingStyle</key>      <string>automatic</string>
+    <key>uploadSymbols</key>     <true/>
+</dict>
+</plist>

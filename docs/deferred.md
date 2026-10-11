@@ -76,7 +76,7 @@ on-device model and no financial data leaves the device.
 
 | Item | Notes |
 |---|---|
-| App Sandbox | Disabled by decision: sibling `.lock` files at user-selected locations are denied by the sandbox; related-item declaration + coordinated I/O are in place but macOS still refused. Direct (notarized) distribution doesn't need it. Revisit before any Mac App Store submission. |
+| App Sandbox | **Enabled 11 Oct 2026** for the Mac App Store and TestFlight. The earlier refusal of the sibling `.lock` had a plain cause: the related item was declared with `CFBundleTypeRole = None`, which the sandbox honours as a *read-only* grant — the coordinator ran the accessor and the write itself was denied (`NSCocoaErrorDomain 513`). With `Editor` (and `LSHandlerRank = None`) the same presenter and coordinated I/O write the lock and the `.audit` sidecar beside a book, verified on a local folder and on the Box Drive folder. See `docs/app-store.md`. |
 | Esc inside a focused text field | AppKit's field editor consumes the raw Escape (completion); ⌘. always cancels, Esc works otherwise. SwiftUI offers no clean override (accepted). *The Jul 2026 F19 sweep put `onEscapeCommand` on every sheet — this field-editor caveat is the one remaining Esc limit.* |
 
 ## 5 — Skipped from the phase plan (revisit only on demand)

@@ -12,14 +12,23 @@
 //
 
 import Foundation
+import FinvestLensPersistence
 
 @MainActor
 extension AppModel {
 
-    /// The sidecar's location: `<book>.audit.log` beside the document.
-    var auditLogURL: URL? {
-        documentURL.map { URL(fileURLWithPath: $0.path + ".audit.log") }
+    /// The sidecar beside the document, `<Book>.audit`: the book's base name
+    /// with the `audit` extension, which the app declares as a related item
+    /// so the sandbox lets it be read and appended through the document's
+    /// own grant (the same mechanism as the `.lock` file). It was
+    /// `<Book>.finvestlens.audit.log` until 11 Oct 2026; that name shares no
+    /// base with the book and is unreachable from a sandboxed app, so an old
+    /// sidecar stays where it is and a new trail starts beside it.
+    var auditSidecar: RelatedSidecar? {
+        documentURL.map { RelatedSidecar(documentURL: $0, pathExtension: "audit") }
     }
+
+    var auditLogURL: URL? { auditSidecar?.sidecarURL }
 
     private static let auditSizeCap = 1 << 20          // rotate past 1 MB…
     private static let auditKeepBytes = 1 << 19        // …keeping the last 512 KB
@@ -28,43 +37,32 @@ extension AppModel {
     /// Undo/redo replays are labelled as such. Failures are ignored — the log
     /// is an aid, never a reason an edit can't proceed.
     func auditLog(_ operation: String) {
-        guard let url = auditLogURL else { return }
+        guard let sidecar = auditSidecar else { return }
         var label = operation
         if undoManager?.isUndoing == true { label = "Undo " + label }
         else if undoManager?.isRedoing == true { label = "Redo " + label }
         let stamp = ISO8601DateFormatter().string(from: Date())
         let line = "\(stamp)\t\(label)\n"
-
-        let manager = FileManager.default
-        if !manager.fileExists(atPath: url.path) {
-            try? Data(line.utf8).write(to: url)
-            return
-        }
-        guard let handle = try? FileHandle(forWritingTo: url) else { return }
-        defer { try? handle.close() }
-        _ = try? handle.seekToEnd()
-        try? handle.write(contentsOf: Data(line.utf8))
-
-        if let size = try? manager.attributesOfItem(atPath: url.path)[.size] as? Int,
-           size > Self.auditSizeCap {
-            rotateAuditLog(at: url)
+        try? sidecar.append(Data(line.utf8))
+        if let size = sidecar.size(), size > Self.auditSizeCap {
+            rotateAuditLog(sidecar)
         }
     }
 
     /// Trims the log to its newest tail, cutting at a line boundary.
-    private func rotateAuditLog(at url: URL) {
-        guard let data = try? Data(contentsOf: url), data.count > Self.auditKeepBytes else { return }
+    private func rotateAuditLog(_ sidecar: RelatedSidecar) {
+        guard let data = sidecar.read(), data.count > Self.auditKeepBytes else { return }
         var tail = data.suffix(Self.auditKeepBytes)
         if let newline = tail.firstIndex(of: UInt8(ascii: "\n")) {
             tail = tail[tail.index(after: newline)...]
         }
-        try? tail.write(to: url)
+        try? sidecar.write(Data(tail))
     }
 
     /// The newest entries, most recent first, for the viewer.
     public func auditLogTail(limit: Int = 500) -> [(date: String, operation: String)] {
-        guard let url = auditLogURL,
-              let text = try? String(contentsOf: url, encoding: .utf8) else { return [] }
+        guard let data = auditSidecar?.read(),
+              let text = String(data: data, encoding: .utf8) else { return [] }
         return text.split(whereSeparator: \.isNewline).suffix(limit).reversed().map { line in
             let parts = line.split(separator: "\t", maxSplits: 1)
             let date = parts.first.map(String.init) ?? ""

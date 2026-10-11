@@ -25,7 +25,29 @@
 			</array>
 			<key>CFBundleTypeName</key>
 			<string>FinvestLens Lock File</string>
+			<!-- Editor, not None: the sandbox grants a related item only the
+			     access the role claims, and None is read-only. Rank None keeps
+			     Finder from offering the app for these files. -->
 			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSHandlerRank</key>
+			<string>None</string>
+			<key>NSIsRelatedItemType</key>
+			<true/>
+		</dict>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>audit</string>
+			</array>
+			<key>CFBundleTypeName</key>
+			<string>FinvestLens Audit Log</string>
+			<!-- Editor, not None: the sandbox grants a related item only the
+			     access the role claims, and None is read-only. Rank None keeps
+			     Finder from offering the app for these files. -->
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSHandlerRank</key>
 			<string>None</string>
 			<key>NSIsRelatedItemType</key>
 			<true/>
@@ -44,6 +66,10 @@
 			</array>
 		</dict>
 	</array>
+	<!-- The app uses only exempt TLS/HTTPS (quote providers, Box), so App
+	     Store Connect need not ask about export compliance on every upload. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>NSUbiquitousContainers</key>
 	<dict>
 		<key>iCloud.com.hellotham.finvestlensapp</key>

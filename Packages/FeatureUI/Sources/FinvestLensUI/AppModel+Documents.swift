@@ -14,6 +14,7 @@
 //
 
 import Foundation
+import FinvestLensPersistence
 import FinvestLensEngine
 #if os(macOS)
 import AppKit
@@ -24,6 +25,44 @@ extension AppModel {
 
     static let documentFolderDefaultsKey = "finvestlens.documentFolderPath"
     static let secondaryDocumentFolderDefaultsKey = "finvestlens.documentFolderPathSecondary"
+    /// Beside each path, the security-scoped bookmark that lets a sandboxed
+    /// build back into the folder on the next launch (`ScopedBookmark`). A
+    /// folder chosen before the sandbox has a path and no bookmark; its
+    /// files read as missing until it is chosen again in Settings.
+    static let documentFolderBookmarkKey = "finvestlens.documentFolderBookmark"
+    static let secondaryDocumentFolderBookmarkKey = "finvestlens.documentFolderBookmarkSecondary"
+
+    /// Each folder's bookmark, resolved once per session and its scoped
+    /// access started then (on macOS, under the sandbox); dropped when the
+    /// folder is re-chosen. The resolved URL is kept only for the access —
+    /// the folder the app reports is the path the person chose, which a
+    /// resolved bookmark may spell differently (`/private/var` for `/var`).
+    private static var resolvedFolders: [String: (url: URL, accessing: Bool)] = [:]
+
+    private func scopedFolder(pathKey: String, bookmarkKey: String) -> URL? {
+        guard let path = UserDefaults.standard.string(forKey: pathKey), !path.isEmpty else {
+            return nil
+        }
+        if Self.resolvedFolders[bookmarkKey] == nil,
+           let data = UserDefaults.standard.data(forKey: bookmarkKey),
+           let resolved = ScopedBookmark.resolve(data) {
+            Self.resolvedFolders[bookmarkKey] =
+                (resolved.url, resolved.url.startAccessingSecurityScopedResource())
+        }
+        return URL(fileURLWithPath: path, isDirectory: true)
+    }
+
+    private func setScopedFolder(_ url: URL?, pathKey: String, bookmarkKey: String) {
+        if let previous = Self.resolvedFolders.removeValue(forKey: bookmarkKey), previous.accessing {
+            previous.url.stopAccessingSecurityScopedResource()
+        }
+        UserDefaults.standard.set(url?.path ?? "", forKey: pathKey)
+        if let url, let data = ScopedBookmark.make(url) {
+            UserDefaults.standard.set(data, forKey: bookmarkKey)
+        } else {
+            UserDefaults.standard.removeObject(forKey: bookmarkKey)
+        }
+    }
 
     // MARK: New-book placement
 
@@ -55,12 +94,12 @@ extension AppModel {
     /// The user-chosen document folder, or `nil` to use the book's folder.
     public var configuredDocumentFolder: URL? {
         get {
-            guard let path = UserDefaults.standard.string(forKey: Self.documentFolderDefaultsKey),
-                  !path.isEmpty else { return nil }
-            return URL(fileURLWithPath: path, isDirectory: true)
+            scopedFolder(pathKey: Self.documentFolderDefaultsKey,
+                         bookmarkKey: Self.documentFolderBookmarkKey)
         }
         set {
-            UserDefaults.standard.set(newValue?.path ?? "", forKey: Self.documentFolderDefaultsKey)
+            setScopedFolder(newValue, pathKey: Self.documentFolderDefaultsKey,
+                            bookmarkKey: Self.documentFolderBookmarkKey)
         }
     }
 
@@ -75,12 +114,12 @@ extension AppModel {
     /// after a move).
     public var secondaryDocumentFolder: URL? {
         get {
-            guard let path = UserDefaults.standard.string(forKey: Self.secondaryDocumentFolderDefaultsKey),
-                  !path.isEmpty else { return nil }
-            return URL(fileURLWithPath: path, isDirectory: true)
+            scopedFolder(pathKey: Self.secondaryDocumentFolderDefaultsKey,
+                         bookmarkKey: Self.secondaryDocumentFolderBookmarkKey)
         }
         set {
-            UserDefaults.standard.set(newValue?.path ?? "", forKey: Self.secondaryDocumentFolderDefaultsKey)
+            setScopedFolder(newValue, pathKey: Self.secondaryDocumentFolderDefaultsKey,
+                            bookmarkKey: Self.secondaryDocumentFolderBookmarkKey)
         }
     }
 
@@ -407,23 +446,14 @@ extension AppModel {
             throw BookFileError("A book named “\(trimmed)” already exists there.")
         }
         try manager.moveItem(at: url, to: destination)
-        let sidecar = URL(fileURLWithPath: url.path + ".audit.log")
-        if manager.fileExists(atPath: sidecar.path) {
-            try? manager.moveItem(at: sidecar,
-                                  to: URL(fileURLWithPath: destination.path + ".audit.log"))
-        }
+        try? RelatedSidecar(documentURL: url, pathExtension: "audit").move(alongside: destination)
         replaceRecent(url, with: destination)
     }
 
     /// After a Files-app move (`fileMover`), point Recents at the new home and
     /// bring the audit sidecar along.
     public func bookMoved(from oldURL: URL, to newURL: URL) {
-        let manager = FileManager.default
-        let sidecar = URL(fileURLWithPath: oldURL.path + ".audit.log")
-        if manager.fileExists(atPath: sidecar.path) {
-            try? manager.moveItem(at: sidecar,
-                                  to: URL(fileURLWithPath: newURL.path + ".audit.log"))
-        }
+        try? RelatedSidecar(documentURL: oldURL, pathExtension: "audit").move(alongside: newURL)
         replaceRecent(oldURL, with: newURL)
     }
 
@@ -438,7 +468,7 @@ extension AppModel {
         var bookmarks = UserDefaults.standard
             .dictionary(forKey: Self.recentBookmarksKey) as? [String: Data] ?? [:]
         bookmarks.removeValue(forKey: oldURL.path)
-        if let bookmark = try? newURL.bookmarkData() { bookmarks[newURL.path] = bookmark }
+        if let bookmark = ScopedBookmark.make(newURL) { bookmarks[newURL.path] = bookmark }
         UserDefaults.standard.set(bookmarks, forKey: Self.recentBookmarksKey)
         recentBooks = Self.loadRecents()
     }

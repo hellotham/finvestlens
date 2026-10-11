@@ -44,6 +44,28 @@ or change them in both the portal and the files.
 The Quick Look extension reads the previewed file directly, so it needs no App
 Group and no iCloud — only a registered App ID so its `.appex` can be signed.
 
+### App Sandbox (since 11 Oct 2026)
+
+Every target is sandboxed (`ENABLE_APP_SANDBOX = YES`), which the Mac App
+Store and TestFlight require. The app's `finvestlens.entitlements` adds
+`files.user-selected.read-write`, `files.bookmarks.app-scope` and
+`network.client` beside the App Group and iCloud keys; the two extensions get
+`ENABLE_USER_SELECTED_FILES = readonly`. Three consequences for the code:
+
+- Anything the app reaches outside its container comes from an open/save
+  panel, a drag, Launch Services, or a **security-scoped** bookmark
+  (`ScopedBookmark` — recents, the last book, the two document folders). A
+  folder chosen before the sandbox has a path and no bookmark, so its files
+  read as missing until it is chosen again in Settings.
+- The `.lock` and `.audit` sidecars beside a book are *related items*:
+  declared in `Info.plist` with `NSIsRelatedItemType`, **`CFBundleTypeRole =
+  Editor`** (`None` is granted read-only) and `LSHandlerRank = None`, and
+  reached only through a file coordinator whose presenter names the book as
+  the primary item (`FileLock`, `RelatedSidecar`).
+- A sandboxed app reads its preferences from its container
+  (`~/Library/Containers/com.hellotham.finvestlens/Data/Library/Preferences`),
+  not the plist `defaults read` shows by default.
+
 ### Two bases, on purpose
 
 The bundle IDs and the shared identifiers do not share a base, and that is

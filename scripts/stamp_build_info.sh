@@ -10,7 +10,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-VERSION="1.1"
+VERSION="1.2"
 COMMIT="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
 DATE="$(date '+%-d %B %Y')"
 OUT="finvestlens/BuildInfo.swift"

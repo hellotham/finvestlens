@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import OSLog
 
 /// Metadata about who holds a document lock.
 public struct LockHolder: Codable, Equatable, Sendable {
@@ -163,7 +164,16 @@ public final class FileLock {
         self.heartbeatInterval = heartbeatInterval
         self.staleAfter = staleAfter
         self.presenter = LockFilePresenter(lockURL: lockURL, documentURL: documentURL)
-        NSFileCoordinator.addFilePresenter(presenter)
+        // The related-item presenter is only wanted under App Sandbox; outside
+        // it each coordination spends ~0.5 s failing to get an extension that
+        // is not needed (see `RelatedSidecar.isSandboxed`).
+        if RelatedSidecar.isSandboxed { NSFileCoordinator.addFilePresenter(presenter) }
+    }
+
+    /// The coordinator for this lock's I/O: carrying the related-item
+    /// presenter under the sandbox, plain elsewhere.
+    private func coordinator() -> NSFileCoordinator {
+        RelatedSidecar.isSandboxed ? NSFileCoordinator(filePresenter: presenter) : NSFileCoordinator()
     }
 
     deinit {
@@ -173,18 +183,22 @@ public final class FileLock {
         // out of scope with the lock still held.
         if held { release() }
         LockReaper.deregister(lockURL)
-        NSFileCoordinator.removeFilePresenter(presenter)
+        if RelatedSidecar.isSandboxed { NSFileCoordinator.removeFilePresenter(presenter) }
     }
 
     /// `true` if this instance currently holds the lock.
     public var isHeldByUs: Bool { held }
+
+    /// Lock-file failures degrade the document to lockless rather than stop
+    /// it, so they are logged — the one place a sandbox refusal shows.
+    static let log = Logger(subsystem: "com.hellotham.finvestlens", category: "lock")
 
     // MARK: Coordinated lock-file I/O
 
     private func coordinatedRead() -> Data? {
         var data: Data?
         var coordError: NSError?
-        NSFileCoordinator(filePresenter: presenter)
+        coordinator()
             .coordinate(readingItemAt: lockURL, options: [.withoutChanges],
                         error: &coordError) { url in
                 data = try? Data(contentsOf: url)
@@ -196,7 +210,7 @@ public final class FileLock {
                                   _ body: (URL) throws -> Void) throws {
         var coordError: NSError?
         var bodyError: Error?
-        NSFileCoordinator(filePresenter: presenter)
+        coordinator()
             .coordinate(writingItemAt: lockURL, options: options,
                         error: &coordError) { url in
                 do { try body(url) } catch { bodyError = error }
@@ -258,11 +272,14 @@ public final class FileLock {
                 try data.write(to: url, options: [.withoutOverwriting])
             }
             held = true
+            Self.log.info("acquired \(self.lockURL.lastPathComponent, privacy: .public)")
             LockReaper.register(lockURL, instanceID: instanceID)
         } catch {
             if let existing = currentHolder() {
                 throw LockError.alreadyLocked(existing)
             }
+            let nsError = error as NSError
+            Self.log.error("could not create \(self.lockURL.lastPathComponent, privacy: .public): \(nsError.localizedDescription, privacy: .public) (\(nsError.domain, privacy: .public) \(nsError.code))")
             if FileManager.default.fileExists(atPath: lockURL.path) {
                 // The file exists but is unreadable/corrupt. Report it as a
                 // (stale) unknown holder so the caller offers Break Lock —
@@ -333,6 +350,9 @@ public final class FileLock {
             try? coordinatedWrite(options: [.forDeleting]) { url in
                 try FileManager.default.removeItem(at: url)
             }
+            Self.log.info("released \(self.lockURL.lastPathComponent, privacy: .public)")
+        } else {
+            Self.log.error("release: \(self.lockURL.lastPathComponent, privacy: .public) is not ours on disk (unreadable or another holder)")
         }
         held = false
         LockReaper.deregister(lockURL)
