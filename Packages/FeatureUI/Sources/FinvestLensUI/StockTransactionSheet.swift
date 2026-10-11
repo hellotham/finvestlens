@@ -75,7 +75,7 @@ struct StockTransactionSheet: View {
             }
             .onAppear(perform: prime)
         }
-        .frame(minWidth: 460, minHeight: 520)
+        .windowFloor(minWidth: 460, minHeight: 520)
     }
 
     // MARK: Sections

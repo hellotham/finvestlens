@@ -95,7 +95,7 @@ struct SmartImportSheet: View {
                     }
             }
         }
-        .frame(minWidth: 700, minHeight: 520)
+        .windowFloor(minWidth: 700, minHeight: 520)
     }
 
     // MARK: Analysis
@@ -437,7 +437,7 @@ private struct CreateFromInvoiceSheet: View {
                 }
             }
         }
-        .frame(minWidth: 400, minHeight: 320)
+        .windowFloor(minWidth: 400, minHeight: 320)
     }
 
     private func create() {

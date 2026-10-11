@@ -27,7 +27,7 @@ struct RulesView: View {
     private var isEmpty: Bool { model.ruleGroups.allSatisfy(\.rules.isEmpty) }
 
     var body: some View {
-        NavigationStack {
+        DestinationStack {
             Group {
                 if model.ruleGroups.isEmpty {
                     ContentUnavailableView("No rules", systemImage: "wand.and.stars",
@@ -36,7 +36,7 @@ struct RulesView: View {
                     list
                 }
             }
-            .navigationTitle("")   // the tab strip names this destination
+            .untitledInRegularWidth()   // the tab strip names this destination
             .onChange(of: model.sidebarCreateRequest) {
                 guard model.sidebarCreateRequest == .ruleGroup else { return }
                 model.sidebarCreateRequest = nil
@@ -78,7 +78,7 @@ struct RulesView: View {
                 }
             }
         }
-        .frame(minWidth: embedded ? nil : 520, minHeight: embedded ? nil : 420)
+        .windowFloor(minWidth: embedded ? nil : 520, minHeight: embedded ? nil : 420)
     }
 
     private var list: some View {
@@ -283,7 +283,7 @@ struct ApplyRulesSheet: View {
                 previewed = true
             }
         }
-        .frame(minWidth: 460, minHeight: 360)
+        .windowFloor(minWidth: 460, minHeight: 360)
     }
 }
 
@@ -425,7 +425,7 @@ struct RuleEditorSheet: View {
             }
             .onAppear(perform: loadIfNeeded)
         }
-        .frame(minWidth: 520, minHeight: 460)
+        .windowFloor(minWidth: 520, minHeight: 460)
     }
 
     private func loadIfNeeded() {

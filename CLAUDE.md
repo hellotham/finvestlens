@@ -24,7 +24,7 @@ done
 swift test --package-path Packages/Shared --skip writeReadRoundTripThroughAppGroup
 ```
 
-The Shared `--skip` matters: that test round-trips through the real App Group container and can block forever on a wedged `containermanagerd`. If a test run hangs, `pkill swiftpm-testing-helper` also frees the `.build` lock. Every package suite uses Swift Testing (`@Test` / `#expect`) — there is no XCTest under `Packages/`. The one exception is outside them and is not a suite: `finvestlensUITests/` is Xcode's XCUITest scaffold, generated with the project and never written. It asserts nothing (`testExample` launches the app and stops), so it proves nothing either — delete the target or write it, but do not read it as coverage.
+The Shared `--skip` matters: that test round-trips through the real App Group container and can block forever on a wedged `containermanagerd`. If a test run hangs, `pkill swiftpm-testing-helper` also frees the `.build` lock. Every package suite uses Swift Testing (`@Test` / `#expect`) — there is no XCTest under `Packages/`. The one exception is outside them: `finvestlensUITests/` is XCUITest. Its generated scaffold (`testExample`) asserts nothing; `ScreenshotTests` is written — it drives a simulator to capture the App Store sets, and tours every phone destination, and skips itself unless `TEST_RUNNER_FL_SHOT_DIR` and `TEST_RUNNER_FL_SHOT_BOOK` are set (recipe in `docs/app-store.md`). Neither is coverage.
 
 The app (both platforms must build before committing):
 
@@ -53,7 +53,7 @@ Website (`website/`, Astro 7 + Tailwind 4, served at `hellotham.com/finvestlens/
 
 Release DMG: `scripts/release-dmg.sh` (archive → notarize + staple the app → build, sign, notarize + staple the DMG; uses the `hellotham-notary` keychain profile).
 
-Live harnesses in the FeatureUI test target skip themselves unless env vars are set: `FL_PERF_FILE=/path/to/Book.finvestlens` enables the real-book perf/report/planning/round-trip harnesses; `FL_FINLENS=/path/to/finlens` points the CLI parity tests at a built binary.
+Live harnesses in the FeatureUI test target skip themselves unless env vars are set: `FL_PERF_FILE=/path/to/Book.finvestlens` enables the real-book perf/report/planning/round-trip harnesses; `FL_FINLENS=/path/to/finlens` points the CLI parity tests at a built binary. The UI test target's `ScreenshotTests` likewise needs `TEST_RUNNER_FL_SHOT_DIR` and `TEST_RUNNER_FL_SHOT_BOOK` (`TEST_RUNNER_FL_TOUR=1` for the phone tour, `TEST_RUNNER_FL_DUMP=1` for an accessibility dump).
 
 ## Architecture
 

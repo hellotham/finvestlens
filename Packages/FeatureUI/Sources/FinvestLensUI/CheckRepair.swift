@@ -235,7 +235,7 @@ public struct CheckRepairSheet: View {
                 }
             }
         }
-        .frame(minWidth: 460, minHeight: 320)
+        .windowFloor(minWidth: 460, minHeight: 320)
     }
 
     /// The offending years, deduplicated and ordered — "1525", or "0025 and

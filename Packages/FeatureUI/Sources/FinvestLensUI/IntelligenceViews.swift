@@ -147,7 +147,7 @@ struct AutoCategorizeSheet: View {
                 loaded = true
             }
         }
-        .frame(minWidth: 620, minHeight: 460)
+        .windowFloor(minWidth: 620, minHeight: 460)
     }
 
     private var emptyMessage: String {
@@ -405,7 +405,7 @@ struct DividendImportSheet: View {
             }
             .task { await extract() }
         }
-        .frame(minWidth: 560, minHeight: 500)
+        .windowFloor(minWidth: 560, minHeight: 500)
     }
 
     private func extract() async {
@@ -526,7 +526,7 @@ struct BudgetSuggestSheet: View {
             }
             .task { await suggest() }
         }
-        .frame(minWidth: 560, minHeight: 480)
+        .windowFloor(minWidth: 560, minHeight: 480)
     }
 
     @ViewBuilder

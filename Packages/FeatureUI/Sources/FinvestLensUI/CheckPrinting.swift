@@ -210,7 +210,7 @@ struct CheckPrintSheet: View {
                           contentType: .pdf,
                           defaultFilename: "Check \(check?.checkNumber ?? "")".trimmingCharacters(in: .whitespaces)) { _ in }
         }
-        .frame(minWidth: 660, minHeight: 420)
+        .windowFloor(minWidth: 660, minHeight: 420)
     }
 
     private func exportPDF() {

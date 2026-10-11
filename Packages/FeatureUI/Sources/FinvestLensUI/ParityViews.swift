@@ -60,10 +60,10 @@ struct LinkedDocumentsView: View {
                 }
             }
             .sheet(item: $editingTransactionID) { id in
-                TransactionEditorSheet(model: model, editingID: id)
+                TransactionEditor(model: model, editingID: id)
             }
         }
-        .frame(minWidth: 480, minHeight: 360)
+        .windowFloor(minWidth: 480, minHeight: 360)
     }
 
     private func row(_ doc: AppModel.LinkedDocument) -> some View {
@@ -151,7 +151,7 @@ struct TaxOptionsView: View {
                 }
             }
         }
-        .frame(minWidth: 520, minHeight: 480)
+        .windowFloor(minWidth: 520, minHeight: 480)
     }
 
     private func scheduleRow(_ row: AppModel.TaxAccount) -> some View {
@@ -304,7 +304,7 @@ struct CloseBookView: View {
                 }
             }
         }
-        .frame(minWidth: 460, minHeight: 420)
+        .windowFloor(minWidth: 460, minHeight: 420)
     }
 }
 
@@ -388,7 +388,7 @@ struct LoanCalculatorView: View {
                 CreateLoanPaymentSheet(model: model, loan: loan, onCreated: { dismiss() })
             }
         }
-        .frame(minWidth: 460, minHeight: 460)
+        .windowFloor(minWidth: 460, minHeight: 460)
     }
 
     private var scheduleTable: some View {
@@ -462,7 +462,7 @@ struct CreateLoanPaymentSheet: View {
                 }
             }
         }
-        .frame(minWidth: 420, minHeight: 320)
+        .windowFloor(minWidth: 420, minHeight: 320)
     }
 
     private func accountPicker(_ label: LocalizedStringKey,

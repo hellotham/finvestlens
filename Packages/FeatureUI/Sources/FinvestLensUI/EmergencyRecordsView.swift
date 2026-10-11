@@ -30,7 +30,7 @@ struct EmergencyRecordsView: View {
                 recordsList
             }
         }
-        .navigationTitle("")   // the tab strip names this destination
+        .untitledInRegularWidth()   // the tab strip names this destination
         .onChange(of: model.sidebarCreateRequest) {
             guard model.sidebarCreateRequest == .emergencyRecord else { return }
             model.sidebarCreateRequest = nil
@@ -137,7 +137,7 @@ struct AuditLogSheet: View {
     @Environment(\.isEmbeddedDestination) private var embedded
 
     var body: some View {
-        NavigationStack {
+        DestinationStack {
             Group {
                 let entries = model.auditLogTail()
                 if entries.isEmpty {
@@ -158,7 +158,7 @@ struct AuditLogSheet: View {
                     }
                 }
             }
-            .navigationTitle("")   // the tab strip names this destination
+            .untitledInRegularWidth()   // the tab strip names this destination
             .onEscapeCommand { if !embedded { dismiss() } }
             .toolbar {
                 if !embedded {
@@ -168,7 +168,7 @@ struct AuditLogSheet: View {
                 }
             }
         }
-        .frame(minWidth: embedded ? nil : 480, minHeight: embedded ? nil : 420)
+        .windowFloor(minWidth: embedded ? nil : 480, minHeight: embedded ? nil : 420)
     }
 }
 
@@ -235,7 +235,7 @@ private struct RecordEditorSheet: View {
             }
             .onAppear(perform: load)
         }
-        .frame(minWidth: 460, minHeight: 420)
+        .windowFloor(minWidth: 460, minHeight: 420)
     }
 
     private func load() {

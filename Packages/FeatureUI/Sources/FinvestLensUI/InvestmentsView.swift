@@ -69,7 +69,7 @@ struct InvestmentsView: View {
         // A stack for the toolbar to hang from — with no path of its own. A
         // holding's page (`FR-INV-15`) is a tab, reached the same way the
         // sidebar reaches it.
-        NavigationStack {
+        DestinationStack {
             Group {
                 if model.securityCommodities.isEmpty && model.watchlist.isEmpty {
                     ContentUnavailableView(
@@ -85,7 +85,7 @@ struct InvestmentsView: View {
                     }
                 }
             }
-            .navigationTitle("")
+            .untitledInRegularWidth()
             .onChange(of: model.sidebarCreateRequest) {
                 guard model.sidebarCreateRequest == .watchedSecurity else { return }
                 model.sidebarCreateRequest = nil
@@ -278,16 +278,36 @@ struct InvestmentsView: View {
                             // where every question this table raises gets
                             // answered, so reaching it should not require
                             // finding a disclosure chevron.
-                            NavigationLink(value: row.commodity) {
-                                InvestmentRowView(
-                                    row: row, model: model, sparkWindow: sparkWindow,
-                                    onTarget: { targeting = CommodityTarget(commodity: row.commodity) },
-                                    onCadence: { cadenceFor = CommodityTarget(commodity: row.commodity) },
-                                    onOpen: {
-                                        model.navigate(to: .security(
-                                            SidebarSelection.securityKey(row.commodity)))
-                                    })
+                            //
+                            // A button, because the page is a *destination* —
+                            // a tab in the regular shell, a pushed page in the
+                            // compact one — and the model is what opens those.
+                            // This was a `NavigationLink(value: row.commodity)`
+                            // with no destination declared for a commodity
+                            // anywhere, so the row drew a chevron and went
+                            // nowhere; only Get Info reached the page.
+                            Button {
+                                model.navigate(to: .security(
+                                    SidebarSelection.securityKey(row.commodity)))
+                            } label: {
+                                HStack(spacing: 8) {
+                                    InvestmentRowView(
+                                        row: row, model: model, sparkWindow: sparkWindow,
+                                        onTarget: { targeting = CommodityTarget(commodity: row.commodity) },
+                                        onCadence: { cadenceFor = CommodityTarget(commodity: row.commodity) },
+                                        onOpen: {
+                                            model.navigate(to: .security(
+                                                SidebarSelection.securityKey(row.commodity)))
+                                        })
+                                    Image(systemName: "chevron.forward")
+                                        .scaledFont(.caption)
+                                        .foregroundStyle(.tertiary)
+                                        .accessibilityHidden(true)
+                                }
+                                .contentShape(Rectangle())
                             }
+                            .buttonStyle(.plain)
+                            .accessibilityHint("Opens the holding’s page")
                         }
                     }
                 } header: {
@@ -454,6 +474,8 @@ private struct InvestmentRowView: View {
     /// clipped "1,234,567 units" to "1,234…" at the larger accessibility
     /// sizes — the same class of defect as the dashboard's.
     @ScaledMetric(relativeTo: .body) private var costWidth: CGFloat = 130
+    @Environment(\.isCompactShell) private var compact
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
         HStack(spacing: 10) {
@@ -461,6 +483,61 @@ private struct InvestmentRowView: View {
                 .foregroundStyle(row.freshness.style)
                 .accessibilityHidden(true)
 
+            if compact {
+                compactColumns
+            } else {
+                regularColumns
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(voiceOver)
+        .contextMenu { rowMenu }
+    }
+
+    /// The row at phone width. The comparison the regular row exists for is
+    /// kept exactly — cost and value on one line at one size, units under
+    /// the cost and return under the value — and what gives way is what the
+    /// row repeats elsewhere: the sparkline (the holding's own page draws the
+    /// history) and the age column (the leading mark already says whether
+    /// the price is fresh, and VoiceOver still reads the age). The fixed
+    /// widths go with them; at 400 points they summed past the screen.
+    ///
+    /// At the accessibility text sizes the two figures fill the line and the
+    /// name — which yields to them — was left with no room at all (seen
+    /// 12 Oct 2026: a row of cost and value with nothing to say whose). There
+    /// the name takes its own line and the comparison stays on one beneath it.
+    @ViewBuilder
+    private var compactColumns: some View {
+        if typeSize.isAccessibilitySize {
+            VStack(alignment: .leading, spacing: 4) {
+                compactName
+                HStack(alignment: .top, spacing: 8) {
+                    costColumn.minimumScaleFactor(0.75)
+                    Spacer(minLength: 4)
+                    valueColumn.lineLimit(1).minimumScaleFactor(0.75)
+                }
+            }
+        } else {
+            compactName.layoutPriority(-1)
+
+            Spacer(minLength: 4)
+
+            // A figure shrinks a little before it is ever cut short.
+            costColumn.minimumScaleFactor(0.75)
+            valueColumn.lineLimit(1).minimumScaleFactor(0.75)
+        }
+    }
+
+    private var compactName: some View {
+        VStack(alignment: .leading, spacing: 1) {
+            Text(row.symbol).fontWeight(.medium)
+            Text(row.name).scaledFont(.caption).foregroundStyle(.secondary)
+        }
+        .lineLimit(1)
+    }
+
+    @ViewBuilder
+    private var regularColumns: some View {
             // Ahead of the name, at a fixed offset from the leading edge.
             // Sitting after the name it inherited that column's width, and the
             // name column was `minWidth` — so every differing name length put
@@ -493,75 +570,84 @@ private struct InvestmentRowView: View {
             // the value. What you paid → what it is worth; how many → how it
             // did. A comparison the eye cannot make on one line is not a
             // comparison.
-            VStack(alignment: .trailing, spacing: 1) {
-                if let paid = row.purchaseAmount {
-                    Text("cost \(AmountFormat.string(paid, code: model.reportCurrency.mnemonic))")
-                        .monospacedDigit()
-                        .foregroundStyle(.secondary)
-                } else {
-                    Text("—").foregroundStyle(.secondary)
-                }
-                if row.units != 0 {
-                    Text("\(DecimalFormat.units(row.units)) units")
-                        .scaledFont(.caption).monospacedDigit()
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .lineLimit(1)
-            .frame(width: costWidth, alignment: .trailing)
+            costColumn
+                .frame(width: costWidth, alignment: .trailing)
 
-            VStack(alignment: .trailing, spacing: 1) {
-                if let value = row.marketValue {
-                    Text(AmountFormat.string(value, code: model.reportCurrency.mnemonic))
-                        .monospacedDigit()
-                } else {
-                    Text("—").foregroundStyle(.secondary)
-                }
-                if let fraction = row.returnFraction {
-                    Text(fraction.formatted(.percent.precision(.fractionLength(1))))
-                        .scaledFont(.caption).monospacedDigit()
-                        .foregroundStyle(fraction < 0 ? Color.negativeAmount : Color.positiveAmount)
-                }
-            }
+            valueColumn
 
             Text(ageText)
                 .scaledFont(.caption).monospacedDigit()
                 .foregroundStyle(.secondary)
                 .frame(width: 54, alignment: .trailing)
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(voiceOver)
-        .contextMenu {
-            // First, and separated: this is the way to the security's own page,
-            // where its name, ticker override, ISIN and price provider are
-            // edited. Everything below it is a single setting.
-            Button("Get Info", action: onOpen)
-            Divider()
-            Button("Set Price Target…", action: onTarget)
-            // Only where it means something: a security a provider prices is
-            // never waiting on a person to value it (`FR-INV-30`).
-            if row.group == .manual {
-                Button("Valuation Cadence…", action: onCadence)
+    }
+
+    /// What it cost, and how many are held.
+    private var costColumn: some View {
+        VStack(alignment: .trailing, spacing: 1) {
+            if let paid = row.purchaseAmount {
+                Text("cost \(AmountFormat.string(paid, code: model.reportCurrency.mnemonic))")
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+            } else {
+                Text("—").foregroundStyle(.secondary)
             }
-            // A held security can stop trading without being disposed of — a
-            // note is redeemed, a company delists. Its last price is then final
-            // rather than late, and nothing should chase it or count it against
-            // valuation confidence (`FR-INV-37`).
-            Toggle("No Longer Trading", isOn: Binding(
-                get: { model.isDelisted(row.commodity) },
-                set: { model.setDelisted(row.commodity, $0) }))
-            // Separate from the above on purpose. A retail super or
-            // managed-fund unit is still trading and its price still moves —
-            // there is just no feed, so it is valued from a statement. Saying
-            // "no longer trading" instead would freeze it and misreport it.
-            Toggle("No Public Price", isOn: Binding(
-                get: { model.isUnquoted(row.commodity) },
-                set: { model.setUnquoted(row.commodity, $0) }))
-                .help("Valued by hand from a statement — never ask a provider for it")
-            if model.isWatchOnly(row.commodity) {
-                Button("Stop Watching", role: .destructive) {
-                    model.removeWatchSecurity(row.commodity)
-                }
+            if row.units != 0 {
+                Text("\(DecimalFormat.units(row.units)) units")
+                    .scaledFont(.caption).monospacedDigit()
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .lineLimit(1)
+    }
+
+    /// What it is worth, and how it did.
+    private var valueColumn: some View {
+        VStack(alignment: .trailing, spacing: 1) {
+            if let value = row.marketValue {
+                Text(AmountFormat.string(value, code: model.reportCurrency.mnemonic))
+                    .monospacedDigit()
+            } else {
+                Text("—").foregroundStyle(.secondary)
+            }
+            if let fraction = row.returnFraction {
+                Text(fraction.formatted(.percent.precision(.fractionLength(1))))
+                    .scaledFont(.caption).monospacedDigit()
+                    .foregroundStyle(fraction < 0 ? Color.negativeAmount : Color.positiveAmount)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var rowMenu: some View {
+        // First, and separated: this is the way to the security's own page,
+        // where its name, ticker override, ISIN and price provider are
+        // edited. Everything below it is a single setting.
+        Button("Get Info", action: onOpen)
+        Divider()
+        Button("Set Price Target…", action: onTarget)
+        // Only where it means something: a security a provider prices is
+        // never waiting on a person to value it (`FR-INV-30`).
+        if row.group == .manual {
+            Button("Valuation Cadence…", action: onCadence)
+        }
+        // A held security can stop trading without being disposed of — a
+        // note is redeemed, a company delists. Its last price is then final
+        // rather than late, and nothing should chase it or count it against
+        // valuation confidence (`FR-INV-37`).
+        Toggle("No Longer Trading", isOn: Binding(
+            get: { model.isDelisted(row.commodity) },
+            set: { model.setDelisted(row.commodity, $0) }))
+        // Separate from the above on purpose. A retail super or
+        // managed-fund unit is still trading and its price still moves —
+        // there is just no feed, so it is valued from a statement. Saying
+        // "no longer trading" instead would freeze it and misreport it.
+        Toggle("No Public Price", isOn: Binding(
+            get: { model.isUnquoted(row.commodity) },
+            set: { model.setUnquoted(row.commodity, $0) }))
+            .help("Valued by hand from a statement — never ask a provider for it")
+        if model.isWatchOnly(row.commodity) {
+            Button("Stop Watching", role: .destructive) {
+                model.removeWatchSecurity(row.commodity)
             }
         }
     }

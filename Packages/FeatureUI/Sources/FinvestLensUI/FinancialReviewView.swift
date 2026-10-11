@@ -84,7 +84,7 @@ struct FinancialReviewSheet: View {
                           contentType: .pdf,
                           defaultFilename: "\(kind.title) — \(model.label(for: period))") { _ in }
         }
-        .frame(minWidth: 980, minHeight: 660)
+        .windowFloor(minWidth: 980, minHeight: 660)
     }
 
     private var deck: some View {

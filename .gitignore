@@ -97,3 +97,7 @@ build/
 # Build/test artifacts.
 *.profraw
 __pycache__/
+
+# App Store screenshot sets — regenerated from the synthetic demo book by the
+# recipe in docs/app-store.md; 14 MB of PNGs would double the repository.
+/screenshots/

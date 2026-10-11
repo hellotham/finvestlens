@@ -5,7 +5,7 @@ let root = "../../../Packages"
 
 let package = Package(
     name: "demo",
-    platforms: [.macOS("26.0")],
+    platforms: [.macOS("27.0")],
     dependencies: [
         .package(path: "\(root)/Engine"),
         .package(path: "\(root)/Persistence"),

@@ -25,7 +25,7 @@ public struct ReportsWindow: View {
         } else {
             ContentUnavailableView("No book open", systemImage: "chart.pie",
                                    description: Text("Open a book to see its reports."))
-                .frame(minWidth: 520, minHeight: 440)
+                .windowFloor(minWidth: 520, minHeight: 440)
         }
     }
 }

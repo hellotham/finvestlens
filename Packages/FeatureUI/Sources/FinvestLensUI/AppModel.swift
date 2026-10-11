@@ -652,6 +652,30 @@ public final class AppModel {
 
     /// The first tab index the user may close. Home and the standing tabs are
     /// derived, so closing one would only make it come back.
+    /// The compact shell's rule for opening a destination: the tab it opened
+    /// last in this mode gives way to the new one. Home, a standing tab, or a
+    /// tab that was already open is simply made active.
+    private func openCompactTab(_ selection: SidebarSelection, in mode: AppMode) {
+        var extras = normalisedExtras(in: mode)
+        if let mine = compactTabByMode[mode], mine != selection {
+            extras.removeAll { $0 == mine }
+            compactTabByMode[mode] = nil
+        }
+        let base = firstClosableTabIndex(in: mode)
+        if selection == mode.defaultSelection {
+            activeTabByMode[mode] = 0
+        } else if let standing = standingTabs(in: mode).firstIndex(of: selection) {
+            activeTabByMode[mode] = 1 + standing
+        } else if let existing = extras.firstIndex(of: selection) {
+            activeTabByMode[mode] = base + existing
+        } else {
+            extras.append(selection)
+            compactTabByMode[mode] = selection
+            activeTabByMode[mode] = base + extras.count - 1
+        }
+        tabsByMode[mode] = extras
+    }
+
     public func firstClosableTabIndex(in mode: AppMode) -> Int {
         1 + standingTabs(in: mode).count
     }
@@ -734,6 +758,10 @@ public final class AppModel {
         if case .account(let id) = selection,
            book?.account(with: id)?.isPlaceholder == true,
            !(book?.account(with: id)?.children.isEmpty ?? true) {
+            return
+        }
+        if compactNavigation {
+            openCompactTab(selection, in: mode)
             return
         }
         if selection == mode.defaultSelection {
@@ -1416,13 +1444,52 @@ public final class AppModel {
     /// (`RootPanel/opensAsTab`) — every call site keeps the one spelling it
     /// always had, and the decision lives in one place rather than at each of
     /// the thirty-odd buttons and menu items that open one.
+    /// Whether the compact shell is what is on screen. Two things follow.
+    ///
+    /// **One destination per mode.** The regular shell's strip holds as many
+    /// tabs as are opened; a stack under a tab bar has no strip, so there a
+    /// navigation *replaces* the one tab the compact shell opened in that mode
+    /// (`openCompactTab`) instead of adding another — a phone session cannot
+    /// pile up tabs nobody can see or close, and tabs an iPad had open before
+    /// its window was narrowed are left as they were.
+    ///
+    /// **Panels are sheets.** A panel that is a tab in the regular shell — an
+    /// editor one can wander away from and come back to — has no strip to
+    /// come back through, so it presents modally; and one asked for from
+    /// inside another (New Security… from New Account) goes on top of it
+    /// (``nestedPanel``) rather than replacing it and what was typed.
+    public var compactNavigation = false {
+        didSet {
+            guard !compactNavigation else { return }
+            compactTabByMode = [:]
+            nestedPanel = nil
+        }
+    }
+
+    /// The tab the compact shell opened in each mode — one at most.
+    private var compactTabByMode: [AppMode: SidebarSelection] = [:]
+
+    /// A panel presented over ``presentedPanel`` in the compact shell.
+    public var nestedPanel: RootPanel?
+
+    /// What `mode` would show if it were brought forward.
+    public func selection(in mode: AppMode) -> SidebarSelection {
+        storedSelection(in: mode)
+    }
+
     public var presentedPanel: RootPanel? {
         get { modalPanel }
         set {
-            guard let panel = newValue else { modalPanel = nil; return }
-            if panel.opensAsTab {
+            guard let panel = newValue else {
+                modalPanel = nil
+                nestedPanel = nil
+                return
+            }
+            if panel.opensAsTab, !compactNavigation {
                 modalPanel = nil
                 navigate(to: .panel(panel), inNewTab: true)
+            } else if compactNavigation, panel.opensAsTab, let open = modalPanel, open != panel {
+                nestedPanel = panel
             } else {
                 modalPanel = panel
             }

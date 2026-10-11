@@ -123,7 +123,7 @@ struct BulkEditSheet: View {
                 }
             }
         }
-        .frame(minWidth: 460, minHeight: 380)
+        .windowFloor(minWidth: 460, minHeight: 380)
     }
 
     private func apply() {

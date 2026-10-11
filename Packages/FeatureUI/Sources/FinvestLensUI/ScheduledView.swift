@@ -26,7 +26,7 @@ struct ScheduledView: View {
     private var bills: [BillReminder] { model.billReminders().filter { $0.status != .paid } }
 
     var body: some View {
-        NavigationStack {
+        DestinationStack {
             SidebarFocusScroll(model: model) {
             List {
                 if !bills.isEmpty {
@@ -90,7 +90,7 @@ struct ScheduledView: View {
                 }
             }
             }
-            .navigationTitle("")   // the tab strip names this destination
+            .untitledInRegularWidth()   // the tab strip names this destination
             .onChange(of: model.sidebarCreateRequest) {
                 guard model.sidebarCreateRequest == .scheduled else { return }
                 model.sidebarCreateRequest = nil
@@ -143,10 +143,10 @@ struct ScheduledView: View {
                         }
                     }
                 }
-                .frame(minWidth: 360, minHeight: 240)
+                .windowFloor(minWidth: 360, minHeight: 240)
             }
         }
-        .frame(minWidth: embedded ? nil : 500, minHeight: embedded ? nil : 420)
+        .windowFloor(minWidth: embedded ? nil : 500, minHeight: embedded ? nil : 420)
     }
 
     private func recurrenceSummary(_ recurrence: Recurrence) -> String {

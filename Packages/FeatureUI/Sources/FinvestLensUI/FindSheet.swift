@@ -207,7 +207,7 @@ struct FindSheet: View {
             }
             .onAppear(perform: loadIfNeeded)
         }
-        .frame(minWidth: 720, minHeight: 380)
+        .windowFloor(minWidth: 720, minHeight: 380)
     }
 
     /// Re-opening Find shows the query you ran, the way GnuCash keeps its

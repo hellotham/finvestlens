@@ -370,7 +370,7 @@ struct ImportView: View {
                 }
             }
         }
-        .frame(minWidth: 640, minHeight: 520)
+        .windowFloor(minWidth: 640, minHeight: 520)
         .alert("Save Import Profile", isPresented: $showingSaveProfile) {
             TextField("Profile name", text: $newProfileName)
             Button("Save") {

@@ -34,7 +34,7 @@ struct GoalsView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        DestinationStack {
             Group {
                 if model.savingsGoals.isEmpty {
                     ContentUnavailableView {
@@ -79,7 +79,7 @@ struct GoalsView: View {
                     }
                 }
             }
-            .navigationTitle("")   // the tab strip names this destination
+            .untitledInRegularWidth()   // the tab strip names this destination
             // The sidebar's + asks; this view owns the editor, so it answers.
             .onChange(of: model.sidebarCreateRequest) {
                 guard model.sidebarCreateRequest == .goal else { return }
@@ -108,7 +108,7 @@ struct GoalsView: View {
             .sheet(item: $adjusting) { goal in GoalAdjustSheet(model: model, goal: goal) }
             .sheet(isPresented: $addingChallenge) { ChallengeEditorSheet(model: model) }
         }
-        .frame(minWidth: embedded ? nil : 460, minHeight: embedded ? nil : 420)
+        .windowFloor(minWidth: embedded ? nil : 460, minHeight: embedded ? nil : 420)
     }
 
     /// Savings challenges (FR-GOAL-02): time-boxed pushes on a goal, paced
@@ -209,7 +209,7 @@ private struct ChallengeEditorSheet: View {
                 }
             }
         }
-        .frame(minWidth: 400, minHeight: 300)
+        .windowFloor(minWidth: 400, minHeight: 300)
     }
 }
 
@@ -311,7 +311,7 @@ private struct GoalEditorSheet: View {
             }
             .onAppear(perform: load)
         }
-        .frame(minWidth: 380, minHeight: 300)
+        .windowFloor(minWidth: 380, minHeight: 300)
     }
 
     private func load() {
@@ -378,6 +378,6 @@ private struct GoalAdjustSheet: View {
                 }
             }
         }
-        .frame(minWidth: 340, minHeight: 240)
+        .windowFloor(minWidth: 340, minHeight: 240)
     }
 }

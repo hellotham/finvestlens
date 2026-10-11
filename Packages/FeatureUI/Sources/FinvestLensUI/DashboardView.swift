@@ -124,6 +124,7 @@ extension AppModel {
 /// priority list decides which cards make the cut — nothing scrolls.
 struct DashboardView: View {
     @Environment(\.appDateFormat) private var dateFormat
+    @Environment(\.isCompactShell) private var compact
     @Environment(\.appFontScale) private var appFontScale
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Bindable var model: AppModel
@@ -181,7 +182,7 @@ struct DashboardView: View {
         // the tab strip a few pixels below already says it — the same
         // redundancy the mode names had, found the same way: on screen. The
         // title area belongs to the secondary controls now.
-        .navigationTitle("")
+        .untitledInRegularWidth()
         .onChange(of: model.sidebarCreateRequest) {
             guard model.sidebarCreateRequest == .overviewView else { return }
             model.sidebarCreateRequest = nil
@@ -261,7 +262,9 @@ struct DashboardView: View {
 
     private var period: ReportPeriod { model.period }
 
-    /// The board: cards packed into the window that actually exists (F8).
+    /// The board: cards packed into the window that actually exists (F8) —
+    /// on the phone too, where the priority list decides which cards earn the
+    /// screen rather than a column that scrolls.
     private func board(range: (from: Date, to: Date)) -> some View {
         GeometryReader { geo in
             let portfolio = model.portfolio(asOf: min(range.to, todayCap))
@@ -686,7 +689,9 @@ struct DashboardView: View {
                             #endif
                         }
                     }
-                    if state.quietImportMonth {
+                    // Import is not offered on the phone (`FR-PLT-06`), so the
+                    // board does not ask for it there.
+                    if state.quietImportMonth, !compact {
                         upNextRow("square.and.arrow.down",
                                   "Import this month’s statements",
                                   button: "Import…") { model.bankImportRequested = true }

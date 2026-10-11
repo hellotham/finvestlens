@@ -40,7 +40,7 @@ struct EditSecuritySheet: View {
             }
             .onAppear { fullName = commodity.fullName }
         }
-        .frame(minWidth: 360, minHeight: 180)
+        .windowFloor(minWidth: 360, minHeight: 180)
     }
 
     private var namespaceLabel: String {
@@ -107,7 +107,7 @@ struct PriceTargetSheet: View {
                 }
             }
         }
-        .frame(minWidth: 380, minHeight: 260)
+        .windowFloor(minWidth: 380, minHeight: 260)
     }
 }
 
@@ -139,6 +139,6 @@ struct AddWatchSheet: View {
                 }
             }
         }
-        .frame(minWidth: 360, minHeight: 200)
+        .windowFloor(minWidth: 360, minHeight: 200)
     }
 }

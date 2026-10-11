@@ -342,7 +342,7 @@ struct AccountComboCell: View {
                         .searchable(text: $query)
                         .navigationTitle(Text(placeholder))
                     }
-                    .frame(minWidth: 320, minHeight: 360)
+                    .windowFloor(minWidth: 320, minHeight: 360)
                 }
             }
         }

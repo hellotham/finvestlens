@@ -94,7 +94,7 @@ struct PlanningView: View {
             case .tax: TaxEstimateView(model: model)
             }
         }
-        .navigationTitle("")
+        .untitledInRegularWidth()
     }
 }
 
@@ -611,7 +611,7 @@ struct WellbeingSheet: View {
                 }
             }
         }
-        .frame(minWidth: 440, minHeight: 460)
+        .windowFloor(minWidth: 440, minHeight: 460)
     }
 
     private func explanation(_ component: WellbeingScore.ComponentScore) -> String {

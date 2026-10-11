@@ -8,6 +8,12 @@
 
 import Foundation
 import OSLog
+import CryptoKit
+#if os(macOS)
+import IOKit
+#else
+import Security
+#endif
 
 /// Metadata about who holds a document lock.
 public struct LockHolder: Codable, Equatable, Sendable {
@@ -17,16 +23,91 @@ public struct LockHolder: Codable, Equatable, Sendable {
     public var pid: Int32
     public var acquiredAt: Date
     public var heartbeatAt: Date
+    /// Which machine wrote the lock — ``MachineIdentity/current`` there.
+    /// Absent from a lock written before 12 Oct 2026, which is then known
+    /// only by its host name.
+    public var machineID: String?
 
     public init(host: String, user: String, instanceID: String, pid: Int32,
-                acquiredAt: Date, heartbeatAt: Date) {
+                acquiredAt: Date, heartbeatAt: Date, machineID: String? = nil) {
         self.host = host
         self.user = user
         self.instanceID = instanceID
         self.pid = pid
         self.acquiredAt = acquiredAt
         self.heartbeatAt = heartbeatAt
+        self.machineID = machineID
     }
+}
+
+/// This machine, by something steadier than its name.
+///
+/// A host name is not an identity: two Macs of one model owned by one person
+/// share a default name until they meet on a network, one Mac answered
+/// `macbookpro128.local` one day and its ISP's reverse-DNS name the next, and
+/// an iPhone answers `localhost`. A lock that syncs between such a pair must
+/// not let one read the other's live holder as "a pid that isn't running
+/// here". So a lock also carries this:
+///
+/// - **macOS** — a digest of the hardware UUID: the same for every tool on
+///   the Mac, sandboxed or not. A digest, because the lock file travels with
+///   the book to wherever the book is synced.
+/// - **iOS** — a value minted once and kept in the Keychain as
+///   *this-device-only*. Not `UserDefaults`: a backup restored onto a second
+///   phone, or a device-to-device transfer, copies preferences, and two
+///   phones would then answer to one identity — each reading the other's
+///   live lock as its own dead one. A this-device-only Keychain item is not
+///   carried to another device.
+///
+/// One limit is accepted and stated: two **virtual** Macs cloned from one
+/// image share a hardware UUID. They also share a host name, so the
+/// host-name rule this replaces was no better; the §6.2 fingerprint check at
+/// save is what stands behind the lock there.
+enum MachineIdentity {
+    static let current: String? = compute()
+
+    private static func digest(_ text: String) -> String {
+        SHA256.hash(data: Data(text.utf8)).prefix(16).map { String(format: "%02x", $0) }.joined()
+    }
+
+    #if os(macOS)
+    private static func compute() -> String? {
+        let service = IOServiceGetMatchingService(kIOMainPortDefault,
+                                                  IOServiceMatching("IOPlatformExpertDevice"))
+        guard service != 0 else { return nil }
+        defer { IOObjectRelease(service) }
+        guard let uuid = IORegistryEntryCreateCFProperty(
+            service, "IOPlatformUUID" as CFString, kCFAllocatorDefault, 0)?
+            .takeRetainedValue() as? String else { return nil }
+        return digest(uuid)
+    }
+    #else
+    private static let service = "com.hellotham.finvestlens.machine-identity"
+    private static let account = "machineID"
+
+    /// `nil` when the Keychain will not answer (locked before first unlock,
+    /// or refused) — which only means nothing is broken without asking.
+    private static func compute() -> String? {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account,
+        ]
+        var found: CFTypeRef?
+        var read = query
+        read[kSecReturnData as String] = true
+        read[kSecMatchLimit as String] = kSecMatchLimitOne
+        if SecItemCopyMatching(read as CFDictionary, &found) == errSecSuccess,
+           let data = found as? Data, let value = String(data: data, encoding: .utf8), !value.isEmpty {
+            return value
+        }
+        let minted = digest(UUID().uuidString)
+        var add = query
+        add[kSecValueData as String] = Data(minted.utf8)
+        add[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        return SecItemAdd(add as CFDictionary, nil) == errSecSuccess ? minted : nil
+    }
+    #endif
 }
 
 /// Declares the sibling lock file as a *related item* of the document, so a
@@ -220,6 +301,22 @@ public final class FileLock {
     }
 
     /// The current holder, or `nil` if the lock file is absent/unreadable.
+    /// Whether the lock file is there at all — asked **inside** a
+    /// coordination scope, because under App Sandbox the sibling file is
+    /// visible only through the related-item grant a coordination carries.
+    /// A plain `fileExists` can answer "no" for a lock that is plainly there,
+    /// and the callers of this are the ones about to overwrite a book.
+    public func exists() -> Bool {
+        var found = false
+        var coordError: NSError?
+        coordinator()
+            .coordinate(readingItemAt: lockURL, options: [.withoutChanges],
+                        error: &coordError) { url in
+                found = (try? url.checkResourceIsReachable()) ?? false
+            }
+        return found
+    }
+
     public func currentHolder() -> LockHolder? {
         guard let data = coordinatedRead() else { return nil }
         return try? JSONDecoder().decode(LockHolder.self, from: data)
@@ -229,9 +326,7 @@ public final class FileLock {
     /// An unreadable/corrupt lock file counts as stale — it has no live holder
     /// and must be breakable, not a permanent silent bar to locking.
     public func isStale(now: Date = Date()) -> Bool {
-        guard let holder = currentHolder() else {
-            return FileManager.default.fileExists(atPath: lockURL.path)
-        }
+        guard let holder = currentHolder() else { return exists() }
         if Self.isProvablyDead(holder) { return true }
         return now.timeIntervalSince(holder.heartbeatAt) > staleAfter
     }
@@ -251,7 +346,7 @@ public final class FileLock {
     /// caution, it is a lockout: the process is measurably absent, and the
     /// person sitting in front of it is the same person who owns the book.
     static func isProvablyDead(_ holder: LockHolder) -> Bool {
-        guard holder.host == ProcessInfo.processInfo.hostName else { return false }
+        guard isThisMachine(holder) else { return false }
         guard holder.pid != ProcessInfo.processInfo.processIdentifier else { return false }
         guard holder.pid > 0 else { return true }
         // `kill(pid, 0)` sends nothing; it only asks. ESRCH is the one answer
@@ -259,6 +354,26 @@ public final class FileLock {
         // someone else, which is still alive. A recycled pid reads as alive,
         // which errs towards waiting rather than towards breaking a live lock.
         return kill(holder.pid, 0) != 0 && errno == ESRCH
+    }
+
+    /// Whether `holder` was written here. A lock that names its machine is
+    /// judged by that alone; one from before locks carried it, by host name.
+    static func isThisMachine(_ holder: LockHolder) -> Bool {
+        if let theirs = holder.machineID { return theirs == MachineIdentity.current }
+        return holder.host == ProcessInfo.processInfo.hostName
+    }
+
+    /// A lock that may be broken **without asking**: written by this very
+    /// machine — by identity, never by host name alone — by a process that no
+    /// longer exists. A crash, a force-quit, an installer replacing the app
+    /// while a book was open: nobody holds the book and there is nothing for
+    /// its owner to decide, so the open simply proceeds. Everything else —
+    /// another machine, an old lock known only by host name, a holder that
+    /// cannot be read — is still put to the person.
+    public static func canBreakWithoutAsking(_ holder: LockHolder) -> Bool {
+        guard let theirs = holder.machineID, let ours = MachineIdentity.current,
+              theirs == ours else { return false }
+        return isProvablyDead(holder)
     }
 
     /// Acquires the lock, throwing ``LockError/alreadyLocked(_:)`` if another
@@ -280,7 +395,7 @@ public final class FileLock {
             }
             let nsError = error as NSError
             Self.log.error("could not create \(self.lockURL.lastPathComponent, privacy: .public): \(nsError.localizedDescription, privacy: .public) (\(nsError.domain, privacy: .public) \(nsError.code))")
-            if FileManager.default.fileExists(atPath: lockURL.path) {
+            if exists() {
                 // The file exists but is unreadable/corrupt. Report it as a
                 // (stale) unknown holder so the caller offers Break Lock —
                 // rethrowing the raw file error made the document layer treat
@@ -289,6 +404,34 @@ public final class FileLock {
             }
             throw error
         }
+    }
+
+    /// Breaks the lock held by exactly `judged` and acquires it — the path a
+    /// lock takes when it is broken **without asking**. The caller has
+    /// established that `judged` is a dead process of this machine
+    /// (``canBreakWithoutAsking(_:)``); this removes that holder and no
+    /// other. The looser rule of ``breakStaleLockAndAcquire(now:)`` — an old
+    /// heartbeat, an unreadable file — is one a person consented to, so it
+    /// is not applied here: if a sync replaced the file between the judgement
+    /// and the delete, whoever is there now is refused, not removed.
+    public func breakLock(heldBy judged: LockHolder, now: Date = Date()) throws {
+        var replacement: LockHolder?
+        var unreadable = false
+        try? coordinatedWrite(options: [.forDeleting]) { url in
+            guard let data = try? Data(contentsOf: url) else { return }   // already gone
+            guard let current = try? JSONDecoder().decode(LockHolder.self, from: data) else {
+                unreadable = true
+                return
+            }
+            guard current == judged else {
+                replacement = current
+                return
+            }
+            try? FileManager.default.removeItem(at: url)
+        }
+        if let replacement { throw LockError.alreadyLocked(replacement) }
+        if unreadable { throw LockError.alreadyLocked(Self.unreadableHolder) }
+        try acquire(now: now)
     }
 
     /// Breaks a stale lock and acquires it. Throws if the existing lock is
@@ -365,7 +508,8 @@ public final class FileLock {
             instanceID: instanceID,
             pid: ProcessInfo.processInfo.processIdentifier,
             acquiredAt: now,
-            heartbeatAt: now
+            heartbeatAt: now,
+            machineID: MachineIdentity.current
         )
     }
 }

@@ -100,7 +100,7 @@ struct FetchPreviewSheet: View {
                 }
             }
         }
-        .frame(minWidth: 420, minHeight: 420)
+        .windowFloor(minWidth: 420, minHeight: 420)
     }
 }
 
@@ -149,6 +149,6 @@ struct ValuationCadenceSheet: View {
                 }
             }
         }
-        .frame(minWidth: 380, minHeight: 300)
+        .windowFloor(minWidth: 380, minHeight: 300)
     }
 }

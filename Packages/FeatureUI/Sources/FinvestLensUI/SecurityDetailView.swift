@@ -67,7 +67,7 @@ struct SecurityDetailView: View {
                                        description: Text("This security has no prices or transactions in this book."))
             }
         }
-        .navigationTitle(embedded ? "" : commodity.mnemonic)
+        .embeddedTitle(Text(verbatim: commodity.mnemonic), embedded: embedded)
         .toolbar { toolbar }
         .sheet(isPresented: $showingTarget) { PriceTargetSheet(model: model, commodity: commodity) }
         .sheet(isPresented: $showingAddPrice) { AddPriceSheet(model: model, commodity: commodity) }

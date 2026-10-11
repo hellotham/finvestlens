@@ -3733,3 +3733,150 @@ Receipts in the session report: Persistence 43 and the FeatureUI
 refresh-scope suite (11, including the audit sidecar) green before the
 preflight; the signed sandboxed build's entitlements read back from the
 bundle; the lock observed beside the Box Drive book with `/usr/bin/log`.
+
+## The compact shell for the phone, a lock that no longer strands a launch, and the store screenshots (11–12 Oct 2026)
+
+- **Compact shell (`FR-PLT-01`; PRD §8 "iOS").** On an iPhone always, and in
+  an iPad window narrowed to a compact width, the app is a tab bar
+  (`CompactShell.swift`): Dashboard, Accounts, Investments and Reports are a
+  tab each — a `NavigationStack` whose root is what the sidebar listed (the
+  account tree, the holdings) or, for Dashboard and Reports, the board and
+  the gallery themselves — and the fifth tab is the app's own **More**: one
+  list whose sections are Business, Planning and Records, every row one tap
+  from its destination. HIG *Tab bars* says "Avoid overflow tabs" and "Don't
+  disable or hide tab bar buttons"; five tabs overflow nothing and hide
+  nothing, and the system's overflow tab was tried first and put a second
+  navigation bar above each stack. The destinations are the regular shell's
+  own views through one builder (`DestinationContent`); the eight that owned
+  a `NavigationStack` now own one only where nothing above does
+  (`DestinationStack`).
+- **What the phone gets that is its own.** The register is a list of
+  postings, newest first by date, with the table's row actions on a long
+  press (`CompactRegisterView.swift`). The editor is a form
+  (`CompactTransactionEditor.swift`) because the regular editor hosts the
+  register's row, which folds its account cells away below 640 points: date,
+  description, notes, and for each split an account and an amount — plus a
+  **quantity** wherever the split's account is held in something other than
+  the transaction's currency (a share purchase, a foreign account). Its rule
+  is that what it does not show it does not change: the transaction keeps
+  the currency it was recorded in (`recordedCurrency`) rather than one
+  re-derived from its accounts, tags and the number go back as they came, a
+  split's memo, action and identity ride along, and a blank amount stops the
+  save instead of dropping the line. One door (`TransactionEditor`) picks
+  between the two editors wherever an edit is asked for. Search results are
+  rows (`SearchHitRow`), since a `Table` at compact width shows its first
+  column only. The holdings row drops its sparkline and age column and keeps
+  cost and value on one line (`compactColumns`). An open report takes the
+  title and the toolbar to itself. The board is the same packed board — it
+  does not scroll on the phone either (F8).
+- **What changed underneath for it.** The shell is decided once at the app's
+  root and published as `isCompactShell` (`finvestLensShell()`,
+  `CompactSupport.swift`) — by idiom for a phone, so turning a Max-size phone
+  sideways (a regular width) cannot swap shells under an open sheet. Every
+  window and sheet floor goes through `windowFloor(minWidth:minHeight:)`,
+  which the compact shell skips without changing the view's identity: a
+  floor wider than the screen does not widen the screen, it cuts both edges
+  off (the whole app at 860 points was why the phone was unusable; the
+  editor at 700 and New Security at 520 were next). "The main window never
+  titles" is the regular shell's rule only (`untitledInRegularWidth()`,
+  `embeddedTitle(_:embedded:)`): a stack has no sidebar or strip to name
+  what is open. New is one shared menu (`NewItemMenu`).
+- **Who owns what is on screen.** The model keeps a selection per mode; the
+  phone keeps a path per tab. The stacks own the paths, and two functions in
+  `CompactShell` keep the two in step: `modelFollowsShell()` puts the model
+  on the top page of the front tab after a push, a pop or a tab change, and
+  `shellFollowsModel()` pushes or returns when the model moves on its own
+  (Show in Register, a search hit, a menu command). What they compare is a
+  **page** (`SidebarSelection.compactPage`), which is coarser than a
+  selection — the Planner's tools are one page, each account its own — so
+  the Planner's picker changes what a page shows without stacking pages
+  behind Back. While the compact shell is up the model is told so
+  (`AppModel.compactNavigation`), and two things follow there: a navigation
+  *replaces* the one tab the shell opened in that mode (`openCompactTab`)
+  instead of adding another, so a phone session leaves no pile of tabs for
+  the regular shell's strip and tabs an iPad had open before its window was
+  narrowed are left alone; and a panel that is a tab in the regular shell
+  presents as a sheet, with one asked for from inside another (New Security…
+  from New Account) going on top of it (`nestedPanel`) rather than replacing
+  it and what was typed. `CompactNavigationTests` holds the model half of
+  that; `ScreenshotTests.testTourCompactDestinations` asserts the rest on a
+  simulator — each More row pushes one page and one Back returns to More, a
+  holding's row opens its page, a share purchase's editor shows a Quantity
+  field, a tapped posting is the one the editor opens.
+- **The holdings row was a dead link.** It was a `NavigationLink(value:
+  row.commodity)` with no destination registered for that value, so on every
+  platform a click on a holding went nowhere and only Get Info reached its
+  page. It is a button now, with a chevron, that navigates to the security
+  (`InvestmentsView.swift`).
+- **A lock left by a dead process no longer strands a launch.** Reported
+  11 Oct as "a lock preventing new app launches from opening", reproduced
+  12 Oct: with `Book.lock` left beside a book by an instance that had been
+  killed, the next launch showed **no window at all**, and a second click
+  showed "Couldn't open book … locked". Two causes, two fixes.
+  (1) `ContentView.swift`: the alert was asked for before its window was on
+  screen, which left the window never shown; it now waits until the window
+  is *visible* (`WindowOnScreen`, an `NSView` probe that latches on the
+  window's occlusion state) — visible, not key, so an app opened in the
+  background still says why. (2) `FileLock.swift`,
+  `FinvestLensDocument.swift`: a lock now names the machine that wrote it
+  (`LockHolder.machineID` — on a Mac a digest of the hardware UUID, the same
+  for every tool on it, sandboxed or not; on iOS a value kept in the
+  Keychain as a this-device-only item, so a backup restored to another
+  device does not carry it), and a lock written by **this** machine whose
+  process no longer exists is broken on open without a question
+  (`canBreakWithoutAsking`). The break removes only the holder that was
+  judged (`breakLock(heldBy:)`): a lock someone else took in the meantime is
+  left alone. Host name is no longer what "this machine" means where the
+  lock says better: the same Mac wrote `macbookpro128.local` on 11 Oct and
+  an ISP's reverse-DNS name on 12 Oct, and two Macs of one model share a
+  default name. A lock from before the field existed, another machine's, or
+  one that cannot be read is still put to the person. Creating a book over a
+  path with a lock beside it follows the same rule, and asks whether the
+  lock is there through the file coordinator (`FileLock.exists()`) — under
+  App Sandbox the sidecar is visible only inside a coordination, and a plain
+  `fileExists` can answer "no" for a lock that is there.
+- **Report switching fixed.** Choosing another report in the Reports sidebar
+  while one was open renamed the tab and kept drawing the first report, on
+  macOS and iPadOS alike: `ReportScreen` seeds its state from its
+  configuration once, so the screen now takes that configuration as its
+  identity (`ReportsHome.swift`, `.id(configuration)`).
+- **iPad register header.** iPadOS 27 drew the `Table`'s first column header
+  as a band across the table's full width with its label at the table's own
+  leading edge, where "Date" was never on screen (the accessibility dump had
+  that header at 0–1032 points while the others kept the sidebar's 240-point
+  inset). A blank, zero-width primary column takes the band and Date's
+  header lays out with the rest (`RegisterTable.swift`). Observed on the
+  All Transactions table on a 13-inch iPad in portrait; not established for
+  any other `Table`.
+- **Report figures stay whole.** At phone width a KPI amount shrinks to fit
+  before it wraps (three tiles across a phone broke a six-figure amount in
+  the middle of its digits), four or more tiles lay out two across instead of in one row, and the
+  Net Worth chart marks a quarter rather than a month (`ReportDocument.swift`).
+  The regular shell is as it was.
+- **Accessibility text sizes on the phone.** Two rows change shape there
+  rather than shrink (`dynamicTypeSize.isAccessibilitySize`): the register
+  row stacks description, account, amount and date, and gives the description
+  a second line (`CompactRegisterRow`); the holdings row gives the security's
+  name its own line above cost and value, which stay on one line. Before
+  that the name yielded to the figures and was left no room at all. Both
+  seen on an iPhone 18 Pro Max simulator at the first accessibility size.
+- **Store screenshots.** `finvestlensUITests/ScreenshotTests` captures the
+  iPad and iPhone sets from the synthetic demo book: it opens a private copy
+  and passes the book and the period as launch arguments, so nothing is
+  seeded into the simulator. The Mac set is `screencapture` of a 1280×800 pt
+  window. On App Store Connect version 1.2: Mac (8), iPad 13" (8), iPhone
+  6.3" (10, the required slot) and iPhone 6.9" (10, optional). There is no
+  icon upload — the product page takes the icon from the build attached to
+  the version. The sets are in `screenshots/app-store/`, which is
+  git-ignored (14 MB of PNGs); the recipe is in [app-store.md](app-store.md).
+
+Receipts in the session report: every package suite green after the lock
+and shell changes; the signed Mac build killed with a book open and
+relaunched (the log's "breaking Demo.lock: its holder on this machine … is
+gone", then the book); the same launch against a live lock from another
+machine showing its window and alert at once, and against a lock with no
+`machineID` still asking; the phone tour passing its assertions at 6.9" and
+the store set at 6.3"; the iPad set from the same build as the regression
+check on the regular shell. Not observed: VoiceOver on a device, the four
+larger accessibility text sizes, and an iPad window dragged across the
+compact threshold with a sheet open.

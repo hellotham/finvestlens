@@ -109,6 +109,7 @@ struct ReportFactsSource {
 
 /// Renders a ``ReportDocument`` in the app's annual-report style.
 struct ReportDocumentView: View {
+    @Environment(\.isCompactShell) private var compact
     @Bindable var model: AppModel
     let document: ReportDocument
     @State private var commentary: [String]?
@@ -140,25 +141,45 @@ struct ReportDocumentView: View {
                        code: document.currencyCode)
     }
 
+    /// The headline figures. Side by side wherever they fit, which is every
+    /// regular width; at phone width three still fit and four do not — the
+    /// Portfolio report's four gave each about 55 points — so there they go
+    /// two to a row, and a figure shrinks before it is ever cut short.
+    @ViewBuilder
     private var kpiRow: some View {
-        HStack(alignment: .top, spacing: 12) {
-            ForEach(document.kpis) { kpi in
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(kpi.label)
-                        .scaledFont(.caption)
-                        .foregroundStyle(.secondary)
-                        .textCase(.uppercase)
-                    Text(AmountFormat.string(kpi.amount, code: document.currencyCode))
-                        .scaledFont(.title2)
-                        .fontWeight(.semibold)
-                        .monospacedDigit()
-                        .foregroundStyle(kpi.signed && kpi.amount < 0 ? Color.negativeAmount : Color.primary)
-                }
-                .padding(12)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 8))
+        if compact, document.kpis.count > 3 {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12, alignment: .top),
+                                     count: 2),
+                      spacing: 12) {
+                ForEach(document.kpis) { kpiTile($0) }
+            }
+        } else {
+            HStack(alignment: .top, spacing: 12) {
+                ForEach(document.kpis) { kpiTile($0) }
             }
         }
+    }
+
+    private func kpiTile(_ kpi: ReportKPI) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(kpi.label)
+                .scaledFont(.caption)
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+            Text(AmountFormat.string(kpi.amount, code: document.currencyCode))
+                .scaledFont(.title2)
+                .fontWeight(.semibold)
+                .monospacedDigit()
+                .foregroundStyle(kpi.signed && kpi.amount < 0 ? Color.negativeAmount : Color.primary)
+                // A figure is one word: three tiles across a phone broke a
+                // six-figure amount in the middle of its digits. The regular
+                // shell is left as it was.
+                .lineLimit(compact ? 1 : nil)
+                .minimumScaleFactor(compact ? 0.5 : 1)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 8))
     }
 
     /// The deterministic plain-language reading, one sentence per line.
@@ -206,6 +227,15 @@ struct ReportDocumentView: View {
                     .interpolationMethod(.monotone)
                     .foregroundStyle(.linearGradient(colors: [Color.appAccent.opacity(0.3), .clear],
                                                      startPoint: .top, endPoint: .bottom))
+            }
+            // Twelve months across a phone give each label a third of the
+            // room it needs ("Nov 20…"); a mark a quarter, whole labels.
+            .chartXAxis {
+                if compact {
+                    AxisMarks(values: .stride(by: .month, count: 3))
+                } else {
+                    AxisMarks()
+                }
             }
             .frame(height: 200)
         case .averageBars(let intervals):

@@ -70,7 +70,7 @@ struct BusinessHub: View {
     private var code: String { model.reportCurrency.mnemonic }
 
     var body: some View {
-        NavigationStack {
+        DestinationStack {
             SidebarFocusScroll(model: model) {
             List {
                 Section("New") {
@@ -160,9 +160,9 @@ struct BusinessHub: View {
                 }
             }
             }
-            .navigationTitle("")
+            .untitledInRegularWidth()
             .onChange(of: model.sidebarCreateRequest) { answer(model.sidebarCreateRequest) }
-            .frame(minWidth: embedded ? nil : 460, minHeight: embedded ? nil : 460)
+            .windowFloor(minWidth: embedded ? nil : 460, minHeight: embedded ? nil : 460)
             .onEscapeCommand { dismiss() }
             .toolbar {
                 if !embedded {

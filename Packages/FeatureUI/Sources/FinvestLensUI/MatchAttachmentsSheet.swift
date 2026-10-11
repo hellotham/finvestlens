@@ -108,7 +108,7 @@ struct MatchAttachmentsSheet: View {
                 }
             }
             .sheet(item: $editTarget) { match in
-                TransactionEditorSheet(
+                TransactionEditor(
                     model: model,
                     documentPrefill: TransactionEditorSheet.DocumentPrefill(
                         url: match.url,
@@ -125,7 +125,7 @@ struct MatchAttachmentsSheet: View {
                 if case .success(let urls) = result { process(urls) }
             }
         }
-        .frame(minWidth: 680, minHeight: 460)
+        .windowFloor(minWidth: 680, minHeight: 460)
     }
 
     @ViewBuilder

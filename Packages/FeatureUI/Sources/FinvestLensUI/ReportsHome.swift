@@ -232,6 +232,12 @@ struct ReportsHome: View {
                     model.navigate(to: .reports)
                     openConfiguration = nil
                 }
+                // **A new report is a new screen.** `ReportScreen` seeds its
+                // own `@State` configuration from this value once, so without
+                // an identity change choosing Net Worth in the sidebar while
+                // the Balance Sheet was open renamed the tab and kept drawing
+                // the Balance Sheet — seen on macOS and iPadOS, 11 Oct 2026.
+                .id(configuration)
             } else {
                 ReportGallery(model: model) { configuration in
                     openConfiguration = configuration
@@ -401,7 +407,7 @@ struct ReportGallery: View {
             }
             .padding(20)
         }
-        .navigationTitle("")
+        .untitledInRegularWidth()
         .sheet(isPresented: $packShown) { FinancialYearPackSheet(model: model) }
         .sheet(isPresented: $reviewShown) { FinancialReviewSheet(model: model, kind: .financial) }
         .sheet(isPresented: $investmentReviewShown) { FinancialReviewSheet(model: model, kind: .investment) }
@@ -538,7 +544,7 @@ struct ReportSettingsForm: View {
                 .foregroundStyle(.secondary)
         }
         .padding(16)
-        .frame(minWidth: 340)
+        .windowFloor(minWidth: 340)
     }
 }
 
@@ -596,7 +602,7 @@ struct PeriodSelector: View {
                 .keyboardShortcut(.defaultAction)
             }
             .padding(16)
-            .frame(minWidth: 300)
+            .windowFloor(minWidth: 300)
         }
     }
 
@@ -648,7 +654,7 @@ struct ReportScreen: View {
         // rule, applied everywhere: a *window* destination shows no title
         // because the sidebar and tab strip name it; a *sheet* always shows one
         // because it has neither.
-        .navigationTitle("")
+        .untitledInRegularWidth()
         .toolbar {
             ToolbarItem(placement: .navigation) {
                 Button("All Reports", systemImage: "chevron.backward", action: close)
@@ -955,7 +961,7 @@ struct FinancialYearPackSheet: View {
                           contentType: .pdf,
                           defaultFilename: "\(years[min(yearIndex, years.count - 1)].label) Pack") { _ in }
         }
-        .frame(minWidth: 440, minHeight: 380)
+        .windowFloor(minWidth: 440, minHeight: 380)
     }
 
     private func build() async {

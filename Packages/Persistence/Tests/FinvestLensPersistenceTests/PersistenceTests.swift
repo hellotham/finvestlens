@@ -189,6 +189,156 @@ struct FileLockTests {
         #expect(throws: FileLock.LockError.self) { try other.breakStaleLockAndAcquire() }
     }
 
+    /// Two Macs of one model, owned by one person, share a default host name
+    /// until they meet on a network — and a lock syncs between exactly such a
+    /// pair. A namesake's holder is live; its pid not running *here* says
+    /// nothing, so a lock that names another machine is never judged by pid.
+    @Test("A namesake machine's lock is not judged by pid")
+    func namesakeMachineIsNotThisMachine() throws {
+        let doc = tempURL()
+        let lock = FileLock(documentURL: doc, staleAfter: 3600)
+        try lock.acquire()
+        defer { lock.release() }
+
+        let holder = try #require(lock.currentHolder())
+        let namesake = LockHolder(host: ProcessInfo.processInfo.hostName, user: holder.user,
+                                  instanceID: holder.instanceID, pid: 999_999,
+                                  acquiredAt: holder.acquiredAt, heartbeatAt: Date(),
+                                  machineID: "another-machine-entirely")
+        try JSONEncoder().encode(namesake).write(to: lock.lockURL, options: .atomic)
+
+        #expect(!lock.isStale(), "same host name, different machine: only the heartbeat may judge it")
+        #expect(!FileLock.canBreakWithoutAsking(namesake))
+    }
+
+    /// The lock a crash, a force-quit or an installer leaves on the owner's
+    /// own machine is broken without a question — by machine identity only.
+    /// A lock from before locks named their machine is still breakable at
+    /// once, but by the person: host name alone never breaks one silently.
+    @Test("Only a dead process of this very machine is broken without asking",
+          .enabled(if: MachineIdentity.current != nil))
+    func silentBreakNeedsMachineIdentity() throws {
+        let ours = try #require(MachineIdentity.current)
+        let host = ProcessInfo.processInfo.hostName
+        func holder(pid: Int32, machineID: String?) -> LockHolder {
+            LockHolder(host: host, user: "me", instanceID: UUID().uuidString, pid: pid,
+                       acquiredAt: Date(), heartbeatAt: Date(), machineID: machineID)
+        }
+        #expect(FileLock.canBreakWithoutAsking(holder(pid: 999_999, machineID: ours)))
+        #expect(!FileLock.canBreakWithoutAsking(holder(pid: 999_999, machineID: nil)),
+                "a lock known only by host name is put to the person")
+        #expect(FileLock.isProvablyDead(holder(pid: 999_999, machineID: nil)),
+                "…who may still break it at once")
+        #expect(!FileLock.canBreakWithoutAsking(holder(pid: getpid(), machineID: ours)),
+                "our own pid is not a dead one")
+        #expect(!FileLock.canBreakWithoutAsking(holder(pid: 1, machineID: ours)),
+                "a pid that exists — launchd — is alive, whoever owns it")
+    }
+
+    @Test("A lock names the machine that wrote it", .enabled(if: MachineIdentity.current != nil))
+    func lockCarriesMachineIdentity() throws {
+        let lock = FileLock(documentURL: tempURL())
+        try lock.acquire()
+        defer { lock.release() }
+        let holder = try #require(lock.currentHolder())
+        #expect(holder.machineID == MachineIdentity.current)
+        #expect(holder.machineID?.count == 32)
+        // A lock written before the field existed still decodes.
+        let legacy = Data(#"{"host":"h","user":"u","instanceID":"i","pid":7,"acquiredAt":0,"heartbeatAt":0}"#.utf8)
+        #expect(try JSONDecoder().decode(LockHolder.self, from: legacy).machineID == nil)
+    }
+
+    /// Writes `holder` as the lock beside `url`, as another process would have.
+    private func plant(_ holder: LockHolder, beside url: URL) throws -> FileLock {
+        let lock = FileLock(documentURL: url)
+        try JSONEncoder().encode(holder).write(to: lock.lockURL, options: .atomic)
+        return lock
+    }
+
+    private func deadHolder(machineID: String?, host: String = ProcessInfo.processInfo.hostName) -> LockHolder {
+        LockHolder(host: host, user: "me", instanceID: UUID().uuidString, pid: 999_999,
+                   acquiredAt: Date(), heartbeatAt: Date(), machineID: machineID)
+    }
+
+    /// The whole path a relaunch after a crash takes: the book opens, with
+    /// nothing asked, over the lock its dead predecessor left.
+    @Test("Opening a book over this machine's dead lock just opens it",
+          .enabled(if: MachineIdentity.current != nil))
+    func openBreaksThisMachinesDeadLock() throws {
+        let url = tempURL()
+        defer { try? FileManager.default.removeItem(at: url) }
+        try FinvestLensDocument.create(at: url).discard()   // releases the lock; the book stays
+
+        let lock = try plant(deadHolder(machineID: MachineIdentity.current), beside: url)
+        defer { try? FileManager.default.removeItem(at: lock.lockURL) }
+
+        let reopened = try FinvestLensDocument.open(at: url)
+        #expect(lock.currentHolder()?.pid == getpid(), "the lock is ours now")
+        reopened.discard()
+    }
+
+    /// The cases the silent path must **not** take, through the same door: a
+    /// namesake machine, and a lock from before locks named their machine —
+    /// dead pid, this host name, fresh heartbeat. Both still ask.
+    @Test("A namesake's lock, and a lock known only by host name, still refuse the open")
+    func openStillRefusesWhatItCannotProve() throws {
+        let url = tempURL()
+        defer { try? FileManager.default.removeItem(at: url) }
+        try FinvestLensDocument.create(at: url).discard()
+
+        for holder in [deadHolder(machineID: "another-machine-entirely"), deadHolder(machineID: nil)] {
+            let lock = try plant(holder, beside: url)
+            defer { try? FileManager.default.removeItem(at: lock.lockURL) }
+            #expect(throws: FileLock.LockError.self) { _ = try FinvestLensDocument.open(at: url) }
+            #expect(lock.currentHolder() == holder, "and the lock is left exactly as it was")
+            try FileManager.default.removeItem(at: lock.lockURL)
+        }
+    }
+
+    /// The silent break removes the holder that was judged and no other: if
+    /// the file changed between the judgement and the delete — a sync client
+    /// landing another machine's lock — whoever is there now is refused.
+    @Test("A lock replaced after it was judged is not the one that gets broken",
+          .enabled(if: MachineIdentity.current != nil))
+    func silentBreakRemovesOnlyTheJudgedHolder() throws {
+        let url = tempURL()
+        let judged = deadHolder(machineID: MachineIdentity.current)
+        let arrived = LockHolder(host: "another-mac.local", user: "them", instanceID: UUID().uuidString,
+                                 pid: 4242, acquiredAt: Date(timeIntervalSinceNow: -3600),
+                                 heartbeatAt: Date(timeIntervalSinceNow: -3600),
+                                 machineID: "another-machine-entirely")
+        let lock = try plant(arrived, beside: url)   // what is on disk by the time we delete
+        defer { try? FileManager.default.removeItem(at: lock.lockURL) }
+
+        #expect(throws: FileLock.LockError.self) { try lock.breakLock(heldBy: judged) }
+        #expect(lock.currentHolder() == arrived, "an hour-old heartbeat is stale, but nobody consented to breaking it")
+    }
+
+    /// New Book over an existing file: a live lock refuses before anything is
+    /// written, and this machine's dead one does not stand in the way.
+    @Test("Creating over a book: a live lock refuses, this machine's dead one does not",
+          .enabled(if: MachineIdentity.current != nil))
+    func createHonoursTheSameRule() throws {
+        let url = tempURL()
+        defer { try? FileManager.default.removeItem(at: url) }
+        try FinvestLensDocument.create(at: url).discard()
+        let before = try Data(contentsOf: url)
+
+        let live = LockHolder(host: "another-mac.local", user: "them", instanceID: UUID().uuidString,
+                              pid: 4242, acquiredAt: Date(), heartbeatAt: Date(),
+                              machineID: "another-machine-entirely")
+        var lock = try plant(live, beside: url)
+        #expect(throws: FileLock.LockError.self) { _ = try FinvestLensDocument.create(at: url) }
+        #expect(try Data(contentsOf: url) == before, "refused before the book was touched")
+        try FileManager.default.removeItem(at: lock.lockURL)
+
+        lock = try plant(deadHolder(machineID: MachineIdentity.current), beside: url)
+        defer { try? FileManager.default.removeItem(at: lock.lockURL) }
+        let created = try FinvestLensDocument.create(at: url)
+        #expect(lock.currentHolder()?.pid == getpid())
+        created.discard()
+    }
+
     @Test("A stale lock is detected and can be broken")
     func staleBreaking() throws {
         let doc = tempURL()

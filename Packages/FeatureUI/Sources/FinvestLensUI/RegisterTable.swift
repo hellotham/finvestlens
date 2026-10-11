@@ -439,9 +439,21 @@ struct RegisterTableView: View {
     private func table(_ rows: [RegisterTableRow], code: String, baseKey: Int) -> some View {
         ScrollViewReader { proxy in
             Table(rows, selection: $selection, sortOrder: tableSortOrder) {
-                // The row's height floor rides on the first column: a `Table`
+                // **A blank primary column.** iPadOS 27 draws a `Table`'s
+                // first column header as a band spanning the table's full
+                // width, with the label at the table's own leading edge —
+                // under the floating sidebar, so "Date" was never on screen
+                // (11 Oct 2026; the accessibility dump had that header cell
+                // at 0–1032 pt while every other header kept the 240 pt
+                // sidebar inset). An empty, zero-width primary column takes
+                // the band instead, and Date's header lays out with the rest.
+                // Compact width never sees this table (it gets its own
+                // register), so the primary-column rule costs nothing there.
+                TableColumn("") { _ in EmptyView() }
+                    .width(0)
+                // The row's height floor rides on the Date column: a `Table`
                 // row is as tall as its tallest cell, so one `minHeight` sets
-                // the lot without touching the other six.
+                // the lot without touching the rest.
                 TableColumn("Date", value: \.sortDate) {
                     dateCell($0).frame(minHeight: rowPoints * appFontScale)
                 }

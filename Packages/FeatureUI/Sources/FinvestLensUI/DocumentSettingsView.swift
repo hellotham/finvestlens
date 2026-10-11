@@ -68,7 +68,7 @@ public struct DocumentSettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(minWidth: 420, minHeight: 300)
+        .windowFloor(minWidth: 420, minHeight: 300)
         .navigationTitle("Documents")
     }
 }
@@ -172,7 +172,7 @@ public struct GeneralSettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(minWidth: 420, minHeight: 220)
+        .windowFloor(minWidth: 420, minHeight: 220)
         .navigationTitle("General")
     }
 }
@@ -232,7 +232,7 @@ public struct PricingSettingsView: View {
             companyDataSection
         }
         .formStyle(.grouped)
-        .frame(minWidth: 440, minHeight: 340)
+        .windowFloor(minWidth: 440, minHeight: 340)
         .onAppear { reload(); measureCache() }
     }
 

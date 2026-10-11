@@ -32,7 +32,7 @@ struct TimeMileageView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        DestinationStack {
             Group {
                 if model.billableEntries.isEmpty {
                     ContentUnavailableView {
@@ -76,7 +76,7 @@ struct TimeMileageView: View {
             }
             // Blank as a tab; the tab strip names this destination, as it does
             // for every other tab in every other mode.
-            .navigationTitle(embedded ? "" : "Time & Mileage")
+            .embeddedTitle(Text("Time & Mileage"), embedded: embedded)
             .onEscapeCommand { dismiss() }
             .toolbar {
                 if !embedded {
@@ -95,7 +95,7 @@ struct TimeMileageView: View {
                 BillCustomerSheet(model: model, customer: customer)
             }
         }
-        .frame(minWidth: embedded ? nil : 480, minHeight: embedded ? nil : 440)
+        .windowFloor(minWidth: embedded ? nil : 480, minHeight: embedded ? nil : 440)
     }
 
     @ViewBuilder
@@ -182,7 +182,7 @@ private struct BillableEntrySheet: View {
             }
             .onAppear(perform: load)
         }
-        .frame(minWidth: 380, minHeight: 380)
+        .windowFloor(minWidth: 380, minHeight: 380)
     }
 
     private func load() {
@@ -257,7 +257,7 @@ private struct BillCustomerSheet: View {
                 }
             }
         }
-        .frame(minWidth: 400, minHeight: 300)
+        .windowFloor(minWidth: 400, minHeight: 300)
     }
 
     private func create() {

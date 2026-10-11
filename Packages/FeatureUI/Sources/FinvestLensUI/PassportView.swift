@@ -109,7 +109,7 @@ struct PassportSheet: View {
                           contentType: .pdf,
                           defaultFilename: "Financial Summary") { _ in }
         }
-        .frame(minWidth: 640, minHeight: 700)
+        .windowFloor(minWidth: 640, minHeight: 700)
     }
 
     private func export() {

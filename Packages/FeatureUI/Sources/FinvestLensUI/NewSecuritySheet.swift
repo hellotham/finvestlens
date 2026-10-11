@@ -55,7 +55,7 @@ struct NewSecuritySheet: View {
                 }
             }
         }
-        .frame(minWidth: 520, minHeight: 420)
+        .windowFloor(minWidth: 520, minHeight: 420)
     }
 
     private var searchField: some View {

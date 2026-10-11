@@ -108,16 +108,28 @@ public final class FinvestLensDocument {
     /// Acquires the advisory lock, tolerating environments where the lock
     /// file cannot be written. A **live** lock held by someone else still
     /// throws (`alreadyLocked`) — only "can't create the sibling file here"
-    /// degrades to lockless mode.
+    /// degrades to lockless mode. A lock whose holder is a dead process of
+    /// this machine is broken on the way (``FileLock/canBreakWithoutAsking(_:)``).
     private static func acquireLockIfPossible(_ lock: FileLock,
                                               breakStaleLock: Bool) throws -> Bool {
         do {
             try lock.acquire()
             return true
         } catch let error as FileLock.LockError {
-            if case .alreadyLocked = error, breakStaleLock {
-                try lock.breakStaleLockAndAcquire()
-                return true
+            if case .alreadyLocked(let holder) = error {
+                if breakStaleLock {
+                    try lock.breakStaleLockAndAcquire()
+                    return true
+                }
+                // Left by a process of this very machine that no longer
+                // exists. Asking "break the lock?" of the one person who can
+                // have held it is a question with one answer — and at launch
+                // it was asked before there was a window to ask it in.
+                if FileLock.canBreakWithoutAsking(holder) {
+                    FileLock.log.notice("breaking \(lock.lockURL.lastPathComponent, privacy: .public): its holder on this machine (pid \(holder.pid)) is gone")
+                    try lock.breakLock(heldBy: holder)
+                    return true
+                }
             }
             throw error
         } catch {
@@ -181,9 +193,17 @@ public final class FinvestLensDocument {
     public static func create(at fileURL: URL, baseCurrency: Commodity = .aud,
                               breakStaleLock: Bool = false) throws -> FinvestLensDocument {
         let lock = FileLock(documentURL: fileURL)
-        if FileManager.default.fileExists(atPath: lock.lockURL.path),
-           !lock.isStale() || !breakStaleLock {
-            throw FileLock.LockError.alreadyLocked(lock.currentHolder() ?? FileLock.unreadableHolder)
+        // `lock.exists()`, not `FileManager.fileExists`: under App Sandbox the
+        // sibling lock is visible only inside a coordination, and a check
+        // that cannot see it would wave the overwrite below through.
+        if lock.exists() {
+            let holder = lock.currentHolder()
+            // A dead process of this very machine holds nothing, here as in
+            // `open`; anything else needs the stale lock *and* the say-so.
+            let deadHere = holder.map(FileLock.canBreakWithoutAsking) ?? false
+            if !deadHere, !lock.isStale() || !breakStaleLock {
+                throw FileLock.LockError.alreadyLocked(holder ?? FileLock.unreadableHolder)
+            }
         }
         // Whether this call is the one that brings the file into existence
         // decides whether the failure path below may remove it.

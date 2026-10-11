@@ -69,7 +69,7 @@ public struct HelpView: View {
                 Button("Done") { dismiss() }
             }
         }
-        .frame(minWidth: 720, minHeight: 520)
+        .windowFloor(minWidth: 720, minHeight: 520)
         .onChange(of: search) {
             visibleSections = Self.sections(matching: search)
             // Keep the reader on a page that is still in the list.

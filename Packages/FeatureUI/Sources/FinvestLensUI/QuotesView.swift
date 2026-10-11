@@ -59,7 +59,7 @@ struct QuotesView: View {
                 Text("Existing prices for the selected securities are replaced with a freshly fetched series. If a fetch fails, that security keeps its current prices.")
             }
         }
-        .frame(minWidth: 520, minHeight: 560)
+        .windowFloor(minWidth: 520, minHeight: 560)
     }
 
     // MARK: Fetch

@@ -53,7 +53,7 @@ struct ReconcileView: View {
                 setupForm
             }
         }
-        .frame(minWidth: 480, minHeight: 440)
+        .windowFloor(minWidth: 480, minHeight: 440)
     }
 
     // MARK: Setup

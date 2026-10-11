@@ -70,13 +70,22 @@ struct finvestlensApp: App {
                 // attachments seam (10) and that panel (180). Below this the
                 // register starves, and a starved register is one that hides
                 // parts of dates and balances.
+                //
+                // A **window** floor, so macOS only: a phone is 440 points
+                // wide and an iPad window can be narrowed by multitasking,
+                // and this floor applied there laid the whole app out 860
+                // wide and centred — cut off on both sides (11 Oct 2026).
+                // Those widths get the compact shell instead.
+                #if os(macOS)
                 .frame(minWidth: 860, minHeight: 520)
+                #endif
                 .onOpenURL { url in
                     // Opened from Finder / another app via the .finvestlens type.
                     guard url.pathExtension == "finvestlens" else { return }
                     Task { await model.openBook(at: url) }
                 }
                 .finvestLensAppearance()
+                .finvestLensShell()
                 // Ask once for permission to deliver bill/alert notifications
                 // (FR-PLAN-05). The system prompts only on first launch; later
                 // syncs are no-ops until granted.

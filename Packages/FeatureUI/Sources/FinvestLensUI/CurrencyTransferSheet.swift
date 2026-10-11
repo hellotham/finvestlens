@@ -73,7 +73,7 @@ struct CurrencyTransferSheet: View {
             }
             .onAppear(perform: prime)
         }
-        .frame(minWidth: 440, minHeight: 420)
+        .windowFloor(minWidth: 440, minHeight: 420)
     }
 
     private func amountField(_ label: String, text: Binding<String>) -> some View {

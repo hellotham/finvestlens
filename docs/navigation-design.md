@@ -699,6 +699,24 @@ assets, depreciation schedules, deductions, logbooks and timesheets are real
 collections with an external requirement behind them. Its sidebar is the
 fullest of any mode.
 
+### 6b The phone (11–12 Oct 2026)
+
+The compact shell (`CompactShell.swift`) is this design's phone-width form.
+Dashboard, Accounts, Investments and Reports are a tab each, a navigation
+stack whose root is what the sidebar lists and whose destinations are the
+regular shell's own. Business, Planning and Records are the three sections
+of a fifth tab, **More** — the app's own list, not the system's overflow:
+*Tab bars* says "Avoid overflow tabs" and, of the other way out, "Don't
+disable or hide tab bar buttons", so five tabs overflow nothing and hide
+nothing, and each row of More is one tap from its destination. §4.1a's
+customisable mode row has no phone counterpart. Panels present as sheets
+there (one opened from inside another goes on top of it), a navigation
+replaces the one tab the phone opened in that mode rather than adding to
+the strip, an open report takes the title, and the board stays the packed
+board of §4.3. The stacks own their paths and the model its selection per
+mode; what keeps them in step compares *pages*, so the Planner's tools are
+one page behind Back and each account is its own.
+
 ## 6a Build order
 
 Scheduled as **P12** in [plan.md](plan.md) §13d, where the exit criteria and

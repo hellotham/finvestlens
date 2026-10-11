@@ -97,7 +97,10 @@ struct WelcomeView: View {
             .padding(.horizontal, 44)
             .padding(.vertical, 30)
         }
+        // A window floor, so macOS only — a phone is narrower than it.
+        #if os(macOS)
         .frame(minWidth: 560, minHeight: 520)
+        #endif
     }
 
     // MARK: Backdrop

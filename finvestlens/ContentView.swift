@@ -33,6 +33,25 @@ struct RootHost: View {
     @Bindable var model: AppModel
     @Environment(\.undoManager) private var undoManager
     @State private var importing = false
+    #if os(macOS)
+    /// Whether this window has been on screen yet. A book that fails to open
+    /// at launch — locked, missing, not a book — fails within milliseconds,
+    /// and an alert asked for before its window is up leaves the window
+    /// *never* shown: the app sat in the Dock with nothing on screen and the
+    /// question unasked until it was clicked a second time (reproduced
+    /// 12 Oct 2026 with a lock beside the book). The alert waits for the
+    /// window to be *visible* — not key: an app opened in the background, or
+    /// a save that fails as the session logs out, must still say why.
+    @State private var windowHasAppeared = false
+    #endif
+
+    private var canPresentDocumentError: Bool {
+        #if os(macOS)
+        windowHasAppeared
+        #else
+        true
+        #endif
+    }
 
     static var documentType: UTType {
         UTType(exportedAs: "com.hellotham.finvestlens.document", conformingTo: .database)
@@ -56,6 +75,9 @@ struct RootHost: View {
             }
         }
         .onAppear { model.undoManager = undoManager }
+        #if os(macOS)
+        .background { WindowOnScreen(hasAppeared: $windowHasAppeared) }
+        #endif
         .onChange(of: undoManager == nil) { model.undoManager = undoManager }
         .fileImporter(isPresented: $importing, allowedContentTypes: [Self.documentType, .data]) { result in
             if case .success(let url) = result { Task { await model.openBook(at: url) } }
@@ -69,7 +91,7 @@ struct RootHost: View {
             }
         }
         .alert(model.documentError?.lockedImportSource != nil ? "Couldn’t import" : "Couldn’t open book",
-               isPresented: Binding(get: { model.documentError != nil },
+               isPresented: Binding(get: { model.documentError != nil && canPresentDocumentError },
                                     set: { if !$0 { model.documentError = nil } }),
                presenting: model.documentError) { error in
             if let source = error.lockedImportSource, let destination = error.lockedURL {
@@ -127,3 +149,46 @@ struct RootHost: View {
         #endif
     }
 }
+
+#if os(macOS)
+/// Latches `hasAppeared` the first time the window holding it is on screen.
+private struct WindowOnScreen: NSViewRepresentable {
+    @Binding var hasAppeared: Bool
+
+    func makeNSView(context: Context) -> Probe {
+        let probe = Probe()
+        probe.onVisible = { if !hasAppeared { hasAppeared = true } }
+        return probe
+    }
+
+    func updateNSView(_ probe: Probe, context: Context) {}
+
+    final class Probe: NSView {
+        var onVisible: (() -> Void)?
+        private var observer: NSObjectProtocol?
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            // Leaving a window arrives here too, with `window == nil` — which is
+            // where the observation ends; there is no `deinit` to do it in.
+            if let observer { NotificationCenter.default.removeObserver(observer) }
+            observer = nil
+            guard let window else { return }
+            observer = NotificationCenter.default.addObserver(
+                forName: NSWindow.didChangeOcclusionStateNotification,
+                object: window, queue: .main
+            ) { [weak self] _ in
+                MainActor.assumeIsolated { self?.report() }
+            }
+            report()
+        }
+
+        /// A turn of the run loop later, so the state is never written while
+        /// AppKit is still putting the window up.
+        private func report() {
+            guard window?.isVisible == true else { return }
+            DispatchQueue.main.async { [weak self] in self?.onVisible?() }
+        }
+    }
+}
+#endif

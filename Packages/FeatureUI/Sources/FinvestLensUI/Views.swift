@@ -486,45 +486,8 @@ public struct FinvestLensRootView: View {
     /// and truer change than building six single-instance screens, and it keeps
     /// "selecting changes what you see" literally true — the same view, showing
     /// what you picked.
-    @ViewBuilder
     private var destinationView: some View {
-        switch model.sidebarSelection ?? .dashboard {
-        case .dashboard, .overviewView, .overviewCard: DashboardView(model: model)
-        case .account: RegisterView(model: model)
-        case .reports, .report, .savedReport: ReportsHome(model: model)
-        case .generalLedger: GeneralLedgerView(model: model)
-        case .budgets, .budget: BudgetView(model: model)
-        case .scheduled, .scheduledTransaction: ScheduledView(model: model)
-        case .rules, .ruleGroup: RulesView(model: model)
-        case .goals, .goal: GoalsView(model: model)
-        case .investments: InvestmentsView(model: model)
-        // The same table, scoped to one portfolio's holdings. One view, because
-        // "the holdings of this broker" is the same question as "the holdings"
-        // with a narrower answer — a second view would drift from it.
-        case .portfolio(let id): InvestmentsView(model: model, portfolio: id)
-        // The same view a sheet would show, in a tab. One builder, so a panel
-        // cannot look like two different things depending on how it opened.
-        case .panel(let panel): PanelContent(model: model, panel: panel)
-        case .security(let key):
-            if let commodity = model.securityCommodity(forKey: key) {
-                SecurityDetailView(model: model, commodity: commodity)
-            } else {
-                // A security the book no longer holds — say so rather than
-                // showing an empty page that looks like a bug.
-                ContentUnavailableView("Security not found", systemImage: "questionmark.folder",
-                                       description: Text("This security is no longer in the book."))
-            }
-        case .business, .invoice, .customer, .vendor, .job, .employee:
-            BusinessHub(model: model)
-        case .timeMileage: TimeMileageView(model: model)
-        // One view for all four: the planner hub and each planner in it. The
-        // selection says which tool, exactly as `.budget(id)` says which budget
-        // to `BudgetView`.
-        case .planner, .plannerDebt, .plannerLifetime, .plannerTax:
-            PlanningView(model: model)
-        case .emergencyRecords, .emergencyRecord: EmergencyRecordsView(model: model)
-        case .auditLog: AuditLogSheet(model: model)
-        }
+        DestinationContent(model: model, selection: model.sidebarSelection ?? .dashboard)
     }
 
     /// Create actions and the period. Lifted out of `body` for the same reason
@@ -550,10 +513,29 @@ public struct FinvestLensRootView: View {
         // This used to measure here — the whole split view, sidebar included —
         // and call the answer the row's width, which overstated it by the
         // sidebar's 200–400pt.
-        splitView
+        rootShell
     }
 
-    private var splitView: some View {
+    @Environment(\.isCompactShell) private var usesCompactShell
+
+    /// The container: a split view beside a sidebar wherever there is room
+    /// for one, and the tab-bar shell (`CompactShell`) in a compact width —
+    /// the phone, or an iPad window narrowed by multitasking (`FR-PLT-01`).
+    /// The destinations are shared; only the container changes.
+    @ViewBuilder
+    private var shell: some View {
+        #if os(iOS)
+        if usesCompactShell {
+            CompactShell(model: model)
+        } else {
+            navigationSplit
+        }
+        #else
+        navigationSplit
+        #endif
+    }
+
+    private var navigationSplit: some View {
         NavigationSplitView {
             ModeSidebar(model: model)
                 // **No title.** HIG *Toolbars*: "If titling a toolbar seems
@@ -563,7 +545,7 @@ public struct FinvestLensRootView: View {
                 // names the mode in words, and the tab strip names what is
                 // open. Reclaiming the title area is what lets the mode
                 // buttons keep their labels at every window width.
-                .navigationTitle("")
+                .untitledInRegularWidth()
         } detail: {
             // Editing an existing transaction happens in the register row
             // itself (see `RegisterView`), not in a pane beside it: the row
@@ -632,7 +614,13 @@ public struct FinvestLensRootView: View {
         // content that is narrow — a partial date is a different date, and this
         // is a ledger.
         .navigationSplitViewStyle(.balanced)
+        // The status chips sit at the bottom of the split view; the compact
+        // shell draws them inside each stack, above its tab bar.
         .overlay(alignment: .bottom) { StatusOverlay(model: model) }
+    }
+
+    private var rootShell: some View {
+        shell
         .safeAreaInset(edge: .top) {
             if model.externalChangePending {
                 ExternalChangeBanner(model: model)
@@ -646,6 +634,11 @@ public struct FinvestLensRootView: View {
         // (`RootPanel.opensAsTab`) and `AppModel.presentedPanel` routes them.
         .sheet(item: $model.presentedPanel) { panel in
             PanelContent(model: model, panel: panel)
+                // The compact shell's second panel, over the first (New
+                // Security… from New Account): the first keeps what was typed.
+                .sheet(item: $model.nestedPanel) { nested in
+                    PanelContent(model: model, panel: nested)
+                }
         }
         // Schedule… (the register context menu and the Transaction menu) sets
         // `schedulingTransactionID`, but the sheet that observed it hung off
@@ -899,7 +892,7 @@ struct PanelContent: View {
         switch panel {
         case .newAccount: NewAccountSheet(model: model)
         case .newSecurity: NewSecuritySheet(model: model)
-        case .newTransaction: TransactionEditorSheet(model: model)
+        case .newTransaction: TransactionEditor(model: model)
         case .stockTransaction: StockTransactionSheet(model: model)
         case .currencyTransfer: CurrencyTransferSheet(model: model)
         case .saveSearch: SaveSearchSheet(model: model)
@@ -1089,23 +1082,10 @@ struct StackedTrailingControls: View {
     /// otherwise, which is how this shipped as a bare `+` — reported as
     /// "unlabelled toolbar buttons still exist", and correctly.
     private var newMenu: some View {
-        Menu {
-            Button("New Transaction…", systemImage: "plus.circle") {
-                model.presentedPanel = .newTransaction
-            }
-            .disabled(model.postableAccounts.count < 2)
-            Button("New Account…", systemImage: "plus.rectangle.on.folder") {
-                model.presentedPanel = .newAccount
-            }
-            Button("New Security…", systemImage: "chart.line.uptrend.xyaxis") {
-                model.presentedPanel = .newSecurity
-            }
-        } label: {
-            Label("New", systemImage: "plus")
-        }
-        .labelStyle(.titleAndIcon)
-        .fixedSize()
-        .help("Create a transaction, account or security")
+        NewItemMenu(model: model)
+            .labelStyle(.titleAndIcon)
+            .fixedSize()
+            .help("Create a transaction, account or security")
     }
 
     /// The saved searches, and the offer to save this one.
@@ -1228,7 +1208,7 @@ struct OnboardingSheet: View {
                 Button("Start Empty") { dismiss() }
             }
             .padding(32)
-            .frame(minWidth: 420)
+            .windowFloor(minWidth: 420)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Skip") { dismiss() } }
             }
@@ -1295,7 +1275,7 @@ struct CascadeAccountSheet: View {
                 }
             }
         }
-        .frame(minWidth: 420, minHeight: 260)
+        .windowFloor(minWidth: 420, minHeight: 260)
     }
 }
 
@@ -1376,7 +1356,7 @@ struct DeleteAccountSheet: View {
                 }
             }
         }
-        .frame(minWidth: 460, minHeight: 300)
+        .windowFloor(minWidth: 460, minHeight: 300)
     }
 
     private func commit() {
@@ -1657,7 +1637,7 @@ struct RegisterView: View {
         // where it cost width the mode buttons needed and repeated what the
         // tab strip already says. HIG *Toolbars*: "If titling a toolbar seems
         // redundant, you can leave the title area empty."
-        .navigationTitle("")
+        .untitledInRegularWidth()
         .background { jumpShortcuts }
         // A **latch**, until it was consumed on appear too.
         //
@@ -2385,7 +2365,7 @@ struct FindAccountSheet: View {
             .onAppear { focusSoon { filterFocused = true } }
             .onChange(of: filter) { selection = nil }
         }
-        .frame(minWidth: 440, minHeight: 360)
+        .windowFloor(minWidth: 440, minHeight: 360)
     }
 
     private func show() {
@@ -2460,7 +2440,7 @@ struct ScheduleTransactionSheet: View {
             }
             .onAppear(perform: loadIfNeeded)
         }
-        .frame(minWidth: 420, minHeight: 300)
+        .windowFloor(minWidth: 420, minHeight: 300)
     }
 
     private var unitName: String {
@@ -2511,7 +2491,7 @@ struct GoToDateSheet: View {
             }
             .onChange(of: date) { missed = false }
         }
-        .frame(minWidth: 340, minHeight: 180)
+        .windowFloor(minWidth: 340, minHeight: 180)
     }
 }
 
@@ -2623,11 +2603,45 @@ struct RegisterFilterSheet: View {
 
 struct SearchResultsView: View {
     @Environment(\.appDateFormat) private var dateFormat
+    @Environment(\.isCompactShell) private var compact
     @Bindable var model: AppModel
     @State private var selection: Set<GncGUID> = []
     @State private var editingTransactionID: GncGUID?
 
     var body: some View {
+        Group {
+            if compact {
+                compactList
+            } else {
+                table
+            }
+        }
+        .sheet(item: $editingTransactionID) { id in
+            TransactionEditor(model: model, editingID: id)
+        }
+        .overlay {
+            if model.searchResults.isEmpty { noResults }
+        }
+        .safeAreaInset(edge: .top) {
+            if !model.searchNotices.isEmpty { noticeBanner }
+        }
+        .toolbar {
+            if model.findQuery != nil {
+                ToolbarItemGroup {
+                    Button("Edit Find…", systemImage: "slider.horizontal.3") {
+                        model.presentedPanel = .find
+                    }
+                    .help("Change the search criteria (⌘F)")
+                    Button("Clear", systemImage: "xmark.circle") { model.clearFind() }
+                        .help("Stop showing find results")
+                }
+            }
+        }
+        .navigationTitle(title)
+    }
+
+    /// The regular shell's results: a table with the register's columns.
+    private var table: some View {
         Table(model.searchResults, selection: $selection) {
             TableColumn("Date") { row in
                 // A Table column is user-resizable, so the width this cell gets
@@ -2688,28 +2702,28 @@ struct SearchResultsView: View {
         } primaryAction: { ids in
             if let id = ids.first, ids.count == 1 { editingTransactionID = id }
         }
-        .sheet(item: $editingTransactionID) { id in
-            TransactionEditorSheet(model: model, editingID: id)
-        }
-        .overlay {
-            if model.searchResults.isEmpty { noResults }
-        }
-        .safeAreaInset(edge: .top) {
-            if !model.searchNotices.isEmpty { noticeBanner }
-        }
-        .toolbar {
-            if model.findQuery != nil {
-                ToolbarItemGroup {
-                    Button("Edit Find…", systemImage: "slider.horizontal.3") {
-                        model.presentedPanel = .find
-                    }
-                    .help("Change the search criteria (⌘F)")
-                    Button("Clear", systemImage: "xmark.circle") { model.clearFind() }
-                        .help("Stop showing find results")
-                }
+    }
+
+    /// The compact shell's results: one row per hit, because a `Table`
+    /// at compact width shows only its first column — the dates alone.
+    private var compactList: some View {
+        List(model.searchResults) { row in
+            Button {
+                editingTransactionID = row.id
+            } label: {
+                SearchHitRow(row: row, dateFormat: dateFormat)
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint("Opens the transaction")
+            .contextMenu {
+                Button("Edit…") { editingTransactionID = row.id }
+                Button("Show in Register") { model.showInRegister(row.id) }
+                Divider()
+                Button("Void Transaction") { model.voidTransactions([row.id]) }
+                Button("Delete Transaction", role: .destructive) { model.deleteTransactions([row.id]) }
             }
         }
-        .navigationTitle(title)
+        .listStyle(.plain)
     }
 
     private var title: String {
@@ -2801,7 +2815,7 @@ struct SaveSearchSheet: View {
             }
             .onAppear { focusSoon { focused = true } }
         }
-        .frame(minWidth: 360, minHeight: 160)
+        .windowFloor(minWidth: 360, minHeight: 160)
     }
 }
 
@@ -3012,6 +3026,30 @@ struct EditableSplit: Identifiable, Equatable {
 }
 
 /// Creates or edits a transaction with N balancing splits, with QuickFill.
+/// The transaction editor, for wherever it is asked for: a form in the
+/// compact shell — the hosted register row folds its account cells away below
+/// 640 points, and a phone is narrower than that — and the hosted row
+/// everywhere else. One door, so an Edit command cannot open the editor that
+/// does not fit.
+struct TransactionEditor: View {
+    @Bindable var model: AppModel
+    var editingID: GncGUID?
+    var documentPrefill: TransactionEditorSheet.DocumentPrefill?
+    @Environment(\.isCompactShell) private var compact
+
+    var body: some View {
+        #if os(iOS)
+        if compact {
+            CompactTransactionEditor(model: model, editingID: editingID, documentPrefill: documentPrefill)
+        } else {
+            TransactionEditorSheet(model: model, editingID: editingID, documentPrefill: documentPrefill)
+        }
+        #else
+        TransactionEditorSheet(model: model, editingID: editingID, documentPrefill: documentPrefill)
+        #endif
+    }
+}
+
 struct TransactionEditorSheet: View {
     @Bindable var model: AppModel
     var editingID: GncGUID?
@@ -3190,7 +3228,7 @@ struct TransactionEditorSheet: View {
                     // Account column (the fold threshold is 640·scale) — a
                     // sheet that folded the account cells away would have no
                     // way to pick accounts.
-                    .frame(minWidth: 660)
+                    .windowFloor(minWidth: 660)
                 #if os(macOS)
                 if showsDocumentPane, let documentURL {
                     Divider()
@@ -3200,7 +3238,7 @@ struct TransactionEditorSheet: View {
                 #endif
             }
         }
-        .frame(minWidth: showsDocumentPane ? 1020 : 700, minHeight: 540)
+        .windowFloor(minWidth: showsDocumentPane ? 1020 : 700, minHeight: 540)
     }
 
     private var editorForm: some View {
@@ -3888,5 +3926,130 @@ struct EditAccountSheet: View {
                 focusSoon { nameFocused = true }
             }
         }
+    }
+}
+
+/// The view for a sidebar selection — one builder, whether the split view
+/// shows it beside the sidebar or the compact shell pushes it onto a stack,
+/// so a destination cannot look like two different things depending on
+/// the width that reached it.
+struct DestinationContent: View {
+    @Bindable var model: AppModel
+    let selection: SidebarSelection
+    @Environment(\.isCompactShell) private var compact
+
+    var body: some View {
+        switch selection {
+        case .dashboard, .overviewView, .overviewCard: DashboardView(model: model)
+        case .account:
+            #if os(iOS)
+            if compact, case .account(let id) = selection {
+                CompactRegisterView(model: model, accountID: id)
+            } else {
+                RegisterView(model: model)
+            }
+            #else
+            RegisterView(model: model)
+            #endif
+        case .reports, .report, .savedReport: ReportsHome(model: model)
+        case .generalLedger:
+            #if os(iOS)
+            if compact { CompactRegisterView(model: model) } else { GeneralLedgerView(model: model) }
+            #else
+            GeneralLedgerView(model: model)
+            #endif
+        case .budgets, .budget: BudgetView(model: model)
+        case .scheduled, .scheduledTransaction: ScheduledView(model: model)
+        case .rules, .ruleGroup: RulesView(model: model)
+        case .goals, .goal: GoalsView(model: model)
+        case .investments: InvestmentsView(model: model)
+        // The same table, scoped to one portfolio's holdings. One view, because
+        // "the holdings of this broker" is the same question as "the holdings"
+        // with a narrower answer — a second view would drift from it.
+        case .portfolio(let id): InvestmentsView(model: model, portfolio: id)
+        // The same view a sheet would show, in a tab. One builder, so a panel
+        // cannot look like two different things depending on how it opened.
+        case .panel(let panel): PanelContent(model: model, panel: panel)
+        case .security(let key):
+            if let commodity = model.securityCommodity(forKey: key) {
+                SecurityDetailView(model: model, commodity: commodity)
+            } else {
+                // A security the book no longer holds — say so rather than
+                // showing an empty page that looks like a bug.
+                ContentUnavailableView("Security not found", systemImage: "questionmark.folder",
+                                       description: Text("This security is no longer in the book."))
+            }
+        case .business, .invoice, .customer, .vendor, .job, .employee:
+            BusinessHub(model: model)
+        case .timeMileage: TimeMileageView(model: model)
+        // One view for all four: the planner hub and each planner in it. The
+        // selection says which tool, exactly as `.budget(id)` says which budget
+        // to `BudgetView`.
+        case .planner, .plannerDebt, .plannerLifetime, .plannerTax:
+            PlanningView(model: model)
+        case .emergencyRecords, .emergencyRecord: EmergencyRecordsView(model: model)
+        case .auditLog: AuditLogSheet(model: model)
+        }
+    }
+}
+
+/// The New menu, shared by the regular shell's toolbar and the compact
+/// shell's: one list of the things a book can gain, so a new kind of item
+/// cannot appear in one shell and not the other.
+struct NewItemMenu: View {
+    @Bindable var model: AppModel
+
+    var body: some View {
+        Menu {
+            Button("New Transaction…", systemImage: "plus.circle") {
+                model.presentedPanel = .newTransaction
+            }
+            .disabled(model.postableAccounts.count < 2)
+            Button("New Account…", systemImage: "plus.rectangle.on.folder") {
+                model.presentedPanel = .newAccount
+            }
+            Button("New Security…", systemImage: "chart.line.uptrend.xyaxis") {
+                model.presentedPanel = .newSecurity
+            }
+        } label: {
+            Label("New", systemImage: "plus")
+        }
+    }
+}
+
+/// One search hit as a list row: what matched over which accounts, the
+/// amount over the date — the compact register's shape.
+struct SearchHitRow: View {
+    let row: TransactionSummary
+    let dateFormat: AppDateFormat
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(row.description.isEmpty ? String(localized: "(No description)") : row.description)
+                    .scaledFont(.body)
+                    .lineLimit(1)
+                Text(row.accounts)
+                    .scaledFont(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 8)
+            VStack(alignment: .trailing, spacing: 2) {
+                Text(AmountFormat.string(row.amount, code: row.currencyCode))
+                    .scaledFont(.body)
+                    .monospacedDigit()
+                Text(dateFormat.short(row.date))
+                    .scaledFont(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.vertical, 2)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel([dateFormat.short(row.date),
+                             row.description.isEmpty ? String(localized: "(No description)") : row.description,
+                             row.accounts,
+                             AmountFormat.spoken(row.amount, code: row.currencyCode)].joined(separator: ", "))
     }
 }

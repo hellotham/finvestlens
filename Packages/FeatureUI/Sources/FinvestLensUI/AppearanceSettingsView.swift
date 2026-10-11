@@ -70,7 +70,7 @@ public struct AppearanceSettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(minWidth: 420, minHeight: 460)
+        .windowFloor(minWidth: 420, minHeight: 460)
         .tint(accent.color)
         .navigationTitle("Appearance")
     }
