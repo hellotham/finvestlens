@@ -3608,7 +3608,9 @@ website's requirements line dropped "and Intel". **CI is knowingly red**: a
 bundles; actions/runner-images offers macOS 26 (Xcode 26.0–26.6) as its newest
 label, with an `xcode-27` image migrated to macOS 27 on 7 Sep 2026 but no
 public runner label (README and issues, read 9 Oct 2026). The ci.yml comment
-says so; `runs-on` moves when a label exists.
+says so; `runs-on` moves when a label exists. *(Wrong, and corrected 12 Oct 2026:
+the label existed the whole time — it is `xcode-27`, announced in
+actions/runner-images issue 14404. See the last section.)*
 
 **Foundation Models 27 — what changed and what was done.** Sources: the
 Updates page, Apple's *Improving the safety of generative model output*
@@ -3860,6 +3862,14 @@ bundle; the lock observed beside the Box Drive book with `/usr/bin/log`.
   name its own line above cost and value, which stay on one line. Before
   that the name yielded to the figures and was left no room at all. Both
   seen on an iPhone 18 Pro Max simulator at the first accessibility size.
+- **CI builds on 27 (12 Oct 2026).** The macOS jobs had been left on
+  `macos-26` with a comment saying GitHub hosted no macOS 27 runner. It
+  does: the label is `xcode-27` (actions/runner-images issue 14404, "You can
+  use the `xcode-27` image label"; its README, read 12 Oct, lists macOS
+  27.0.1 with Xcode 27.0 build 27A266a as the default — the build this
+  project is developed on). The earlier check looked for a `macos-27` name
+  and stopped there. `ci.yml` now runs the package and app jobs on
+  `xcode-27`, and each begins by refusing a toolchain below Xcode 27.
 - **Store screenshots.** `finvestlensUITests/ScreenshotTests` captures the
   iPad and iPhone sets from the synthetic demo book: it opens a private copy
   and passes the book and the period as launch arguments, so nothing is

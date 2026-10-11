@@ -149,7 +149,7 @@ def repo_relative(source: str) -> str | None:
     """The repo-relative path of a compiled source, or None if it is outside.
 
     A `.stringsdata` records the **absolute** path of the file it came from, on
-    the machine that compiled it. In CI that machine is the `macos-26` runner
+    the machine that compiled it. In CI that machine is the macOS runner
     (`/Users/runner/work/…`) and this script runs on `ubuntu-latest`
     (`/home/runner/work/…`), so resolving against this checkout raised
     `ValueError` for *every* source: each key was dropped, each catalog then

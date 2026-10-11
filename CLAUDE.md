@@ -8,7 +8,7 @@ FinvestLens is a native Apple double-entry accounting app (macOS 27 / iPadOS 27 
 
 ## Commands
 
-Everything needs Xcode 27 (Swift 6.4) and the macOS 27 / iOS 27 SDKs: the deployment targets are 27.0 (PRD NFR-04), so nothing older can build it. GitHub hosts no macOS 27 runner yet (checked 9 Oct 2026), so CI's macOS jobs fail at the first compile until `runs-on` can name one. Twelve local SPM packages live under `Packages/`; each builds and tests on its own.
+Everything needs Xcode 27 (Swift 6.4) and the macOS 27 / iOS 27 SDKs: the deployment targets are 27.0 (PRD NFR-04), so nothing older can build it. CI's macOS jobs run on GitHub's `xcode-27` image (macOS 27, Xcode 27) — GitHub labels its newest macOS image by Xcode major, so there is no `macos-27` to find; a note here once said no such runner existed, on the strength of a search for that name, and CI stayed red for three pushes because of it. Check `actions/runner-images` itself, not this sentence, before saying what a runner can or cannot do. Twelve local SPM packages live under `Packages/`; each builds and tests on its own.
 
 ```bash
 swift test --package-path Packages/Engine                      # one package's suite
