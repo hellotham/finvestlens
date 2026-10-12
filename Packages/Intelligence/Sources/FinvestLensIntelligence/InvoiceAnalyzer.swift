@@ -35,14 +35,24 @@ public struct InvoiceAnalysis: Sendable {
     /// are missing, and the review should say so rather than let the sum's
     /// shortfall speak for itself.
     public var readWholeDocument: Bool
+    /// A payment reference or invoice number carried by a QR code or barcode
+    /// on the document — what Vision's barcode reader found there, not what
+    /// the model made of it. `nil` for a document read as text, and for one
+    /// with no code.
+    public var reference: String?
+    /// Whether this is the reading of the document's picture rather than of
+    /// its text.
+    public var readFromPicture: Bool
 
     public init(vendor: String, date: Date?, total: Decimal, lineItems: [InvoiceLineItem],
-                readWholeDocument: Bool = true) {
+                readWholeDocument: Bool = true, reference: String? = nil, readFromPicture: Bool = false) {
         self.vendor = vendor
         self.date = date
         self.total = total
         self.lineItems = lineItems
         self.readWholeDocument = readWholeDocument
+        self.reference = reference
+        self.readFromPicture = readFromPicture
     }
 
     /// Sum of line items — compare with `total` to surface OCR/extraction
@@ -88,32 +98,167 @@ public enum InvoiceAnalyzer {
         var lineItems: [ModelLineItem]
     }
 
+    /// The invoice as read off its picture, with what a code on it carries.
+    @Generable
+    struct ModelPicturedInvoice {
+        @Guide(description: "The invoice or receipt in the image")
+        var invoice: ModelInvoice
+        @Guide(description: "The payment reference or invoice number encoded in a QR code or barcode on the document, exactly as the barcode tool reports it. Empty if the document has no code.")
+        var reference: String
+    }
+
+    static let instructions = """
+        You read invoices and receipts. Extract the vendor, date, grand total, \
+        and each billed line item exactly as printed. Each printed line is one \
+        line item — never merge adjacent lines, and take each item's amount \
+        from the end of its own line. The line items should add up to the \
+        grand total. Never invent line items.
+        """
+
+    /// One reading of an invoice, by either route.
+    struct Reading {
+        var invoice: ModelInvoice
+        /// Only the leading part of the document was read.
+        var truncated = false
+        var reference: String?
+        var fromPicture = false
+    }
+
+    /// How far a reading can be trusted without knowing the answer: whether
+    /// its total is a figure printed in the document, and whether its line
+    /// items add up to it.
+    ///
+    /// `source` is the document's text as Vision read it — the same text
+    /// for both routes, and not the model's. The total counts for more than
+    /// the arithmetic: a receipt whose prices leave the tax out adds up to
+    /// less than its total and is still read right, while a total that is
+    /// printed nowhere is a misread however tidy the sum.
+    static func standing(of invoice: ModelInvoice, in source: String) -> Int {
+        let amounts = invoice.lineItems.compactMap { IntelligenceParsing.amount($0.amount) }
+        var standing = 0
+        if let total = IntelligenceParsing.amount(invoice.total), total != 0 {
+            if SourceGrounding.isAmountPrinted(invoice.total, in: source) { standing += 2 }
+            if !amounts.isEmpty, amounts.reduce(0, +) == total { standing += 1 }
+        }
+        return standing
+    }
+
+    /// What a picture's reading needs for the text not to be read as well:
+    /// a total that is printed in the document. Its lines need not add up
+    /// to it — on a bill with a tax line they do not — and asking for the
+    /// text whenever they did not was a second request on most documents
+    /// that changed the answer on none of fifteen.
+    static let standsAlone = 2
+
+    /// Which of two readings of one document to keep. The picture's, unless
+    /// the text's stands better: on fifteen synthetic receipts — clean,
+    /// photographed, handwritten, faint and tilted — the picture read with
+    /// Vision's tools had every total right and ten line-item lists, and
+    /// the text thirteen and six (12 October 2026).
+    static func preferred(pictured: Reading?, written: Reading?, source: String) -> Reading? {
+        guard let pictured else { return written }
+        guard let written else { return pictured }
+        return standing(of: written.invoice, in: source) > standing(of: pictured.invoice, in: source)
+            ? written : pictured
+    }
+
+    /// The reference the model reports, if it is what the barcode reader
+    /// found on the page; nothing otherwise. The model is asked to copy it,
+    /// and this is what checks that it did: a reference is typed into a
+    /// payment, and one the model composed is worse than none.
+    static func groundedReference(_ claimed: String, in barcodes: String) -> String? {
+        let reference = claimed.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard reference.count >= 4, barcodes.contains(reference) else { return nil }
+        return reference
+    }
+
+    /// The invoice read off its picture, with Vision's text and barcode
+    /// tools offered — or `nil` where a picture cannot be shown, or the
+    /// model would not or could not read this one. A failure of the model
+    /// itself is thrown: the text route would meet it too.
+    static func read(picture: DocumentPicture) async throws -> Reading? {
+        let seeing = instructions + """
+             The document is the image labelled \(LanguageModels.pictureLabel). \
+            Read its text with the OCR tool and take every name and number from what \
+            the tool returns, not from the image itself.
+            """
+        do {
+            // The barcode reader is offered, and a reference asked for, only
+            // where Vision has already found a code on the page.
+            if await DocumentText.hasBarcode(picture) {
+                guard let (answer, readings) = try await LanguageModels.respond(
+                    .invoiceAnalyzer,
+                    instructions: seeing + " The document carries a QR code or a barcode: read it with the barcode tool.",
+                    prompt: "Read this receipt or invoice.",
+                    picture: picture, readingCodes: true, generating: ModelPicturedInvoice.self)
+                else { return nil }
+                return Reading(invoice: answer.invoice,
+                               reference: groundedReference(answer.reference, in: readings.barcodes),
+                               fromPicture: true)
+            }
+            guard let (invoice, _) = try await LanguageModels.respond(
+                .invoiceAnalyzer, instructions: seeing, prompt: "Read this receipt or invoice.",
+                picture: picture, generating: ModelInvoice.self)
+            else { return nil }
+            return Reading(invoice: invoice, fromPicture: true)
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch let error as IntelligenceError where error.endsABatch {
+            throw error
+        } catch {
+            return nil
+        }
+    }
+
     /// Extracts vendor, date, total, and line items, then categorises each
     /// line item against `candidates` (pass expense accounts).
     ///
-    /// - Parameter explainRefusal: ask the model why, if it refuses the
-    ///   document — a second request, for when one invoice is being read
-    ///   and a person will see the reason.
+    /// - Parameters:
+    ///   - text: the document's text — its own, or as Vision read it.
+    ///   - picture: the document as an image, where it is one (a
+    ///     photographed receipt, a scanned page: `DocumentText.picture`).
+    ///     It is read first, with Vision's tools, and the text is read only
+    ///     if that reading's total is not printed in the document
+    ///     (``standing(of:in:)``).
+    ///   - explainRefusal: ask the model why, if it refuses the document — a
+    ///     second request, for when one invoice is being read and a person
+    ///     will see the reason.
     public static func analyze(
         text: String,
+        picture: DocumentPicture? = nil,
         candidates: [CategoryCandidate],
         explainRefusal: Bool = false
     ) async throws -> InvoiceAnalysis {
-        let instructions = """
-            You read invoices and receipts. Extract the vendor, date, grand total, \
-            and each billed line item exactly as printed. Each printed line is one \
-            line item — never merge adjacent lines, and take each item's amount \
-            from the end of its own line. The line items should add up to the \
-            grand total. Never invent line items.
-            """
-        // The invoice is cut to what the model it runs on can read beside
-        // the instructions and fifty line items of answer — measured in that
-        // model's tokens (`LanguageModels.fit`). An invoice longer than that
-        // is read from the top, and the result says so.
-        let (invoice, truncated) = try await LanguageModels.respond(
-            .invoiceAnalyzer, instructions: instructions,
-            document: text, framing: { "Invoice text:\n\n\($0)" },
-            generating: ModelInvoice.self, explainRefusal: explainRefusal)
+        let source = SourceGrounding.folded(text)
+        var pictured: Reading?
+        if let picture { pictured = try await read(picture: picture) }
+
+        var written: Reading?
+        if pictured.map({ standing(of: $0.invoice, in: source) < standsAlone }) ?? true {
+            do {
+                // The invoice is cut to what the model it runs on can read
+                // beside the instructions and fifty line items of answer —
+                // measured in that model's tokens (`LanguageModels.fit`). An
+                // invoice longer than that is read from the top, and the
+                // result says so.
+                let (invoice, truncated) = try await LanguageModels.respond(
+                    .invoiceAnalyzer, instructions: instructions,
+                    document: text, framing: { "Invoice text:\n\n\($0)" },
+                    generating: ModelInvoice.self, explainRefusal: explainRefusal)
+                written = Reading(invoice: invoice, truncated: truncated)
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch {
+                // With a reading of the picture in hand, the text's refusal
+                // is not the document's.
+                guard pictured != nil else { throw error }
+            }
+        }
+        guard let reading = preferred(pictured: pictured, written: written, source: source) else {
+            throw IntelligenceError.emptyDocument
+        }
+        let invoice = reading.invoice
+        let truncated = reading.truncated
 
         var items: [InvoiceLineItem] = invoice.lineItems.compactMap { line in
             guard let amount = IntelligenceParsing.amount(line.amount), amount != 0 else { return nil }
@@ -152,7 +297,9 @@ public enum InvoiceAnalyzer {
             date: IntelligenceParsing.date(invoice.date),
             total: IntelligenceParsing.amount(invoice.total) ?? items.reduce(0) { $0 + $1.amount },
             lineItems: items,
-            readWholeDocument: !truncated
+            readWholeDocument: !truncated,
+            reference: reading.reference,
+            readFromPicture: reading.fromPicture
         )
     }
 }

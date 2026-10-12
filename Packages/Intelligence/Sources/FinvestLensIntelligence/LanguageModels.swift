@@ -29,6 +29,10 @@
 
 import Foundation
 import FoundationModels
+#if canImport(_Vision_FoundationModels)
+import Vision
+import _Vision_FoundationModels
+#endif
 import NaturalLanguage
 import Synchronization
 #if os(macOS)
@@ -670,17 +674,22 @@ public enum LanguageModels {
     ///   it, and the instructions as that session was given them.
     private static func perform<Output>(
         _ feature: IntelligenceFeature, instructions: String?, explainRefusal: Bool,
+        readings: PictureReadings? = nil, readsCodes: Bool = false,
         _ request: (Resolved, LanguageModelSession, String?) async throws -> Output
     ) async throws -> Output {
         let resolved = try await resolve(feature)
         func attempt(on resolved: Resolved) async throws -> Output {
+            if readings != nil, !canSee(resolved) { throw CannotShowPictures() }
             let sent = Self.instructions(instructions, for: feature)
             let session = LanguageModelSession(profile: FeatureProfile(
-                feature: feature, model: resolved.model, instructions: sent))
+                feature: feature, model: resolved.model, instructions: sent,
+                readings: readings, readsCodes: readsCodes))
             do {
                 return try await request(resolved, session, sent)
             } catch is CancellationError {
                 throw CancellationError()
+            } catch is CannotShowPictures {
+                throw CannotShowPictures()
             } catch {
                 guard explainRefusal else { throw IntelligenceError.wrap(error) }
                 throw try await IntelligenceError.describing(error)
@@ -716,18 +725,147 @@ public enum LanguageModels {
     /// generating down to about 440, on a request that then generates for
     /// 2.3 seconds. Six categoriser requests took 16.80 s one way and 16.78
     /// the other. See docs/intelligence-prompts.md.
+    ///
+    /// A request that shows the model a picture is the one case that is not
+    /// like the rest, and the profile is where that is said: Vision's two
+    /// tools are offered with the picture and only with it, and the model
+    /// may call them. Everything else is one guided generation with no tool
+    /// to call.
     struct FeatureProfile: LanguageModelSession.DynamicProfile {
         let feature: IntelligenceFeature
         let model: any LanguageModel
         let instructions: String?
+        /// Where what the tools return is kept, for a request that shows a
+        /// picture; `nil` for every other request.
+        var readings: PictureReadings? = nil
+        /// Whether the barcode reader is offered beside the text reader.
+        var readsCodes = false
 
         var body: some LanguageModelSession.DynamicProfile {
-            LanguageModelSession.Profile {
-                if let instructions { Instructions(instructions) }
+            if let readings {
+                LanguageModelSession.Profile {
+                    if let instructions { Instructions(instructions) }
+                    LanguageModels.pictureTools(readingCodes: readsCodes)
+                }
+                .model(model)
+                .samplingMode(feature.samplingMode)
+                .toolCallingMode(.allowed)
+                .onToolOutput { _, output in readings.note(output) }
+            } else {
+                LanguageModelSession.Profile {
+                    if let instructions { Instructions(instructions) }
+                }
+                .model(model)
+                .samplingMode(feature.samplingMode)
+                .toolCallingMode(feature.toolCallingMode)
             }
-            .model(model)
-            .samplingMode(feature.samplingMode)
-            .toolCallingMode(feature.toolCallingMode)
+        }
+    }
+
+    // MARK: - Pictures
+
+    /// What an attachment is called in a prompt, so that a tool can be told
+    /// which image to read. Apple, *Analyzing images with multimodal
+    /// prompting* (read 12 October 2026): "When you use tools, provide an
+    /// label(_:) to help the model identify a specific attachment."
+    static let pictureLabel = "document"
+
+    /// Vision's readers, offered to the model beside a picture: text
+    /// recognition, and the barcode reader where the page has a code for it.
+    /// They live in an overlay the iOS Simulator's SDK does not have, so
+    /// there the list is empty and no picture is shown (``canSee(_:)``).
+    static func pictureTools(readingCodes: Bool) -> [any Tool] {
+        #if canImport(_Vision_FoundationModels)
+        readingCodes ? [OCRTool(), BarcodeReaderTool()] : [OCRTool()]
+        #else
+        []
+        #endif
+    }
+
+    /// What Vision's tools returned in the course of one request.
+    ///
+    /// Kept because it is the only thing a picture's answer can be checked
+    /// against: the model is shown pixels, and on fifteen synthetic receipts
+    /// read from the pixels alone it gave a wrong date and a wrong total
+    /// that the same receipts read through these tools did not (12 October
+    /// 2026). A reference the model says it found in a barcode is believed
+    /// only if the barcode tool said it.
+    final class PictureReadings: Sendable {
+        private let outputs = Mutex<[(tool: String, text: String)]>([])
+
+        func note(_ output: Transcript.ToolOutput) {
+            let text = output.segments.map { segment -> String in
+                switch segment {
+                case .text(let text): text.content
+                case .structure(let structure): structure.content.jsonString
+                default: ""
+                }
+            }.joined(separator: "\n")
+            outputs.withLock { $0.append((output.toolName, text)) }
+        }
+
+        /// Everything the tool named `name` returned.
+        func text(from name: String) -> String {
+            outputs.withLock { $0.filter { $0.tool == name }.map(\.text).joined(separator: "\n") }
+        }
+
+        /// The tools that were called, in order.
+        var called: [String] { outputs.withLock { $0.map(\.tool) } }
+
+        #if canImport(_Vision_FoundationModels)
+        /// What the barcode reader found on the picture.
+        var barcodes: String { text(from: BarcodeReaderTool().name) }
+        /// The text the OCR tool read off the picture.
+        var recognisedText: String { text(from: OCRTool().name) }
+        #else
+        var barcodes: String { "" }
+        var recognisedText: String { "" }
+        #endif
+    }
+
+    /// Whether a request on `resolved` can show its model a picture: the
+    /// model has to see, and Vision's tools have to be there to read with.
+    static func canSee(_ resolved: Resolved) -> Bool {
+        #if canImport(_Vision_FoundationModels)
+        resolved.model.capabilities.contains(.vision)
+        #else
+        false
+        #endif
+    }
+
+    /// Thrown inside the seam when a picture was to be shown and cannot be;
+    /// never leaves it.
+    private struct CannotShowPictures: Error {}
+
+    /// One guided request about a picture of a document, with Vision's
+    /// tools offered — or `nil`, without a request being made, where a
+    /// picture cannot be shown: on the iOS Simulator, or to a model that
+    /// does not see.
+    ///
+    /// The picture is not measured against the window: the model will not
+    /// count an attachment's tokens (`tokenCount(for:)` throws for a prompt
+    /// with one, probed 12 October 2026). A request that overflows fails
+    /// like any other, and the caller has the document's text to fall back
+    /// on.
+    static func respond<Output: Generable>(
+        _ feature: IntelligenceFeature, instructions: String? = nil,
+        prompt: String, picture: DocumentPicture, readingCodes: Bool = false,
+        generating type: Output.Type = Output.self
+    ) async throws -> (answer: Output, readings: PictureReadings)? {
+        let readings = PictureReadings()
+        do {
+            let answer: Output = try await perform(
+                feature, instructions: instructions, explainRefusal: false,
+                readings: readings, readsCodes: readingCodes
+            ) { _, session, _ in
+                try await session.respond(generating: type) {
+                    prompt
+                    Attachment(picture.image).label(pictureLabel)
+                }.content
+            }
+            return (answer, readings)
+        } catch is CannotShowPictures {
+            return nil
         }
     }
 

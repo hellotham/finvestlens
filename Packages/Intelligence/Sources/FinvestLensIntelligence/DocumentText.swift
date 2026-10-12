@@ -20,6 +20,16 @@ import Vision
 import CoreGraphics
 #endif
 
+/// A document that is a picture — a photographed receipt, a scanned page —
+/// as the image a model can be shown.
+///
+/// `CGImage` is immutable once made, which is what lets this cross tasks.
+public struct DocumentPicture: @unchecked Sendable {
+    public let image: CGImage
+
+    public init(_ image: CGImage) { self.image = image }
+}
+
 /// Extracts plain text from financial documents (PDF statements, invoices).
 ///
 /// Text-based PDFs read directly through PDFKit; pages with no text layer
@@ -42,6 +52,56 @@ public enum DocumentText {
         #endif
         // Not a PDF — attachments are often PNG/JPEG scans; try it as an image.
         return try await extractPages(from: Data(contentsOf: url))
+    }
+
+    /// The document as a picture, where it is one: an image file, or a PDF of
+    /// a single page with no text of its own (a scan). `nil` for a document
+    /// with a text layer or more than one page — those are read as text,
+    /// which loses nothing.
+    ///
+    /// A photograph comes back upright: a phone stores a portrait shot on
+    /// its side with a note of which way up it goes, and a model shown the
+    /// pixels alone sees a receipt lying down.
+    public static func picture(from url: URL) -> DocumentPicture? {
+        (try? Data(contentsOf: url)).flatMap(picture(from:))
+    }
+
+    public static func picture(from data: Data) -> DocumentPicture? {
+        #if canImport(PDFKit)
+        if let document = PDFDocument(data: data) {
+            guard document.pageCount == 1, let page = document.page(at: 0),
+                  (page.string ?? "").trimmingCharacters(in: .whitespacesAndNewlines).count < 32,
+                  let image = render(page: page) else { return nil }
+            return DocumentPicture(image)
+        }
+        #endif
+        #if canImport(ImageIO)
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil),
+              CGImageSourceGetCount(source) > 0 else { return nil }
+        // A thumbnail "with transform" is the image turned the way its
+        // orientation says, and no larger than a model has any use for.
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: 2_400,
+        ]
+        return CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary).map(DocumentPicture.init)
+        #else
+        return nil
+        #endif
+    }
+
+    /// Whether the picture carries a barcode or a QR code that Vision can
+    /// read. Asked before the model is, so that the barcode tool is offered
+    /// only for a page that has something for it: most receipts have none,
+    /// and a tool that is offered is a tool the model may spend a call on.
+    public static func hasBarcode(_ picture: DocumentPicture) async -> Bool {
+        #if canImport(Vision)
+        let found = try? await DetectBarcodesRequest().perform(on: picture.image)
+        return found?.contains { !($0.payloadString ?? "").isEmpty } ?? false
+        #else
+        return false
+        #endif
     }
 
     public static func extractPages(from data: Data) async throws -> [Page] {
@@ -181,10 +241,12 @@ public enum DocumentText {
         try await extractPages(from: data).map(\.text).joined(separator: "\n\n")
     }
 
-    #if canImport(PDFKit) && canImport(Vision)
-    private static func ocr(page: PDFPage) async throws -> String? {
+    #if canImport(PDFKit)
+    /// A page drawn on white at about 180 dpi — enough for statement type
+    /// sizes — for Vision to read, or a model to be shown.
+    private static func render(page: PDFPage) -> CGImage? {
         let bounds = page.bounds(for: .mediaBox)
-        let scale: CGFloat = 2.5  // ~180 dpi, enough for statement type sizes
+        let scale: CGFloat = 2.5
         let width = Int(bounds.width * scale)
         let height = Int(bounds.height * scale)
         guard width > 0, height > 0,
@@ -201,8 +263,13 @@ public enum DocumentText {
         context.scaleBy(x: scale, y: scale)
         context.translateBy(x: -bounds.minX, y: -bounds.minY)
         page.draw(with: .mediaBox, to: context)
-        guard let image = context.makeImage() else { return nil }
+        return context.makeImage()
+    }
+    #endif
 
+    #if canImport(PDFKit) && canImport(Vision)
+    private static func ocr(page: PDFPage) async throws -> String? {
+        guard let image = render(page: page) else { return nil }
         return try await recognize(image: image)
     }
     #endif
@@ -280,9 +347,35 @@ public enum DocumentText {
     }
 
     /// Decodes image data (PNG/JPEG/HEIC…) to a `CGImage` for recognition.
-    private static func cgImage(from data: Data) -> CGImage? {
-        guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
-        return CGImageSourceCreateImageAtIndex(source, 0, nil)
+    /// The image in `data`, the way up its file says it goes.
+    ///
+    /// A phone stores a portrait photograph as landscape pixels with a note
+    /// of the turn to apply, and the pixels alone are a receipt lying on its
+    /// side. Vision still finds the characters in one, which is how this
+    /// went unnoticed — but not the lines: a fourteen-line receipt came back
+    /// as thirty-three fragments and a twelve-row invoice as four runs
+    /// (probed 12 October 2026), and a line is what joins an item to its
+    /// price. An image with no note, or one that is already upright, is
+    /// decoded as it always was.
+    static func cgImage(from data: Data) -> CGImage? {
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil),
+              CGImageSourceGetCount(source) > 0 else { return nil }
+        let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
+        let noted = (properties?[kCGImagePropertyOrientation] as? UInt32)
+            .flatMap(CGImagePropertyOrientation.init(rawValue:)) ?? .up
+        guard noted != .up else { return CGImageSourceCreateImageAtIndex(source, 0, nil) }
+        // "With transform" applies the turn; the size asked for is the
+        // image's own, so nothing is scaled.
+        let width = properties?[kCGImagePropertyPixelWidth] as? Int ?? 0
+        let height = properties?[kCGImagePropertyPixelHeight] as? Int ?? 0
+        guard max(width, height) > 0 else { return CGImageSourceCreateImageAtIndex(source, 0, nil) }
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: max(width, height),
+        ]
+        return CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary)
+            ?? CGImageSourceCreateImageAtIndex(source, 0, nil)
     }
 
     /// Redraws an image at `factor`× on white with high-quality interpolation.

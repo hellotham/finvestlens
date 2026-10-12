@@ -637,6 +637,11 @@ extension AppModel {
         } catch {}
         do {
             if doc.dividend == nil || (doc.dividend?.netPayment ?? 0) <= 0 {
+                // As text, not with the file's picture. A batch is matched
+                // on each document's total, and on sixteen real receipt
+                // photographs the two routes gave the same total every
+                // time, the picture taking twice as long (12 October 2026).
+                // The picture is for one document and a person waiting.
                 doc.invoice = try await InvoiceAnalyzer.analyze(text: head, candidates: candidates)
             }
         } catch let error as IntelligenceError where error.endsABatch {
@@ -1283,8 +1288,9 @@ extension AppModel {
                     : String(localized: "The attachment file was not found."))
         }
         let text = try await Task.detached { try await DocumentText.extractText(from: url) }.value
+        let picture = DocumentText.picture(from: url)
         return try await running(.categoriseFromAttachment) {
-            try await attachmentSuggestion(for: transactionID, text: text)
+            try await attachmentSuggestion(for: transactionID, text: text, picture: picture)
         }
     }
 
@@ -1293,7 +1299,7 @@ extension AppModel {
     /// its two document readers follow the person's choice; called from
     /// anywhere else they run on this device.
     func attachmentSuggestion(
-        for transactionID: GncGUID, text: String
+        for transactionID: GncGUID, text: String, picture: DocumentPicture? = nil
     ) async throws -> AttachmentCategorySuggestion? {
         guard let book, let txn = book.transaction(with: transactionID) else { return nil }
         // The uncategorised leg gives the model the amount's sign; else any leg.
@@ -1336,7 +1342,7 @@ extension AppModel {
             friendlyDescription: (friendly.isEmpty || friendly == txn.transactionDescription)
                 ? nil : friendly,
             currencyCode: txn.currency.mnemonic,
-            lines: await invoiceSplitLines(for: txn, text: text,
+            lines: await invoiceSplitLines(for: txn, text: text, picture: picture,
                                            fallbackAccountID: insight.accountID,
                                            candidates: candidates))
     }
@@ -1433,12 +1439,12 @@ extension AppModel {
     /// as a multi-item invoice, the amounts are nowhere near the charge, or
     /// the transaction has no replaceable leg.
     private func invoiceSplitLines(
-        for txn: Transaction, text: String,
+        for txn: Transaction, text: String, picture: DocumentPicture?,
         fallbackAccountID: GncGUID,
         candidates: [CategoryCandidate]
     ) async -> [AttachmentCategorySuggestion.SplitLine]? {
         guard let analysis = try? await InvoiceAnalyzer.analyze(
-            text: text, candidates: candidates) else { return nil }
+            text: text, picture: picture, candidates: candidates) else { return nil }
         return invoiceLines(from: analysis, for: txn, fallbackAccountID: fallbackAccountID)
     }
 
@@ -1637,8 +1643,12 @@ extension AppModel {
     public func analyzeInvoicePDF(_ data: Data) async throws -> InvoiceAnalysis {
         try requireIntelligence(for: .invoiceAnalyzer)
         let text = try await Task.detached { try await DocumentText.extractText(from: data) }.value
+        // One document, and a person waiting on it: where it is a picture
+        // — a photographed receipt, a scanned page — the model is shown the
+        // picture as well, with Vision's tools to read it.
+        let picture = DocumentText.picture(from: data)
         return try await running(.invoice) {
-            try await InvoiceAnalyzer.analyze(text: text,
+            try await InvoiceAnalyzer.analyze(text: text, picture: picture,
                                               candidates: categoryCandidates(includeIncome: false),
                                               explainRefusal: true)
         }

@@ -285,9 +285,12 @@ extension AppModel {
             splits.append(SplitInput(accountID: firstCategory.guid, value: residual,
                                      memo: "Invoice adjustment"))
         }
+        // A reference read from a code on the invoice goes where a cheque
+        // number would: it is what the payee will look the payment up by.
         return try addTransaction(date: analysis.date ?? Date(),
                                   description: analysis.vendor,
-                                  currency: funding.commodity, splits: splits)
+                                  currency: funding.commodity, splits: splits,
+                                  number: analysis.reference ?? "")
     }
 
     // MARK: Date helpers

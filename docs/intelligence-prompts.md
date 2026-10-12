@@ -44,8 +44,9 @@ model once and adds what a feature does not have to think about:
    again after the feature's own instructions.
 3. **Sampling by feature**: greedy for everything that reads, sorts or fills
    in a table; the model's own for the three narrators.
-4. **No tools**: `toolCallingMode = .disallowed`, since no feature registers
-   one yet.
+4. **No tools**, with one exception: `toolCallingMode = .disallowed` for
+   every request but the one that shows the model a picture, which is
+   offered Vision's readers and may call them.
 
    Both are declared by the session's profile
    (`LanguageModels.FeatureProfile`, a `LanguageModelSession.DynamicProfile`:
@@ -65,7 +66,7 @@ none.
 |---|---|---|---|---|
 | Document classifier | `DocumentClassifier.classify` — no instructions, guidance in the prompt, first 1,500 characters | device | greedy | falls back to keywords |
 | Statement extractor | `StatementExtractor.extract` — 1,000 characters a request | device | greedy | payee and amount must be printed in the slice; a row may not be reported more often than the page prints it; signs re-derived from the balance column; a failure of the model itself stops the run |
-| Invoice analyser | `InvoiceAnalyzer.analyze` | the person's choice | greedy | line items reconciled against the printed total; says when only the first part was read |
+| Invoice analyser | `InvoiceAnalyzer.analyze` — as text; and, where one document is read and it is a picture, the picture first with Vision's `OCRTool` (and `BarcodeReaderTool` if Vision finds a code on the page) | the person's choice | greedy | line items reconciled against the printed total; says when only the first part was read; of two readings, the one whose total is printed on the page and whose lines add up; a reference only as the barcode reader returned it |
 | Dividend extractor | `DividendExtractor.extract` | the person's choice | greedy | `DividendReconciler` against the figures printed in the whole statement |
 | Attachment insight | `AttachmentInsight.analyze` — first 1,600 characters | device | greedy | category must be in the chart offered |
 | Categoriser | `TransactionCategorizer.suggest` — exactly one answer per transaction | device | greedy | category must be one that was offered; money out is never offered income |
@@ -355,6 +356,67 @@ earlier prompt and answer between. And returning an empty array is therefore
 an error, not "no history" — "Transcript must end with a .prompt or
 .toolOutput entry".
 
+**A picture, with Vision's tools — and where it is worth it.** The model
+sees (`capabilities` includes `vision`), and Vision's `OCRTool` and
+`BarcodeReaderTool` can be offered to it. Whether to show it a receipt was
+measured before it was built, on fifteen invented pages — a supermarket
+receipt, a restaurant bill and a tabular invoice, each drawn clean, as a
+photograph, in a handwriting face, faint at low resolution, and badly tilted
+— read four ways (`ReceiptImages.swift`; the probe's four routes, then
+`PictureSurvey` for the code the app runs):
+
+| Route | Vendor | Date | Total | Line items (the 10 pages where which lines count is not arguable) | Median |
+|---|---|---|---|---|---|
+| Vision's text, read by the model (the route until now) | 15 | 15 | 13 | 6 | 3.0 s |
+| The picture alone | 15 | 14 | 13 | 6 | 3.2 s |
+| The picture, with `OCRTool` offered | 15 | 15 | 15 | 10 | 4.5 s |
+| Vision's text and the picture, no tool | 15 | 15 (three in the wrong format) | 15 | 8 | 2.6 s without the recognition |
+
+The picture alone is no better than the text and reads digits worse: a wrong
+date and a wrong total on the photographed pages, where every wrong figure is
+a plausible one. The picture *with the text reader as a tool* was right on
+every field of every page; the text alone took the subtotal for the total on
+the photographed invoice and the faint one, and got the invoice's line items
+wrong in four of its five drawings.
+
+On real receipts the difference is smaller. Sixteen photographs sampled
+evenly from the owner's archive, read both ways by the app's code, tallies
+only: each route read fifteen; in all fifteen the two gave the same total,
+and every total was a figure printed on the page; the lines added up to the
+total in nine of the text's readings and ten of the picture's; 48 seconds
+for the text and 94 for the picture.
+
+So the picture is shown where one document is read and a person is waiting —
+Split from Invoice, Smart Import's invoices, Categorise from Attachment —
+and not in Match Attachments, which is matched on totals, by the dozen. The
+rules around it:
+
+- The picture is read first. The text is read as well only if the picture's
+  total is not a figure printed in the document (as Vision read it); and of
+  two readings the picture's is kept unless the text's stands better — total
+  printed, then lines adding up. Asking for the text whenever the picture's
+  lines did not add up was a second request on most documents (a tax line is
+  enough) that changed the answer on none of the fifteen, and took the
+  median from 9.0 seconds to 7.1 — against 3.7 for text in the same run.
+- The barcode reader is offered, and a reference asked for, only where
+  Vision has already found a code on the page. Offered and unasked, the
+  model did not call it; asked, it returned a QR code's payload exactly. A
+  reference is kept only if it is in what the tool returned.
+- A picture's tokens cannot be counted (`tokenCount(for:)` throws for a
+  prompt with an attachment), so a picture is not fitted to the window. A
+  request that overflows fails like any other, and the text is there.
+- The tools are in an overlay the iOS Simulator's SDK does not have; there,
+  and for a model that does not see, the request is not made at all.
+
+**A photograph knows which way up it is, and the decoder was not asking.**
+A phone stores a portrait shot as landscape pixels with a note of the turn.
+The image was decoded without it, so Vision was given a receipt lying on its
+side: it still found the characters — which is how this went unnoticed — but
+not the lines. A fourteen-line receipt came back as thirty-three fragments
+and a twelve-row invoice as four runs, and a line is what joins an item to
+its price. The turn is applied now, for recognition and for the picture the
+model is shown; with it removed again, all three test receipts fail.
+
 ## What the instrument showed
 
 The Foundation Models instrument, recorded on 12 October 2026 with the
@@ -424,3 +486,4 @@ What it confirmed, and what it showed that nothing else had:
 | 12 Oct 2026, from the survey that followed | Review slide: a change goes in words on its figure's line, and the instructions ask for it where one is given and forbid describing one where none is ("stable" included); a story that calls unchanged what the slide says changed is declined. Number check: a figure may be cut off at its precision as well as rounded to it; German T€ / T$ / TEUR read as thousands. Forecast prompt measured on a rising and a falling balance and left as it was. |
 | 12 Oct 2026, the decks | The review decks' labels reach the model in the reader's language (they were English literals). The two month counts on the cash-flow slide go as counts; they went as amounts ("Months positive: 7 AUD"). The decks take dividend figures from `dividendBreakdown`, not by looking them up under the report's English labels. |
 | 12 Oct 2026, profiles | Every request's session is built from a `LanguageModelSession.DynamicProfile` that declares its instructions, model, sampling and tool-calling mode; requests no longer carry options. A session kept for a batch was measured and not adopted. No prompt changed. |
+| 12 Oct 2026, pictures | The invoice reader is shown a document's picture where one document is read and it is one, with Vision's `OCRTool` and — where Vision finds a code — `BarcodeReaderTool`; the reading kept is chosen against the document's own text. Image decoding honours the photograph's orientation. The text prompt is unchanged. |

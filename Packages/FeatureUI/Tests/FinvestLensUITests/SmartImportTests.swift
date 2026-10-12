@@ -218,6 +218,15 @@ struct SmartInvoiceTests {
         let shoppingAccount = try #require(book.account(with: shopping))
         #expect(book.splits(for: shoppingAccount).map(\.value).sorted()
                 == [Decimal(string: "21.75")!, Decimal(string: "289.00")!, Decimal(string: "499.00")!])
+        // Read as text there is no reference, and the number is left alone.
+        #expect(txn.number.isEmpty)
+
+        // A reference read from a code on the invoice's picture goes where a
+        // cheque number would.
+        var coded = makeAnalysis(date: utcDate(2026, 6, 4), groceries: shopping)
+        coded.reference = "PAYREF 7741-2209-INV20418"
+        let codedID = try model.createTransactionFromInvoice(coded, fundingAccountID: bank)
+        #expect(try #require(book.transaction(with: codedID)).number == "PAYREF 7741-2209-INV20418")
     }
 
     @Test("Line-item shortfall against the total posts an adjustment split")

@@ -424,6 +424,9 @@ private struct CreateFromInvoiceSheet: View {
                     if let date = analysis.date {
                         LabeledContent("Date", value: dateFormat.long(date))
                     }
+                    if let reference = analysis.reference {
+                        LabeledContent("Reference", value: reference)
+                    }
                 }
                 Section("Pay from") {
                     AccountField(nodes: fundingAccounts, selection: $fundingID)

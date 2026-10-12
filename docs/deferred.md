@@ -108,11 +108,21 @@ if the build condition is set while this paragraph is still headed "Open".
 **Decided by the owner, 12 Oct 2026, and not yet built at this commit** — they
 are the next changes, in this order:
 
-- **Images in prompts, with Vision's `OCRTool` and `BarcodeReaderTool`.** The
-  installed model reports the `vision` capability. Today the import pipeline
-  reads a document with Vision itself and gives the model text. The tools
-  live in a cross-import overlay (`_Vision_FoundationModels`) that the iOS
-  Simulator SDK does not have, so the code path has to be conditional.
+- **Images in prompts, with Vision's `OCRTool` and `BarcodeReaderTool`** —
+  *adopted 12 Oct, after this list was written, for the invoice reader.*
+  Where one invoice or receipt is read and it is a picture, the model is
+  shown the picture with Vision's tools, and that reading is kept unless the
+  text's stands better (intelligence-prompts.md has the measurements). The
+  barcode reader is offered only when Vision itself finds a code on the
+  page, and what it returns is the only thing a payment reference is
+  believed from. The tools live in a cross-import overlay
+  (`_Vision_FoundationModels`) that the iOS Simulator SDK does not have, so
+  there — and for a model that does not see — the text is read as before.
+  **Deliberately not done:** a batch (Match Attachments) still reads text,
+  because on real receipts the two routes gave the same total every time and
+  the picture took twice as long; and the dividend extractor, the attachment
+  reader and the classifier are not shown pictures, having not been
+  measured.
 - **`LanguageModelSession.DynamicProfile`** — *adopted 12 Oct, after this
   list was written.* Every request's session is built from a profile that
   declares its instructions, model, sampling and tool-calling mode

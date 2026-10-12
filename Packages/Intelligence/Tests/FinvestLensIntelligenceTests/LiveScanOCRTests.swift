@@ -130,6 +130,66 @@ struct LiveReceiptTests {
         // Most should still get through; a wholesale collapse is a real failure.
         #expect(analysed * 2 >= sample.count)
     }
+
+    /// The same photographs read as text and read with their picture, by
+    /// the code the app runs — tallies and seconds only, never what a
+    /// receipt says. There is no answer key for a real receipt, so each
+    /// reading is judged by what can be checked without one: is its total a
+    /// figure printed on the page, and do its lines add up to it.
+    @Test("Receipt photographs, as text and with their picture")
+    func receiptsBothWays() async throws {
+        let root = URL(fileURLWithPath: try #require(receiptPath))
+        let images = (FileManager.default.enumerator(at: root, includingPropertiesForKeys: nil)?
+            .compactMap { $0 as? URL }
+            .filter { ["png", "jpg", "jpeg", "heic"].contains($0.pathExtension.lowercased()) } ?? [])
+            .sorted { $0.lastPathComponent < $1.lastPathComponent }
+        try #require(!images.isEmpty, "FL_RECEIPT_DIR contains no images")
+        let count = Int(ProcessInfo.processInfo.environment["FL_RECEIPT_SAMPLE"] ?? "") ?? 12
+        let step = max(images.count / count, 1)
+        let sample = stride(from: 0, to: images.count, by: step).prefix(count).map { images[$0] }
+
+        struct Tally { var read = 0, totalPrinted = 0, addsUp = 0, seconds = 0.0 }
+        var written = Tally(), pictured = Tally()
+        var keptPicture = 0, agree = 0, both = 0, pictures = 0
+        let clock = ContinuousClock()
+        func judge(_ analysis: InvoiceAnalysis, in source: String, into tally: inout Tally) {
+            tally.read += 1
+            if SourceGrounding.isAmountPrinted("\(analysis.total)", in: source) { tally.totalPrinted += 1 }
+            if !analysis.lineItems.isEmpty, analysis.lineItemSum == analysis.total { tally.addsUp += 1 }
+        }
+        for url in sample {
+            guard let text = try? await DocumentText.extractText(from: url) else { continue }
+            let source = SourceGrounding.folded(text)
+            var first: InvoiceAnalysis?, second: InvoiceAnalysis?
+            let textTime = await clock.measure {
+                first = try? await InvoiceAnalyzer.analyze(text: text, candidates: [])
+            }
+            written.seconds += Double(textTime.components.seconds) + Double(textTime.components.attoseconds) / 1e18
+            if let first { judge(first, in: source, into: &written) }
+            guard let picture = DocumentText.picture(from: url) else { continue }
+            pictures += 1
+            let pictureTime = await clock.measure {
+                second = try? await InvoiceAnalyzer.analyze(text: text, picture: picture, candidates: [])
+            }
+            pictured.seconds += Double(pictureTime.components.seconds) + Double(pictureTime.components.attoseconds) / 1e18
+            if let second {
+                judge(second, in: source, into: &pictured)
+                if second.readFromPicture { keptPicture += 1 }
+            }
+            if let first, let second {
+                both += 1
+                if first.total == second.total { agree += 1 }
+            }
+        }
+        func line(_ name: String, _ tally: Tally) -> String {
+            "\(name): read \(tally.read) of \(sample.count), total printed on the page \(tally.totalPrinted), "
+                + "lines add up to it \(tally.addsUp), \(String(format: "%.0f", tally.seconds)) s"
+        }
+        print("RECEIPTS \(sample.count) photographs of \(images.count); \(pictures) usable as pictures")
+        print("RECEIPTS \(line("as text", written))")
+        print("RECEIPTS \(line("with picture", pictured)); the picture's reading kept \(keptPicture) times")
+        print("RECEIPTS both read \(both); same total \(agree)")
+    }
 }
 }
 #endif

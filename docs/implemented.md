@@ -4251,3 +4251,58 @@ The first of the three adoptions the owner decided on.
   existed) moved from `TaskLocal.withValue(_:operation:isolation:)`, which
   Swift 6.4 deprecates, to the caller-context form.
 
+## An invoice read off its picture, with Vision's tools (12 Oct 2026)
+
+The second of the three adoptions the owner decided on: images in prompts,
+with `OCRTool` and `BarcodeReaderTool`.
+
+- **Measured before it was built.** Fifteen invented pages — three documents,
+  each drawn clean, photographed, handwritten, faint and tilted — read four
+  ways. The picture alone was no better than the text and misread digits; the
+  picture with Vision's text reader as a tool was right on every field of
+  every page, where the text route had thirteen totals and six of ten
+  line-item lists. On sixteen real receipt photographs (tallies only) the two
+  routes gave the same total every time, the picture's lines added up once
+  more often, and it took twice as long. The tables are in
+  intelligence-prompts.md.
+- **So: one document and a person waiting.** `InvoiceAnalyzer.analyze` takes
+  the document's picture (`DocumentText.picture`: an image file, or a
+  one-page scan) and reads it first — in Split from Invoice, Smart Import's
+  invoices and Categorise from Attachment. Match Attachments reads text, as
+  before. The reading kept is the picture's unless the text's stands better
+  against the document: its total a figure printed on the page, then its
+  lines adding up to it.
+- **The seam.** A request that shows a picture is declared by the session's
+  profile like every other, and is the only one offered tools
+  (`LanguageModels.respond(…picture:)`, `FeatureProfile.readings`). What the
+  tools return is kept (`PictureReadings`). Where the platform has no Vision
+  overlay (the iOS Simulator) or the model does not see, no request is made
+  and the text is read.
+- **The barcode reader has one job.** It is offered only when Vision itself
+  finds a code on the page; a payment reference is kept only if it is in
+  what the tool returned (`groundedReference`), and it becomes the number of
+  a transaction created from the invoice. The create sheet shows it.
+- **A defect found on the way, in what was already there.** Image decoding
+  ignored a photograph's orientation, so a portrait shot from a phone went
+  to Vision lying on its side: the characters were still found, the lines
+  were not (fourteen lines read as thirty-three fragments). The turn is
+  applied now, for recognition and for the picture.
+
+Tests: what counts as a picture and that it comes back the right way up
+(checked against the upright image, not only by its shape); which of two
+readings is kept; a reference only as the barcode reader gave it; and, on the
+live model, a tilted invoice read right, a QR code's payload returned exactly,
+and a clean receipt reading the same both ways. With the orientation fix
+removed, all three recognition cases fail. `PictureSurvey` and the real-receipt
+harness (`FL_RECEIPT_DIR`, tallies only) re-run the comparison.
+
+Receipts, 12 Oct 2026, on the tree as committed: every package suite passes
+(1,947 tests; Intelligence 203, with the live model), both unsigned app
+builds succeed — the iOS Simulator one included, where the Vision overlay is
+absent and the picture route compiles away — and the localization gate, the
+help-manual drift check, the SPDX check and the real-data gate pass.
+
+Not done, and why: the dividend extractor, the attachment reader and the
+classifier are not shown pictures — not measured. Nothing here has run on
+Private Cloud Compute, where a picture would be sent as the text is.
+
