@@ -467,7 +467,7 @@ extension AppModel {
             headline: headline,
             callouts: callouts,
             chart: .allocation(valued.prefix(12).map { ($0.symbol, $0.marketValue ?? 0) }),
-            footnote: String(localized: "Valued at the most recent recorded prices · \(portfolio.method.displayName) basis"),
+            footnote: String(localized: "Valued at the most recent recorded prices · \(AppModel.costBasisName(portfolio.method)) basis"),
             facts: ReviewSlideFacts(
                 kicker: String(localized: "Portfolio"), periodLabel: label, currencyCode: code,
                 figures: [(marketValueLabel, portfolio.totalValue),
@@ -539,7 +539,7 @@ extension AppModel {
                 SlideCallout(label: String(localized: "Gains / losses"), value: "\(gains) / \(losses)"),
             ],
             chart: .categoryBars(Array(bars)),
-            footnote: String(localized: "\(report.method.displayName) cost basis"),
+            footnote: String(localized: "\(AppModel.costBasisName(report.method)) cost basis"),
             facts: ReviewSlideFacts(
                 kicker: String(localized: "Capital gains"), periodLabel: label, currencyCode: code,
                 figures: [(String(localized: "Realised gain"), total)] + ranked.prefix(5).map { ($0.key, $0.value) },

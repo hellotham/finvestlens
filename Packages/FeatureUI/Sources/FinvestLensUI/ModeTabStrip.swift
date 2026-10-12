@@ -174,7 +174,7 @@ extension AppModel {
         case .generalLedger: String(localized: "All Transactions")
         case .account(let id): accountName(id) ?? String(localized: "Account")
         case .reports: String(localized: "All Reports")
-        case .report(let kind): kind.rawValue
+        case .report(let kind): kind.title
         case .savedReport(let id):
             savedReports.first { $0.id == id }?.name ?? String(localized: "Report")
         case .investments: String(localized: "All Holdings")

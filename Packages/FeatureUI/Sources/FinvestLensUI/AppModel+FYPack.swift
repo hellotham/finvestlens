@@ -162,33 +162,31 @@ extension AppModel {
         }
 
         return ReportDocument(
-            title: "Dividends & Franking",
+            title: String(localized: "Dividends & Franking"),
             periodLabel: periodLabel,
             currencyCode: breakdown.currencyCode,
             kpis: [
-                ReportKPI(label: "Franked", amount: franked),
-                ReportKPI(label: "Unfranked", amount: unfranked),
-                ReportKPI(label: "Franking credits", amount: imputation),
+                ReportKPI(label: String(localized: "Franked"), amount: franked),
+                ReportKPI(label: String(localized: "Unfranked"), amount: unfranked),
+                ReportKPI(label: String(localized: "Franking credits"), amount: imputation),
             ],
             chart: nil,
             sections: [
-                ReportDocumentSection(title: "Franked dividends", rows: rows(\.franked),
-                                      total: ("Total franked", franked)),
+                ReportDocumentSection(title: String(localized: "Franked dividends"), rows: rows(\.franked),
+                                      total: (String(localized: "Total franked"), franked)),
                 ReportDocumentSection(
-                    title: "Unfranked dividends",
+                    title: String(localized: "Unfranked dividends"),
                     rows: rows(\.unfranked) + rows(\.other),
-                    total: ("Total unfranked", unfranked)),
-                ReportDocumentSection(title: "Franking (imputation) credits",
+                    total: (String(localized: "Total unfranked"), unfranked)),
+                ReportDocumentSection(title: String(localized: "Franking (imputation) credits"),
                                       rows: rows(\.imputation),
-                                      total: ("Total credits", imputation)),
+                                      total: (String(localized: "Total credits"), imputation)),
                 ReportDocumentSection(
-                    title: "Grossed-up total",
+                    title: String(localized: "Grossed-up total"),
                     rows: [],
-                    total: ("Dividends plus credits", franked + unfranked + imputation)),
+                    total: (String(localized: "Dividends plus credits"), franked + unfranked + imputation)),
             ].filter { !$0.rows.isEmpty || $0.total != nil },
-            notes: ["Classified by account name under the Dividends income tree "
-                    + "(Franked / Unfranked / Imputation Credit), the same shape "
-                    + "the app books dividend statements into."],
+            notes: [String(localized: "Classified by account name under the Dividends income tree (Franked / Unfranked / Imputation Credit), the same shape the app books dividend statements into.")],
             facts: nil)
     }
 }

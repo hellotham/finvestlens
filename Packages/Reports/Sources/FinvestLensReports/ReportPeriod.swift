@@ -143,9 +143,11 @@ public enum ReportPeriod: Codable, Hashable, Sendable {
     /// typo). The one formatter — the period selector, comparative column
     /// headers, and the FY Pack picker had each hand-built their own copy.
     public static func financialYearLabel(fromYear: Int, toYear: Int) -> String {
+        // The years go in as text: as numbers they would be grouped by the
+        // reader's locale, and a financial year would read "FY 2,025".
         fromYear == toYear
-            ? "FY \(fromYear)"
-            : "FY \(fromYear)–\(String(format: "%02d", toYear % 100))"
+            ? String(localized: "FY \(String(fromYear))")
+            : String(localized: "FY \(String(fromYear))–\(String(format: "%02d", toYear % 100))")
     }
 
     private func label(fromYear: Int, toYear: Int, from: Date, to: Date, calendar: Calendar) -> String {
@@ -153,18 +155,18 @@ public enum ReportPeriod: Codable, Hashable, Sendable {
         case .currentFinancialYear, .previousFinancialYear:
             return Self.financialYearLabel(fromYear: fromYear, toYear: toYear)
         case .calendarYearToDate:
-            return "\(fromYear) to date"
+            return String(localized: "\(String(fromYear)) to date")
         case .previousCalendarYear:
             return "\(fromYear)"
         case .currentQuarter:
             let quarter = (calendar.component(.month, from: from) - 1) / 3 + 1
-            return "Q\(quarter) \(fromYear)"
+            return String(localized: "Q\(quarter) \(String(fromYear))")
         case .currentMonth, .previousMonth:
             return from.formatted(.dateTime.month(.wide).year())
         case .last12Months:
-            return "Last 12 months"
+            return String(localized: "Last 12 months")
         case .allTime:
-            return "All time"
+            return String(localized: "All time")
         case .custom:
             return "\(from.formatted(date: .abbreviated, time: .omitted)) – "
                 + "\(to.formatted(date: .abbreviated, time: .omitted))"
@@ -175,16 +177,16 @@ public enum ReportPeriod: Codable, Hashable, Sendable {
     /// resolved label).
     public var name: String {
         switch self {
-        case .currentFinancialYear: "This financial year"
-        case .previousFinancialYear: "Last financial year"
-        case .calendarYearToDate: "This year to date"
-        case .previousCalendarYear: "Last calendar year"
-        case .currentQuarter: "This quarter"
-        case .currentMonth: "This month"
-        case .previousMonth: "Last month"
-        case .last12Months: "Last 12 months"
-        case .allTime: "All time"
-        case .custom: "Custom range"
+        case .currentFinancialYear: String(localized: "This financial year")
+        case .previousFinancialYear: String(localized: "Last financial year")
+        case .calendarYearToDate: String(localized: "This year to date")
+        case .previousCalendarYear: String(localized: "Last calendar year")
+        case .currentQuarter: String(localized: "This quarter")
+        case .currentMonth: String(localized: "This month")
+        case .previousMonth: String(localized: "Last month")
+        case .last12Months: String(localized: "Last 12 months")
+        case .allTime: String(localized: "All time")
+        case .custom: String(localized: "Custom range")
         }
     }
 }

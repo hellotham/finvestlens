@@ -235,4 +235,90 @@ struct SpendingInsightsTests {
         // The headline reads the right direction with the right figure.
         #expect(summary.first!.contains("fell") && summary.first!.contains("$100"))
     }
+
+    // MARK: The sentences, whole
+    //
+    // Each line of the summary is one phrase in the catalog, where it used
+    // to be put together from parts. These pin what each says in English —
+    // the catalog's key — so a sentence cannot quietly go back to being
+    // assembled, or lose a figure on the way.
+
+    private func comparison(_ name: String, _ current: Decimal, _ prior: Decimal) -> CategoryComparison {
+        CategoryComparison(id: .random(), name: name, current: current, prior: prior)
+    }
+
+    private func insights(expenses: [CategoryComparison] = [],
+                          spending: (current: Decimal, prior: Decimal),
+                          income: (current: Decimal, prior: Decimal) = (0, 0)) -> SpendingInsights {
+        SpendingInsights(currencyCode: "AUD",
+                         from: day(2026, 6, 1), to: day(2026, 6, 30),
+                         priorFrom: day(2026, 5, 1), priorTo: day(2026, 5, 31),
+                         expenses: expenses, income: [],
+                         totalSpendingCurrent: spending.current, totalSpendingPrior: spending.prior,
+                         totalIncomeCurrent: income.current, totalIncomePrior: income.prior)
+    }
+
+    private func lines(_ insights: SpendingInsights) -> [String] {
+        insights.summary { "$\($0)" }
+    }
+
+    @Test("Spending rose, and what drove it, is one sentence")
+    func roseWithDrivers() {
+        let summary = lines(insights(
+            expenses: [comparison("Groceries", 600, 400), comparison("Dining", 400, 300)],
+            spending: (1_000, 700)))
+        #expect(summary == ["Spending rose 43% ($300), driven by Groceries (+$200) and Dining (+$100)."])
+    }
+
+    @Test("Spending fell, and what drove it, is one sentence")
+    func fellWithDrivers() {
+        let summary = lines(insights(
+            expenses: [comparison("Groceries", 600, 400), comparison("Dining", 0, 300)],
+            spending: (600, 700)))
+        #expect(summary == ["Spending fell 14% ($100), driven by Dining (−$300)."])
+    }
+
+    @Test("With nothing to name as the cause, the sentence ends at the figure")
+    func withoutDrivers() {
+        #expect(lines(insights(spending: (1_000, 700))) == ["Spending rose 43% ($300)."])
+        #expect(lines(insights(spending: (600, 700))) == ["Spending fell 14% ($100)."])
+    }
+
+    @Test("Unchanged spending, and spending with nothing before it")
+    func steadyAndFirst() {
+        #expect(lines(insights(spending: (700, 700))) == ["Spending held steady at $700."])
+        #expect(lines(insights(spending: (600, 0))) == ["Spending was $600 with no prior period to compare."])
+        #expect(lines(insights(spending: (0, 0))).isEmpty)
+    }
+
+    @Test("Income, the category that went the other way, and what is new")
+    func theOtherLines() {
+        let summary = lines(insights(
+            expenses: [comparison("Groceries", 900, 400), comparison("Dining", 0, 300),
+                       comparison("Travel", 250, 0), comparison("Gifts", 50, 0)],
+            spending: (1_200, 700),
+            income: (5_500, 5_000)))
+        #expect(summary == [
+            "Spending rose 71% ($500), driven by Groceries (+$500) and Travel (+$250).",
+            "Income rose 10% ($500).",
+            "Dining fell $300.",
+            "New this period: Travel ($250) and 1 more.",
+            "You kept $4300 — a 78% saving rate.",
+        ])
+
+        let fewer = lines(insights(expenses: [comparison("Travel", 250, 0)],
+                                   spending: (250, 0), income: (4_500, 5_000)))
+        #expect(fewer == [
+            "Spending was $250 with no prior period to compare.",
+            "Income fell 10% ($500).",
+            "New this period: Travel ($250).",
+            "You kept $4250 — a 94% saving rate.",
+        ])
+    }
+
+    @Test("Spending past income is said as that, not as a negative rate")
+    func overspent() {
+        #expect(lines(insights(spending: (600, 600), income: (500, 500)))
+            == ["Spending held steady at $600.", "Spending exceeded income by $100."])
+    }
 }

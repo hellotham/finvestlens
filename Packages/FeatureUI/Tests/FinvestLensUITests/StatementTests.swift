@@ -220,6 +220,22 @@ struct StatementTests {
         #expect(!labels.contains { $0.hasPrefix("Imbalance") })
     }
 
+    @Test("The passport finds assets and liabilities by the statement's own titles")
+    func passportSections() throws {
+        let f = try Fixture()
+        defer { f.tearDown() }
+        // It looked for the sections whose title *contained* "Assets" and
+        // "Liabilit". With the titles in the reader's language it would have
+        // found neither, and drawn a summary with no figures and no fault.
+        // It asks for them now by the label the builder used.
+        let passport = try #require(f.model.passportData())
+        let sheet = try #require(f.model.balanceSheet(asOf: AppModel.endOfToday()))
+        #expect(!passport.assetClasses.isEmpty)
+        #expect(!passport.liabilityClasses.isEmpty)
+        #expect(passport.totalAssets == sheet.totalAssets)
+        #expect(passport.totalLiabilities == sheet.totalLiabilities)
+    }
+
     @Test("Trial balance statement: sections tie, and the books balance")
     func trialBalanceStatement() throws {
         let f = try Fixture()

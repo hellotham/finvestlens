@@ -57,51 +57,70 @@ public struct SpendingInsights: Sendable {
     /// Deterministic plain-language sentences built from the figures —
     /// the caller supplies the currency formatter so wording and numbers
     /// can't drift apart.
+    ///
+    /// Each sentence is a whole phrase in the catalog. They were assembled
+    /// from parts — "Spending " + "rose"/"fell" + a percentage + an optional
+    /// ", driven by …" — which reads in English and gives a translator four
+    /// fragments that agree with each other in no other language. So "rose"
+    /// and "fell", with and without what drove them, are four sentences.
     public func summary(format: (Decimal) -> String) -> [String] {
         var lines: [String] = []
         let spendDelta = totalSpendingCurrent - totalSpendingPrior
 
         if totalSpendingPrior != 0 {
-            let percent = (abs(spendDelta) / abs(totalSpendingPrior)) * 100
-            let direction = spendDelta > 0 ? "rose" : (spendDelta < 0 ? "fell" : "held steady")
+            let percent = Self.wholePercent((abs(spendDelta) / abs(totalSpendingPrior)) * 100)
+            let change = format(abs(spendDelta))
             if spendDelta == 0 {
-                lines.append("Spending held steady at \(format(totalSpendingCurrent)).")
+                lines.append(String(localized: "Spending held steady at \(format(totalSpendingCurrent))."))
             } else {
-                let drivers = (spendDelta > 0 ? topIncreases : topDecreases).prefix(2)
+                let rose = spendDelta > 0
+                // A name and a signed amount: no words, so nothing to translate.
+                let drivers = (rose ? topIncreases : topDecreases).prefix(2)
                     .map { "\($0.name) (\($0.delta > 0 ? "+" : "−")\(format(abs($0.delta))))" }
-                    .joined(separator: " and ")
-                let driverClause = drivers.isEmpty ? "" : ", driven by \(drivers)"
-                lines.append("Spending \(direction) \(Self.wholePercent(percent))% "
-                             + "(\(format(abs(spendDelta))))\(driverClause).")
+                if drivers.isEmpty {
+                    lines.append(rose
+                        ? String(localized: "Spending rose \(percent)% (\(change)).")
+                        : String(localized: "Spending fell \(percent)% (\(change))."))
+                } else {
+                    // Joined the way the reader's language joins two things.
+                    let driven = drivers.formatted(.list(type: .and))
+                    lines.append(rose
+                        ? String(localized: "Spending rose \(percent)% (\(change)), driven by \(driven).")
+                        : String(localized: "Spending fell \(percent)% (\(change)), driven by \(driven)."))
+                }
             }
         } else if totalSpendingCurrent != 0 {
-            lines.append("Spending was \(format(totalSpendingCurrent)) with no prior period to compare.")
+            lines.append(String(localized: "Spending was \(format(totalSpendingCurrent)) with no prior period to compare."))
         }
 
         let incomeDelta = totalIncomeCurrent - totalIncomePrior
         if totalIncomePrior != 0, incomeDelta != 0 {
-            let percent = (abs(incomeDelta) / abs(totalIncomePrior)) * 100
-            lines.append("Income \(incomeDelta > 0 ? "rose" : "fell") "
-                         + "\(Self.wholePercent(percent))% (\(format(abs(incomeDelta)))).")
+            let percent = Self.wholePercent((abs(incomeDelta) / abs(totalIncomePrior)) * 100)
+            let change = format(abs(incomeDelta))
+            lines.append(incomeDelta > 0
+                ? String(localized: "Income rose \(percent)% (\(change)).")
+                : String(localized: "Income fell \(percent)% (\(change))."))
         }
 
         let counter = topDecreases.first
         if let counter, spendDelta > 0, counter.delta < 0 {
-            lines.append("\(counter.name) fell \(format(abs(counter.delta))).")
+            lines.append(String(localized: "\(counter.name) fell \(format(abs(counter.delta)))."))
         }
 
         let fresh = expenses.filter(\.isNew).sorted { $0.current > $1.current }
         if let biggest = fresh.first {
-            lines.append("New this period: \(biggest.name) (\(format(biggest.current)))"
-                         + (fresh.count > 1 ? " and \(fresh.count - 1) more." : "."))
+            let amount = format(biggest.current)
+            lines.append(fresh.count > 1
+                ? String(localized: "New this period: \(biggest.name) (\(amount)) and \(fresh.count - 1) more.")
+                : String(localized: "New this period: \(biggest.name) (\(amount))."))
         }
 
         let saved = totalIncomeCurrent - totalSpendingCurrent
         if totalIncomeCurrent > 0 {
-            let rate = (saved / totalIncomeCurrent) * 100
+            let rate = Self.wholePercent((saved / totalIncomeCurrent) * 100)
             lines.append(saved >= 0
-                ? "You kept \(format(saved)) — a \(Self.wholePercent(rate))% saving rate."
-                : "Spending exceeded income by \(format(abs(saved))).")
+                ? String(localized: "You kept \(format(saved)) — a \(rate)% saving rate.")
+                : String(localized: "Spending exceeded income by \(format(abs(saved)))."))
         }
         return lines
     }

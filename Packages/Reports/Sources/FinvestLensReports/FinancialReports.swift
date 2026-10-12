@@ -151,7 +151,7 @@ public enum FinancialReports {
         var equityLines = equityAccounts
         let tradingEquity = -typeTotal([.trading])
         if tradingEquity != 0 {
-            equityLines.append(ReportLine(id: .random(), name: "Unrealised FX", fullName: "Trading",
+            equityLines.append(ReportLine(id: .random(), name: String(localized: "Unrealised FX"), fullName: "Trading",
                                           amount: currency.round(tradingEquity)))
         }
 
@@ -171,7 +171,7 @@ public enum FinancialReports {
         var equityTotal = equityFromAccounts + retained + tradingEquity
         let residual = totalAssets - totalLiabilities - equityTotal
         if residual != 0 {
-            equityLines.append(ReportLine(id: .random(), name: "Rounding on translation",
+            equityLines.append(ReportLine(id: .random(), name: String(localized: "Rounding on translation"),
                                           fullName: "Rounding", amount: residual))
             equityTotal += residual
         }

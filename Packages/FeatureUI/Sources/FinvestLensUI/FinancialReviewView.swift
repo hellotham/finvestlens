@@ -30,8 +30,8 @@ enum ReviewDeckKind {
 
     var title: String {
         switch self {
-        case .financial: "Financial Review"
-        case .investment: "Investment Review"
+        case .financial: String(localized: "Financial Review")
+        case .investment: String(localized: "Investment Review")
         }
     }
 }

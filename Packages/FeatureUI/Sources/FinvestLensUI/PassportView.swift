@@ -46,8 +46,10 @@ extension AppModel {
         let yearAgo = calendar.date(byAdding: .year, value: -1, to: now) ?? now
 
         guard let statement = financialPositionStatement(asOf: now) else { return nil }
+        // By the title the builder gave the section — the same string, not
+        // a word expected to be in it (`StatementLabels`).
         func classes(_ sectionTitle: String) -> [(name: String, value: Decimal)] {
-            guard let section = statement.sections.first(where: { $0.title.localizedCaseInsensitiveContains(sectionTitle) })
+            guard let section = statement.sections.first(where: { $0.title == sectionTitle })
             else { return [] }
             return section.items.compactMap { item -> (name: String, value: Decimal)? in
                 guard item.role == .line,
@@ -64,13 +66,13 @@ extension AppModel {
         guard let breakdown = categoryBreakdown(from: yearAgo, to: now) else { return nil }
 
         return PassportData(
-            title: documentURL?.deletingPathExtension().lastPathComponent ?? "Financial Summary",
+            title: documentURL?.deletingPathExtension().lastPathComponent ?? String(localized: "Financial Summary"),
             asOf: now,
             currencyCode: reportCurrency.mnemonic,
             netWorth: trend.last?.netWorth ?? 0,
             trend: trend,
-            assetClasses: classes("Assets"),
-            liabilityClasses: classes("Liabilit"),
+            assetClasses: classes(StatementLabels.assets),
+            liabilityClasses: classes(StatementLabels.liabilities),
             income12M: breakdown.totalIncome,
             expenses12M: breakdown.totalExpenses)
     }
@@ -107,7 +109,7 @@ struct PassportSheet: View {
             }
             .fileExporter(isPresented: $exporting, document: exportDocument,
                           contentType: .pdf,
-                          defaultFilename: "Financial Summary") { _ in }
+                          defaultFilename: String(localized: "Financial Summary")) { _ in }
         }
         .windowFloor(minWidth: 640, minHeight: 700)
     }

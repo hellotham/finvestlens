@@ -175,14 +175,37 @@ Their two builders held 133 phrases as bare literals, English on screen in
 every language and English in the facts handed to the narrator; each is now a
 whole phrase in the catalog, in eight languages.
 
-**Open, found while doing that: the report documents are still in English.**
-A report's KPI, section, row and total labels (`ReportKPI.label` and its
-neighbours, built for 29 documents in `ReportBuilders.swift`,
-`AppModel+ReportDocuments.swift` and `AppModel+FYPack.swift`) are `String`s
-written in English and drawn verbatim — on screen, in the exported PDF, and
-in what the report narrator is handed. It is the same defect as the decks',
-several times the size, and the catalog's gate cannot see it: a `String`
-emits no key, so nothing is missing.
+**The reports are in the reader's language** (done 12 Oct): the 29 report
+documents, the annual-report statements, the gallery and an open report,
+period names and labels, and what surrounds them — 247 phrases. See
+`implemented.md`, "The reports in the reader's language".
+
+**Open, found while doing that: it is not only the reports.** Everything the
+catalog's gate checks is a key the compiler emitted, and a `String` emits
+none. Setting every string literal that reads as English against the keys
+emitted for its own file — both platforms, every package the app ships —
+leaves several hundred that a reader meets in English whatever their
+language:
+
+- the name of every undo action ("Undo Delete Transaction" in the Edit menu,
+  and in the audit trail) — some 150 call sites behind seven functions that
+  take a `String`;
+- the toasts, and most error and information messages (`showToast`,
+  `DocumentError`, the import, quote, Box and book-file errors);
+- names the Engine and Reports packages give things and the app shows as
+  they are: reconcile states, recurrence periods, find operators and fields,
+  stock-transaction kinds, cost-basis methods, alert titles and messages,
+  the wellbeing measures, an account's type;
+- labels passed to helpers that take a `String` (the planning, stock and
+  currency sheets), the open and save panels' titles, the book-load progress
+  caption, what an intent says aloud;
+- what the app writes *into* a book in English: the starter chart of
+  accounts, and memos and descriptions such as "Closing Entries" — a
+  decision more than a translation, since other code and GnuCash read some
+  of them back.
+
+Being done next, with a gate that reads the source the way the count did, so
+that a `String` a reader sees cannot go in unnoticed again.
 
 ## 4 — Platform & HIG — deferred decisions
 

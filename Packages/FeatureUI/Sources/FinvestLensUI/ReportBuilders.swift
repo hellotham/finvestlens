@@ -62,7 +62,7 @@ extension AppModel {
               kind.usesScaffold else { return nil }
 
         let (from, to) = resolve(configuration.period)
-        let asOfLabel = "As of \(AppDateFormat.current.full(to))"
+        let asOfLabel = String(localized: "As of \(AppDateFormat.current.full(to))")
         let periodLabel = kind.isAsOf ? asOfLabel : label(for: configuration.period)
 
         switch kind {
@@ -73,35 +73,34 @@ extension AppModel {
             }
             guard let sheet = balanceSheet(asOf: to) else { return nil }
             return ReportDocument(
-                title: "Balance Sheet",
+                title: String(localized: "Balance Sheet"),
                 periodLabel: periodLabel,
                 currencyCode: sheet.currencyCode,
                 kpis: [
-                    ReportKPI(label: "Assets", amount: sheet.totalAssets),
-                    ReportKPI(label: "Liabilities", amount: sheet.totalLiabilities),
-                    ReportKPI(label: "Net worth",
+                    ReportKPI(label: String(localized: "Assets"), amount: sheet.totalAssets),
+                    ReportKPI(label: String(localized: "Liabilities"), amount: sheet.totalLiabilities),
+                    ReportKPI(label: String(localized: "Net worth"),
                               amount: sheet.totalAssets - sheet.totalLiabilities, signed: true),
                 ],
                 chart: nil,
                 sections: [
-                    section("Assets", sheet.assets, total: ("Total Assets", sheet.totalAssets)),
-                    section("Liabilities", sheet.liabilities,
-                            total: ("Total Liabilities", sheet.totalLiabilities)),
+                    section(String(localized: "Assets"), sheet.assets, total: (String(localized: "Total Assets"), sheet.totalAssets)),
+                    section(String(localized: "Liabilities"), sheet.liabilities,
+                            total: (String(localized: "Total Liabilities"), sheet.totalLiabilities)),
                     ReportDocumentSection(
-                        title: "Equity",
+                        title: String(localized: "Equity"),
                         rows: sheet.equity.map { line in
                             ReportDocumentRow(label: line.fullName, amount: line.amount)
-                        } + [ReportDocumentRow(label: "Retained earnings",
+                        } + [ReportDocumentRow(label: String(localized: "Retained earnings"),
                                                amount: sheet.retainedEarnings)],
-                        total: ("Total Equity", sheet.totalEquity)),
+                        total: (String(localized: "Total Equity"), sheet.totalEquity)),
                 ],
                 notes: [valuationNote(to),
-                        "Retained earnings fold lifetime income less expenses into equity, "
-                        + "so the sheet balances."],
+                        String(localized: "Retained earnings fold lifetime income less expenses into equity, so the sheet balances.")],
                 facts: ReportFactsSource(
-                    headline: [("Assets", sheet.totalAssets),
-                               ("Liabilities", sheet.totalLiabilities),
-                               ("Equity", sheet.totalEquity)],
+                    headline: [(String(localized: "Assets"), sheet.totalAssets),
+                               (String(localized: "Liabilities"), sheet.totalLiabilities),
+                               (String(localized: "Equity"), sheet.totalEquity)],
                     lines: ranked(sheet.assets + sheet.liabilities)))
 
         case .incomeStatement:
@@ -111,89 +110,85 @@ extension AppModel {
             }
             guard let statement = incomeStatement(from: from, to: to) else { return nil }
             return ReportDocument(
-                title: "Income Statement",
+                title: String(localized: "Income Statement"),
                 periodLabel: periodLabel,
                 currencyCode: statement.currencyCode,
                 kpis: [
-                    ReportKPI(label: "Income", amount: statement.totalIncome),
-                    ReportKPI(label: "Expenses", amount: statement.totalExpenses),
-                    ReportKPI(label: "Net income", amount: statement.netIncome, signed: true),
+                    ReportKPI(label: String(localized: "Income"), amount: statement.totalIncome),
+                    ReportKPI(label: String(localized: "Expenses"), amount: statement.totalExpenses),
+                    ReportKPI(label: String(localized: "Net income"), amount: statement.netIncome, signed: true),
                 ],
                 chart: nil,
                 sections: [
-                    section("Income", statement.income,
-                            total: ("Total Income", statement.totalIncome)),
-                    section("Expenses", statement.expenses,
-                            total: ("Total Expenses", statement.totalExpenses)),
+                    section(String(localized: "Income"), statement.income,
+                            total: (String(localized: "Total Income"), statement.totalIncome)),
+                    section(String(localized: "Expenses"), statement.expenses,
+                            total: (String(localized: "Total Expenses"), statement.totalExpenses)),
                 ],
                 notes: [valuationNote(to)],
                 facts: ReportFactsSource(
-                    headline: [("Income", statement.totalIncome),
-                               ("Expenses", statement.totalExpenses),
-                               ("Net income", statement.netIncome)],
+                    headline: [(String(localized: "Income"), statement.totalIncome),
+                               (String(localized: "Expenses"), statement.totalExpenses),
+                               (String(localized: "Net income"), statement.netIncome)],
                     lines: ranked(statement.income + statement.expenses)))
 
         case .equityStatement:
             guard let statement = equityStatement(from: from, to: to) else { return nil }
             return ReportDocument(
-                title: "Equity Statement",
+                title: String(localized: "Equity Statement"),
                 periodLabel: periodLabel,
                 currencyCode: statement.currencyCode,
                 kpis: [
-                    ReportKPI(label: "Opening capital", amount: statement.openingCapital),
-                    ReportKPI(label: "Closing capital", amount: statement.closingCapital),
-                    ReportKPI(label: "Net income", amount: statement.netIncome, signed: true),
+                    ReportKPI(label: String(localized: "Opening capital"), amount: statement.openingCapital),
+                    ReportKPI(label: String(localized: "Closing capital"), amount: statement.closingCapital),
+                    ReportKPI(label: String(localized: "Net income"), amount: statement.netIncome, signed: true),
                 ],
                 chart: nil,
                 sections: [ReportDocumentSection(
-                    title: "Movement in capital",
+                    title: String(localized: "Movement in capital"),
                     rows: [
-                        ReportDocumentRow(label: "Opening capital",
+                        ReportDocumentRow(label: String(localized: "Opening capital"),
                                           amount: statement.openingCapital),
-                        ReportDocumentRow(label: "Net income", amount: statement.netIncome),
-                        ReportDocumentRow(label: "Contributions",
+                        ReportDocumentRow(label: String(localized: "Net income"), amount: statement.netIncome),
+                        ReportDocumentRow(label: String(localized: "Contributions"),
                                           amount: statement.contributions),
-                        ReportDocumentRow(label: "Withdrawals",
+                        ReportDocumentRow(label: String(localized: "Withdrawals"),
                                           amount: -statement.withdrawals),
-                        ReportDocumentRow(label: "Unrealised gains and FX",
+                        ReportDocumentRow(label: String(localized: "Unrealised gains and FX"),
                                           amount: statement.unrealisedChange),
                     ],
-                    total: ("Closing capital", statement.closingCapital))],
-                notes: ["The unrealised line is the valuation change the period's postings "
-                        + "cannot account for: market moves and FX revaluation.",
+                    total: (String(localized: "Closing capital"), statement.closingCapital))],
+                notes: [String(localized: "The unrealised line is the valuation change the period’s postings cannot account for: market moves and FX revaluation."),
                         valuationNote(to)],
                 facts: ReportFactsSource(
-                    headline: [("Opening capital", statement.openingCapital),
-                               ("Closing capital", statement.closingCapital),
-                               ("Net income", statement.netIncome),
-                               ("Unrealised change", statement.unrealisedChange)],
+                    headline: [(String(localized: "Opening capital"), statement.openingCapital),
+                               (String(localized: "Closing capital"), statement.closingCapital),
+                               (String(localized: "Net income"), statement.netIncome),
+                               (String(localized: "Unrealised change"), statement.unrealisedChange)],
                     lines: []))
 
         case .trialBalance:
             guard let report = trialBalance(asOf: to) else { return nil }
             return ReportDocument(
-                title: "Trial Balance",
+                title: String(localized: "Trial Balance"),
                 periodLabel: periodLabel,
                 currencyCode: report.currencyCode,
                 kpis: [
-                    ReportKPI(label: "Debits", amount: report.totalDebits),
-                    ReportKPI(label: "Credits", amount: report.totalCredits),
-                    ReportKPI(label: "Unrealised adjustment",
+                    ReportKPI(label: String(localized: "Debits"), amount: report.totalDebits),
+                    ReportKPI(label: String(localized: "Credits"), amount: report.totalCredits),
+                    ReportKPI(label: String(localized: "Unrealised adjustment"),
                               amount: report.unrealisedAdjustment, signed: true),
                 ],
                 chart: nil,
                 sections: [ReportDocumentSection(
-                    title: "Balances",
+                    title: String(localized: "Balances"),
                     rows: report.rows.map { row in
                         ReportDocumentRow(label: row.fullName,
                                           debit: row.debit, credit: row.credit)
                     },
-                    total: ("Totals", report.totalDebits),
+                    total: (String(localized: "Totals"), report.totalDebits),
                     isDebitCredit: true)],
-                notes: ["Balances in the raw double-entry convention. The unrealised "
-                        + "adjustment is what valuing holdings at market adds over cost — "
-                        + "printed, not hidden, because it is the number that makes the "
-                        + "columns agree.",
+                notes: [String(localized: "Balances in the raw double-entry convention. The unrealised adjustment is what valuing holdings at market adds over cost — printed, not hidden, because it is the number that makes the columns agree."),
                         valuationNote(to)],
                 facts: nil)
 
@@ -203,27 +198,26 @@ extension AppModel {
             let assets = report.sections.first { $0.title == "Assets" }?.total ?? 0
             let liabilities = report.sections.first { $0.title == "Liabilities" }?.total ?? 0
             return ReportDocument(
-                title: "Account Summary",
+                title: String(localized: "Account Summary"),
                 periodLabel: periodLabel,
                 currencyCode: report.currencyCode,
                 kpis: [
-                    ReportKPI(label: "Assets", amount: assets),
-                    ReportKPI(label: "Liabilities", amount: liabilities),
-                    ReportKPI(label: "Net worth", amount: assets - liabilities, signed: true),
+                    ReportKPI(label: String(localized: "Assets"), amount: assets),
+                    ReportKPI(label: String(localized: "Liabilities"), amount: liabilities),
+                    ReportKPI(label: String(localized: "Net worth"), amount: assets - liabilities, signed: true),
                 ],
                 chart: nil,
                 sections: report.sections.map { section in
-                    ReportDocumentSection(
-                        title: section.title,
+                    let title = Self.accountClassName(section.title)
+                    return ReportDocumentSection(
+                        title: title,
                         rows: section.rows.map { row in
                             ReportDocumentRow(label: row.name, depth: row.depth - 1,
                                               amount: row.balance)
                         },
-                        total: ("Total \(section.title)", section.total))
+                        total: (String(localized: "Total \(title)"), section.total))
                 },
-                notes: ["Accounts deeper than level \(depth) roll into their ancestor, so "
-                        + "every depth sums to the same totals. Income and expense balances "
-                        + "are lifetime to date.",
+                notes: [String(localized: "Accounts deeper than level \(depth) roll into their ancestor, so every depth sums to the same totals. Income and expense balances are lifetime to date."),
                         valuationNote(to)],
                 facts: nil)
 
@@ -231,77 +225,74 @@ extension AppModel {
             let points = netWorthPoints(from: from, to: to)
             guard let first = points.first, let last = points.last else { return nil }
             return ReportDocument(
-                title: "Net Worth",
+                title: String(localized: "Net Worth"),
                 periodLabel: periodLabel,
                 currencyCode: reportCurrency.mnemonic,
                 kpis: [
-                    ReportKPI(label: "Start", amount: first.netWorth),
-                    ReportKPI(label: "End", amount: last.netWorth),
-                    ReportKPI(label: "Change",
+                    ReportKPI(label: String(localized: "Start"), amount: first.netWorth),
+                    ReportKPI(label: String(localized: "End"), amount: last.netWorth),
+                    ReportKPI(label: String(localized: "Change"),
                               amount: last.netWorth - first.netWorth, signed: true),
                 ],
                 chart: .line(points),
                 sections: [],
-                notes: ["Month-end net worth: assets less liabilities, converted at each "
-                        + "date's rates.", valuationNote(to)],
+                notes: [String(localized: "Month-end net worth: assets less liabilities, converted at each date’s rates."),
+                        valuationNote(to)],
                 facts: ReportFactsSource(
-                    headline: [("Start", first.netWorth), ("End", last.netWorth),
-                               ("Change", last.netWorth - first.netWorth)],
+                    headline: [(String(localized: "Start"), first.netWorth), (String(localized: "End"), last.netWorth),
+                               (String(localized: "Change"), last.netWorth - first.netWorth)],
                     lines: []))
 
         case .cashFlow:
             let scope = configuration.accountIDs ?? defaultCashFlowAccountIDs
             guard let report = cashFlow(accountIDs: scope, from: from, to: to) else { return nil }
             return ReportDocument(
-                title: "Cash Flow",
+                title: String(localized: "Cash Flow"),
                 periodLabel: periodLabel,
                 currencyCode: report.currencyCode,
                 kpis: [
-                    ReportKPI(label: "Money in", amount: report.totalIn),
-                    ReportKPI(label: "Money out", amount: report.totalOut),
-                    ReportKPI(label: "Net change", amount: report.netChange, signed: true),
+                    ReportKPI(label: Self.moneyIn, amount: report.totalIn),
+                    ReportKPI(label: Self.moneyOut, amount: report.totalOut),
+                    ReportKPI(label: String(localized: "Net change"), amount: report.netChange, signed: true),
                 ],
                 chart: nil,
                 sections: [
-                    section("Money in, from", report.inflows,
-                            total: ("Total in", report.totalIn)),
-                    section("Money out, to", report.outflows,
-                            total: ("Total out", report.totalOut)),
+                    section(String(localized: "Money in, from"), report.inflows,
+                            total: (String(localized: "Total in"), report.totalIn)),
+                    section(String(localized: "Money out, to"), report.outflows,
+                            total: (String(localized: "Total out"), report.totalOut)),
                 ],
-                notes: ["Flows through \(report.accountNames.count) account(s): "
-                        + report.accountNames.joined(separator: ", ") + ".",
-                        "Transfers wholly inside the selected accounts are internal and "
-                        + "excluded; by double entry, in minus out equals their net change."],
+                notes: [String(localized: "Flows through \(report.accountNames.count) account(s): \(Self.listed(report.accountNames))."),
+                        String(localized: "Transfers wholly inside the selected accounts are internal and excluded; by double entry, in minus out equals their net change.")],
                 facts: ReportFactsSource(
-                    headline: [("Money in", report.totalIn), ("Money out", report.totalOut),
-                               ("Net change", report.netChange)],
+                    headline: [(Self.moneyIn, report.totalIn), (Self.moneyOut, report.totalOut),
+                               (String(localized: "Net change"), report.netChange)],
                     lines: ranked(report.inflows + report.outflows)))
 
         case .incomeExpense:
             guard let breakdown = categoryBreakdown(from: from, to: to) else { return nil }
             return ReportDocument(
-                title: "Income & Expense",
+                title: String(localized: "Income & Expense"),
                 periodLabel: periodLabel,
                 currencyCode: breakdown.currencyCode,
                 kpis: [
-                    ReportKPI(label: "Income", amount: breakdown.totalIncome),
-                    ReportKPI(label: "Expenses", amount: breakdown.totalExpenses),
-                    ReportKPI(label: "Net",
+                    ReportKPI(label: String(localized: "Income"), amount: breakdown.totalIncome),
+                    ReportKPI(label: String(localized: "Expenses"), amount: breakdown.totalExpenses),
+                    ReportKPI(label: String(localized: "Net"),
                               amount: breakdown.totalIncome - breakdown.totalExpenses,
                               signed: true),
                 ],
                 chart: .monthlyBars(breakdown.months),
                 sections: [
-                    section("Spending by category", breakdown.expenseSlices,
-                            total: ("Total Expenses", breakdown.totalExpenses)),
-                    section("Income by category", breakdown.incomeSlices,
-                            total: ("Total Income", breakdown.totalIncome)),
+                    section(String(localized: "Spending by category"), breakdown.expenseSlices,
+                            total: (String(localized: "Total Expenses"), breakdown.totalExpenses)),
+                    section(String(localized: "Income by category"), breakdown.incomeSlices,
+                            total: (String(localized: "Total Income"), breakdown.totalIncome)),
                 ],
-                notes: ["Categories are top-level accounts with their subtrees rolled up; "
-                        + "the slices sum to the income statement for the same period."],
+                notes: [String(localized: "Categories are top-level accounts with their subtrees rolled up; the slices sum to the income statement for the same period.")],
                 facts: ReportFactsSource(
-                    headline: [("Income", breakdown.totalIncome),
-                               ("Expenses", breakdown.totalExpenses)],
+                    headline: [(String(localized: "Income"), breakdown.totalIncome),
+                               (String(localized: "Expenses"), breakdown.totalExpenses)],
                     lines: ranked(breakdown.expenseSlices + breakdown.incomeSlices)))
 
         case .averageBalance:
@@ -311,37 +302,34 @@ extension AppModel {
                                               step: step) else { return nil }
             let average = report.overallAverage ?? 0
             return ReportDocument(
-                title: "Average Balance",
+                title: String(localized: "Average Balance"),
                 periodLabel: periodLabel,
                 currencyCode: report.currencyCode,
                 kpis: [
-                    ReportKPI(label: "Average balance", amount: average),
-                    ReportKPI(label: "Total in", amount: report.totalGain),
-                    ReportKPI(label: "Total out", amount: report.totalLoss),
+                    ReportKPI(label: String(localized: "Average balance"), amount: average),
+                    ReportKPI(label: String(localized: "Total in"), amount: report.totalGain),
+                    ReportKPI(label: String(localized: "Total out"), amount: report.totalLoss),
                 ],
                 chart: report.intervals.isEmpty ? nil : .averageBars(report.intervals),
                 sections: [
                     ReportDocumentSection(
-                        title: "By \(step.displayName.lowercased())",
+                        title: Self.intervalTitle(step),
                         rows: report.intervals.map { interval in
                             ReportDocumentRow(
                                 label: intervalLabel(interval),
                                 amounts: [interval.average, interval.minimum, interval.maximum,
                                           interval.gain, interval.loss])
                         },
-                        columns: ["Average", "Minimum", "Maximum", "Gain", "Loss"],
-                        columnTotals: ("Weighted average / totals",
+                        columns: [String(localized: "Average"), String(localized: "Minimum"), String(localized: "Maximum"), String(localized: "Gain"), String(localized: "Loss")],
+                        columnTotals: (String(localized: "Weighted average / totals"),
                                        [average, nil, nil, report.totalGain, report.totalLoss])),
                 ],
-                notes: ["Balances are sampled at each day's end; an interval's average is "
-                        + "the mean of its daily balances. Across "
-                        + "\(report.accountNames.count) account(s): "
-                        + report.accountNames.joined(separator: ", ") + ".",
-                        "Foreign-currency accounts convert at each day's rate; an account "
-                        + "with no rate contributes nothing that day."],
+                notes: [String(localized: "Balances are sampled at each day’s end; an interval’s average is the mean of its daily balances."),
+                        String(localized: "Across \(report.accountNames.count) account(s): \(Self.listed(report.accountNames))."),
+                        String(localized: "Foreign-currency accounts convert at each day’s rate; an account with no rate contributes nothing that day.")],
                 facts: ReportFactsSource(
-                    headline: [("Average balance", average), ("Total in", report.totalGain),
-                               ("Total out", report.totalLoss)],
+                    headline: [(String(localized: "Average balance"), average), (String(localized: "Total in"), report.totalGain),
+                               (String(localized: "Total out"), report.totalLoss)],
                     lines: report.intervals.map { (intervalLabel($0), $0.average) }))
 
         case .receivableAging, .payableAging:
@@ -349,7 +337,7 @@ extension AppModel {
             guard let book else { return nil }
             let rows = book.agingByOwner(receivable: receivable, asOf: to)
             let code = reportCurrency.mnemonic
-            let columns = ["Current", "31–60", "61–90", "91+", "Total"]
+            let columns = [String(localized: "Current"), "31–60", "61–90", "91+", String(localized: "Total")]
             func amounts(_ b: AgingBuckets) -> [Decimal?] {
                 [b.current, b.days31to60, b.days61to90, b.over90, b.total]
             }
@@ -360,50 +348,44 @@ extension AppModel {
                 acc.over90 += row.buckets.over90
             }
             return ReportDocument(
-                title: receivable ? "Receivable Aging" : "Payable Aging",
+                title: receivable ? String(localized: "Receivable Aging") : String(localized: "Payable Aging"),
                 periodLabel: asOfLabel,
                 currencyCode: code,
                 kpis: [
-                    ReportKPI(label: receivable ? "Owed to you" : "You owe", amount: totals.total),
-                    ReportKPI(label: "Current", amount: totals.current),
-                    ReportKPI(label: "Over 90 days", amount: totals.over90, signed: true),
+                    ReportKPI(label: receivable ? String(localized: "Owed to you") : String(localized: "You owe"), amount: totals.total),
+                    ReportKPI(label: String(localized: "Current"), amount: totals.current),
+                    ReportKPI(label: String(localized: "Over 90 days"), amount: totals.over90, signed: true),
                 ],
                 chart: nil,
                 sections: [ReportDocumentSection(
-                    title: receivable ? "Customers" : "Vendors",
+                    title: receivable ? String(localized: "Customers") : String(localized: "Vendors"),
                     rows: rows.map { ReportDocumentRow(label: $0.name, amounts: amounts($0.buckets)) },
                     columns: columns,
-                    columnTotals: ("Total", amounts(totals)))],
-                notes: ["Open invoices are aged by their due date as of "
-                        + AppDateFormat.current.long(to)
-                        + " into 0–30 (current), 31–60, 61–90 and 91+ day buckets."],
+                    columnTotals: (String(localized: "Total"), amounts(totals)))],
+                notes: [String(localized: "Open invoices are aged by their due date as of \(AppDateFormat.current.long(to)) into 0–30 (current), 31–60, 61–90 and 91+ day buckets.")],
                 facts: ReportFactsSource(
-                    headline: [("Total", totals.total), ("Current", totals.current),
-                               ("Over 90 days", totals.over90)],
+                    headline: [(String(localized: "Total"), totals.total), (String(localized: "Current"), totals.current),
+                               (String(localized: "Over 90 days"), totals.over90)],
                     lines: rows.map { ($0.name, $0.buckets.total) }))
 
         case .customerSummary:
             guard let book else { return nil }
-            return ownerSummary(title: "Customer Summary", chargedNoun: "Invoiced",
-                                entity: "Customers", asOf: to, asOfLabel: asOfLabel,
+            return ownerSummary(.customers, asOf: to, asOfLabel: asOfLabel,
                                 owners: book.customers.map { ($0.guid, $0.name) })
 
         case .vendorSummary:
             guard let book else { return nil }
-            return ownerSummary(title: "Vendor Summary", chargedNoun: "Billed",
-                                entity: "Vendors", asOf: to, asOfLabel: asOfLabel,
+            return ownerSummary(.vendors, asOf: to, asOfLabel: asOfLabel,
                                 owners: book.vendors.map { ($0.guid, $0.name) })
 
         case .employeeSummary:
             guard let book else { return nil }
-            return ownerSummary(title: "Employee Summary", chargedNoun: "Claimed",
-                                entity: "Employees", asOf: to, asOfLabel: asOfLabel,
+            return ownerSummary(.employees, asOf: to, asOfLabel: asOfLabel,
                                 owners: book.employees.map { ($0.guid, $0.username) })
 
         case .jobSummary:
             guard let book else { return nil }
-            return ownerSummary(title: "Job Summary", chargedNoun: "Invoiced",
-                                entity: "Jobs", asOf: to, asOfLabel: asOfLabel,
+            return ownerSummary(.jobs, asOf: to, asOfLabel: asOfLabel,
                                 owners: book.jobs.map { ($0.guid, $0.name) })
 
         case .spendingInsights:
@@ -431,10 +413,11 @@ extension AppModel {
     /// documents, most-charged first — the shared shape behind the Customer,
     /// Vendor, Employee and Job summaries (GnuCash's per-owner reports). Parties
     /// with no posted document are omitted.
-    private func ownerSummary(title: String, chargedNoun: String, entity: String,
+    private func ownerSummary(_ parties: OwnerSummaryWording,
                               asOf to: Date, asOfLabel: String,
                               owners: [(guid: GncGUID, name: String)]) -> ReportDocument? {
         guard let book else { return nil }
+        let chargedNoun = parties.charged
         let code = reportCurrency.mnemonic
         struct Row { var name: String; var charged: Decimal = 0; var outstanding: Decimal = 0 }
         var rows: [Row] = []
@@ -449,34 +432,33 @@ extension AppModel {
             rows.append(row)
         }
         rows.sort { $0.charged > $1.charged }
-        let columns = [chargedNoun, "Paid", "Outstanding"]
+        let columns = [chargedNoun, String(localized: "Paid"), String(localized: "Outstanding")]
         func amounts(_ r: Row) -> [Decimal?] {
             [r.charged, r.charged - r.outstanding, r.outstanding]
         }
         let totalCharged = rows.reduce(Decimal(0)) { $0 + $1.charged }
         let totalOutstanding = rows.reduce(Decimal(0)) { $0 + $1.outstanding }
         return ReportDocument(
-            title: title,
+            title: parties.title,
             periodLabel: asOfLabel,
             currencyCode: code,
             kpis: [
-                ReportKPI(label: "Total \(chargedNoun.lowercased())", amount: totalCharged),
-                ReportKPI(label: "Paid", amount: totalCharged - totalOutstanding),
-                ReportKPI(label: "Outstanding", amount: totalOutstanding),
+                ReportKPI(label: parties.totalCharged, amount: totalCharged),
+                ReportKPI(label: String(localized: "Paid"), amount: totalCharged - totalOutstanding),
+                ReportKPI(label: String(localized: "Outstanding"), amount: totalOutstanding),
             ],
             chart: nil,
             sections: [ReportDocumentSection(
-                title: entity,
+                title: parties.entity,
                 rows: rows.map { ReportDocumentRow(label: $0.name, amounts: amounts($0)) },
                 columns: columns,
-                columnTotals: ("Total",
+                columnTotals: (String(localized: "Total"),
                                [totalCharged, totalCharged - totalOutstanding, totalOutstanding]))],
-            notes: ["Totals cover posted documents only, as of "
-                    + AppDateFormat.current.long(to)
-                    + ". \"Paid\" is \(chargedNoun.lowercased()) less what is still outstanding."],
+            notes: [String(localized: "Totals cover posted documents only, as of \(AppDateFormat.current.long(to))."),
+                    parties.paidNote],
             facts: ReportFactsSource(
-                headline: [(chargedNoun, totalCharged), ("Paid", totalCharged - totalOutstanding),
-                           ("Outstanding", totalOutstanding)],
+                headline: [(chargedNoun, totalCharged), (String(localized: "Paid"), totalCharged - totalOutstanding),
+                           (String(localized: "Outstanding"), totalOutstanding)],
                 lines: rows.map { ($0.name, $0.charged) }))
     }
 
@@ -524,7 +506,8 @@ extension AppModel {
                 : ReportPeriod.financialYearLabel(fromYear: fromYear, toYear: toYear)
         }
         if stride.month == 3 {
-            return "Q\((fromMonth - 1) / 3 + 1) \(fromYear)"
+            // The year as text: as a number it would be grouped ("2,026").
+            return String(localized: "Q\((fromMonth - 1) / 3 + 1) \(String(fromYear))")
         }
         if stride.month == 1 {
             return AppDateFormat.current.monthYear(from)
@@ -562,42 +545,41 @@ extension AppModel {
         let sheets = columns.compactMap { balanceSheet(asOf: $0.to) }
         guard sheets.count == columns.count, let current = sheets.first else { return nil }
         let headers = columns.map(\.label)
-        let equityExtra = [(label: "Retained earnings",
+        let equityExtra = [(label: String(localized: "Retained earnings"),
                             amounts: sheets.map { Optional($0.retainedEarnings) })]
 
         return ReportDocument(
-            title: "Balance Sheet",
-            periodLabel: "Comparative · " + headers.joined(separator: " vs "),
+            title: String(localized: "Balance Sheet"),
+            periodLabel: Self.comparativeLabel(headers),
             currencyCode: current.currencyCode,
             kpis: [
-                ReportKPI(label: "Assets", amount: current.totalAssets),
-                ReportKPI(label: "Liabilities", amount: current.totalLiabilities),
-                ReportKPI(label: "Net worth",
+                ReportKPI(label: String(localized: "Assets"), amount: current.totalAssets),
+                ReportKPI(label: String(localized: "Liabilities"), amount: current.totalLiabilities),
+                ReportKPI(label: String(localized: "Net worth"),
                           amount: current.totalAssets - current.totalLiabilities, signed: true),
             ],
             chart: nil,
             sections: [
                 ReportDocumentSection(
-                    title: "Assets", rows: alignedRows(sheets.map { $0.assets }),
+                    title: String(localized: "Assets"), rows: alignedRows(sheets.map { $0.assets }),
                     columns: headers,
-                    columnTotals: ("Total Assets", sheets.map { Optional($0.totalAssets) })),
+                    columnTotals: (String(localized: "Total Assets"), sheets.map { Optional($0.totalAssets) })),
                 ReportDocumentSection(
-                    title: "Liabilities", rows: alignedRows(sheets.map { $0.liabilities }),
+                    title: String(localized: "Liabilities"), rows: alignedRows(sheets.map { $0.liabilities }),
                     columns: headers,
-                    columnTotals: ("Total Liabilities", sheets.map { Optional($0.totalLiabilities) })),
+                    columnTotals: (String(localized: "Total Liabilities"), sheets.map { Optional($0.totalLiabilities) })),
                 ReportDocumentSection(
-                    title: "Equity",
+                    title: String(localized: "Equity"),
                     rows: alignedRows(sheets.map { $0.equity }, extra: equityExtra),
                     columns: headers,
-                    columnTotals: ("Total Equity", sheets.map { Optional($0.totalEquity) })),
+                    columnTotals: (String(localized: "Total Equity"), sheets.map { Optional($0.totalEquity) })),
             ],
             notes: [valuationNote(columns[0].to),
-                    "Columns compare the selected period with earlier periods of the same "
-                    + "length; the leftmost is the most recent."],
+                    String(localized: "Columns compare the selected period with earlier periods of the same length; the leftmost is the most recent.")],
             facts: ReportFactsSource(
-                headline: [("Assets", current.totalAssets),
-                           ("Liabilities", current.totalLiabilities),
-                           ("Equity", current.totalEquity)],
+                headline: [(String(localized: "Assets"), current.totalAssets),
+                           (String(localized: "Liabilities"), current.totalLiabilities),
+                           (String(localized: "Equity"), current.totalEquity)],
                 lines: ranked(current.assets + current.liabilities)))
     }
 
@@ -609,35 +591,34 @@ extension AppModel {
         let headers = columns.map(\.label)
 
         return ReportDocument(
-            title: "Income Statement",
-            periodLabel: "Comparative · " + headers.joined(separator: " vs "),
+            title: String(localized: "Income Statement"),
+            periodLabel: Self.comparativeLabel(headers),
             currencyCode: current.currencyCode,
             kpis: [
-                ReportKPI(label: "Income", amount: current.totalIncome),
-                ReportKPI(label: "Expenses", amount: current.totalExpenses),
-                ReportKPI(label: "Net income", amount: current.netIncome, signed: true),
+                ReportKPI(label: String(localized: "Income"), amount: current.totalIncome),
+                ReportKPI(label: String(localized: "Expenses"), amount: current.totalExpenses),
+                ReportKPI(label: String(localized: "Net income"), amount: current.netIncome, signed: true),
             ],
             chart: nil,
             sections: [
                 ReportDocumentSection(
-                    title: "Income", rows: alignedRows(statements.map { $0.income }),
+                    title: String(localized: "Income"), rows: alignedRows(statements.map { $0.income }),
                     columns: headers,
-                    columnTotals: ("Total Income", statements.map { Optional($0.totalIncome) })),
+                    columnTotals: (String(localized: "Total Income"), statements.map { Optional($0.totalIncome) })),
                 ReportDocumentSection(
-                    title: "Expenses", rows: alignedRows(statements.map { $0.expenses }),
+                    title: String(localized: "Expenses"), rows: alignedRows(statements.map { $0.expenses }),
                     columns: headers,
-                    columnTotals: ("Total Expenses", statements.map { Optional($0.totalExpenses) })),
+                    columnTotals: (String(localized: "Total Expenses"), statements.map { Optional($0.totalExpenses) })),
                 ReportDocumentSection(
-                    title: "Result", rows: [], columns: headers,
-                    columnTotals: ("Net income", statements.map { Optional($0.netIncome) })),
+                    title: String(localized: "Result"), rows: [], columns: headers,
+                    columnTotals: (String(localized: "Net income"), statements.map { Optional($0.netIncome) })),
             ],
             notes: [valuationNote(columns[0].to),
-                    "Columns compare the selected period with earlier periods of the same "
-                    + "length; the leftmost is the most recent."],
+                    String(localized: "Columns compare the selected period with earlier periods of the same length; the leftmost is the most recent.")],
             facts: ReportFactsSource(
-                headline: [("Income", current.totalIncome),
-                           ("Expenses", current.totalExpenses),
-                           ("Net income", current.netIncome)],
+                headline: [(String(localized: "Income"), current.totalIncome),
+                           (String(localized: "Expenses"), current.totalExpenses),
+                           (String(localized: "Net income"), current.netIncome)],
                 lines: ranked(current.income + current.expenses)))
     }
 
@@ -658,9 +639,125 @@ extension AppModel {
     }
 
     private func valuationNote(_ date: Date) -> String {
-        "Security holdings are valued at market using the latest price on or before "
-        + AppDateFormat.current.long(date)
-        + "; foreign currencies convert at that date's rate. Accounts with no available "
-        + "price are omitted."
+        String(localized: "Security holdings are valued at market using the latest price on or before \(AppDateFormat.current.long(date)); foreign currencies convert at that date’s rate. Accounts with no available price are omitted.")
+    }
+
+    // MARK: Words
+
+    /// "Money in" and "Money out" on a cash-flow statement: money arriving in
+    /// and leaving the accounts followed. The same two English words head the
+    /// investment decks, where they mean money *put into* and *taken out of*
+    /// the market, and are translated that way ("Dinero aportado", "投入資金").
+    /// One key cannot carry both, so these have keys of their own and English
+    /// that is unchanged.
+    static var moneyIn: String { String(localized: "Money in (cash flow)", defaultValue: "Money in") }
+    static var moneyOut: String { String(localized: "Money out (cash flow)", defaultValue: "Money out") }
+
+    /// Names in a sentence: "Everyday, Savings and Offset", joined the way
+    /// the reader's language joins a list.
+    static func listed(_ names: [String]) -> String {
+        names.formatted(.list(type: .and, width: .standard))
+    }
+
+    /// "Comparative · FY 2025–26 vs FY 2024–25" — the period line of a
+    /// comparative statement.
+    static func comparativeLabel(_ headers: [String]) -> String {
+        let versus = String(localized: "vs")
+        return String(localized: "Comparative · \(headers.joined(separator: " \(versus) "))")
+    }
+
+    /// The engine names an account summary's sections after the five account
+    /// classes, in English — they are keys there, and compared as keys
+    /// above. Shown, each is the reader's word for it. Anything else the
+    /// engine might one day send is shown as it came.
+    static func accountClassName(_ engineTitle: String) -> String {
+        switch engineTitle {
+        case "Assets": String(localized: "Assets")
+        case "Liabilities": String(localized: "Liabilities")
+        case "Equity": String(localized: "Equity")
+        case "Income": String(localized: "Income")
+        case "Expenses": String(localized: "Expenses")
+        default: engineTitle
+        }
+    }
+
+    /// An interval by name, for the control that chooses one. The engine's
+    /// `displayName` is English.
+    static func intervalName(_ step: AverageBalanceStep) -> String {
+        switch step {
+        case .day: String(localized: "Day")
+        case .week: String(localized: "Week")
+        case .twoWeeks: String(localized: "Fortnight")
+        case .month: String(localized: "Month")
+        case .quarter: String(localized: "Quarter")
+        case .halfYear: String(localized: "Half-year")
+        case .year: String(localized: "Year")
+        }
+    }
+
+    /// The heading over an average-balance table: "By month". A whole phrase
+    /// for each interval, because "by" + a lowercased noun is English's way
+    /// of saying it and nobody else's (German keeps the capital; Japanese has
+    /// one word for the pair).
+    static func intervalTitle(_ step: AverageBalanceStep) -> String {
+        switch step {
+        case .day: String(localized: "By day")
+        case .week: String(localized: "By week")
+        case .twoWeeks: String(localized: "By fortnight")
+        case .month: String(localized: "By month")
+        case .quarter: String(localized: "By quarter")
+        case .halfYear: String(localized: "By half-year")
+        case .year: String(localized: "By year")
+        }
+    }
+}
+
+/// What a per-party summary says, by whose it is. Whole phrases: the note
+/// was built from the column's noun lowercased into a sentence ("\"Paid\" is
+/// invoiced less…"), which reads in English and cannot be translated.
+enum OwnerSummaryWording {
+    case customers, vendors, employees, jobs
+
+    var title: String {
+        switch self {
+        case .customers: String(localized: "Customer Summary")
+        case .vendors: String(localized: "Vendor Summary")
+        case .employees: String(localized: "Employee Summary")
+        case .jobs: String(localized: "Job Summary")
+        }
+    }
+
+    var entity: String {
+        switch self {
+        case .customers: String(localized: "Customers")
+        case .vendors: String(localized: "Vendors")
+        case .employees: String(localized: "Employees")
+        case .jobs: String(localized: "Jobs")
+        }
+    }
+
+    /// The column, and the headline figure's name for the narrator.
+    var charged: String {
+        switch self {
+        case .customers, .jobs: String(localized: "Invoiced")
+        case .vendors: String(localized: "Billed")
+        case .employees: String(localized: "Claimed")
+        }
+    }
+
+    var totalCharged: String {
+        switch self {
+        case .customers, .jobs: String(localized: "Total invoiced")
+        case .vendors: String(localized: "Total billed")
+        case .employees: String(localized: "Total claimed")
+        }
+    }
+
+    var paidNote: String {
+        switch self {
+        case .customers, .jobs: String(localized: "“Paid” is what was invoiced less what is still outstanding.")
+        case .vendors: String(localized: "“Paid” is what was billed less what is still outstanding.")
+        case .employees: String(localized: "“Paid” is what was claimed less what is still outstanding.")
+        }
     }
 }

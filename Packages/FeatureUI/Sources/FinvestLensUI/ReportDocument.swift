@@ -207,18 +207,23 @@ struct ReportDocumentView: View {
     private func chartView(_ chart: ReportDocumentChart) -> some View {
         switch chart {
         case .monthlyBars(let months):
+            // The two series are named by a *value*, and a value is drawn as
+            // it is: the legend read "Income" and "Expenses" in every
+            // language until the names were the reader's.
+            let income = String(localized: "Income")
+            let expenses = String(localized: "Expenses")
             Chart(months) { month in
                 BarMark(x: .value("Month", month.month, unit: .month),
                         y: .value("Income", month.income))
-                    .foregroundStyle(by: .value("Kind", "Income"))
-                    .position(by: .value("Kind", "Income"))
+                    .foregroundStyle(by: .value("Kind", income))
+                    .position(by: .value("Kind", income))
                 BarMark(x: .value("Month", month.month, unit: .month),
                         y: .value("Expenses", month.expenses))
-                    .foregroundStyle(by: .value("Kind", "Expenses"))
-                    .position(by: .value("Kind", "Expenses"))
+                    .foregroundStyle(by: .value("Kind", expenses))
+                    .position(by: .value("Kind", expenses))
             }
-            .chartForegroundStyleScale(["Income": Color.appAccent,
-                                        "Expenses": Color.red.opacity(0.75)])
+            .chartForegroundStyleScale([income: Color.appAccent,
+                                        expenses: Color.red.opacity(0.75)])
             .frame(height: 200)
         case .line(let points):
             Chart(points) { point in
@@ -450,12 +455,12 @@ extension ReportDocument {
     var printable: PrintableStatement {
         var sections: [PrintableSection] = []
         if !kpis.isEmpty {
-            sections.append(PrintableSection(heading: "Summary", rows:
+            sections.append(PrintableSection(heading: String(localized: "Summary"), rows:
                 kpis.map { PrintableRow(label: $0.label, amount: $0.amount, bold: true) }))
         }
         if !summary.isEmpty {
             // Text-only rows: the single nil amount column renders blank.
-            sections.append(PrintableSection(heading: "In brief", rows:
+            sections.append(PrintableSection(heading: String(localized: "In brief"), rows:
                 summary.map { PrintableRow(label: $0, amount: 0, amounts: [nil]) }))
         }
         for section in self.sections {

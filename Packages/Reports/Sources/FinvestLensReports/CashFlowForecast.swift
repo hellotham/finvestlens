@@ -79,7 +79,7 @@ public extension FinancialReports {
         occurrences.sort { $0.date < $1.date }
 
         var points = [CashFlowPoint(id: UUID(), date: from, balance: currency.round(running),
-                                    change: 0, label: "Today")]
+                                    change: 0, label: String(localized: "Today"))]
         for occurrence in occurrences {
             running += occurrence.amount
             points.append(CashFlowPoint(id: UUID(), date: occurrence.date,

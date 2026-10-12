@@ -132,6 +132,32 @@ struct ReportPeriodTests {
             == "Q3 2026")
     }
 
+    @Test("A year in a label is written out, not grouped as a number")
+    func yearsAreText() {
+        // A label is a phrase in the catalog now, and a number put into one
+        // is formatted for the reader: 2026 became "2,026". The years go in
+        // as text.
+        #expect(ReportPeriod.financialYearLabel(fromYear: 2025, toYear: 2026) == "FY 2025–26")
+        #expect(ReportPeriod.financialYearLabel(fromYear: 2025, toYear: 2025) == "FY 2025")
+        #expect(ReportPeriod.calendarYearToDate
+            .label(financialYearStartMonth: 7, today: date(2026, 8, 2), calendar: utc)
+            == "2026 to date")
+        #expect(ReportPeriod.previousCalendarYear
+            .label(financialYearStartMonth: 7, today: date(2026, 8, 2), calendar: utc)
+            == "2025")
+    }
+
+    @Test("Every rule has a name and a label")
+    func namesAndLabels() {
+        for period in ReportPeriod.named {
+            #expect(!period.name.isEmpty)
+            #expect(!period.label(financialYearStartMonth: 7, today: date(2026, 8, 2), calendar: utc).isEmpty)
+        }
+        #expect(ReportPeriod.last12Months.name == "Last 12 months")
+        #expect(ReportPeriod.allTime.label(financialYearStartMonth: 7, today: date(2026, 8, 2), calendar: utc)
+            == "All time")
+    }
+
     @Test("A period name survives a Codable round-trip")
     func codable() throws {
         for period in ReportPeriod.named + [.custom(from: date(2025, 1, 1), to: date(2025, 6, 30))] {

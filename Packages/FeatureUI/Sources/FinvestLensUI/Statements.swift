@@ -25,7 +25,16 @@ import FinvestLensEngine
 /// ranking), so it lives once — rewording the display string in one place and
 /// not the others silently broke all of them.
 enum StatementLabels {
-    static let uncategorised = "Uncategorised"
+    /// Read once: it is compared as well as shown, and a comparison has to
+    /// be against the very string that was put on the page.
+    static let uncategorised = String(localized: "Uncategorised")
+    /// The two sections of the Statement of Financial Position, which the
+    /// Financial Passport finds by title. It looked for the English words;
+    /// with the titles in the reader's language that found nothing, and the
+    /// passport would have shown no assets and no liabilities in seven
+    /// languages out of eight.
+    static let assets = String(localized: "Assets")
+    static let liabilities = String(localized: "Liabilities")
 }
 import FinvestLensReports
 
@@ -247,7 +256,7 @@ struct StatementBuilder {
         let projected = projectForest(lineSets: lineSets)
         var groups = projected.groups
         if !projected.orphans.isEmpty {
-            groups.append(("Other", projected.orphans))
+            groups.append((String(localized: "Other"), projected.orphans))
         }
         return groups
     }
@@ -368,7 +377,14 @@ struct StatementBuilder {
     /// `protected` captions never fold into Other — IAS 1's minimum line
     /// items (cash and equivalents) and integrity signals (Uncategorised)
     /// stay on the face however small they are.
+    ///
+    /// - Parameters:
+    ///   - otherLabel: the caption for what is folded — "Other assets". A
+    ///     whole phrase from the caller: it was "Other " and the title
+    ///     lowercased, which is how English makes it and no other language.
+    ///   - totalOtherLabel: the total under that caption's note.
     func buildSection(title: String, totalLabel: String,
+                      otherLabel: String, totalOtherLabel: String,
                       forest: [Node], ordering: SectionOrdering,
                       columnCount: Int,
                       protected: (Node) -> Bool = { _ in false }) -> BuiltSection {
@@ -414,7 +430,7 @@ struct StatementBuilder {
             // A container that also has its own postings gets a "(direct)"
             // detail row so the note still adds up visibly.
             if !node.children.isEmpty, node.own.contains(where: { ($0 ?? 0) != 0 }) {
-                rows.append(StatementNoteRow(label: "\(node.name) (direct)",
+                rows.append(StatementNoteRow(label: String(localized: "\(node.name) (direct)"),
                                              depth: depth + 1, amounts: node.own))
             }
             for child in Self.sort(node.children, by: .magnitude) {
@@ -440,12 +456,12 @@ struct StatementBuilder {
                     noteRows(child, depth: 0, into: &rows)
                 }
                 if node.own.contains(where: { ($0 ?? 0) != 0 }) {
-                    rows.append(StatementNoteRow(label: "\(node.name) (direct)",
+                    rows.append(StatementNoteRow(label: String(localized: "\(node.name) (direct)"),
                                                  depth: 0, amounts: node.own))
                 }
                 let note = StatementNote(number: 0, title: node.name,
                                          rows: rows,
-                                         totalLabel: "Total \(node.name)",
+                                         totalLabel: String(localized: "Total \(node.name)"),
                                          totalAmounts: node.total)
                 notes.append(note)
                 items.append(StatementItem(caption: node.name,
@@ -465,12 +481,12 @@ struct StatementBuilder {
             for node in Self.sort(folded, by: .magnitude) {
                 noteRows(node, depth: 0, into: &rows)
             }
-            let note = StatementNote(number: 0, title: "Other \(title.lowercased())",
+            let note = StatementNote(number: 0, title: otherLabel,
                                      rows: rows,
-                                     totalLabel: "Total other \(title.lowercased())",
+                                     totalLabel: totalOtherLabel,
                                      totalAmounts: otherTotals)
             notes.append(note)
-            items.append(StatementItem(caption: "Other \(title.lowercased())",
+            items.append(StatementItem(caption: otherLabel,
                                        noteRef: notes.count - 1,
                                        amounts: otherTotals, role: .line))
         }
@@ -505,15 +521,17 @@ struct StatementBuilder {
     }
 
     private func basisNote(asOf: Date, comparativeLabel: String?) -> StatementNote {
+        let commodity = book.rootAccount.commodity
+        let currency = commodity.fullName.isEmpty ? commodity.mnemonic : commodity.fullName
         var body = [
-            "Prepared from the accounting records of the book on an accrual basis.",
-            "Assets are stated at estimated current value: securities at the most recent recorded market price, foreign-currency balances translated at the nearest recorded exchange rate.",
-            "Amounts are presented in \(book.rootAccount.commodity.fullName.isEmpty ? book.rootAccount.commodity.mnemonic : book.rootAccount.commodity.fullName) and rounded to the nearest cent; negatives are shown in parentheses.",
+            String(localized: "Prepared from the accounting records of the book on an accrual basis."),
+            String(localized: "Assets are stated at estimated current value: securities at the most recent recorded market price, foreign-currency balances translated at the nearest recorded exchange rate."),
+            String(localized: "Amounts are presented in \(currency) and rounded to the nearest cent; negatives are shown in parentheses."),
         ]
         if let comparativeLabel {
-            body.append("Comparative figures are presented for \(comparativeLabel).")
+            body.append(String(localized: "Comparative figures are presented for \(comparativeLabel)."))
         }
-        return StatementNote(number: 1, title: "Basis of preparation", body: body)
+        return StatementNote(number: 1, title: String(localized: "Basis of preparation"), body: body)
     }
 
     /// The Statement of Financial Position (ASC 274 personal presentation):
@@ -539,11 +557,16 @@ struct StatementBuilder {
             let dominant = weights.max { $0.value < $1.value }?.key
             return Self.liquidityClass(dominant) == 0
         }
-        var assets = buildSection(title: "Assets", totalLabel: "Total assets",
+        var assets = buildSection(title: StatementLabels.assets, totalLabel: String(localized: "Total assets"),
+                                  otherLabel: String(localized: "Other assets"),
+                                  totalOtherLabel: String(localized: "Total other assets"),
                                   forest: assetForest, ordering: .liquidity,
                                   columnCount: columnCount,
                                   protected: protectedAsset)
-        var liabilities = buildSection(title: "Liabilities", totalLabel: "Total liabilities",
+        var liabilities = buildSection(title: StatementLabels.liabilities,
+                                       totalLabel: String(localized: "Total liabilities"),
+                                       otherLabel: String(localized: "Other liabilities"),
+                                       totalOtherLabel: String(localized: "Total other liabilities"),
                                        forest: liabilityForest, ordering: .maturity,
                                        columnCount: columnCount,
                                        protected: { $0.name == StatementLabels.uncategorised })
@@ -569,7 +592,7 @@ struct StatementBuilder {
                              amounts: columnCount == 2 ? [$0.amount, nil] : [$0.amount])
         }
         equityRows.append(StatementNoteRow(
-            label: "Accumulated surplus (income less expenses to date)", depth: 0,
+            label: String(localized: "Accumulated surplus (income less expenses to date)"), depth: 0,
             amounts: columnCount == 2 ? [current.retainedEarnings, prior?.retainedEarnings]
                                       : [current.retainedEarnings]))
         // Multi-currency books: income converts at posting-date rates while
@@ -580,27 +603,27 @@ struct StatementBuilder {
         let priorResidual = prior.map { ($0.totalAssets - $0.totalLiabilities) - $0.totalEquity }
         if currentResidual != 0 || (priorResidual ?? 0) != 0 {
             equityRows.append(StatementNoteRow(
-                label: "Currency translation and valuation differences", depth: 0,
+                label: String(localized: "Currency translation and valuation differences"), depth: 0,
                 amounts: columnCount == 2 ? [currentResidual, priorResidual]
                                           : [currentResidual]))
         }
         let composition = StatementNote(
             number: notes.count + 1,
-            title: "Composition of net worth",
+            title: String(localized: "Composition of net worth"),
             rows: equityRows,
-            totalLabel: "Net worth",
+            totalLabel: String(localized: "Net worth"),
             totalAmounts: netWorth)
         notes.append(composition)
 
         return Statement(
-            title: "Statement of Financial Position",
+            title: String(localized: "Statement of Financial Position"),
             entityName: entityName,
-            periodLabel: "As at \(currentLabel)",
+            periodLabel: String(localized: "As at \(currentLabel)"),
             unitsLabel: unitsLabel(),
             currencyCode: current.currencyCode,
             columns: columns,
             sections: faces,
-            grandTotal: ("Net worth (Note \(composition.number))", netWorth),
+            grandTotal: (String(localized: "Net worth (Note \(composition.number))"), netWorth),
             notes: notes)
     }
 
@@ -617,11 +640,15 @@ struct StatementBuilder {
         let expenseForest = captionForest(lineSets:
             [current.expenses] + (prior.map { [$0.expenses] } ?? []))
 
-        var income = buildSection(title: "Income", totalLabel: "Total income",
+        var income = buildSection(title: String(localized: "Income"), totalLabel: String(localized: "Total income"),
+                                  otherLabel: String(localized: "Other income"),
+                                  totalOtherLabel: String(localized: "Total other income"),
                                   forest: incomeForest, ordering: .magnitude,
                                   columnCount: columnCount,
                                   protected: { $0.name == StatementLabels.uncategorised })
-        var expenses = buildSection(title: "Expenses", totalLabel: "Total expenses",
+        var expenses = buildSection(title: String(localized: "Expenses"), totalLabel: String(localized: "Total expenses"),
+                                    otherLabel: String(localized: "Other expenses"),
+                                    totalOtherLabel: String(localized: "Total other expenses"),
                                     forest: expenseForest, ordering: .magnitude,
                                     columnCount: columnCount,
                                     protected: { $0.name == StatementLabels.uncategorised })
@@ -639,14 +666,14 @@ struct StatementBuilder {
             basis: basisNote(asOf: current.to, comparativeLabel: priorLabel))
 
         return Statement(
-            title: "Income Statement",
+            title: String(localized: "Income Statement"),
             entityName: entityName,
             periodLabel: currentLabel,
             unitsLabel: unitsLabel(),
             currencyCode: current.currencyCode,
             columns: columns,
             sections: faces,
-            grandTotal: ("Net surplus for the period", net),
+            grandTotal: (String(localized: "Net surplus for the period"), net),
             notes: notes)
     }
 
@@ -664,31 +691,31 @@ struct StatementBuilder {
         let valuation = closingNet - openingNet - period.netIncome
 
         let rows: [StatementItem] = [
-            StatementItem(caption: "Net worth at the beginning of the period",
+            StatementItem(caption: String(localized: "Net worth at the beginning of the period"),
                           amounts: [openingNet], role: .line),
-            StatementItem(caption: "Net surplus for the period",
+            StatementItem(caption: String(localized: "Net surplus for the period"),
                           amounts: [period.netIncome], role: .line),
-            StatementItem(caption: "Income", amounts: [period.totalIncome],
+            StatementItem(caption: String(localized: "Income"), amounts: [period.totalIncome],
                           depth: 1, role: .childLine),
-            StatementItem(caption: "Expenses", amounts: [-period.totalExpenses],
+            StatementItem(caption: String(localized: "Expenses"), amounts: [-period.totalExpenses],
                           depth: 1, role: .childLine),
-            StatementItem(caption: "Net valuation and currency movement",
+            StatementItem(caption: String(localized: "Net valuation and currency movement"),
                           amounts: [valuation], role: .line),
         ]
-        let section = StatementSection(title: "Changes in net worth",
+        let section = StatementSection(title: String(localized: "Changes in net worth"),
                                        items: rows,
-                                       totalLabel: "Net worth at the end of the period",
+                                       totalLabel: String(localized: "Net worth at the end of the period"),
                                        totalAmounts: [closingNet])
 
         let basis = basisNote(asOf: closing.asOf, comparativeLabel: nil)
         var valuationNote = StatementNote(
-            number: 2, title: "Net valuation and currency movement",
-            body: ["The movement not explained by the period's income and expenses: market-price changes on securities, foreign-currency translation, and entries made directly to equity. Derived as closing net worth less opening net worth less the net surplus."])
-        valuationNote.totalLabel = "Net valuation and currency movement"
+            number: 2, title: String(localized: "Net valuation and currency movement"),
+            body: [String(localized: "The movement not explained by the period’s income and expenses: market-price changes on securities, foreign-currency translation, and entries made directly to equity. Derived as closing net worth less opening net worth less the net surplus.")])
+        valuationNote.totalLabel = String(localized: "Net valuation and currency movement")
         valuationNote.totalAmounts = [valuation]
 
         return Statement(
-            title: "Statement of Changes in Net Worth",
+            title: String(localized: "Statement of Changes in Net Worth"),
             entityName: entityName,
             periodLabel: currentLabel,
             unitsLabel: unitsLabel(),
@@ -702,6 +729,6 @@ struct StatementBuilder {
     private func unitsLabel() -> String {
         let commodity = book.rootAccount.commodity
         let name = commodity.fullName.isEmpty ? commodity.mnemonic : commodity.fullName
-        return "All amounts in \(name) (\(commodity.mnemonic))"
+        return String(localized: "All amounts in \(name) (\(commodity.mnemonic))")
     }
 }

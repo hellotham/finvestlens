@@ -51,6 +51,44 @@ public enum ReportKind: String, CaseIterable, Identifiable, Codable, Sendable {
 
     public var id: String { rawValue }
 
+    /// The report's name, for the reader. `rawValue` is what a saved report
+    /// and the session's last tab store, and it stays as it is in every
+    /// language — so the name shown is spelled out here, case by case, where
+    /// the compiler can see each one and the catalog's gate can miss it.
+    var title: String {
+        switch self {
+        case .balanceSheet: String(localized: "Balance Sheet")
+        case .incomeStatement: String(localized: "Income Statement")
+        case .equityStatement: String(localized: "Equity Statement")
+        case .trialBalance: String(localized: "Trial Balance")
+        case .accountSummary: String(localized: "Account Summary")
+        case .netWorth: String(localized: "Net Worth")
+        case .cashFlow: String(localized: "Cash Flow")
+        case .incomeExpense: String(localized: "Income & Expense")
+        case .averageBalance: String(localized: "Average Balance")
+        case .transactions: String(localized: "Transactions")
+        case .reconcile: String(localized: "Reconciliation")
+        case .forecast: String(localized: "Forecast")
+        case .spendingInsights: String(localized: "Spending Insights")
+        case .portfolio: String(localized: "Portfolio")
+        case .investmentLots: String(localized: "Investment Lots")
+        case .priceScatter: String(localized: "Price Scatter")
+        case .capitalGains: String(localized: "Capital Gains")
+        case .receivableAging: String(localized: "Receivable Aging")
+        case .payableAging: String(localized: "Payable Aging")
+        case .customerSummary: String(localized: "Customer Summary")
+        case .vendorSummary: String(localized: "Vendor Summary")
+        case .employeeSummary: String(localized: "Employee Summary")
+        case .jobSummary: String(localized: "Job Summary")
+        }
+    }
+
+    /// The name of a stored kind — or the stored text itself, for a kind a
+    /// later version wrote and this one does not know.
+    static func title(of stored: String) -> String {
+        ReportKind(rawValue: stored)?.title ?? stored
+    }
+
     enum Group: String, CaseIterable, Identifiable {
         case statements = "Statements"
         case activity = "Activity"
@@ -150,29 +188,29 @@ public enum ReportKind: String, CaseIterable, Identifiable, Codable, Sendable {
 
     var blurb: String {
         switch self {
-        case .balanceSheet: "Where you stand: assets, liabilities, equity"
-        case .incomeStatement: "What the period earned and spent"
-        case .equityStatement: "How your capital moved, and why"
-        case .trialBalance: "Every balance, and proof the books balance"
-        case .accountSummary: "The whole chart of accounts, to a depth"
-        case .netWorth: "Net worth over time"
-        case .cashFlow: "Where the money came from and went"
-        case .incomeExpense: "Spending and income by category and month"
-        case .averageBalance: "Average balance over time, by interval"
-        case .transactions: "An account's postings over a period"
-        case .reconcile: "Reconciled, cleared, and outstanding"
-        case .forecast: "Projected balances from scheduled transactions"
-        case .spendingInsights: "This period against the last, in plain language"
-        case .portfolio: "Holdings, allocation, and value"
-        case .investmentLots: "Purchase lots and cost basis"
-        case .priceScatter: "Price history for a security"
-        case .capitalGains: "Realised gains by disposal"
-        case .receivableAging: "What customers owe, by how overdue"
-        case .payableAging: "What you owe vendors, by how overdue"
-        case .customerSummary: "Sales and receivables by customer"
-        case .vendorSummary: "Bills and payables by vendor"
-        case .employeeSummary: "Expense vouchers and payables by employee"
-        case .jobSummary: "Charges and outstanding by job"
+        case .balanceSheet: String(localized: "Where you stand: assets, liabilities, equity")
+        case .incomeStatement: String(localized: "What the period earned and spent")
+        case .equityStatement: String(localized: "How your capital moved, and why")
+        case .trialBalance: String(localized: "Every balance, and proof the books balance")
+        case .accountSummary: String(localized: "The whole chart of accounts, to a depth")
+        case .netWorth: String(localized: "Net worth over time")
+        case .cashFlow: String(localized: "Where the money came from and went")
+        case .incomeExpense: String(localized: "Spending and income by category and month")
+        case .averageBalance: String(localized: "Average balance over time, by interval")
+        case .transactions: String(localized: "An account's postings over a period")
+        case .reconcile: String(localized: "Reconciled, cleared, and outstanding")
+        case .forecast: String(localized: "Projected balances from scheduled transactions")
+        case .spendingInsights: String(localized: "This period against the last, in plain language")
+        case .portfolio: String(localized: "Holdings, allocation, and value")
+        case .investmentLots: String(localized: "Purchase lots and cost basis")
+        case .priceScatter: String(localized: "Price history for a security")
+        case .capitalGains: String(localized: "Realised gains by disposal")
+        case .receivableAging: String(localized: "What customers owe, by how overdue")
+        case .payableAging: String(localized: "What you owe vendors, by how overdue")
+        case .customerSummary: String(localized: "Sales and receivables by customer")
+        case .vendorSummary: String(localized: "Bills and payables by vendor")
+        case .employeeSummary: String(localized: "Expense vouchers and payables by employee")
+        case .jobSummary: String(localized: "Charges and outstanding by job")
         }
     }
 
@@ -314,7 +352,7 @@ struct ReportGallery: View {
                             Button {
                                 open(kind.defaultConfiguration(for: model))
                             } label: {
-                                Label(kind.rawValue, systemImage: kind.icon)
+                                Label(kind.title, systemImage: kind.icon)
                                     .scaledFont(.callout)
                                     .padding(.horizontal, 10)
                                     .padding(.vertical, 6)
@@ -410,7 +448,7 @@ struct ReportGallery: View {
                 }
                 .buttonStyle(.plain)
                 ForEach(ReportKind.Group.allCases, id: \.self) { group in
-                    Text(group.rawValue).scaledFont(.title2).fontWeight(.semibold)
+                    Text(group.title).scaledFont(.title2).fontWeight(.semibold)
                     LazyVGrid(columns: columns, alignment: .leading, spacing: 12) {
                         ForEach(ReportKind.allCases.filter { $0.group == group }) { kind in
                             catalogueCard(kind)
@@ -486,7 +524,7 @@ struct ReportGallery: View {
                 Label(saved.name, systemImage: "bookmark.fill")
                     .scaledFont(.headline)
                     .lineLimit(1)
-                Text("\(saved.configuration.kind) · \(model.label(for: saved.configuration.period))")
+                Text("\(ReportKind.title(of: saved.configuration.kind)) · \(model.label(for: saved.configuration.period))")
                     .scaledFont(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
@@ -508,7 +546,7 @@ struct ReportGallery: View {
             open(kind.defaultConfiguration(for: model))
         } label: {
             VStack(alignment: .leading, spacing: 4) {
-                Label(kind.rawValue, systemImage: kind.icon)
+                Label(kind.title, systemImage: kind.icon)
                     .scaledFont(.headline)
                     .lineLimit(1)
                 Text(kind.blurb)
@@ -643,6 +681,9 @@ struct ReportScreen: View {
     @State private var computeFinished = false
 
     private var kind: ReportKind? { ReportKind(rawValue: configuration.kind) }
+    /// The report's name as the reader sees it — on the progress line, as a
+    /// favourite's first name, and as the PDF's.
+    private var kindTitle: String { ReportKind.title(of: configuration.kind) }
 
     /// The kinds that render as annual-report statements (report-redesign
     /// §3.2) rather than the generic document scaffold.
@@ -675,7 +716,7 @@ struct ReportScreen: View {
             }
             ToolbarItemGroup {
                 Button("Save as Favourite", systemImage: "bookmark") {
-                    savingName = configuration.kind
+                    savingName = kindTitle
                     savePromptShown = true
                 }
                 .help("Save this report and its settings as a favourite")
@@ -683,16 +724,16 @@ struct ReportScreen: View {
                     Button("PDF", systemImage: "arrow.up.doc") { exportPDF() }
                         .help("Export this report as a PDF")
                     if let statement {
-                        ShareLink(item: ShareableStatementPDF(title: configuration.kind,
+                        ShareLink(item: ShareableStatementPDF(title: kindTitle,
                                                               statement: statement),
-                                  preview: SharePreview("\(configuration.kind).pdf")) {
+                                  preview: SharePreview("\(kindTitle).pdf")) {
                             Label("Share", systemImage: "square.and.arrow.up")
                         }
                         .help("Share this report as a PDF")
                     } else if let printable = sharablePrintable {
-                        ShareLink(item: ShareableReportPDF(title: configuration.kind,
+                        ShareLink(item: ShareableReportPDF(title: kindTitle,
                                                            statement: printable),
-                                  preview: SharePreview("\(configuration.kind).pdf")) {
+                                  preview: SharePreview("\(kindTitle).pdf")) {
                             Label("Share", systemImage: "square.and.arrow.up")
                         }
                         .help("Share this report as a PDF")
@@ -710,7 +751,7 @@ struct ReportScreen: View {
             Text("Saving with an existing name replaces that favourite.")
         }
         .fileExporter(isPresented: $exporting, document: pdfDocument,
-                      contentType: .pdf, defaultFilename: configuration.kind) { _ in }
+                      contentType: .pdf, defaultFilename: kindTitle) { _ in }
     }
 
     @ViewBuilder
@@ -756,7 +797,7 @@ struct ReportScreen: View {
                     get: { configuration.step ?? .month },
                     set: { configuration.step = $0 })) {
                     ForEach(AverageBalanceStep.allCases) { step in
-                        Text(step.displayName).tag(step)
+                        Text(verbatim: AppModel.intervalName(step)).tag(step)
                     }
                 }
                 .pickerStyle(.menu)
@@ -780,7 +821,7 @@ struct ReportScreen: View {
                 if let statement {
                     StatementView(statement: statement)
                 } else {
-                    ProgressView("Preparing \(configuration.kind)…")
+                    ProgressView("Preparing \(kindTitle)…")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
@@ -800,7 +841,7 @@ struct ReportScreen: View {
                     ContentUnavailableView("Nothing to report", systemImage: kind.icon,
                                            description: Text(emptyReason(kind)))
                 } else {
-                    ProgressView("Preparing \(configuration.kind)…")
+                    ProgressView("Preparing \(kindTitle)…")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
@@ -833,11 +874,11 @@ struct ReportScreen: View {
 
     /// Why a report can be empty, in the report's own terms.
     private func emptyReason(_ kind: ReportKind) -> String {
-        if kind.usesSingleAccount { return "Choose an account above." }
+        if kind.usesSingleAccount { return String(localized: "Choose an account above.") }
         switch kind.group {
-        case .business: return "No business activity to report for this period."
-        case .investments: return "No security accounts or activity to report."
-        default: return "No activity to report for this period."
+        case .business: return String(localized: "No business activity to report for this period.")
+        case .investments: return String(localized: "No security accounts or activity to report.")
+        default: return String(localized: "No activity to report for this period.")
         }
     }
 
@@ -899,11 +940,11 @@ struct AccountScopeButton: View {
     }
 
     private var label: String {
-        guard let ids = accountIDs else { return "Bank & cash accounts" }
+        guard let ids = accountIDs else { return String(localized: "Bank & cash accounts") }
         switch ids.count {
-        case 0: return "Choose accounts…"
-        case 1: return model.accountName(ids.first!) ?? "1 account"
-        default: return "\(ids.count) accounts"
+        case 0: return String(localized: "Choose accounts…")
+        case 1: return model.accountName(ids.first!) ?? String(localized: "\(ids.count) accounts")
+        default: return String(localized: "\(ids.count) accounts")
         }
     }
 }
@@ -972,7 +1013,7 @@ struct FinancialYearPackSheet: View {
             .task(id: yearIndex) { await build() }
             .fileExporter(isPresented: $exporting, document: exportDocument,
                           contentType: .pdf,
-                          defaultFilename: "\(years[min(yearIndex, years.count - 1)].label) Pack") { _ in }
+                          defaultFilename: String(localized: "\(years[min(yearIndex, years.count - 1)].label) Pack")) { _ in }
         }
         .windowFloor(minWidth: 440, minHeight: 380)
     }

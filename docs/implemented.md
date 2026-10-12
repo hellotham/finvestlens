@@ -4209,7 +4209,8 @@ so this change is for the screen, not for the model.
 
 **Still English, and the same defect:** the report documents. A report's
 KPI, section, row and total labels are `String`s built in English for 29
-documents and drawn verbatim, on screen and in the PDF (`deferred.md` §3a).
+documents and drawn verbatim, on screen and in the PDF. *(Done since: "The
+reports in the reader's language", below.)*
 
 Receipts, 12 Oct 2026, on the tree as committed: every package suite passes
 (1,929 tests; FeatureUI 771), both unsigned app builds succeed, and the
@@ -4415,3 +4416,96 @@ acknowledgements held against `Package.resolved`. In the app's own target:
 Not done, and why: deferred.md §3a lists it — pictures, reasoning, a
 statement reader tuned for a large window, reading again for anything but a
 statement, prose in another language, and any run on an iPhone or iPad.
+
+## The reports in the reader's language (12 Oct 2026)
+
+What the review-deck change left open (`deferred.md` §3a, as it then read):
+a report's labels were `String`s written in English and drawn as they were,
+on screen, in the PDF and in what the narrator is handed. Closing that turned
+up the same thing on every surface around a report, and it is all done here.
+
+**What was English in every language, and is not now.**
+
+- *The documents.* The KPI, section, row, column and total labels and the
+  notes of the 29 report documents (`ReportBuilders.swift`,
+  `AppModel+ReportDocuments.swift`, `AppModel+FYPack.swift`), and the
+  sentences of Spending Insights (`SpendingInsights.summary`).
+- *The annual-report statements.* Financial position, income and expenses,
+  changes in net worth and the grouped trial balance: titles, face captions,
+  "Other" and "Total other" lines, the period and units lines, and every
+  note (`Statements.swift`, `AppModel+Statements.swift`).
+- *The gallery and an open report.* A report's name was its stored
+  identifier (`ReportKind.rawValue`) — in the gallery, on the tab, on the
+  progress line, as a favourite's first name and as the PDF's file name.
+  `ReportKind.title` is the name for the reader; the stored one is
+  unchanged, so saved reports and the last-open tab still resolve. The line
+  under each name, the group headings, why a report is empty, and the button
+  that names the accounts in scope were `String`s too.
+- *Periods.* The rules' names ("This financial year", "Last 12 months") and
+  the labels they resolve to ("FY 2025–26", "2026 to date", "Q3 2026"),
+  which head every report and every comparative column
+  (`ReportPeriod.swift`).
+- *The rest.* The two review decks' titles; the Price History and Forecast
+  mastheads; the legend of the monthly income-and-expenses chart; the
+  forecast's "Today" and "What-if"; the "Summary" and "In brief" headings of
+  a printed report; the lines the balance sheet adds itself ("Unrealised
+  FX", "Rounding on translation"); the passport's and the year pack's file
+  names.
+
+247 catalog entries, each in eight languages — 2,215 entries before, 2,462
+after.
+
+**How, where it was more than wrapping a literal.**
+
+- *Whole phrases.* A sentence put together from parts — "Spending " +
+  "rose" + a percentage + ", driven by …" — is four fragments that agree
+  with each other in English only. Each shape is its own sentence now, and
+  two things are joined by `ListFormatStyle`, which knows how the reader's
+  language joins them.
+- *One English, two meanings.* "Money in" and "Money out" head the cash-flow
+  report and mean something else elsewhere, so they are keyed
+  (`String(localized: "Money in (cash flow)", defaultValue: "Money in")`).
+- *Counts.* "Across 3 accounts: …" and its neighbours are plural entries.
+- *A year is not a number.* Put into a catalog phrase as an `Int`, 2026 is
+  formatted for the reader and a financial year read "FY 2,026". Years go
+  in as text; `ReportPeriodTests` holds the labels.
+- *A legend names a value.* The chart's two series were named by the
+  strings "Income" and "Expenses" passed as data, and data is drawn as it
+  is. The names are the reader's now.
+- *What the engine calls things stays what it was.* The account summary's
+  section titles and the interval and cost-basis names in the Reports and
+  Engine packages are identifiers as much as words — other code compares
+  them — so they are left in English there and given the reader's word
+  where they are shown (`AppModel.accountClassName`, `intervalName`,
+  `costBasisName`).
+
+**A fault this would have caused, found before it did.** The Financial
+Summary found the statement's two sections by looking for a title that
+*contained* "Assets" and "Liabilit". With the titles translated it would
+have found neither and drawn a page with no figures and nothing to say why.
+It asks for them by the label the builder used (`StatementLabels`), and
+`StatementTests` ties its totals to the balance sheet's.
+
+Tests added: every Spending Insights sentence word for word (it had one test,
+which looked for "fell" and a figure); period labels and names; the
+passport's sections; every report kind's name, and a stored kind this version
+does not know.
+
+Receipts, 12 Oct 2026, on the tree as committed: every package suite passes
+(2,013 tests; Reports 189, FeatureUI 788), both unsigned app builds succeed,
+and the localization gate — both platforms built with the extractor on —
+reports every emitted key present in eight languages.
+
+**Not observed.** A report on screen, or its PDF, in any language but
+English: the translations are in the bundle and nobody has looked at one.
+The same is true of the decks before it.
+
+**Found while doing this, and not done in this commit: it is not only the
+reports.** A `String` emits no key, so the catalog's gate has never been able
+to see one — and the app holds several hundred phrases that way. Counted by
+setting every string literal that reads as English against the keys the
+compiler emits for its file, on both platforms: the name of each undo action
+in the Edit menu, the toasts, most error and information messages, the names
+the engine gives a reconcile state, a recurrence, a find operator or a stock
+transaction, the open and save panels' titles, and more. `deferred.md` §3a
+has the list; it is the next thing done.

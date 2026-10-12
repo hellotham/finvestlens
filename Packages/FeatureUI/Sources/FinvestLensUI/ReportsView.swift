@@ -46,8 +46,8 @@ struct PriceScatterView: View {
         } else {
             VStack(alignment: .leading, spacing: 0) {
                 ReportMasthead(entity: model.statementEntityName,
-                               title: "Price History",
-                               period: "All recorded security prices",
+                               title: String(localized: "Price History"),
+                               period: String(localized: "All recorded security prices"),
                                code: model.reportCurrency.mnemonic)
                     .padding(.top, 12)
                 Chart(data) { point in
@@ -62,7 +62,7 @@ struct PriceScatterView: View {
             }
         }
         }
-        .reportPDFToolbar(title: "Price History", entity: model.statementEntityName) { model.priceHistoryDocument() }
+        .reportPDFToolbar(title: String(localized: "Price History"), entity: model.statementEntityName) { model.priceHistoryDocument() }
     }
 }
 
@@ -87,8 +87,8 @@ struct ForecastView: View {
             let events = points.filter { $0.change != 0 }
             VStack(spacing: 0) {
                 ReportMasthead(entity: model.statementEntityName,
-                               title: "Forecast",
-                               period: model.accountName(accountID) ?? "Projected balances",
+                               title: String(localized: "Forecast"),
+                               period: model.accountName(accountID) ?? String(localized: "Projected balances"),
                                code: model.reportCurrency.mnemonic)
                     .padding(.top, 12)
                 whatIfBar
@@ -147,7 +147,7 @@ struct ForecastView: View {
                                    description: Text("Create an asset account first."))
         }
         }
-        .reportPDFToolbar(title: "Forecast", entity: model.statementEntityName) { model.forecastDocument() }
+        .reportPDFToolbar(title: String(localized: "Forecast"), entity: model.statementEntityName) { model.forecastDocument() }
     }
 
     private var whatIfBar: some View {

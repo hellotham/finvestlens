@@ -123,7 +123,12 @@ extension AppModel {
             for group in groups {
                 builtSections.append(builder.buildSection(
                     title: group.title,
-                    totalLabel: "Total \(group.title)",
+                    totalLabel: String(localized: "Total \(group.title)"),
+                    // The group is one of the book's own top-level accounts,
+                    // named as the person named it — so its name goes into
+                    // the phrase as written, capital and all.
+                    otherLabel: String(localized: "Other \(group.title)"),
+                    totalOtherLabel: String(localized: "Total other \(group.title)"),
                     forest: group.nodes,
                     ordering: .magnitude,
                     columnCount: 2,
@@ -131,11 +136,11 @@ extension AppModel {
             }
 
             let format = AppDateFormat.current
-            var basis = StatementNote(number: 1, title: "Basis of preparation", body: [
-                "Balances in the raw double-entry convention: debit balances in the left column, credit balances in the right, converted to \(report.currencyCode) at \(format.long(asOf)) rates.",
-                "The unrealised valuation adjustment is what valuing holdings at market adds over cost — printed, not hidden, because it is the number that makes the columns agree.",
+            var basis = StatementNote(number: 1, title: String(localized: "Basis of preparation"), body: [
+                String(localized: "Balances in the raw double-entry convention: debit balances in the left column, credit balances in the right, converted to \(report.currencyCode) at \(format.long(asOf)) rates."),
+                String(localized: "The unrealised valuation adjustment is what valuing holdings at market adds over cost — printed, not hidden, because it is the number that makes the columns agree."),
             ])
-            basis.body.append("Zero balances are omitted.")
+            basis.body.append(String(localized: "Zero balances are omitted."))
 
             var (faces, notes) = { () -> ([StatementSection], [StatementNote]) in
                 var allNotes: [StatementNote] = [basis]
@@ -161,22 +166,22 @@ extension AppModel {
                 let adjustment = report.unrealisedAdjustment
                 let amounts: [Decimal?] = adjustment > 0 ? [nil, adjustment] : [-adjustment, nil]
                 faces.append(StatementSection(
-                    title: "Adjustments",
-                    items: [StatementItem(caption: "Unrealised valuation adjustment (Note 1)",
+                    title: String(localized: "Adjustments"),
+                    items: [StatementItem(caption: String(localized: "Unrealised valuation adjustment (Note 1)"),
                                           amounts: amounts, role: .line)],
-                    totalLabel: "Total adjustments",
+                    totalLabel: String(localized: "Total adjustments"),
                     totalAmounts: amounts))
             }
 
             return Statement(
-                title: "Trial Balance",
+                title: String(localized: "Trial Balance"),
                 entityName: statementEntityName,
-                periodLabel: "As at \(format.long(asOf))",
-                unitsLabel: "All amounts in \(report.currencyCode) · debits left, credits right",
+                periodLabel: String(localized: "As at \(format.long(asOf))"),
+                unitsLabel: String(localized: "All amounts in \(report.currencyCode) · debits left, credits right"),
                 currencyCode: report.currencyCode,
-                columns: ["Debit", "Credit"],
+                columns: [String(localized: "Debit"), String(localized: "Credit")],
                 sections: faces,
-                grandTotal: ("Total (the books balance)",
+                grandTotal: (String(localized: "Total (the books balance)"),
                              [report.totalDebits, report.totalCredits]),
                 notes: notes)
         }

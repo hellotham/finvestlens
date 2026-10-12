@@ -60,7 +60,7 @@ extension AppModel {
     /// not persisted).
     public func addWhatIfEvent(date: Date, amount: Decimal, label: String) {
         whatIfEvents.append(WhatIfEvent(date: date, amount: amount,
-                                        label: label.isEmpty ? "What-if" : label))
+                                        label: label.isEmpty ? String(localized: "What-if") : label))
     }
 
     public func removeWhatIfEvent(_ id: UUID) {
