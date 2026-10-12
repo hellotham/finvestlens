@@ -45,13 +45,11 @@ public struct DividendStatementDetails: Sendable {
     }
 }
 
-#if canImport(FoundationModels)
 import FoundationModels
 
 /// Reads a dividend statement PDF into ``DividendStatementDetails``
 /// (`FR-AI-04`), so franked/unfranked components and franking credits are
 /// booked correctly instead of as one opaque deposit.
-@available(macOS 26.0, iOS 26.0, *)
 public enum DividendExtractor {
 
     /// Field order matters, and the order that works is not the printed one.
@@ -60,7 +58,10 @@ public enum DividendExtractor {
     /// columns, and another's unfranked amount as just the cents figure.
     /// Franked first holds the row in place. Measured, not reasoned.
     @Generable
-    struct ModelDividend {
+    struct ModelDividend: DocumentAnswer {
+        /// Seven short fields.
+        static let replyReserve = 300
+
         @Guide(description: "Company or fund name paying the dividend")
         var security: String
         @Guide(description: "ASX/stock ticker code if shown, else empty")
@@ -77,14 +78,11 @@ public enum DividendExtractor {
         var netPayment: String
     }
 
-    public static func extract(text: String) async throws -> DividendStatementDetails {
-        guard IntelligenceAvailability.current().isAvailable else {
-            if case .unavailable(let reason) = IntelligenceAvailability.current() {
-                throw IntelligenceError.unavailable(reason)
-            }
-            throw IntelligenceError.unavailable("Apple Intelligence is not available.")
-        }
-
+    /// - Parameter explainRefusal: ask the model why, if it refuses the
+    ///   statement — a second request, for when one statement is being read
+    ///   and a person will see the reason.
+    public static func extract(text: String,
+                               explainRefusal: Bool = false) async throws -> DividendStatementDetails {
         // Two sentences, both bought with measurements on real statements.
         //
         // The franking credit has its own column whose header wraps across two
@@ -103,30 +101,28 @@ public enum DividendExtractor {
         // fail outright — `refusal`, "May contain sensitive content". The
         // reconciliation below fixes that figure without asking the model for
         // anything, so the prompt stays short enough not to trip the guardrail.
-        let session = LanguageModelSession(instructions: """
+        let instructions = """
             You read dividend and distribution statements from share registries. \
             Extract the amounts exactly as printed. The franking credit has its \
             own column in the same table, headed "Franking Credit", which may be \
             split across two lines — report it when it is there. Franking \
             credits are listed separately from the cash payment: never add them \
             to it and never subtract them from it.
-            """)
-        do {
-            let model = try await session.respond(
-                to: "Dividend statement:\n\n\(String(text.prefix(6000)))",
-                generating: ModelDividend.self,
-                options: .greedy
-            ).content
-            return DividendReconciler.details(
-                from: RawDividendFigures(
-                    security: model.security, ticker: model.ticker,
-                    paymentDate: model.paymentDate, franked: model.frankedAmount,
-                    unfranked: model.unfrankedAmount, credits: model.frankingCredits,
-                    net: model.netPayment),
-                printedIn: text)
-        } catch {
-            throw IntelligenceError.wrap(error)
-        }
+            """
+        // The statement is cut to what the model it runs on can read
+        // (`LanguageModels.fit`). Whether it was cut is not reported: a
+        // dividend statement is a page, and the figures the model returns
+        // are reconciled below against the whole of `text` whatever it read.
+        let (model, _) = try await LanguageModels.respond(
+            .dividendExtractor, instructions: instructions,
+            document: text, framing: { "Dividend statement:\n\n\($0)" },
+            generating: ModelDividend.self, explainRefusal: explainRefusal)
+        return DividendReconciler.details(
+            from: RawDividendFigures(
+                security: model.security, ticker: model.ticker,
+                paymentDate: model.paymentDate, franked: model.frankedAmount,
+                unfranked: model.unfrankedAmount, credits: model.frankingCredits,
+                net: model.netPayment),
+            printedIn: text)
     }
 }
-#endif

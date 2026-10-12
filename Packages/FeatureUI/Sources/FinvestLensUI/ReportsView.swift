@@ -116,7 +116,7 @@ struct ForecastView: View {
                     .padding()
                     .accessibilityLabel("Projected cash-flow balance")
                     Divider()
-                    if model.isIntelligenceAvailable {
+                    if model.isIntelligenceAvailable(for: .forecastNarrator) {
                         outlookBar
                         Divider()
                     }

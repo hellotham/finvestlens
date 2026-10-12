@@ -42,13 +42,11 @@ private func tempPDF() -> URL {
         .appendingPathComponent("finvestlens-live-\(UUID().uuidString).pdf")
 }
 
-private let modelAvailable = IntelligenceAvailability.current().isAvailable
-
-@Suite("Live on-device model", .enabled(if: modelAvailable),
+extension Live {
+@Suite("Live on-device model", .enabled(if: Fixtures.modelAvailable),
        .timeLimit(.minutes(4)), .serialized)
 struct LiveModelTests {
 
-    @available(macOS 26.0, *)
     @Test("Bank statement PDF extracts signed, dated transactions")
     func statement() async throws {
         let url = tempPDF()
@@ -81,7 +79,6 @@ struct LiveModelTests {
         #expect(calendar.component(.year, from: woolworths.date) == 2026)
     }
 
-    @available(macOS 26.0, *)
     @Test("The model classifies statement, dividend, and invoice documents")
     func classification() async throws {
         let statement = """
@@ -107,7 +104,6 @@ struct LiveModelTests {
         #expect(await DocumentClassifier.classify(text: invoice) == .invoice)
     }
 
-    @available(macOS 26.0, *)
     @Test("Transactions categorise onto the offered accounts")
     func categorization() async throws {
         let candidates = [
@@ -129,7 +125,6 @@ struct LiveModelTests {
         #expect(suggestions[items[2].id].map { byName[$0] } == "Income:Salary")
     }
 
-    @available(macOS 26.0, *)
     @Test("Invoice PDF splits into categorised line items")
     func invoice() async throws {
         let url = tempPDF()
@@ -164,7 +159,6 @@ struct LiveModelTests {
         #expect(analysis.lineItems.allSatisfy { $0.suggestedCategoryID == equipment })
     }
 
-    @available(macOS 26.0, *)
     @Test("Dividend statement extracts franked components and credits")
     func dividend() async throws {
         let url = tempPDF()
@@ -192,19 +186,12 @@ struct LiveModelTests {
         #expect(details.componentsMatchPayment)
     }
 
-    @available(macOS 26.0, *)
     @Test("Budget advisor keeps essentials near average and explains itself")
     func budget() async throws {
-        let groceries = GncGUID.random()
-        let dining = GncGUID.random()
-        let history = [
-            SpendingHistory(categoryID: groceries, fullName: "Expenses:Food:Groceries",
-                            monthlyAverage: 820, monthlyMinimum: 760, monthlyMaximum: 905),
-            SpendingHistory(categoryID: dining, fullName: "Expenses:Food:Dining Out",
-                            monthlyAverage: 460, monthlyMinimum: 300, monthlyMaximum: 640),
-        ]
+        let history = Fixtures.spendingHistory()
+        let groceries = history[0].categoryID
         let suggestion = try await BudgetAdvisor.suggest(history: history,
-                                                         monthlyIncome: 7800,
+                                                         monthlyIncome: Fixtures.monthlyIncome,
                                                          currencyCode: "AUD")
         #expect(!suggestion.summary.isEmpty)
         #expect(suggestion.lines.count == 2, "got \(suggestion.lines.map(\.fullName))")
@@ -219,46 +206,25 @@ struct LiveModelTests {
         }
     }
 
-    @available(macOS 26.0, *)
-    @Test("Report narrator writes grounded notes for a computed statement")
+    @Test("Report narrator writes notes for a computed statement")
     func reportCommentary() async throws {
-        // The FY 2025–26 income-statement anchor: figures arrive computed, the
-        // model only observes them.
-        let facts = ReportFacts(
-            reportTitle: "Income Statement",
-            periodLabel: "FY 2025–26",
-            currencyCode: "AUD",
-            headline: [("Income", Decimal(string: "233856.12")!),
-                       ("Expenses", Decimal(string: "79013.41")!),
-                       ("Net income", Decimal(string: "154842.71")!)],
-            lines: [("Income:Dividends", Decimal(string: "61234.00")!),
-                    ("Expenses:Income Tax", Decimal(string: "40185.68")!),
-                    ("Income:Distributions", Decimal(string: "9275.32")!),
-                    ("Expenses:Brokerage", Decimal(string: "4988.84")!)])
-
-        let notes = try await ReportNarrator.narrate(facts: facts)
-        // Nondeterministic wording; check the shape and that it is grounded.
-        #expect((2...4).contains(notes.count), "got \(notes)")
+        // Figures arrive computed; the model only observes them. What comes
+        // back has passed the number check, so between one note and four
+        // survive — a note that quotes a figure the report does not contain
+        // is dropped, not shown.
+        let notes = try await ReportNarrator.narrate(facts: Fixtures.income)
+        #expect((1...4).contains(notes.count), "got \(notes)")
         #expect(notes.allSatisfy { !$0.trimmingCharacters(in: .whitespaces).isEmpty })
     }
 
-    @available(macOS 26.0, *)
-    @Test("Forecast narrator writes a grounded outlook")
+    @Test("Forecast narrator writes an outlook")
     func forecast() async throws {
-        let facts = ForecastFacts(
-            currencyCode: "AUD", accountName: "Everyday", horizonDays: 90,
-            openingBalance: 8069, closingBalance: 9420,
-            lowestBalance: 3105,
-            lowestBalanceDate: IntelligenceParsing.date("2026-08-02"),
-            upcoming: [
-                (IntelligenceParsing.date("2026-08-01")!, "Rent", -2600),
-                (IntelligenceParsing.date("2026-08-15")!, "Salary", 5200),
-            ],
-            recentMonthlyNet: 450
-        )
-        let insights = try await ForecastNarrator.narrate(facts: facts)
+        let insights = try await ForecastNarrator.narrate(facts: Fixtures.forecast)
         #expect(!insights.headline.isEmpty)
-        #expect((2...4).contains(insights.insights.count))
+        // The headline has to stand; an observation that fails the check is
+        // dropped, so there may be fewer than the model wrote.
+        #expect(insights.insights.count <= 4)
     }
+}
 }
 #endif

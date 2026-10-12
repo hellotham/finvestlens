@@ -8,16 +8,13 @@
 
 import Foundation
 import FinvestLensEngine
-#if canImport(FoundationModels)
 import FoundationModels
-#endif
 
 /// Reads an attachment's extracted text and answers two things at once for its
 /// transaction: the best category from the book's chart, and a short friendly
 /// payee ("Sydney Water") to replace the raw bank narrative — the same
 /// convention the smart categoriser learns from hand-categorised transactions
 /// (`FR-AI-02`/`FR-AI-08`).
-@available(macOS 26.0, iOS 26.0, *)
 public enum AttachmentInsight {
 
     public struct Insight: Sendable {
@@ -25,31 +22,29 @@ public enum AttachmentInsight {
         public let friendlyDescription: String
     }
 
-    #if canImport(FoundationModels)
     @Generable
-    struct ModelAnswer {
+    struct ModelAnswer: DocumentAnswer {
+        /// A category name and a payee of five words.
+        static let replyReserve = 128
+
         @Guide(description: "The chosen category, copied EXACTLY from the category list")
         var category: String
         @Guide(description: "A short friendly payee for the transaction — the merchant or counterparty the document names, e.g. 'Sydney Water'. At most five words; no reference numbers or dates.")
         var payee: String
     }
-    #endif
 
     /// One transaction, one document. Returns `nil` when the model's category
     /// matches nothing in the chart.
+    ///
+    /// - Parameter explainRefusal: ask the model why, if it refuses the
+    ///   document — a second request, for when a person will see the reason.
     public static func analyze(
         documentText: String,
         currentDescription: String,
         amount: Decimal,
-        candidates: [CategoryCandidate]
+        candidates: [CategoryCandidate],
+        explainRefusal: Bool = false
     ) async throws -> Insight? {
-        #if canImport(FoundationModels)
-        guard case .available = IntelligenceAvailability.current() else {
-            if case .unavailable(let reason) = IntelligenceAvailability.current() {
-                throw IntelligenceError.unavailable(reason)
-            }
-            throw IntelligenceError.unavailable("Apple Intelligence is not available.")
-        }
         guard !candidates.isEmpty else { return nil }
 
         let offered = Array(candidates.prefix(80))
@@ -66,27 +61,26 @@ public enum AttachmentInsight {
             narrative. Negative amounts are spending, positive amounts are \
             income or refunds.
             """
-        let session = LanguageModelSession(instructions: instructions)
-        do {
-            let response = try await session.respond(
-                to: """
-                    Transaction: \(currentDescription) (\(amount))
-                    Document text:
-                    \(documentText)
-                    """,
-                generating: ModelAnswer.self,
-                options: .greedy
-            )
-            guard let hit = AccountNameMatcher.match(response.content.category, in: offered) else {
-                return nil
-            }
-            let payee = response.content.payee.trimmingCharacters(in: .whitespaces)
-            return Insight(accountID: hit.id, friendlyDescription: payee)
-        } catch {
-            throw IntelligenceError.wrap(error)
+        // The category list is most of this request — up to eighty names —
+        // so the document gets what is left of the model's window once that
+        // is paid for (`LanguageModels.fit`). Callers pass an excerpt from
+        // the top of the document, which is where a receipt says who it is
+        // from; whether that excerpt was cut again is not reported.
+        let (answer, _) = try await LanguageModels.respond(
+            .attachmentInsight, instructions: instructions,
+            document: documentText,
+            framing: { text in
+                """
+                Transaction: \(currentDescription) (\(amount))
+                Document text:
+                \(text)
+                """
+            },
+            generating: ModelAnswer.self, explainRefusal: explainRefusal)
+        guard let hit = AccountNameMatcher.match(answer.category, in: offered) else {
+            return nil
         }
-        #else
-        throw IntelligenceError.unavailable("Apple Intelligence is not available on this platform.")
-        #endif
+        let payee = answer.payee.trimmingCharacters(in: .whitespaces)
+        return Insight(accountID: hit.id, friendlyDescription: payee)
     }
 }

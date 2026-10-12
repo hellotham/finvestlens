@@ -197,6 +197,7 @@ extension AppModel {
                     ("Net worth", netWorth), ("Net surplus", surplus),
                     ("Income", income), ("Expenses", current?.totalExpenses ?? 0)]
                 var deltas: [(String, Decimal)] = []
+                var ratios: [(String, Decimal)] = []
                 if let openingNet {
                     figures.append(("Opening net worth", openingNet))
                     figures.append(("Change in net worth", netWorth - openingNet))
@@ -207,10 +208,10 @@ extension AppModel {
                 if let savingsRate {
                     var rounded = Decimal(); var raw = savingsRate
                     NSDecimalRound(&rounded, &raw, 1, .plain)
-                    figures.append(("Savings rate percent", rounded))
+                    ratios.append(("Savings rate", rounded))
                 }
                 return ReviewSlideFacts(kicker: "Highlights", periodLabel: label,
-                                        currencyCode: code, figures: figures,
+                                        currencyCode: code, figures: figures, ratios: ratios,
                                         deltaPercents: deltas)
             }())
     }
@@ -494,8 +495,8 @@ extension AppModel {
             footnote: "\(report.method.displayName) cost basis",
             facts: ReviewSlideFacts(
                 kicker: "Capital gains", periodLabel: label, currencyCode: code,
-                figures: [("Realised gain", total), ("Disposals", Decimal(report.lines.count))]
-                    + ranked.prefix(5).map { ($0.key, $0.value) }))
+                figures: [("Realised gain", total)] + ranked.prefix(5).map { ($0.key, $0.value) },
+                counts: [("Disposals", report.lines.count)]))
     }
 
     private func positionSlide(to: Date, label: String, code: String,
@@ -553,8 +554,8 @@ extension AppModel {
                 kicker: "Financial position", periodLabel: label, currencyCode: code,
                 figures: [("Assets", closing.totalAssets),
                           ("Liabilities", closing.totalLiabilities),
-                          ("Net worth", net),
-                          ("Debt to assets percent", debtRounded)]))
+                          ("Net worth", net)],
+                ratios: [("Debt to assets", debtRounded)]))
     }
 
     // MARK: Insights (Apple Intelligence, cached)
@@ -562,14 +563,26 @@ extension AppModel {
     /// The narrator's story for a slide, cached per (slide, book revision).
     /// Returns `nil` — leaving the deterministic headline — when Apple
     /// Intelligence is unavailable or declines.
+    ///
+    /// Both outcomes are remembered. A story is; and so is the narrator
+    /// having had nothing sound to say after its three drafts, because the
+    /// slide's facts will not change before the book does and a visit to the
+    /// slide should not cost three more requests each time. What is *not*
+    /// remembered is a failure of the model rather than of the slide — it is
+    /// unavailable, busy, out of allowance, or the visit was cut short — so
+    /// the next visit asks again.
     func reviewStory(for slide: ReviewSlide) async -> ReviewSlideStory? {
         let key = "review.story:\(slide.id):\(bookRevision):\(slide.facts.periodLabel)"
         if let cached = reviewStoryCache[key] { return cached }
-        guard isIntelligenceAvailable else { return nil }
+        guard !reviewStoryDeclined.contains(key),
+              isIntelligenceAvailable(for: .reviewNarrator) else { return nil }
         do {
             let story = try await ReviewNarrator.story(facts: slide.facts)
             reviewStoryCache[key] = story
             return story
+        } catch let error as IntelligenceError where !error.endsABatch {
+            reviewStoryDeclined.insert(key)
+            return nil
         } catch {
             return nil
         }

@@ -46,6 +46,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 @main
 struct finvestlensApp: App {
     @State private var model = AppModel()
+
+    init() {
+        // Private Cloud Compute is compiled in only alongside Apple's managed
+        // entitlement: the condition and the entitlement are added in one
+        // change, and until then the app has no way to reach the cloud model
+        // (see `LanguageModels.privateCloudComputeEnabled`).
+        #if PRIVATE_CLOUD_COMPUTE
+        IntelligenceBuild.offersPrivateCloudCompute()
+        #endif
+    }
     /// Mirrors the register's View ▸ Style picker into the menu bar.
     @AppStorage("registerViewStyle") private var registerStyle = RegisterStyle.basic
     @AppStorage(AppearanceKey.registerRowHeight)
@@ -353,18 +363,18 @@ struct finvestlensApp: App {
                     .disabled(!model.isOpen)
                 Divider()
                 // Apple Intelligence features — disabled (with the reason as
-                // a tooltip) when the on-device model isn't available.
+                // a tooltip) when the model each would run on isn't available.
                 Button("Smart Import PDFs…") { model.smartImportRequested = true }
                     .keyboardShortcut("i", modifiers: [.command, .shift])
-                    .disabled(!model.isOpen || !model.isIntelligenceAvailable)
-                    .help(model.intelligenceUnavailableReason
+                    .disabled(!model.isOpen || model.smartImportUnavailableReason != nil)
+                    .help(model.smartImportUnavailableReason
                           ?? "Import bank statements, dividend statements, and invoices — each PDF is identified and handled automatically")
                 Button("Auto-Categorise Transactions…") { model.presentedPanel = .autoCategorize }
                     .disabled(!model.isOpen)
                 Button("Match Attachments…") { model.presentedPanel = .matchAttachments }
                     .keyboardShortcut("m", modifiers: [.command, .shift])
-                    .disabled(!model.isOpen || !model.isIntelligenceAvailable)
-                    .help(model.intelligenceUnavailableReason
+                    .disabled(!model.isOpen || model.matchAttachmentsUnavailableReason != nil)
+                    .help(model.matchAttachmentsUnavailableReason
                           ?? "Pick receipts and statements — each is matched to its transaction, linked, and categorised")
                 // Mode switching (⌘1…⌘7) lives in the View menu, where the
                 // HIG puts commands that change what is displayed. A second
@@ -439,6 +449,14 @@ struct finvestlensApp: App {
                 Button("Payable Aging Report…") { model.openPayableAging() }
                     .disabled(!model.isOpen)
             }
+            #if os(iOS)
+            // The Mac's Settings scene supplies this item itself; iPadOS has
+            // a menu bar and no Settings scene to fill it.
+            CommandGroup(replacing: .appSettings) {
+                Button("Settings…") { model.showingSettings = true }
+                    .keyboardShortcut(",", modifiers: .command)
+            }
+            #endif
             CommandGroup(replacing: .help) {
                 Button("FinvestLens Help") {
                     #if os(macOS)

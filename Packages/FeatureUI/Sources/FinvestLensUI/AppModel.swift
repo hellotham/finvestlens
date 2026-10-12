@@ -534,6 +534,10 @@ public final class AppModel {
     /// Financial Review slide stories, keyed by (slide, revision, period) —
     /// the on-device model writes each once per book state.
     @ObservationIgnored var reviewStoryCache: [String: ReviewSlideStory] = [:]
+    /// Slides the narrator was asked about and had nothing sound to say for,
+    /// by the same key — so the deterministic headline stands until the book
+    /// changes, instead of three more drafts being spent on every visit.
+    @ObservationIgnored var reviewStoryDeclined: Set<String> = []
 
     @ObservationIgnored private var descriptionRecencyCache: [(text: String, folded: String)] = []
     @ObservationIgnored private var descriptionRecencyRevision = -1
@@ -1611,6 +1615,9 @@ public final class AppModel {
     public var printCheckRequestTxnID: GncGUID?
     /// Set by the Help menu to present the in-app help / shortcut reference.
     public var showingHelp = false
+    /// iPhone and iPad: the settings sheet. The Mac has a Settings window,
+    /// which the system presents.
+    public var showingSettings = false
 
     /// A user-facing document error (open/new/import failed). When
     /// ``DocumentError/lockedURL`` is set the UI offers "Break Lock" recovery;

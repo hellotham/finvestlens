@@ -73,6 +73,7 @@ private let receiptPath = ProcessInfo.processInfo.environment["FL_RECEIPT_DIR"]
 ///
 ///     FL_RECEIPT_DIR=~/path/to/receipts swift test \
 ///       --package-path Packages/Intelligence --filter LiveReceipts
+extension Live {
 @Suite("LiveReceipts", .enabled(if: receiptPath != nil && IntelligenceAvailability.current().isAvailable),
        .timeLimit(.minutes(20)), .serialized)
 struct LiveReceiptTests {
@@ -129,5 +130,6 @@ struct LiveReceiptTests {
         // Most should still get through; a wholesale collapse is a real failure.
         #expect(analysed * 2 >= sample.count)
     }
+}
 }
 #endif

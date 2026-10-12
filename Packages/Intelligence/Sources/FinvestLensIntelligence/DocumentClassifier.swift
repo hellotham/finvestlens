@@ -7,9 +7,7 @@
 //
 
 import Foundation
-#if canImport(FoundationModels)
 import FoundationModels
-#endif
 
 /// What kind of financial document a PDF is, deciding how Smart Import
 /// handles it (`FR-AI-07`).
@@ -134,12 +132,10 @@ public enum DocumentClassifier {
         return .unknown
     }
 
-    /// Classifies with the on-device model, falling back to keywords.
+    /// Classifies with the on-device model, falling back to keywords
+    /// whenever the model cannot answer — unavailable, refused, or an answer
+    /// that is none of the kinds.
     public static func classify(text: String) async -> FinancialDocumentKind {
-        #if canImport(FoundationModels)
-        guard IntelligenceAvailability.current().isAvailable else {
-            return classifyByKeywords(text)
-        }
         // No session instructions, on purpose. Against the macOS 27 model
         // (9 Oct 2026) *any* instructions — the original definitions, or a
         // bare "you are an assistant for a personal finance app" role line —
@@ -153,34 +149,32 @@ public enum DocumentClassifier {
         // model output, read 9 Oct 2026). `permissiveContentTransformations`
         // is no alternative — it applies only to string responses, and this
         // is guided generation.
-        let session = LanguageModelSession()
-        do {
-            let answer = try await session.respond(
-                to: """
-                    Which kind of financial document is this text: bank statement, \
-                    dividend statement, invoice or receipt, or something else? A bank \
-                    or credit card statement lists many dated transactions with a \
-                    running balance. A dividend statement reports a single dividend or \
-                    distribution payment. An invoice or receipt lists purchased items \
-                    with a total.
+        //
+        // The 1,500 characters are a sample, not a window: the top of a
+        // document says what it is. No model this runs on is too small for
+        // them — 1,500 digits are 1,725 tokens at the worst rate measured —
+        // so the sample goes as it is.
+        let sample = String(text.prefix(1500))
+        let prompt = """
+            Which kind of financial document is this text: bank statement, \
+            dividend statement, invoice or receipt, or something else? A bank \
+            or credit card statement lists many dated transactions with a \
+            running balance. A dividend statement reports a single dividend or \
+            distribution payment. An invoice or receipt lists purchased items \
+            with a total.
 
-                    \(String(text.prefix(1500)))
-                    """,
-                generating: ModelKind.self,
-                options: .greedy
-            ).content
+            \(sample)
+            """
+        do {
+            let answer = try await LanguageModels.respond(
+                .documentClassifier, prompt: prompt, generating: ModelKind.self)
             let kind = FinancialDocumentKind(rawValue: answer.kind.lowercased()) ?? .unknown
             return kind == .unknown ? classifyByKeywords(text) : kind
         } catch {
             return classifyByKeywords(text)
         }
-        #else
-        return classifyByKeywords(text)
-        #endif
     }
 
-    #if canImport(FoundationModels)
-    @available(macOS 26.0, iOS 26.0, *)
     @Generable
     struct ModelKind {
         @Guide(description: "The document kind", .anyOf([
@@ -188,5 +182,4 @@ public enum DocumentClassifier {
         ]))
         var kind: String
     }
-    #endif
 }

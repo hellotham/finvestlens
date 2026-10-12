@@ -33,7 +33,10 @@ export const release = {
   sha256: '477d4ccd7bf024f463f083835496f8fd1744ba6eee7793fd788befde069d92d9',
   /** Release assets live on GitHub, not in this repository. */
   url: 'https://github.com/hellotham/finvestlens/releases/latest',
-  requirements: 'macOS 27 or later · Apple silicon',
+  /** What the file above needs — not what the source tree builds for. 1.1
+   *  was built for macOS 26.5; the 27.0 targets arrive with the 1.2 DMG, and
+   *  this line moves in the same change as `version`, `file` and `sha256`. */
+  requirements: 'macOS 26.5 or later · Apple silicon and Intel',
   signedBy: 'Developer ID Application: Hello Tham Pty. Ltd. (RPL5R637DS)',
 } as const;
 

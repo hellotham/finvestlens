@@ -538,6 +538,9 @@ public struct FinvestLensRootView: View {
     private var navigationSplit: some View {
         NavigationSplitView {
             ModeSidebar(model: model)
+                #if os(iOS)
+                .safeAreaInset(edge: .bottom, spacing: 0) { SidebarFooter(model: model) }
+                #endif
                 // **No title.** HIG *Toolbars*: "If titling a toolbar seems
                 // redundant, you can leave the title area empty" — Notes does
                 // exactly this. Here it is redundant three times over: the
@@ -731,6 +734,12 @@ public struct FinvestLensRootView: View {
             csvDocument: $csvDocument, showingCSVExport: $showingCSVExport,
             csvFilename: $csvFilename))
         .sheet(isPresented: $model.showingHelp) { HelpView() }
+        #if os(iOS)
+        .sheet(isPresented: $model.showingSettings) {
+            SettingsSheet(model: model)
+                .finvestLensAppearance()
+        }
+        #endif
         .sheet(item: $model.printCheckRequestTxnID) { txnID in
             CheckPrintSheet(model: model, txnID: txnID)
         }
@@ -1697,38 +1706,7 @@ struct RegisterView: View {
     /// the primary action here and it stays on the entry bar and \u{2318}N.
     private var actionsMenu: some View {
         Menu {
-            Button("Reconcile Account…", systemImage: "checkmark.seal") {
-                #if os(macOS)
-                if let id = model.selectedAccountID { openWindow(id: "reconcile", value: id) }
-                #else
-                model.presentedPanel = .reconcile
-                #endif
-            }
-            .disabled(model.selectedAccountID == nil)
-            Button("Bulk Edit…", systemImage: "square.and.pencil") {
-                model.presentedPanel = .bulkEdit
-            }
-            .disabled(model.selectedTransactionIDs.count < 2)
-            Divider()
-            Button("Import Bank File…", systemImage: "square.and.arrow.down.on.square") {
-                model.bankImportRequested = true
-            }
-            Button("Smart Import PDFs…", systemImage: "doc.viewfinder") {
-                model.smartImportRequested = true
-            }
-            .disabled(!model.isIntelligenceAvailable)
-            .help(model.intelligenceUnavailableReason
-                  ?? "Import bank statements, dividend statements, and invoices — each PDF is identified and handled automatically")
-            Button("Auto-Categorise…", systemImage: "sparkles") {
-                model.presentedPanel = .autoCategorize
-            }
-            .help("Assign categories to uncategorised transactions")
-            Button("Match Attachments…", systemImage: "paperclip.badge.ellipsis") {
-                model.presentedPanel = .matchAttachments
-            }
-            .disabled(!model.isIntelligenceAvailable)
-            .help(model.intelligenceUnavailableReason
-                  ?? "Pick receipts and statements — each is matched to its transaction, linked, and categorised")
+            RegisterActions(model: model, scope: .regular)
         } label: {
             Label("Actions", systemImage: "ellipsis.circle")
         }
@@ -3335,7 +3313,7 @@ struct TransactionEditorSheet: View {
                             }
                         }
                     }
-                    if model.isIntelligenceAvailable {
+                    if model.isIntelligenceAvailable(for: .invoiceAnalyzer) {
                         Button {
                             #if os(macOS)
                             if let url = MacFilePanel.open(types: [.pdf],
@@ -3569,10 +3547,13 @@ struct TransactionEditorSheet: View {
                           amountText: NSDecimalNumber(decimal: $0.amount).stringValue)
         }
         guard !items.isEmpty else {
-            commitError = "No line items were found in this invoice."
+            commitError = String(localized: "No line items were found in this invoice.")
             return
         }
         lines = [funding] + items
+        if !analysis.readWholeDocument {
+            commitError = String(localized: "This invoice is longer than Apple Intelligence can read at once, so only its first part was read. Line items further down are missing.")
+        }
     }
 
     /// The commodity a leg's own amount is denominated in, when it is not the

@@ -9,6 +9,7 @@
 import SwiftUI
 import FinvestLensEngine
 import FinvestLensInterchange
+import FinvestLensIntelligence
 
 /// A file the user chose to import, with its detected format. PDF statements
 /// arrive with `prestaged` rows already extracted by Apple Intelligence.
@@ -247,7 +248,7 @@ struct ImportView: View {
                         Toggle("Post unmatched rows to the imbalance account", isOn: $fallbackToImbalance)
                             .help("Rows nothing categorised still import, parked in Imbalance for the Uncategorised review to sweep")
                     }
-                    if model.isIntelligenceAvailable {
+                    if model.isIntelligenceAvailable(for: .transactionCategorizer) {
                         Section {
                             Button {
                                 suggestCategories()

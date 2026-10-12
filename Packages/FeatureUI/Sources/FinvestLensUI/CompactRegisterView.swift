@@ -129,6 +129,22 @@ struct CompactRegisterView: View {
             CompactTransactionEditor(model: model, editingID: nil)
         }
         .toolbar {
+            // What can be *done* to this register: the regular shell's
+            // Actions menu, from the one definition both shells draw
+            // (`RegisterActions`). The phone leaves out importing, which
+            // `FR-PLT-06` keeps off it, and Bulk Edit and Match Attachments,
+            // which work on a multiple selection and a file picker's batch
+            // that this list does not offer. Until 12 Oct 2026 a
+            // reconciliation could be started on the phone only from the
+            // dashboard's Up Next card, never from the account itself.
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    RegisterActions(model: model, scope: .phone(account: !wholeBook))
+                } label: {
+                    Label("Actions", systemImage: "ellipsis.circle")
+                }
+                .accessibilityLabel("Actions")
+            }
             ToolbarItem(placement: .primaryAction) {
                 Button("New Transaction", systemImage: "plus") { adding = true }
                     .disabled(model.postableAccounts.count < 2)

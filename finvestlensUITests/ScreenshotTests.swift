@@ -142,9 +142,48 @@ final class ScreenshotTests: XCTestCase {
                           "one Back from \(row) returns to More")
         }
 
+        // More ▸ Settings: the five panes, each one tap in and one Back out,
+        // and Done closes the sheet. Until 12 Oct 2026 nothing on iPhone or
+        // iPad presented the panes at all.
+        if tapRow("Settings", app) {
+            XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 5),
+                          "Settings opened as a sheet with its own title")
+            capture("tour-settings")
+            for pane in ["General", "Appearance", "Pricing", "Documents", "Apple Intelligence"] {
+                guard tapRow(pane, app) else { XCTFail("Settings has no \(pane) row"); continue }
+                XCTAssertFalse(app.navigationBars["Settings"].exists, "\(pane) did not push")
+                capture("tour-settings-\(pane.lowercased().replacingOccurrences(of: " ", with: "-"))")
+                if pane == "Apple Intelligence" {
+                    XCTAssertTrue(app.staticTexts["Where it runs"].firstMatch.exists
+                                  || app.staticTexts["WHERE IT RUNS"].firstMatch.exists,
+                                  "the pane says where Apple Intelligence runs")
+                }
+                popToRoot(app)
+                XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 3),
+                              "one Back from \(pane) returns to Settings")
+            }
+            XCTAssertTrue(tap("Done", in: app), "Settings has a Done button")
+            XCTAssertTrue(app.navigationBars["More"].waitForExistence(timeout: 3), "Done closes Settings")
+        } else {
+            XCTFail("More has no Settings row")
+        }
+        if tapRow("Help", app) {
+            settle(1)
+            capture("tour-help")
+            // A sheet the tour cannot close hides the tab bar from every
+            // step after it, and each of those steps then skips in silence —
+            // which is how a tour "passed" having toured half the app.
+            XCTAssertTrue(tap("Done", in: app), "Help has a Done button on the phone")
+            XCTAssertTrue(app.navigationBars["More"].waitForExistence(timeout: 3), "Done closes Help")
+        } else {
+            XCTFail("More has no Help row")
+        }
+
         // Investments: a holding's row opens its page; Back returns to the
         // holdings, and Back again to the list.
         tapMode("Investments", app)
+        XCTAssertTrue(app.navigationBars["Investments"].waitForExistence(timeout: 5),
+                      "the Investments tab is in front")
         if tapRow("All Holdings", app) {
             capture("tour-holdings")
             // The worklist row above also names VAS; the holding's own row starts with it.
@@ -167,9 +206,15 @@ final class ScreenshotTests: XCTestCase {
 
         // Accounts: a register, its editor, its row menu.
         tapMode("Accounts", app)
-        if expandGroup("Assets", app), expandGroup("Current Assets", app) {
+        XCTAssertTrue(app.navigationBars["Accounts"].waitForExistence(timeout: 5),
+                      "the Accounts tab is in front")
+        let reachedRegister = expandGroup("Assets", app) && expandGroup("Current Assets", app)
+        XCTAssertTrue(reachedRegister, "the account tree opens to Current Assets")
+        if reachedRegister {
             capture("tour-accounts-expanded")
-            if tapRow("Everyday Account", app) {
+            let opened = tapRow("Everyday Account", app)
+            XCTAssertTrue(opened, "the demo book's Everyday Account opens its register")
+            if opened {
                 capture("tour-register")
                 let posting = app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Sunfield Energy")).firstMatch
                 if posting.waitForExistence(timeout: 5) {
@@ -182,8 +227,55 @@ final class ScreenshotTests: XCTestCase {
                     posting.press(forDuration: 1.2)
                     settle(1)
                     capture("tour-register-menu")
-                    app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.08)).tap()
+                    // The row's own Auto-Categorise… is about that row, and
+                    // leaves it selected behind a list that shows no selection.
+                    if tap("Auto-Categorise…", in: app) {
+                        settle(2)
+                        capture("tour-autocategorise-row")
+                        if !tap("Cancel", in: app) { tap("Done", in: app) }
+                        settle(1)
+                    } else {
+                        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.08)).tap()
+                        settle(1)
+                    }
+                }
+                // The register's Actions menu: reconcile this account, or
+                // categorise — everything uncategorised, not the one row a
+                // row's menu selected a moment ago.
+                let actions = app.navigationBars.buttons["Actions"].firstMatch
+                if actions.waitForExistence(timeout: 5) {
+                    actions.tap()
                     settle(1)
+                    capture("tour-register-actions")
+                    XCTAssertTrue(app.buttons["Reconcile Account…"].firstMatch.exists,
+                                  "an account's register offers reconciling")
+                    XCTAssertFalse(app.buttons["Import Bank File…"].firstMatch.exists,
+                                   "importing is not offered on the phone (FR-PLT-06)")
+                    if tap("Auto-Categorise…", in: app) {
+                        settle(2)
+                        capture("tour-autocategorise-all")
+                        let scoped = app.staticTexts.matching(
+                            NSPredicate(format: "label CONTAINS[c] %@", "selected transaction")).firstMatch
+                        XCTAssertFalse(scoped.exists,
+                                       "the toolbar's Auto-Categorise is not scoped to a selection nobody can see")
+                        if !tap("Cancel", in: app) { tap("Done", in: app) }
+                        settle(1)
+                    } else {
+                        XCTFail("the Actions menu has no Auto-Categorise…")
+                    }
+                    actions.tap()
+                    settle(1)
+                    if tap("Reconcile Account…", in: app) {
+                        settle(2)
+                        capture("tour-reconcile")
+                        if !tap("Cancel", in: app) { tap("Close", in: app) }
+                        settle(1)
+                    } else {
+                        XCTFail("the Actions menu has no Reconcile Account…")
+                    }
+                } else {
+                    dump("no-actions-menu", app)
+                    XCTFail("the register has no Actions menu")
                 }
                 popToRoot(app)
                 XCTAssertTrue(app.navigationBars["Accounts"].waitForExistence(timeout: 3))
@@ -199,6 +291,42 @@ final class ScreenshotTests: XCTestCase {
             capture("tour-\(item.lowercased().replacingOccurrences(of: "…", with: "").replacingOccurrences(of: " ", with: "-"))")
             if !tap("Cancel", in: app) { dump("no-cancel-\(item)", app) }
         }
+    }
+
+    /// The regular shell's Settings and Help — the iPad's, reached from the
+    /// foot of its sidebar. Both are sheets there, so each has to open, show
+    /// what it should, and close again. Runs with `FL_TOUR=1`, on an iPad.
+    @MainActor
+    func testRegularSettingsAndHelp() throws {
+        guard ProcessInfo.processInfo.environment["FL_TOUR"] != nil else {
+            throw XCTSkip("Set TEST_RUNNER_FL_TOUR=1 for the settings tour")
+        }
+        guard let app = launchOnBook() else { return }
+        guard !compact else { throw XCTSkip("this tour is for the regular shell") }
+
+        capture("regular-sidebar-footer")
+        XCTAssertTrue(tap("Settings", in: app), "the sidebar's foot has a Settings button")
+        XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 5), "Settings opened")
+        capture("regular-settings")
+        for pane in ["General", "Appearance", "Pricing", "Documents", "Apple Intelligence"] {
+            guard tapRow(pane, app) else { XCTFail("Settings has no \(pane) row"); continue }
+            capture("regular-settings-\(pane.lowercased().replacingOccurrences(of: " ", with: "-"))")
+            popToRoot(app)
+            XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 3),
+                          "one Back from \(pane) returns to Settings")
+        }
+        XCTAssertTrue(tap("Done", in: app), "Settings has a Done button")
+        settle(1)
+        XCTAssertFalse(app.navigationBars["Settings"].exists, "Done closes Settings")
+
+        XCTAssertTrue(tap("Help", in: app), "the sidebar's foot has a Help button")
+        settle(2)
+        capture("regular-help")
+        XCTAssertEqual(app.buttons.matching(identifier: "Done").count, 1,
+                       "Help shows one Done button, not one per column")
+        XCTAssertTrue(tap("Done", in: app), "Help has a Done button")
+        settle(1)
+        XCTAssertTrue(app.buttons["Settings"].firstMatch.isHittable, "Done closes Help")
     }
 
     /// Taps a button by name if there is one. Returns whether it did.

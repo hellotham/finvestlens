@@ -38,7 +38,9 @@ const appSchema = {
   description: site.description,
   applicationCategory: 'FinanceApplication',
   applicationSubCategory: 'Accounting',
-  operatingSystem: 'macOS 27, iPadOS 27, iOS 27',
+  // The system the released file runs on (see `release.requirements`), not
+  // what the tree builds for: the download is a Mac disk image.
+  operatingSystem: 'macOS 26.5',
   softwareVersion: release.version,
   downloadUrl: release.url,
   fileSize: release.sizeLabel,

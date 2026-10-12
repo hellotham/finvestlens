@@ -24,31 +24,47 @@ import FinvestLensIntelligence
 import FinvestLensReports
 
 /// Apple Intelligence features (`FR-AI-01…06`). Everything here follows the
-/// same contract: extraction and suggestion run on the on-device model
-/// (nothing leaves the Mac), results are *proposals* the user reviews in UI,
-/// and only deterministic code mutates the book.
+/// same contract: extraction and suggestion run on Apple's models — on the
+/// device, or on Private Cloud Compute where the build offers it and the
+/// person has left it chosen (`FR-AI-13`; `LanguageModels` decides, and
+/// says which) — results are *proposals* the user reviews in UI, and only
+/// deterministic code mutates the book.
 @MainActor
 extension AppModel {
 
     // MARK: Availability
 
-    /// Live availability of the on-device model (device, OS, setting).
-    public var intelligenceStatus: IntelligenceAvailability {
-        IntelligenceAvailability.current()
+    /// Whether `feature` can run now — asked of the model that feature
+    /// would use (device, OS, setting; and for the features that follow the
+    /// person's choice, Private Cloud Compute where it is offered). Asking
+    /// about the device's own model for every feature disabled the ones that
+    /// could have run without it.
+    public func isIntelligenceAvailable(for feature: IntelligenceFeature) -> Bool {
+        LanguageModels.availability(for: feature).isAvailable
     }
 
-    public var isIntelligenceAvailable: Bool {
-        intelligenceStatus.isAvailable
-    }
-
-    /// Why intelligence features are disabled, for menu help/tooltips.
-    public var intelligenceUnavailableReason: String? {
-        if case .unavailable(let reason) = intelligenceStatus { return reason }
+    /// Why `feature` is disabled, for menu help and tooltips.
+    public func intelligenceUnavailableReason(for feature: IntelligenceFeature) -> String? {
+        if case .unavailable(let reason) = LanguageModels.availability(for: feature) { return reason }
         return nil
     }
 
-    private func requireIntelligence() throws {
-        if case .unavailable(let reason) = intelligenceStatus {
+    /// Why Smart Import cannot run, or `nil` when it can. It reads bank
+    /// statements, which stay on the device whatever is chosen. Named for
+    /// the command rather than the feature so that menus — the app target's
+    /// among them — need not know which model reads what.
+    public var smartImportUnavailableReason: String? {
+        intelligenceUnavailableReason(for: .statementExtractor)
+    }
+
+    /// Why Match Attachments cannot run, or `nil` when it can. It reads
+    /// invoices and dividend statements.
+    public var matchAttachmentsUnavailableReason: String? {
+        intelligenceUnavailableReason(for: .invoiceAnalyzer)
+    }
+
+    private func requireIntelligence(for feature: IntelligenceFeature) throws {
+        if let reason = intelligenceUnavailableReason(for: feature) {
             throw IntelligenceError.unavailable(reason)
         }
     }
@@ -72,7 +88,7 @@ extension AppModel {
         _ data: Data,
         onProgress: (@Sendable (Int, Int) -> Void)? = nil
     ) async throws -> [StagedTransaction] {
-        try requireIntelligence()
+        try requireIntelligence(for: .statementExtractor)
         let pages = try await Task.detached { try await DocumentText.extractPages(from: data) }.value
         return try await StatementExtractor.extract(pages: pages, onProgress: onProgress)
     }
@@ -111,7 +127,7 @@ extension AppModel {
     /// one. Keyed by `StagedTransaction.id`, ready to merge into the import
     /// view's assignments.
     public func suggestCategories(for results: [MatchResult]) async throws -> [UUID: GncGUID] {
-        try requireIntelligence()
+        try requireIntelligence(for: .transactionCategorizer)
         let items = results
             .filter { !$0.isDuplicate }
             .map {
@@ -164,7 +180,7 @@ extension AppModel {
     public func suggestCategoriesForUncategorized(
         _ items: [UncategorizedItem]
     ) async throws -> [UUID: GncGUID] {
-        try requireIntelligence()
+        try requireIntelligence(for: .transactionCategorizer)
         let categorizables = items.map {
             // The counter-leg of spending is positive in the imbalance account,
             // so flip the sign to present the account holder's perspective.
@@ -281,8 +297,9 @@ extension AppModel {
         urls: [URL],
         onProgress: (@MainActor (Int, Int) -> Void)? = nil
     ) async -> [AttachmentMatch] {
-        guard isIntelligenceAvailable else {
-            let note = intelligenceUnavailableReason ?? "Apple Intelligence is unavailable."
+        guard isIntelligenceAvailable(for: .invoiceAnalyzer) else {
+            let note = intelligenceUnavailableReason(for: .invoiceAnalyzer)
+                ?? String(localized: "Apple Intelligence is unavailable.")
             return urls.map { var match = AttachmentMatch(url: $0); match.note = note; return match }
         }
         let candidates = categoryCandidates()
@@ -294,6 +311,12 @@ extension AppModel {
         // batch take the better part of an hour.
         var parsed = [ParsedAttachment?](repeating: nil, count: urls.count)
         var completed = 0
+        // Why the model stopped answering, if it did part-way: no allowance
+        // left, no network, rate-limited in the background. Every file after
+        // that would come back unread — and still be matched, on amounts
+        // scraped from its text by pattern — so the batch stops and each
+        // unread file says why.
+        var stopped: String?
         onProgress?(0, urls.count)
         await withTaskGroup(of: (Int, ParsedAttachment).self) { group in
             var next = 0
@@ -306,10 +329,14 @@ extension AppModel {
             }
             for _ in 0..<min(Self.physicalCPUCount, urls.count) { addNext() }
             for await (index, result) in group {
-                parsed[index] = result
+                if let reason = result.stopped {
+                    stopped = stopped ?? reason
+                } else if stopped == nil {
+                    parsed[index] = result
+                }
                 completed += 1
                 onProgress?(completed, urls.count)
-                if Task.isCancelled { group.cancelAll() } else { addNext() }
+                if Task.isCancelled || stopped != nil { group.cancelAll() } else { addNext() }
             }
         }
 
@@ -335,7 +362,10 @@ extension AppModel {
             if Task.isCancelled { break }
             var match = AttachmentMatch(url: url)
             defer { results.append(match) }
-            guard let doc = parsed[index] else { match.note = "Cancelled."; continue }
+            guard let doc = parsed[index] else {
+                match.note = stopped ?? String(localized: "Cancelled.")
+                continue
+            }
             let fileDate = Self.leadingDate(inFileName: url.lastPathComponent)
             // Candidate dates, most reliable first: the file's own name, the
             // extractor's date (plus its day/month swap — models mix them up),
@@ -363,7 +393,7 @@ extension AppModel {
             match.currencyCandidates = doc.currencyCandidates
             match.tender = doc.tender
             if let already = attachedByName[url.lastPathComponent.lowercased()] {
-                match.note = "This file is already attached to \(transactionSummary(already))."
+                match.note = String(localized: "This file is already attached to \(transactionSummary(already)).")
                 continue
             }
             if let note = doc.note { match.note = note; continue }
@@ -419,7 +449,7 @@ extension AppModel {
             }
             if matched == nil {
                 if match.candidateAmounts.isEmpty {
-                    match.note = "Couldn’t read an amount from the document — the scan may be too faint to OCR."
+                    match.note = String(localized: "Couldn’t read an amount from the document — the scan may be too faint to OCR.")
                 } else {
                     let tried = match.candidateAmounts.map { "\($0)" }.joined(separator: ", ")
                     match.note = match.candidateAmounts.compactMap {
@@ -475,7 +505,10 @@ extension AppModel {
         /// The OCR text's head — for the categorisation fallback when the
         /// invoice pass yielded no per-line categories.
         var textExcerpt = ""
-
+        /// Set when a model request failed for a reason that every later
+        /// request will share (``IntelligenceError/endsABatch``): the
+        /// sentence to show, and the signal to stop the batch.
+        var stopped: String?
 
         var amount: Decimal? {
             if let dividend, dividend.netPayment > 0 { return dividend.netPayment }
@@ -485,22 +518,34 @@ extension AppModel {
         var date: Date? { dividend?.paymentDate ?? invoice?.date }
     }
 
-    @available(macOS 26.0, iOS 26.0, *)
+    /// How much of each document a *batch* reads: its head. What a match
+    /// needs — who it is from, the date, the total — is at the top, and a
+    /// batch of fifty files is fifty requests; a long invoice read to the end
+    /// of the model's window roughly doubles each of them. A deliberate bound
+    /// on the bulk path only: one document opened on its own is read as far
+    /// as the model's window allows (`LanguageModels.fit`).
+    nonisolated static let bulkHeadCharacters = 6_000
+
+    /// The excerpt a categorisation reads: the top of the document, which is
+    /// where a receipt says who it is from. Most of that request is the list
+    /// of up to eighty categories, not the document.
+    nonisolated static let insightExcerptCharacters = 1_600
+
     nonisolated private static func parseAttachment(
         url: URL, candidates: [CategoryCandidate]
     ) async -> ParsedAttachment {
         var doc = ParsedAttachment()
         guard await waitForLocalFile(url) else {
             doc.note = cloudPlaceholderExists(url)
-                ? "Still downloading from the cloud — try again shortly."
-                : "Couldn’t read the file."
+                ? String(localized: "Still downloading from the cloud — try again shortly.")
+                : String(localized: "Couldn’t read the file.")
             return doc
         }
         let text: String
         do {
             text = try await DocumentText.extractText(from: url)
         } catch {
-            doc.note = "Couldn’t read the file."
+            doc.note = String(localized: "Couldn’t read the file.")
             return doc
         }
         // Shared with every other place that has to tell an income document
@@ -508,19 +553,32 @@ extension AppModel {
         // this one used to demand both "dividend" and franking language, which
         // no ETF or capital-note distribution statement satisfies.
         doc.isIncome = DocumentClassifier.isSecurityIncome(text)
-        if doc.isIncome {
-            doc.dividend = try? await DividendExtractor.extract(text: String(text.prefix(4000)))
-        }
-        if doc.dividend == nil || (doc.dividend?.netPayment ?? 0) <= 0 {
-            doc.invoice = try? await InvoiceAnalyzer.analyze(
-                text: String(text.prefix(6000)), candidates: candidates)
-        }
+        // A document the model declines or cannot make sense of is still
+        // matched, on what the patterns below find in its text. A model that
+        // is not answering at all is a different thing, and stops the batch.
+        let head = String(text.prefix(bulkHeadCharacters))
+        do {
+            if doc.isIncome {
+                doc.dividend = try await DividendExtractor.extract(text: head)
+            }
+        } catch let error as IntelligenceError where error.endsABatch {
+            doc.stopped = error.localizedDescription
+            return doc
+        } catch {}
+        do {
+            if doc.dividend == nil || (doc.dividend?.netPayment ?? 0) <= 0 {
+                doc.invoice = try await InvoiceAnalyzer.analyze(text: head, candidates: candidates)
+            }
+        } catch let error as IntelligenceError where error.endsABatch {
+            doc.stopped = error.localizedDescription
+            return doc
+        } catch {}
         doc.fallbackAmounts = Self.amountCandidates(in: text)
         doc.textDates = Self.datesInText(text)
         doc.currencyCandidates = Self.currencyCandidates(in: text)
         doc.currencyHint = doc.currencyCandidates.count == 1 ? doc.currencyCandidates.first : nil
         doc.tender = DocumentClassifier.tender(text)
-        doc.textExcerpt = String(text.prefix(1600))
+        doc.textExcerpt = String(text.prefix(insightExcerptCharacters))
         return doc
     }
 
@@ -1019,12 +1077,11 @@ extension AppModel {
     /// The suggestion for a matched file, built from its one parse — dividend
     /// franking split, per-item invoice split, or the invoice's dominant
     /// category — with the vendor / ticker as the friendly rename.
-    @available(macOS 26.0, iOS 26.0, *)
     private func suggestion(for txn: Transaction,
                             from doc: ParsedAttachment) async -> AttachmentCategorySuggestion? {
         if let details = doc.dividend, let lines = dividendSplitLines(for: txn, details: details) {
             let ticker = details.ticker.trimmingCharacters(in: .whitespaces).uppercased()
-            let friendly = ticker.isEmpty ? nil : "\(ticker) dividend"
+            let friendly = ticker.isEmpty ? nil : String(localized: "\(ticker) dividend")
             return AttachmentCategorySuggestion(
                 accountID: lines[0].accountID,
                 accountName: lines[0].accountName,
@@ -1137,16 +1194,16 @@ extension AppModel {
     public func suggestCategoryFromAttachment(
         for transactionID: GncGUID
     ) async throws -> AttachmentCategorySuggestion? {
-        try requireIntelligence()
+        try requireIntelligence(for: .attachmentInsight)
         guard let book, book.transaction(with: transactionID) != nil else { return nil }
         guard let url = linkedDocumentURL(for: transactionID) else {
-            throw IntelligenceError.unavailable("The transaction has no readable attachment.")
+            throw IntelligenceError.unavailable(String(localized: "The transaction has no readable attachment."))
         }
         guard await ensureLocalFile(url) else {
             throw IntelligenceError.unavailable(
                 Self.cloudPlaceholderExists(url)
-                    ? "The attachment is still downloading from the cloud — try again shortly."
-                    : "The attachment file was not found.")
+                    ? String(localized: "The attachment is still downloading from the cloud — try again shortly.")
+                    : String(localized: "The attachment file was not found."))
         }
         let text = try await Task.detached { try await DocumentText.extractText(from: url) }.value
         return try await attachmentSuggestion(for: transactionID, text: text)
@@ -1155,7 +1212,6 @@ extension AppModel {
     /// The suggestion core, over already-extracted document text — shared by
     /// the sidebar (which resolves the transaction's link) and the bulk
     /// match-attachments flow (which brings its own files).
-    @available(macOS 26.0, iOS 26.0, *)
     func attachmentSuggestion(
         for transactionID: GncGUID, text: String
     ) async throws -> AttachmentCategorySuggestion? {
@@ -1171,10 +1227,10 @@ extension AppModel {
         let lower = text.lowercased()
         if lower.contains("dividend"),
            lower.contains("frank") || lower.contains("imputation"),
-           let details = try? await DividendExtractor.extract(text: String(text.prefix(4000))),
+           let details = try? await DividendExtractor.extract(text: text),
            let dividend = dividendSplitLines(for: txn, details: details) {
             let ticker = details.ticker.trimmingCharacters(in: .whitespaces).uppercased()
-            let friendly = ticker.isEmpty ? nil : "\(ticker) dividend"
+            let friendly = ticker.isEmpty ? nil : String(localized: "\(ticker) dividend")
             return AttachmentCategorySuggestion(
                 accountID: dividend[0].accountID,
                 accountName: dividend[0].accountName,
@@ -1183,11 +1239,14 @@ extension AppModel {
                 lines: dividend)
         }
 
+        // One document, and a person waiting on the answer: if the model
+        // refuses it, ask why, because here the reason is shown.
         guard let insight = try await AttachmentInsight.analyze(
-            documentText: String(text.prefix(1600)),
+            documentText: String(text.prefix(Self.insightExcerptCharacters)),
             currentDescription: txn.transactionDescription,
             amount: amount,
-            candidates: candidates)
+            candidates: candidates,
+            explainRefusal: true)
         else { return nil }
         guard let account = book.account(with: insight.accountID) else { return nil }
         let friendly = insight.friendlyDescription
@@ -1210,7 +1269,6 @@ extension AppModel {
     /// `nil` — falling back to the generic paths — when the statement's cash
     /// doesn't match the transaction, or the book has no per-security accounts
     /// for this ticker (accounts are never invented here).
-    @available(macOS 26.0, iOS 26.0, *)
     private func dividendSplitLines(
         for txn: Transaction,
         details: DividendStatementDetails
@@ -1294,23 +1352,23 @@ extension AppModel {
     /// residual absorbed by the largest. `nil` when the document doesn't read
     /// as a multi-item invoice, the amounts are nowhere near the charge, or
     /// the transaction has no replaceable leg.
-    @available(macOS 26.0, iOS 26.0, *)
     private func invoiceSplitLines(
         for txn: Transaction, text: String,
         fallbackAccountID: GncGUID,
         candidates: [CategoryCandidate]
     ) async -> [AttachmentCategorySuggestion.SplitLine]? {
         guard let analysis = try? await InvoiceAnalyzer.analyze(
-            text: String(text.prefix(4000)), candidates: candidates) else { return nil }
+            text: text, candidates: candidates) else { return nil }
         return invoiceLines(from: analysis, for: txn, fallbackAccountID: fallbackAccountID)
     }
 
     /// One model call over the stored OCR excerpt — the categorisation of last
     /// resort for a matched file whose invoice pass placed nothing.
-    @available(macOS 26.0, iOS 26.0, *)
     private func insightFallback(for txn: Transaction,
                                  from doc: ParsedAttachment) async -> AttachmentCategorySuggestion? {
-        guard let book, !doc.textExcerpt.isEmpty, isIntelligenceAvailable else { return nil }
+        guard let book, !doc.textExcerpt.isEmpty, isIntelligenceAvailable(for: .attachmentInsight) else {
+            return nil
+        }
         let amount = -(txn.splits.first { $0.account?.isWash ?? false }?.value
                        ?? txn.splits.first?.value ?? 0)
         guard let insight = try? await AttachmentInsight.analyze(
@@ -1384,7 +1442,7 @@ extension AppModel {
         _ items: [UncategorizedItem],
         onProgress: (@MainActor (Int, Int) -> Void)? = nil
     ) async throws -> [UUID: GncGUID] {
-        try requireIntelligence()
+        try requireIntelligence(for: .attachmentInsight)
         let withDocs = items.filter { item in
             guard let url = linkedDocumentURL(for: item.transactionID) else { return false }
             return FileManager.default.fileExists(atPath: url.path)
@@ -1497,19 +1555,20 @@ extension AppModel {
     /// Analyses an invoice PDF into line items with expense-account
     /// suggestions, for splitting a single card charge across categories.
     public func analyzeInvoicePDF(_ data: Data) async throws -> InvoiceAnalysis {
-        try requireIntelligence()
+        try requireIntelligence(for: .invoiceAnalyzer)
         let text = try await Task.detached { try await DocumentText.extractText(from: data) }.value
         return try await InvoiceAnalyzer.analyze(text: text,
-                                                 candidates: categoryCandidates(includeIncome: false))
+                                                 candidates: categoryCandidates(includeIncome: false),
+                                                 explainRefusal: true)
     }
 
     // MARK: FR-AI-04 — Dividend statements
 
     /// Reads a dividend statement PDF (franked/unfranked/franking credits).
     public func extractDividendStatement(_ data: Data) async throws -> DividendStatementDetails {
-        try requireIntelligence()
+        try requireIntelligence(for: .dividendExtractor)
         let text = try await Task.detached { try await DocumentText.extractText(from: data) }.value
-        return try await DividendExtractor.extract(text: text)
+        return try await DividendExtractor.extract(text: text, explainRefusal: true)
     }
 
     /// Books a reviewed dividend: cash to the chosen account, income split
@@ -1629,10 +1688,10 @@ extension AppModel {
 
     /// Proposes a monthly budget from spending history via the on-device model.
     public func suggestBudget(months: Int = 6) async throws -> BudgetSuggestion {
-        try requireIntelligence()
+        try requireIntelligence(for: .budgetAdvisor)
         let history = spendingHistory(months: months)
         guard !history.isEmpty else {
-            throw IntelligenceError.modelFailure("There is no spending history yet to budget from.")
+            throw IntelligenceError.modelFailure(String(localized: "There is no spending history yet to budget from."))
         }
         return try await BudgetAdvisor.suggest(history: history,
                                                monthlyIncome: monthlyIncomeAverage(months: months),
@@ -1705,9 +1764,9 @@ extension AppModel {
 
     /// A plain-language outlook on the cash-flow forecast.
     public func forecastInsights(months: Int = 3) async throws -> ForecastInsights {
-        try requireIntelligence()
+        try requireIntelligence(for: .forecastNarrator)
         guard let facts = forecastFacts(months: months) else {
-            throw IntelligenceError.modelFailure("There is no asset account to forecast yet.")
+            throw IntelligenceError.modelFailure(String(localized: "There is no asset account to forecast yet."))
         }
         return try await ForecastNarrator.narrate(facts: facts)
     }
@@ -1716,7 +1775,7 @@ extension AppModel {
     /// figures arrive already computed; the model observes, it never
     /// calculates.
     public func reportCommentary(for facts: ReportFacts) async throws -> [String] {
-        try requireIntelligence()
+        try requireIntelligence(for: .reportNarrator)
         return try await ReportNarrator.narrate(facts: facts)
     }
 }

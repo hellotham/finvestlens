@@ -4,8 +4,9 @@
 #  FinvestLens
 #
 #  Builds a Developer ID–signed, notarized, stapled DMG for direct
-#  distribution (the app is not sandboxed, so the Mac App Store is not the
-#  route — see docs/deferred.md §4).
+#  distribution. The Mac App Store and TestFlight are a separate channel with
+#  their own signing and export options — see docs/app-store.md; the two are
+#  not interchangeable.
 #
 #  Everything here is repeatable and idempotent except the one credential
 #  step, which is deliberately NOT automated: notarization needs an
@@ -77,7 +78,10 @@ VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" \
 [[ -z "$VERSION" ]] && VERSION=$(xcodebuild -project "$ROOT/$APP_NAME.xcodeproj" \
     -scheme "$SCHEME" -showBuildSettings 2>/dev/null \
     | awk -F' = ' '/ MARKETING_VERSION /{print $2; exit}')
-VERSION="${VERSION:-1.0}"
+if [[ -z "$VERSION" ]]; then
+    echo "error: could not read MARKETING_VERSION from the project" >&2
+    exit 1
+fi
 DMG="$BUILD/FinvestLens-$VERSION.dmg"
 echo "  version $VERSION"
 

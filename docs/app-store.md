@@ -21,9 +21,9 @@
 
 Created from App Store Connect ▸ Apps ▸ ＋ ▸ New App with every platform
 ticked at creation (adding one later goes through App Information ▸
-Platforms, never a second New App). The version records it made say 1.0;
-the build number is what TestFlight keys on, and the App Store version is
-edited on the version page before submission.
+Platforms, never a second New App). The version records it made said 1.0
+and were edited to **1.2** on each platform's version page (11 Oct 2026), to
+match `MARKETING_VERSION`; the build number is what TestFlight keys on.
 
 ## What the build has to carry
 
@@ -116,7 +116,11 @@ platform). Never a real book, never `imports/`.
   display)" slot**; iPhone 18 Pro Max gives 1320×2868 for the optional large
   slot (Media Manager). `testTourCompactDestinations` (with
   `TEST_RUNNER_FL_TOUR=1`) captures every destination the phone can reach —
-  the visual pass after a change to the compact shell.
+  the visual pass after a change to the compact shell. Since 12 Oct 2026 it
+  also opens Settings (each of the five panes), Help, and the register's
+  Actions menu, and asserts along the way: a step it cannot take fails the
+  test. Before that a sheet it could not close left every later step to
+  skip in silence, and the tour "passed" having toured half the app.
 - **Uploading** — version page ▸ *App Previews and Screenshots* ▸ device
   tab; each zone's file input takes the whole set (under 10 MB a call) and
   saves itself; thumbnails keep upload order, so name files `01-…`. There is

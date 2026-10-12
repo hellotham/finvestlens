@@ -121,6 +121,7 @@ struct StatementChunkingTests {
     }
 }
 
+extension Live {
 @Suite("LiveStatementChunking", .enabled(if: harnessEnabled),
        .timeLimit(.minutes(20)), .serialized)
 struct LiveStatementChunkingTests {
@@ -161,5 +162,6 @@ struct LiveStatementChunkingTests {
             #expect(rows.allSatisfy { $0.amount != 0 })
         }
     }
+}
 }
 #endif

@@ -15,6 +15,7 @@ import SwiftUI
 
 public struct HelpView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var selection: String? = HelpBook.sections.first?.topics.first?.id
     @State private var search = ""
 
@@ -38,6 +39,13 @@ public struct HelpView: View {
         }
     }
 
+    @ToolbarContentBuilder
+    private var doneButton: some ToolbarContent {
+        ToolbarItem(placement: .confirmationAction) {
+            Button("Done") { dismiss() }
+        }
+    }
+
     public var body: some View {
         NavigationSplitView {
             List(selection: $selection) {
@@ -54,21 +62,35 @@ public struct HelpView: View {
             .searchable(text: $search, prompt: Text("Search help"))
             .navigationTitle("FinvestLens Help")
             .navigationSplitViewColumnWidth(min: 220, ideal: 250)
+            #if os(iOS)
+            // At a compact width the split view is one stack, and this list
+            // is a screen of its own — so it needs the way out too. At a
+            // regular width the detail column's Done is beside it already.
+            .toolbar { if sizeClass == .compact { doneButton } }
+            #endif
         } detail: {
-            if let topic = selection.flatMap(HelpBook.topic(id:)) {
-                HelpTopicPage(topic: topic)
-            } else {
-                ContentUnavailableView("Choose a topic",
-                                       systemImage: "book",
-                                       description: Text("Pick a page on the left, or search."))
+            Group {
+                if let topic = selection.flatMap(HelpBook.topic(id:)) {
+                    HelpTopicPage(topic: topic)
+                } else {
+                    ContentUnavailableView("Choose a topic",
+                                           systemImage: "book",
+                                           description: Text("Pick a page on the left, or search."))
+                }
             }
+            #if os(iOS)
+            .toolbar { doneButton }
+            #endif
         }
         .onEscapeCommand { dismiss() }
-        .toolbar {
-            ToolbarItem(placement: .confirmationAction) {
-                Button("Done") { dismiss() }
-            }
-        }
+        // On iOS this is a sheet, and a toolbar hung on the split view itself
+        // reaches neither column's navigation bar: the phone showed a help
+        // page with a Back chevron and no way to close the sheet but a swipe
+        // (seen on an iPhone 18 Pro simulator, 12 Oct 2026). So there the
+        // button belongs to the columns, above; on the Mac, to the window.
+        #if os(macOS)
+        .toolbar { doneButton }
+        #endif
         .windowFloor(minWidth: 720, minHeight: 520)
         .onChange(of: search) {
             visibleSections = Self.sections(matching: search)

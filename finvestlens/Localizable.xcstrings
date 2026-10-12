@@ -213,6 +213,53 @@
         }
       }
     },
+    "%@ dividend": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@-Dividende"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dividendo de %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dividende %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dividendo %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ の配当"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dividendo de %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 股息"
+          }
+        }
+      }
+    },
     "%@ has no company data for this security.": {
       "extractionState": "manual",
       "localizations": {
@@ -11479,6 +11526,476 @@
         }
       }
     },
+    "Apple Intelligence": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple 智能"
+          }
+        }
+      }
+    },
+    "Apple Intelligence could not process this request: %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence konnte diese Anfrage nicht verarbeiten: %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence no pudo procesar esta solicitud: %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence n’a pas pu traiter cette demande : %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence non è riuscita a elaborare questa richiesta: %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligenceはこのリクエストを処理できませんでした：%@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A Apple Intelligence não conseguiu processar esta solicitação: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple 智能 无法处理此请求：%@"
+          }
+        }
+      }
+    },
+    "Apple Intelligence declined this request: %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence hat diese Anfrage abgelehnt: %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence rechazó esta solicitud: %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence a refusé cette demande : %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence ha rifiutato questa richiesta: %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligenceはこのリクエストを拒否しました：%@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A Apple Intelligence recusou esta solicitação: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple 智能 拒绝了此请求：%@"
+          }
+        }
+      }
+    },
+    "Apple Intelligence declined to process this content (safety guardrails). Enter the details manually instead.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence hat die Verarbeitung dieses Inhalts abgelehnt (Sicherheitsvorkehrungen). Geben Sie die Angaben stattdessen manuell ein."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence rechazó procesar este contenido (medidas de seguridad). Introduce los datos manualmente."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence a refusé de traiter ce contenu (garde-fous de sécurité). Saisissez plutôt les informations manuellement."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence ha rifiutato di elaborare questo contenuto (misure di sicurezza). Inserisci i dati manualmente."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligenceはこの内容の処理を拒否しました（安全対策）。代わりに手動で入力してください。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A Apple Intelligence recusou processar este conteúdo (proteções de segurança). Insira os dados manualmente."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple 智能 拒绝处理此内容（安全防护）。请改为手动输入详细信息。"
+          }
+        }
+      }
+    },
+    "Apple Intelligence doesn’t support this language yet.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence unterstützt diese Sprache noch nicht."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence todavía no admite este idioma."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence ne prend pas encore en charge cette langue."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence non supporta ancora questa lingua."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligenceはまだこの言語に対応していません。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A Apple Intelligence ainda não oferece suporte a este idioma."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple 智能 尚不支持此语言。"
+          }
+        }
+      }
+    },
+    "Apple Intelligence had nothing to say about this report.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence hatte zu diesem Bericht nichts anzumerken."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence no tenía nada que comentar sobre este informe."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence n’a rien trouvé à dire sur ce rapport."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence non aveva nulla da osservare su questo resoconto."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence はこのレポートについて書くことがありませんでした。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A Apple Intelligence não tinha nada a dizer sobre este relatório."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple 智能对此报表没有可写的内容。"
+          }
+        }
+      }
+    },
+    "Apple Intelligence is busy right now. Try again in a moment.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence ist gerade ausgelastet. Versuchen Sie es gleich noch einmal."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence está ocupada en este momento. Inténtalo de nuevo en un momento."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence est occupée pour le moment. Réessayez dans un instant."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence è occupata in questo momento. Riprova tra un attimo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligenceは現在混み合っています。しばらくしてからもう一度お試しください。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A Apple Intelligence está ocupada no momento. Tente novamente em instantes."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple 智能 当前繁忙。请稍后重试。"
+          }
+        }
+      }
+    },
+    "Apple Intelligence is not available on this device.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence ist auf diesem Gerät nicht verfügbar."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence no está disponible en este dispositivo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence n’est pas disponible sur cet appareil."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence non è disponibile su questo dispositivo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このデバイスではApple Intelligenceを利用できません。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A Apple Intelligence não está disponível neste dispositivo."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此设备无法使用 Apple 智能。"
+          }
+        }
+      }
+    },
+    "Apple Intelligence is unavailable.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence ist nicht verfügbar."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence no está disponible."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence n’est pas disponible."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence non è disponibile."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence は利用できません。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A Apple Intelligence não está disponível."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple 智能不可用。"
+          }
+        }
+      }
+    },
+    "Apple Intelligence took too long to answer. Try again.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence hat zu lange für die Antwort gebraucht. Versuchen Sie es erneut."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence tardó demasiado en responder. Inténtalo de nuevo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence a mis trop de temps à répondre. Réessayez."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence ha impiegato troppo tempo a rispondere. Riprova."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence の応答に時間がかかりすぎました。もう一度お試しください。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A Apple Intelligence demorou demais para responder. Tente novamente."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple 智能响应时间过长。请重试。"
+          }
+        }
+      }
+    },
     "APR %": {
       "extractionState": "manual",
       "localizations": {
@@ -18766,6 +19283,53 @@
         }
       }
     },
+    "Available on this device": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf diesem Gerät verfügbar"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Disponible en este dispositivo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Disponible sur cet appareil"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Disponibile su questo dispositivo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このデバイスで利用できます"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Disponível neste dispositivo"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此设备可用"
+          }
+        }
+      }
+    },
     "Avalanche — highest rate first": {
       "extractionState": "manual",
       "localizations": {
@@ -19236,49 +19800,96 @@
         }
       }
     },
-    "Bank statements, dividend statements and invoices are read on-device by Apple Intelligence and turned into transactions to review — nothing leaves your Mac.": {
+    "Bank statements are read on this device and turned into transactions to review. Invoices and dividend statements are read with Apple’s Private Cloud Compute — you can keep them on this device in Settings.": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Kontoauszüge, Dividendenabrechnungen und Rechnungen werden von Apple Intelligence auf dem Gerät gelesen und in Buchungen zur Prüfung umgewandelt — nichts verlässt Ihren Mac."
+            "value": "Kontoauszüge werden auf diesem Gerät gelesen und in Buchungen zur Prüfung umgewandelt. Rechnungen und Dividendenabrechnungen werden mit Apples Private Cloud Compute gelesen — in den Einstellungen können Sie festlegen, dass sie auf diesem Gerät bleiben."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Los extractos bancarios, los informes de dividendos y las facturas los lee Apple Intelligence en el propio dispositivo y los convierte en transacciones para revisar: nada sale de tu Mac."
+            "value": "Los extractos bancarios se leen en este dispositivo y se convierten en transacciones para revisar. Las facturas y los informes de dividendos se leen con Private Cloud Compute de Apple; puedes mantenerlos en este dispositivo desde Ajustes."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Les relevés bancaires, avis de dividendes et factures sont lus sur l’appareil par Apple Intelligence et transformés en opérations à vérifier — rien ne quitte votre Mac."
+            "value": "Les relevés bancaires sont lus sur cet appareil et transformés en opérations à vérifier. Les factures et les avis de dividendes sont lus avec Private Cloud Compute d’Apple — vous pouvez les garder sur cet appareil dans Réglages."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Estratti conto, avvisi di dividendo e fatture vengono letti sul dispositivo da Apple Intelligence e trasformati in transazioni da rivedere: nulla esce dal tuo Mac."
+            "value": "Gli estratti conto vengono letti su questo dispositivo e trasformati in transazioni da rivedere. Fatture e avvisi di dividendo vengono letti con Private Cloud Compute di Apple: puoi tenerli su questo dispositivo dalle Impostazioni."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "銀行明細、配当通知、請求書は Apple Intelligence がデバイス上で読み取り、確認用の取引に変換します。データが Mac から出ることはありません。"
+            "value": "銀行明細はこのデバイス上で読み取り、確認用の取引に変換します。請求書と配当通知は Apple の Private Cloud Compute で読み取ります。「設定」で、このデバイス上で処理するように変更できます。"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Extratos bancários, avisos de dividendos e faturas são lidos no dispositivo pela Apple Intelligence e convertidos em transações para revisão — nada sai do seu Mac."
+            "value": "Os extratos bancários são lidos neste dispositivo e convertidos em transações para revisão. Faturas e avisos de dividendos são lidos com o Private Cloud Compute da Apple — você pode mantê-los neste dispositivo nos Ajustes."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "银行对账单、股息通知和发票由 Apple 智能在设备端读取并转换为待审阅的交易 — 数据不会离开你的 Mac。"
+            "value": "银行对账单在此设备上读取并转换为待审阅的交易。发票和股息通知通过 Apple 的 Private Cloud Compute 读取 — 你可以在“设置”中改为仅在此设备上处理。"
+          }
+        }
+      }
+    },
+    "Bank statements, dividend statements and invoices are read on-device by Apple Intelligence and turned into transactions to review — nothing leaves this device.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kontoauszüge, Dividendenabrechnungen und Rechnungen werden von Apple Intelligence auf dem Gerät gelesen und in Buchungen zur Prüfung umgewandelt — nichts verlässt dieses Gerät."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los extractos bancarios, los informes de dividendos y las facturas los lee Apple Intelligence en el propio dispositivo y los convierte en transacciones para revisar: nada sale de este dispositivo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les relevés bancaires, avis de dividendes et factures sont lus sur l’appareil par Apple Intelligence et transformés en opérations à vérifier — rien ne quitte cet appareil."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estratti conto, avvisi di dividendo e fatture vengono letti sul dispositivo da Apple Intelligence e trasformati in transazioni da rivedere: nulla esce da questo dispositivo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "銀行明細、配当通知、請求書は Apple Intelligence がデバイス上で読み取り、確認用の取引に変換します。データがこのデバイスから出ることはありません。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Extratos bancários, avisos de dividendos e faturas são lidos no dispositivo pela Apple Intelligence e convertidos em transações para revisão — nada sai deste dispositivo."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "银行对账单、股息通知和发票由 Apple 智能在设备端读取并转换为待审阅的交易 — 数据不会离开此设备。"
           }
         }
       }
@@ -20552,6 +21163,53 @@
         }
       }
     },
+    "Budgeted from your monthly averages over the observed period. Apple Intelligence didn’t refine this plan, so no trims were applied.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Budgetiert anhand Ihrer Monatsdurchschnitte im beobachteten Zeitraum. Apple Intelligence hat diesen Plan nicht verfeinert, daher wurden keine Kürzungen vorgenommen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Presupuestado a partir de tus promedios mensuales del periodo observado. Apple Intelligence no afinó este plan, por lo que no se aplicaron recortes."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Budget établi à partir de vos moyennes mensuelles sur la période observée. Apple Intelligence n’a pas affiné ce plan ; aucune réduction n’a donc été appliquée."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Budget ricavato dalle tue medie mensili nel periodo osservato. Apple Intelligence non ha perfezionato questo piano, quindi non sono state applicate riduzioni."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "対象期間の月平均をもとに予算を作成しました。Apple Intelligence はこの計画を調整しなかったため、削減は行われていません。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Orçado a partir das suas médias mensais no período observado. A Apple Intelligence não refinou este plano, portanto nenhum corte foi aplicado."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "根据所观察期间的月均支出制定预算。Apple 智能未对此方案进行优化，因此未作任何削减。"
+          }
+        }
+      }
+    },
     "Budgets": {
       "extractionState": "manual",
       "localizations": {
@@ -20975,6 +21633,53 @@
         }
       }
     },
+    "Cancelled.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abgebrochen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancelado."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Annulé."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Annullato."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キャンセルされました。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancelado."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已取消。"
+          }
+        }
+      }
+    },
     "CGT discount (>12 months)": {
       "extractionState": "manual",
       "localizations": {
@@ -21018,6 +21723,147 @@
           "stringUnit": {
             "state": "translated",
             "value": "资本利得折扣（超过 12 个月）"
+          }
+        }
+      }
+    },
+    "Couldn’t reach Private Cloud Compute. Check your internet connection.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private Cloud Compute ist nicht erreichbar. Prüfen Sie Ihre Internetverbindung."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo conectar con Private Cloud Compute. Comprueba tu conexión a internet."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible de joindre Private Cloud Compute. Vérifiez votre connexion internet."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile raggiungere Private Cloud Compute. Controlla la connessione a internet."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private Cloud Computeに接続できませんでした。インターネット接続を確認してください。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível acessar o Private Cloud Compute. Verifique sua conexão com a internet."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法连接 Private Cloud Compute。请检查互联网连接。"
+          }
+        }
+      }
+    },
+    "Couldn’t read an amount from the document — the scan may be too faint to OCR.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Im Dokument konnte kein Betrag gelesen werden – der Scan ist möglicherweise zu blass für die Texterkennung."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo leer ningún importe del documento: puede que el escaneo sea demasiado tenue para el reconocimiento de texto."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible de lire un montant dans le document — la numérisation est peut-être trop pâle pour la reconnaissance de texte."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile leggere un importo dal documento: la scansione potrebbe essere troppo sbiadita per il riconoscimento del testo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "書類から金額を読み取れませんでした。スキャンが薄すぎて文字認識できない可能性があります。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível ler um valor no documento — a digitalização pode estar clara demais para o reconhecimento de texto."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法从文稿中读取金额 — 扫描件可能过于模糊，无法识别文字。"
+          }
+        }
+      }
+    },
+    "Couldn’t read the file.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Datei konnte nicht gelesen werden."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo leer el archivo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible de lire le fichier."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile leggere il file."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルを読み取れませんでした。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível ler o arquivo."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法读取该文件。"
           }
         }
       }
@@ -43302,6 +44148,53 @@
         }
       }
     },
+    "Help": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hilfe"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ayuda"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aide"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aiuto"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ヘルプ"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajuda"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "帮助"
+          }
+        }
+      }
+    },
     "Hidden": {
       "extractionState": "manual",
       "localizations": {
@@ -44027,6 +44920,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "包含 %@"
+          }
+        }
+      }
+    },
+    "Invoices and dividend statements you ask Apple Intelligence to read, and the figures it writes about, are sent to Apple’s Private Cloud Compute to process. Apple says what is sent there isn’t stored or made accessible to Apple. Categorising and reading bank statements always run on this device.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rechnungen und Dividendenabrechnungen, die Apple Intelligence auf Ihren Wunsch liest, und die Zahlen, über die es schreibt, werden zur Verarbeitung an Apples Private Cloud Compute gesendet. Laut Apple wird das Gesendete weder gespeichert noch Apple zugänglich gemacht. Das Kategorisieren und das Lesen von Kontoauszügen erfolgen immer auf diesem Gerät."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Las facturas y los informes de dividendos que pides a Apple Intelligence que lea, y las cifras sobre las que escribe, se envían a Private Cloud Compute de Apple para su procesamiento. Apple afirma que lo enviado no se almacena ni queda accesible para Apple. La categorización y la lectura de extractos bancarios siempre se ejecutan en este dispositivo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les factures et les avis de dividendes que vous demandez à Apple Intelligence de lire, ainsi que les chiffres sur lesquels elle écrit, sont envoyés à Private Cloud Compute d’Apple pour être traités. Apple indique que ce qui y est envoyé n’est ni stocké ni rendu accessible à Apple. La catégorisation et la lecture des relevés bancaires s’effectuent toujours sur cet appareil."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le fatture e gli avvisi di dividendo che chiedi ad Apple Intelligence di leggere, e le cifre di cui scrive, vengono inviati a Private Cloud Compute di Apple per l’elaborazione. Apple dichiara che quanto inviato non viene conservato né reso accessibile ad Apple. La categorizzazione e la lettura degli estratti conto vengono sempre eseguite su questo dispositivo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence に読み取りを依頼した請求書と配当通知、および Apple Intelligence が文章にする数値は、処理のため Apple の Private Cloud Compute に送信されます。Apple によると、送信された内容は保存されず、Apple がアクセスすることもできません。分類と銀行明細の読み取りは常にこのデバイス上で行われます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "As faturas e os avisos de dividendos que você pede à Apple Intelligence para ler, e os valores sobre os quais ela escreve, são enviados ao Private Cloud Compute da Apple para processamento. A Apple afirma que o que é enviado não é armazenado nem fica acessível à Apple. A categorização e a leitura de extratos bancários são sempre executadas neste dispositivo."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你让 Apple 智能读取的发票和股息通知，以及它所描述的数字，会发送到 Apple 的 Private Cloud Compute 进行处理。Apple 表示，发送的内容不会被存储，Apple 也无法访问。分类和银行对账单的读取始终在此设备上运行。"
           }
         }
       }
@@ -50960,6 +51900,53 @@
         }
       }
     },
+    "Matches your observed monthly average.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entspricht Ihrem beobachteten Monatsdurchschnitt."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coincide con tu promedio mensual observado."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Correspond à votre moyenne mensuelle observée."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Corrisponde alla tua media mensile osservata."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "これまでの月平均と同じ金額です。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Corresponde à sua média mensal observada."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "与你的月均支出一致。"
+          }
+        }
+      }
+    },
     "Matches “%@” but only %@ of %@ franking credits are booked.": {
       "extractionState": "manual",
       "localizations": {
@@ -55448,6 +56435,53 @@
         }
       }
     },
+    "No line items were found in this invoice.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In dieser Rechnung wurden keine Positionen gefunden."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se encontraron partidas en esta factura."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucune ligne n’a été trouvée dans cette facture."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In questa fattura non sono state trovate voci."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この請求書に明細行が見つかりませんでした。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nenhum item foi encontrado nesta fatura."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此发票中未找到明细项目。"
+          }
+        }
+      }
+    },
     "No Longer Trading": {
       "extractionState": "manual",
       "localizations": {
@@ -55544,6 +56578,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "无公开价格"
+          }
+        }
+      }
+    },
+    "No readable text was found in the document.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Im Dokument wurde kein lesbarer Text gefunden."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se encontró texto legible en el documento."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun texte lisible n’a été trouvé dans le document."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nel documento non è stato trovato testo leggibile."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "書類内に読み取れるテキストが見つかりませんでした。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nenhum texto legível foi encontrado no documento."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文稿中未找到可读取的文字。"
           }
         }
       }
@@ -57724,6 +58805,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "尚未持有证券。"
+          }
+        }
+      }
+    },
+    "No spending history to budget from.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Ausgabenhistorie für ein Budget vorhanden."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No hay historial de gastos con el que presupuestar."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun historique de dépenses à partir duquel établir un budget."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessuno storico di spesa da cui ricavare un budget."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "予算のもとになる支出履歴がありません。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não há histórico de gastos para basear o orçamento."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有可用于制定预算的支出历史。"
           }
         }
       }
@@ -60126,6 +61254,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "某日期当天或之前。"
+          }
+        }
+      }
+    },
+    "On This Device": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf diesem Gerät"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En este dispositivo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sur cet appareil"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Su questo dispositivo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このデバイス上"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neste dispositivo"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在此设备上"
           }
         }
       }
@@ -66312,6 +67487,241 @@
         }
       }
     },
+    "Private Cloud Compute": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private Cloud Compute"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private Cloud Compute"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private Cloud Compute"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private Cloud Compute"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private Cloud Compute"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private Cloud Compute"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private Cloud Compute"
+          }
+        }
+      }
+    },
+    "Private Cloud Compute is unavailable right now.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private Cloud Compute ist derzeit nicht verfügbar."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private Cloud Compute no está disponible en este momento."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private Cloud Compute est indisponible pour le moment."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private Cloud Compute non è disponibile in questo momento."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private Cloud Computeは現在利用できません。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Private Cloud Compute está indisponível no momento."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private Cloud Compute 目前不可用。"
+          }
+        }
+      }
+    },
+    "Private Cloud Compute isn’t available in this version of FinvestLens.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private Cloud Compute ist in dieser Version von FinvestLens nicht verfügbar."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private Cloud Compute no está disponible en esta versión de FinvestLens."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private Cloud Compute n’est pas disponible dans cette version de FinvestLens."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private Cloud Compute non è disponibile in questa versione di FinvestLens."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このバージョンのFinvestLensではPrivate Cloud Computeを利用できません。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Private Cloud Compute não está disponível nesta versão do FinvestLens."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此版本的 FinvestLens 无法使用 Private Cloud Compute。"
+          }
+        }
+      }
+    },
+    "Private Cloud Compute isn’t available on this device.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private Cloud Compute ist auf diesem Gerät nicht verfügbar."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private Cloud Compute no está disponible en este dispositivo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private Cloud Compute n’est pas disponible sur cet appareil."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private Cloud Compute non è disponibile su questo dispositivo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このデバイスではPrivate Cloud Computeを利用できません。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Private Cloud Compute não está disponível neste dispositivo."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此设备无法使用 Private Cloud Compute。"
+          }
+        }
+      }
+    },
+    "Private Cloud Compute isn’t ready yet. Check that Apple Intelligence is on in %@, then try again.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private Cloud Compute ist noch nicht bereit. Prüfen Sie, ob Apple Intelligence in „%@“ aktiviert ist, und versuchen Sie es dann erneut."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private Cloud Compute aún no está listo. Comprueba que Apple Intelligence esté activada en %@ e inténtalo de nuevo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private Cloud Compute n’est pas encore prêt. Vérifiez qu’Apple Intelligence est activée dans %@, puis réessayez."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private Cloud Compute non è ancora pronto. Verifica che Apple Intelligence sia attiva in %@, quindi riprova."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private Cloud Computeはまだ準備ができていません。%@でApple Intelligenceがオンになっていることを確認してから、もう一度お試しください。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Private Cloud Compute ainda não está pronto. Verifique se a Apple Intelligence está ativada em %@ e tente novamente."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private Cloud Compute 尚未就绪。请确认已在“%@”中打开 Apple 智能，然后重试。"
+          }
+        }
+      }
+    },
     "Process Payment": {
       "extractionState": "manual",
       "localizations": {
@@ -68185,6 +69595,53 @@
         }
       }
     },
+    "Read documents and write summaries": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dokumente lesen und Zusammenfassungen schreiben"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leer documentos y escribir resúmenes"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lire les documents et rédiger les synthèses"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leggere i documenti e scrivere i riepiloghi"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "書類の読み取りと要約の作成"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ler documentos e escrever resumos"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "读取文稿并撰写摘要"
+          }
+        }
+      }
+    },
     "Read statements on device": {
       "extractionState": "manual",
       "localizations": {
@@ -68228,6 +69685,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "在设备端读取对账单"
+          }
+        }
+      }
+    },
+    "Read statements with Apple Intelligence": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auszüge mit Apple Intelligence lesen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leer extractos con Apple Intelligence"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lire des relevés avec Apple Intelligence"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leggere gli estratti conto con Apple Intelligence"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence で明細を読み取る"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ler extratos com a Apple Intelligence"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用 Apple 智能读取对账单"
           }
         }
       }
@@ -74912,6 +76416,53 @@
         }
       }
     },
+    "Runs on this device. Your books and documents never leave it.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Läuft auf diesem Gerät. Ihre Bücher und Dokumente verlassen es nie."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se ejecuta en este dispositivo. Tus libros y documentos nunca salen de él."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "S’exécute sur cet appareil. Vos livres et documents ne le quittent jamais."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Viene eseguita su questo dispositivo. I tuoi libri e documenti non lo lasciano mai."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このデバイス上で実行されます。帳簿や書類がデバイスの外に出ることはありません。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "É executada neste dispositivo. Seus livros e documentos nunca saem dele."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在此设备上运行。你的账簿和文稿绝不会离开设备。"
+          }
+        }
+      }
+    },
     "SAVINGS RATE (12 MO)": {
       "extractionState": "manual",
       "localizations": {
@@ -77691,6 +79242,53 @@
         }
       }
     },
+    "See Options…": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Optionen anzeigen …"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ver opciones…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voir les options…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostra opzioni…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オプションを表示…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ver opções…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "查看选项…"
+          }
+        }
+      }
+    },
     "Select %@": {
       "extractionState": "manual",
       "localizations": {
@@ -79008,6 +80606,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "「设置 ▸ 文稿」可设置两个文件夹：主文件夹与次文件夹 — 比如收据放一个、对账单放另一个。位于其中任一文件夹内的文件会以**相对路径**链接，与 GnuCash 的做法一致，因此账簿和文档可以一起迁移 — 迁到 NAS 或新的 Mac — 而不会断链。不在这两个文件夹内的文件按完整路径链接：仍然可用，但无法随之迁移。"
+          }
+        }
+      }
+    },
+    "Settings…": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einstellungen …"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajustes…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réglages…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impostazioni…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajustes…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "设置…"
           }
         }
       }
@@ -81997,6 +83642,53 @@
         }
       }
     },
+    "Still downloading from the cloud — try again shortly.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wird noch aus der Cloud geladen – versuchen Sie es in Kürze erneut."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aún se está descargando de la nube: inténtalo de nuevo en breve."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Téléchargement depuis le nuage encore en cours — réessayez dans un instant."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ancora in fase di download dal cloud: riprova tra poco."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "クラウドからダウンロード中です。しばらくしてからもう一度お試しください。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ainda está sendo baixado da nuvem — tente novamente em breve."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仍在从云端下载 — 请稍后重试。"
+          }
+        }
+      }
+    },
     "Stock Transaction": {
       "extractionState": "manual",
       "localizations": {
@@ -82845,6 +84537,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "摘要"
+          }
+        }
+      }
+    },
+    "System Settings": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Systemeinstellungen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajustes del Sistema"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réglages Système"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impostazioni di Sistema"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "システム設定"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajustes do Sistema"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "系统设置"
           }
         }
       }
@@ -84259,6 +85998,194 @@
         }
       }
     },
+    "The Apple Intelligence model is still downloading. Try again shortly.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Apple-Intelligence-Modell wird noch geladen. Versuchen Sie es in Kürze erneut."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El modelo de Apple Intelligence aún se está descargando. Inténtalo de nuevo en breve."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le modèle d’Apple Intelligence est encore en cours de téléchargement. Réessayez dans un instant."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il modello di Apple Intelligence è ancora in fase di download. Riprova tra poco."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligenceのモデルをダウンロード中です。しばらくしてからもう一度お試しください。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O modelo da Apple Intelligence ainda está sendo baixado. Tente novamente em breve."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple 智能模型仍在下载。请稍后重试。"
+          }
+        }
+      }
+    },
+    "The attachment file was not found.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Anhangdatei wurde nicht gefunden."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se encontró el archivo adjunto."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le fichier joint est introuvable."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il file allegato non è stato trovato."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添付ファイルが見つかりませんでした。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O arquivo anexo não foi encontrado."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未找到附件文件。"
+          }
+        }
+      }
+    },
+    "The attachment is still downloading from the cloud — try again shortly.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Anhang wird noch aus der Cloud geladen – versuchen Sie es in Kürze erneut."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El adjunto aún se está descargando de la nube: inténtalo de nuevo en breve."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La pièce jointe est encore en cours de téléchargement depuis le nuage — réessayez dans un instant."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L’allegato è ancora in fase di download dal cloud: riprova tra poco."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添付ファイルをクラウドからダウンロード中です。しばらくしてからもう一度お試しください。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O anexo ainda está sendo baixado da nuvem — tente novamente em breve."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "附件仍在从云端下载——请稍后重试。"
+          }
+        }
+      }
+    },
+    "The commentary quoted figures that are not in this report, so it was discarded.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Kommentar nannte Zahlen, die nicht in diesem Bericht stehen, und wurde daher verworfen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El comentario citaba cifras que no figuran en este informe, por lo que se descartó."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le commentaire citait des chiffres absents de ce rapport ; il a donc été écarté."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il commento citava cifre che non figurano in questo resoconto, quindi è stato scartato."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コメントにこのレポートにない数値が含まれていたため、破棄されました。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O comentário citava valores que não constam neste relatório, por isso foi descartado."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "评述引用了本报表中没有的数字，因此已被舍弃。"
+          }
+        }
+      }
+    },
     "The Loan Calculator builds a repayment schedule and can create the scheduled payment for you, split into interest and principal.": {
       "extractionState": "manual",
       "localizations": {
@@ -85205,6 +87132,53 @@
         }
       }
     },
+    "The model quoted a number that is not in the slide’s facts.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Modell nannte eine Zahl, die nicht zu den Fakten der Folie gehört."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El modelo citó una cifra que no figura en los datos de la diapositiva."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le modèle a cité un chiffre absent des données de la diapositive."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il modello ha citato una cifra che non figura nei dati della diapositiva."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "モデルがスライドのデータにない数値を引用しました。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O modelo citou um valor que não consta nos dados do slide."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "模型引用了幻灯片数据中没有的数字。"
+          }
+        }
+      }
+    },
     "The most recent reconciliation was %@. Re-opening reverts those splits to cleared so you can reconcile the statement again (FR-REC-03).": {
       "extractionState": "manual",
       "localizations": {
@@ -85252,6 +87226,53 @@
         }
       }
     },
+    "The outlook quoted figures that are not in this forecast, so it was discarded.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Ausblick nannte Zahlen, die nicht in dieser Prognose stehen, und wurde daher verworfen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La perspectiva citaba cifras que no figuran en esta previsión, por lo que se descartó."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les perspectives citaient des chiffres absents de cette prévision ; elles ont donc été écartées."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La prospettiva citava cifre che non figurano in questa previsione, quindi è stata scartata."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "見通しにこの予測にない数値が含まれていたため、破棄されました。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A perspectiva citava valores que não constam nesta previsão, por isso foi descartada."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "展望引用了本预测中没有的数字，因此已被舍弃。"
+          }
+        }
+      }
+    },
     "The papers": {
       "extractionState": "manual",
       "localizations": {
@@ -85295,6 +87316,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "相关文件"
+          }
+        }
+      }
+    },
+    "The period as a results deck — one message per slide, charts, callouts, insights from Apple Intelligence": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Zeitraum als Ergebnispräsentation — eine Aussage je Folie, Diagramme, Hinweise, Erkenntnisse von Apple Intelligence"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El período como presentación de resultados: un mensaje por diapositiva, gráficos, notas destacadas e ideas de Apple Intelligence"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La période sous forme de présentation de résultats — un message par diapositive, graphiques, encadrés, analyses d’Apple Intelligence"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il periodo come presentazione dei risultati: un messaggio per diapositiva, grafici, richiami e analisi di Apple Intelligence"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "期間を成果報告スライドとして — 1 スライド 1 メッセージ、グラフ、注記、Apple Intelligence による分析"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O período como apresentação de resultados — uma mensagem por slide, gráficos, destaques e análises da Apple Intelligence"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "将该期间做成业绩幻灯片 — 每页一个要点，配图表、批注与 Apple 智能洞察"
           }
         }
       }
@@ -86003,6 +88071,100 @@
         }
       }
     },
+    "The text in this document could not be read on this device. Enter the details manually instead.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Text in diesem Dokument konnte auf diesem Gerät nicht gelesen werden. Geben Sie die Angaben stattdessen manuell ein."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo leer el texto de este documento en este dispositivo. Introduce los datos manualmente."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le texte de ce document n’a pas pu être lu sur cet appareil. Saisissez plutôt les informations manuellement."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non è stato possibile leggere il testo di questo documento su questo dispositivo. Inserisci i dati manualmente."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このデバイスではこの書類のテキストを読み取れませんでした。代わりに手動で入力してください。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível ler o texto deste documento neste dispositivo. Insira os dados manualmente."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法在此设备上读取此文稿中的文字。请改为手动输入详细信息。"
+          }
+        }
+      }
+    },
+    "The transaction has no readable attachment.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Buchung hat keinen lesbaren Anhang."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La transacción no tiene ningún adjunto legible."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L’opération n’a aucune pièce jointe lisible."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La transazione non ha alcun allegato leggibile."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この取引には読み取れる添付ファイルがありません。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A transação não tem nenhum anexo legível."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "该交易没有可读取的附件。"
+          }
+        }
+      }
+    },
     "The two amounts are within a few percent — that is usually a surcharge rather than a foreign currency. Convert anyway if it wasn’t.": {
       "extractionState": "manual",
       "localizations": {
@@ -86234,6 +88396,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "控制中心里还有一个可打开 FinvestLens 的按钮。"
+          }
+        }
+      }
+    },
+    "There is no asset account to forecast yet.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Es gibt noch kein Aktivkonto für eine Prognose."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aún no hay ninguna cuenta de activo que prever."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il n’y a pas encore de compte d’actif à prévoir."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non c’è ancora alcun conto di attività da prevedere."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "予測する資産勘定がまだありません。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ainda não há nenhuma conta de ativo para prever."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "尚无可供预测的资产科目。"
+          }
+        }
+      }
+    },
+    "There is no spending history yet to budget from.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Es gibt noch keine Ausgabenhistorie für ein Budget."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aún no hay historial de gastos con el que presupuestar."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il n’y a pas encore d’historique de dépenses pour établir un budget."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non c’è ancora uno storico di spesa da cui ricavare un budget."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "予算のもとになる支出履歴がまだありません。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ainda não há histórico de gastos para basear o orçamento."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "尚无可用于制定预算的支出历史。"
           }
         }
       }
@@ -86708,6 +88964,100 @@
         }
       }
     },
+    "This device does not support Apple Intelligence.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieses Gerät unterstützt Apple Intelligence nicht."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este dispositivo no es compatible con Apple Intelligence."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cet appareil ne prend pas en charge Apple Intelligence."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questo dispositivo non supporta Apple Intelligence."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このデバイスはApple Intelligenceに対応していません。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este dispositivo não é compatível com a Apple Intelligence."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此设备不支持 Apple 智能。"
+          }
+        }
+      }
+    },
+    "This document is too long for Apple Intelligence to read in one piece.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieses Dokument ist zu lang, als dass Apple Intelligence es in einem Stück lesen könnte."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este documento es demasiado largo para que Apple Intelligence lo lea de una sola vez."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce document est trop long pour qu’Apple Intelligence le lise d’un seul tenant."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questo documento è troppo lungo perché Apple Intelligence lo legga in una volta sola."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この書類は長すぎるため、Apple Intelligenceが一度に読み取ることができません。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este documento é longo demais para a Apple Intelligence ler de uma só vez."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此文稿过长，Apple 智能 无法一次读完。"
+          }
+        }
+      }
+    },
     "This favourite was saved by a newer version.": {
       "extractionState": "manual",
       "localizations": {
@@ -86802,6 +89152,53 @@
         }
       }
     },
+    "This file is already attached to %@.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Datei ist bereits an %@ angehängt."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este archivo ya está adjunto a %@."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce fichier est déjà joint à %@."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questo file è già allegato a %@."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このファイルはすでに %@ に添付されています。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este arquivo já está anexado a %@."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此文件已附加到 %@。"
+          }
+        }
+      }
+    },
     "This help": {
       "extractionState": "manual",
       "localizations": {
@@ -86845,6 +89242,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "本帮助"
+          }
+        }
+      }
+    },
+    "This invoice is longer than Apple Intelligence can read at once, so only its first part was read. Line items further down are missing.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Rechnung ist länger, als Apple Intelligence auf einmal lesen kann; daher wurde nur der erste Teil gelesen. Weiter unten stehende Positionen fehlen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esta factura es más larga de lo que Apple Intelligence puede leer de una vez, así que solo se leyó la primera parte. Faltan las partidas que aparecen más abajo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cette facture est plus longue que ce qu’Apple Intelligence peut lire en une fois ; seule sa première partie a donc été lue. Les lignes situées plus bas sont absentes."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questa fattura è più lunga di quanto Apple Intelligence possa leggere in una volta, quindi ne è stata letta solo la prima parte. Mancano le voci più in basso."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この請求書は Apple Intelligence が一度に読み取れる長さを超えているため、最初の部分だけを読み取りました。それより後の明細行は含まれていません。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esta fatura é mais longa do que a Apple Intelligence consegue ler de uma vez, então apenas a primeira parte foi lida. Os itens mais abaixo estão faltando."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此发票超出了 Apple 智能一次可读取的长度，因此只读取了开头部分。后面的明细项目未包含在内。"
           }
         }
       }
@@ -88829,6 +91273,53 @@
         }
       }
     },
+    "Turn on Apple Intelligence in %@ to use this feature.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktivieren Sie Apple Intelligence in „%@“, um diese Funktion zu verwenden."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Activa Apple Intelligence en %@ para usar esta función."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Activez Apple Intelligence dans %@ pour utiliser cette fonctionnalité."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Attiva Apple Intelligence in %@ per usare questa funzione."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この機能を使うには、%@でApple Intelligenceをオンにしてください。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ative a Apple Intelligence em %@ para usar este recurso."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请在“%@”中打开 Apple 智能 以使用此功能。"
+          }
+        }
+      }
+    },
     "Turn statements, invoices and dividend notices into transactions.": {
       "extractionState": "manual",
       "localizations": {
@@ -90733,6 +93224,53 @@
         }
       }
     },
+    "Uses Apple’s Private Cloud Compute. What it reads is sent to Apple to process; Apple says it isn’t stored or made accessible to Apple.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verwendet Apples Private Cloud Compute. Das Gelesene wird zur Verarbeitung an Apple gesendet; laut Apple wird es weder gespeichert noch Apple zugänglich gemacht."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usa Private Cloud Compute de Apple. Lo que lee se envía a Apple para su procesamiento; Apple afirma que no se almacena ni queda accesible para Apple."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Utilise Private Cloud Compute d’Apple. Ce qui est lu est envoyé à Apple pour être traité ; Apple indique que cela n’est ni stocké ni rendu accessible à Apple."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usa Private Cloud Compute di Apple. Ciò che viene letto è inviato ad Apple per l’elaborazione; Apple dichiara che non viene conservato né reso accessibile ad Apple."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple の Private Cloud Compute を使用します。読み取った内容は処理のため Apple に送信されます。Apple によると、保存されず、Apple がアクセスすることもできません。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usa o Private Cloud Compute da Apple. O que é lido é enviado à Apple para processamento; a Apple afirma que não é armazenado nem fica acessível à Apple."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用 Apple 的 Private Cloud Compute。读取的内容会发送给 Apple 进行处理；Apple 表示这些内容不会被存储，Apple 也无法访问。"
+          }
+        }
+      }
+    },
     "Valuation Cadence": {
       "extractionState": "manual",
       "localizations": {
@@ -92543,6 +95081,53 @@
         }
       }
     },
+    "Where it runs": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wo es läuft"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dónde se ejecuta"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Où elle s’exécute"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dove viene eseguita"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "実行場所"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Onde é executada"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "运行位置"
+          }
+        }
+      }
+    },
     "While held": {
       "extractionState": "manual",
       "localizations": {
@@ -93668,6 +96253,147 @@
           "stringUnit": {
             "state": "translated",
             "value": "当最新报价越过此目标时，仪表板会显示提醒。"
+          }
+        }
+      }
+    },
+    "You’re close to today’s Private Cloud Compute limit.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sie nähern sich dem heutigen Limit für Private Cloud Compute."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estás cerca del límite de hoy de Private Cloud Compute."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vous approchez de la limite du jour pour Private Cloud Compute."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stai per raggiungere il limite odierno di Private Cloud Compute."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "本日のPrivate Cloud Computeの上限に近づいています。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Você está perto do limite de hoje do Private Cloud Compute."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "即将达到今天的 Private Cloud Compute 限额。"
+          }
+        }
+      }
+    },
+    "You’ve reached today’s Private Cloud Compute limit.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sie haben das heutige Limit für Private Cloud Compute erreicht."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Has alcanzado el límite de hoy de Private Cloud Compute."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vous avez atteint la limite du jour pour Private Cloud Compute."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hai raggiunto il limite odierno di Private Cloud Compute."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "本日のPrivate Cloud Computeの上限に達しました。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Você atingiu o limite de hoje do Private Cloud Compute."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已达到今天的 Private Cloud Compute 限额。"
+          }
+        }
+      }
+    },
+    "You’ve reached today’s Private Cloud Compute limit. It resets %@.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sie haben das heutige Limit für Private Cloud Compute erreicht. Es wird %@ zurückgesetzt."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Has alcanzado el límite de hoy de Private Cloud Compute. Se restablece %@."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vous avez atteint la limite du jour pour Private Cloud Compute. Elle sera réinitialisée %@."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hai raggiunto il limite odierno di Private Cloud Compute. Verrà reimpostato %@."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "本日のPrivate Cloud Computeの上限に達しました。%@にリセットされます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Você atingiu o limite de hoje do Private Cloud Compute. Ele será redefinido %@."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已达到今天的 Private Cloud Compute 限额。限额将于%@重置。"
           }
         }
       }

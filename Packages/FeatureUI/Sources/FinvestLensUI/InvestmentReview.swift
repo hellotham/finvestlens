@@ -88,12 +88,13 @@ extension AppModel {
             ("Cost basis", portfolio.totalCost),
             ("Unrealised gain", portfolio.totalUnrealized),
         ]
+        var ratios: [(String, Decimal)] = []
         var headline = "Portfolio valued at \(compactAmount(portfolio.totalValue, code))"
         if let returnFraction = portfolio.totalReturnFraction {
             let percent = roundedPercent(returnFraction)
             callouts.append(SlideCallout(label: "Total return", value: "\(percent)%",
                                          deltaPositive: percent >= 0))
-            figures.append(("Total return percent", percent))
+            ratios.append(("Total return", percent))
             headline = percent >= 0
                 ? "Portfolio of \(compactAmount(portfolio.totalValue, code)) returning \(percent)% on money in"
                 : "Portfolio of \(compactAmount(portfolio.totalValue, code)) down \(-percent)% on money in"
@@ -110,7 +111,7 @@ extension AppModel {
             chart: .categoryBars(Array(bars)),
             footnote: "Valued at the most recent recorded prices · \(portfolio.method.displayName) basis · return = (unrealised + realised + income) over money in",
             facts: ReviewSlideFacts(kicker: "Portfolio overview", periodLabel: label,
-                                    currencyCode: code, figures: figures))
+                                    currencyCode: code, figures: figures, ratios: ratios))
     }
 
     /// Allocation + the factsheet's concentration read.
@@ -141,10 +142,9 @@ extension AppModel {
             footnote: "Share of market value · concentration is the factsheet's first risk read",
             facts: ReviewSlideFacts(
                 kicker: "Allocation and concentration", periodLabel: label, currencyCode: code,
-                figures: [("Number of holdings", Decimal(valued.count)),
-                          ("Largest holding percent", topShare),
-                          ("Top five percent", topFiveShare)]
-                    + valued.prefix(5).map { ($0.symbol, $0.marketValue ?? 0) }))
+                figures: valued.prefix(5).map { ($0.symbol, $0.marketValue ?? 0) },
+                ratios: [("Largest holding", topShare), ("Top five holdings", topFiveShare)],
+                counts: [("Number of holdings", valued.count)]))
     }
 
     /// Mark-to-market winners and losers.
@@ -216,11 +216,12 @@ extension AppModel {
             ("Franked", franked), ("Unfranked", unfranked),
             ("Franking credits", credits),
         ]
+        var ratios: [(String, Decimal)] = []
         if portfolio.totalValue > 0 {
             let yield = roundedPercent(
                 NSDecimalNumber(decimal: periodIncome / portfolio.totalValue).doubleValue)
             callouts.append(SlideCallout(label: "Yield on value", value: "\(yield)%"))
-            figures.append(("Income yield percent", yield))
+            ratios.append(("Income yield", yield))
         }
 
         return ReviewSlide(
@@ -231,7 +232,7 @@ extension AppModel {
             chart: .categoryBars(Array(bars)),
             footnote: "Dividends and distributions classified from the Dividends income tree · yield on closing market value",
             facts: ReviewSlideFacts(kicker: "Investment income", periodLabel: label,
-                                    currencyCode: code, figures: figures))
+                                    currencyCode: code, figures: figures, ratios: ratios))
     }
 
     /// Realised gains for the period, with the CGT-relevant term split.
@@ -271,8 +272,8 @@ extension AppModel {
                 kicker: "Realised gains", periodLabel: label, currencyCode: code,
                 figures: [("Realised gain", report.totalGain),
                           ("Held over one year", longTerm),
-                          ("Held one year or less", shortTerm),
-                          ("Disposals", Decimal(report.lines.count))]))
+                          ("Held one year or less", shortTerm)],
+                counts: [("Disposals", report.lines.count)]))
     }
 
     /// Where the return came from: income + realised + unrealised over
@@ -296,11 +297,12 @@ extension AppModel {
             ("Unrealised gain", portfolio.totalUnrealized),
             ("Total gain", gain),
         ]
+        var ratios: [(String, Decimal)] = []
         if let returnFraction = portfolio.totalReturnFraction {
             let percent = roundedPercent(returnFraction)
             callouts.append(SlideCallout(label: "Return on money in", value: "\(percent)%",
                                          deltaPositive: percent >= 0))
-            figures.append(("Return percent", percent))
+            ratios.append(("Return on money in", percent))
         }
 
         return ReviewSlide(
@@ -315,6 +317,6 @@ extension AppModel {
             ]),
             footnote: "Gain = income + realised + unrealised · GnuCash's money-in return model",
             facts: ReviewSlideFacts(kicker: "Return decomposition", periodLabel: label,
-                                    currencyCode: code, figures: figures))
+                                    currencyCode: code, figures: figures, ratios: ratios))
     }
 }

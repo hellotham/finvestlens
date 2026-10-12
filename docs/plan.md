@@ -61,9 +61,10 @@ FinvestLensApp targets (macOS/iPadOS/iOS) depend on FeatureUI → downward only.
 
 Dependencies point downward only; `Engine` builds/tests with nothing above it (`FR-ENG-12`).
 
-Four more packages joined after P0, making **eleven** in all: `Shared` (the
+Five more packages joined after P0, making **twelve** in all: `Shared` (the
 Foundation-only App-Group snapshot leaf, P6), `Intelligence` (the on-device
-model layer, P6+), `CLI` (`finlens`, P10c) and `Lab` (`finlab`, Aug 2026). The
+model layer, P6+), `CLI` (`finlens`, P10c), `Lab` (`finlab`, Aug 2026) and
+`Cloud` (the Box OAuth and file transport, Oct 2026, which depends on nothing). The
 app target and `finlab` are both top-level consumers above `FeatureUI`;
 `finlens` sits beside them on Engine/Persistence/Interchange/Reports only. The
 current graph is [architecture.md §9](architecture.md).
@@ -74,7 +75,7 @@ current graph is [architecture.md §9](architecture.md).
 
 | Stream | What | Starts |
 |---|---|---|
-| **Testing & CI** | Swift Testing; CI (`ci.yml`) builds and tests all eleven packages plus the unsigned macOS/iOS app on every PR, and gates SPDX headers. Perf and live-book harnesses are env-gated (`FL_*`) and skip in CI. Coverage is **not** currently measured. | P0 |
+| **Testing & CI** | Swift Testing; CI (`ci.yml`) builds and tests all twelve packages plus the unsigned macOS/iOS app on every push and PR, on GitHub's `xcode-27` image (macOS 27, Xcode 27), and gates SPDX headers, the string catalogs and real-looking figures in published files. Perf and live-book harnesses are env-gated (`FL_*`) and skip in CI. Coverage is **not** currently measured. | P0 |
 | **Fixture corpus** | Books synthesized in-test per package, plus env-gated harnesses against the real reference book (`FL_ROUNDTRIP_FILE`, `FL_PERF_FILE`). No committed `.gnucash` corpus and no synthetic generator — real books are gitignored, and a real 46,578-transaction book proved the better instrument. | P1 |
 | **Design system** | SwiftUI component kit, dark/light, Dynamic Type; charts per the [dataviz](enhancements-firefly.md) standards | P2 |
 | **Performance harness** | Open/scroll/import/save benchmarks vs NFR-02; NAS write-back tests. *An `os_signpost` + DEBUG over-budget harness (`Perf`) now wraps the hot paths (Jul 2026).* | P1 |

@@ -157,7 +157,6 @@ struct ClassifierKeywordTests {
 @Suite("Budget advisor fallback")
 struct BudgetFallbackTests {
 
-    @available(macOS 26.0, iOS 26.0, *)
     @Test("Average-based fallback budgets every category at its average")
     func averageFallback() {
         let history = [

@@ -363,6 +363,12 @@ struct CompactMoreRoot: View {
                     ForEach(CompactTab.moreModes) { mode in
                         CompactModeSections(model: model, mode: mode, namesMode: true)
                     }
+                    // App-wide, so below every mode's rows. Until 12 Oct 2026
+                    // the phone could reach neither.
+                    Section {
+                        Button("Settings", systemImage: "gearshape") { model.showingSettings = true }
+                        Button("Help", systemImage: "questionmark.circle") { model.showingHelp = true }
+                    }
                 }
                 .listStyle(.insetGrouped)
             }

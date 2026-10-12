@@ -55,22 +55,56 @@ Quality limits of the on-device import layer (PRD §5.18), caught by the review 
 | Statement sign inference without a balance column | FR-AI-01 / P4 | Signs re-derived from the running balance; statements with unsigned debit/credit columns *and* no balance column may import with wrong signs (the review screen catches it). |
 | iOS file pickers on-device | FR-AI-01/03/04/07 / P4–P7 | iOS keeps `.fileImporter`; not yet exercised on a device. |
 
-## 3a — Foundation Models 27 — consciously not adopted (9 Oct 2026)
+## 3a — Foundation Models 27 — where each change stands (12 Oct 2026)
 
-What the 27 SDK added (Apple's *Foundation Models updates* page and the SDK
-interface, both read 9 Oct 2026) and why the Intelligence package does not
-use it. The doctrine in architecture.md stands: everything runs on the
-on-device model and no financial data leaves the device.
+Apple's [*Foundation Models updates*](https://developer.apple.com/documentation/Updates/FoundationModels)
+page lists what arrived with 27. On 9 Oct 2026 this section was a table headed
+"consciously not adopted" that declined seven of them on the implementer's own
+judgement, against an instruction to accommodate the new framework. It is
+replaced by what was done on 12 Oct — every page the updates page links to was
+read that day in a browser, with the 27 SDK's interface and probes of the
+installed model — and by what is still open and why. The account of the work is
+in [implemented.md](implemented.md); the prompts and the measurements behind
+them are in [intelligence-prompts.md](intelligence-prompts.md).
 
-| Feature | Why not (yet) |
+| Change in 27 | Where it stands |
 |---|---|
-| `PrivateCloudComputeLanguageModel` — more reasoning, larger context | Sends the prompt to Apple's Private Cloud Compute. Off-device by definition; ruled out by the doctrine, not by capability. |
-| `LanguageModel` protocol, `CoreAILanguageModel`, `MLXLanguageModel` | Lets any model stand in for the system one. Nothing to gain while the on-device model does the job; a third-party model would need its own privacy case. |
-| Image attachments in prompts + Vision `OCRTool` / `BarcodeReaderTool` | The import pipeline already OCRs with Vision and feeds *text* to the model, which is what the real-document harnesses validate. A multimodal rewrite needs re-validation against the real bank files before it could replace that. |
-| `LanguageModelSession.DynamicProfile` (agentic sessions), `GenerationOptions.ToolCallingMode` | No session here uses tools or multi-turn agency; every call is one guided-generation request. |
-| `SystemLanguageModel.Variant` (`core3`, `coreAdvanced3`) | Read-only: it *reports* which on-device model backs the instance (Apple's doc page, read 9 Oct 2026); there is no initializer to choose one. |
-| `Guardrails.permissiveContentTransformations` | Tried and reverted the same day: Apple's safety article says it applies only to string responses, and every session here is guided generation, which keeps the default guardrails regardless. The classifier's guardrail refusals were fixed by re-phrasing instead (see implemented.md). |
-| `SystemLanguageModel.contextSize` / `tokenCount(for:)` (26.4) for pre-sizing statement chunks | The extractor's split-and-retry on `contextOverflow` already works, and the 27 model's context is 8,192 tokens (measured 9 Oct 2026), twice the 4,096 the loop was tuned on. Worth revisiting only if overflow retries show up in real imports. |
+| `LanguageModel` protocol — a session takes any model | **Adopted.** One seam (`LanguageModels`) resolves the model for each request, once, and is the only place a session is created. |
+| `SystemLanguageModel.contextSize` / `tokenCount(for:)` | **Adopted.** A document read on its own is cut to the model's window by the model's own count (`LanguageModels.fit`: measure as sent, cut in proportion, measure again). The installed model reports 8,192 tokens. Two bounds are deliberate and are not the window: a *batch* of attachments reads the first 6,000 characters of each file (`AppModel.bulkHeadCharacters` — fifty files are fifty requests), and a bank statement is read 1,000 characters a request so that no row is dropped. An invoice too long for the window is read from the top and the review says so. |
+| The error types (`LanguageModelError`, `SystemLanguageModel.Error`, `LanguageModelSession.Error`, `PrivateCloudComputeLanguageModel.Error`), `GeneratedContent.ParsingError`, and a refusal's `explanation` | **Adopted in full** (`IntelligenceError.wrap` / `describing`). Rate limits, timeouts and unsupported languages are their own cases, because they mean different things to a batch: a rate limit stops it, a timeout costs one slice. A refusal's explanation is asked for only where one document is being read and a person will see it, and shown only if it is a sentence — the model has answered that question with the extraction itself. |
+| The new on-device model — "test your prompts" | **Done, and it found defects**: see intelligence-prompts.md. Live suites run on every local `swift test`: the eight features in English, the three narrators in each of the seven languages the app is translated into, the budget advisor in Japanese and French. |
+| Locale and language instructions | **Adopted**, placed where measurement says they work (224 drafts, judged by an oracle that is not the code's own). |
+| `GenerationOptions.ToolCallingMode` | **Adopted as far as it applies**: no feature registers a tool yet, so every request states `.disallowed`. |
+| Run-time schemas (`GenerationSchema`) | **Adopted** for the budget advisor and the categoriser, whose answers now have exactly as many rows as the request — as the `@Generable` type's own schema with one count changed (`LanguageModels.countedSchema`), not a second schema written by hand. |
+| `PrivateCloudComputeLanguageModel` | **Built, and switched off until Apple grants the entitlement.** Where a build can offer it, it is the default (the owner's decision) for reading one invoice or dividend statement at a time and for writing summaries; categorising, classifying and reading bank statements stay on the device. The choice is in Settings on every platform, each feature that can leave the device says so where it is used, and the daily allowance is shown there. It is compiled in only by the `PRIVATE_CLOUD_COMPUTE` condition, which must land with the `com.apple.developer.private-cloud-compute` entitlement, the help text and the privacy policy — `PrivateCloudComputeBuildTests` fails on any one without the others — and is never offered in the Simulator. **Nothing has run against the cloud model**: a request without the entitlement ends the process. That leaves three things only a granted entitlement can settle: whether the prompts behave as they do on the device; which reasoning level each feature should ask for (Apple: start at `moderate` and evaluate); and how the allowance holds up in a batch. Apple's request form answered "not currently enrolled in the App Store Small Business Program" for this account on 12 Oct, after the approval had arrived; the owner has a support request open. |
+| `SystemLanguageModel.Variant` | Read-only (no initialiser takes one). The installed model reports "AFM 3 Core Advanced"; nothing in the app depends on which. |
+| `Guardrails.permissiveContentTransformations` | Does not apply: Apple's safety article (re-read 12 Oct) says "This mode only works for generating a string value", and every request here is guided generation. |
+| Foundation Models instrument | Recorded on 12 Oct with the owner's consent to its unencrypted capture; see intelligence-prompts.md for what it showed. |
+
+**Decided by the owner, 12 Oct 2026, and not yet built at this commit** — they
+are the next changes, in this order:
+
+- **Images in prompts, with Vision's `OCRTool` and `BarcodeReaderTool`.** The
+  installed model reports the `vision` capability. Today the import pipeline
+  reads a document with Vision itself and gives the model text. The tools
+  live in a cross-import overlay (`_Vision_FoundationModels`) that the iOS
+  Simulator SDK does not have, so the code path has to be conditional.
+- **`LanguageModelSession.DynamicProfile`.** A profile is where a session's
+  model, sampling, tool mode and reasoning level are declared together, and
+  where tools are offered only when the request has an image for them.
+- **A model the person supplies** (`MLXLanguageModel` from a folder they
+  choose). The owner's rule covers this one in particular: *the publisher
+  provides no APIs and stores no data; everything is supplied by the person
+  using the app.* So no model is bundled, no model is downloaded by the app,
+  and there is no key or endpoint of the publisher's.
+
+**Measured, and the next change after those:** the review decks hand the
+model their labels in English whatever the app's language, because the two
+builders (`FinancialReview.swift`, `InvestmentReview.swift`) hold 102 label
+literals that were never localized — on screen or in the prompt. With English
+labels the model answered a French reader in French 10 times in 16; with the
+same labels in French, 16 in 16. Localizing them fixes the deck on screen and
+the language at its root.
 
 ## 4 — Platform & HIG — deferred decisions
 

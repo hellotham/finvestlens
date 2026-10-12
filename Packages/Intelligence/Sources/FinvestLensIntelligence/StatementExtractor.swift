@@ -8,9 +8,7 @@
 
 import Foundation
 import FinvestLensInterchange
-#if canImport(FoundationModels)
 import FoundationModels
-#endif
 
 /// Extracts transactions from PDF bank/card statements using the on-device
 /// model (`FR-AI-01`).
@@ -21,10 +19,8 @@ import FoundationModels
 /// statements are naturally page-structured), and the typed results merge
 /// into the same ``StagedTransaction`` rows the CSV/QIF/OFX importers emit —
 /// so matching, rules, and review all work unchanged downstream.
-@available(macOS 26.0, iOS 26.0, *)
 public enum StatementExtractor {
 
-    #if canImport(FoundationModels)
     @Generable
     struct ModelTransaction {
         @Guide(description: "Transaction date in yyyy-MM-dd format")
@@ -61,7 +57,6 @@ public enum StatementExtractor {
         @Guide(description: "Every transaction row on this statement page. Exclude opening/closing balance lines, subtotals, and marketing text.", .maximumCount(20))
         var transactions: [ModelTransaction]
     }
-    #endif
 
     /// How much statement text to put in one request.
     ///
@@ -101,13 +96,9 @@ public enum StatementExtractor {
         pages: [DocumentText.Page],
         onProgress: (@Sendable (Int, Int) -> Void)? = nil
     ) async throws -> [StagedTransaction] {
-        #if canImport(FoundationModels)
-        guard IntelligenceAvailability.current().isAvailable else {
-            if case .unavailable(let reason) = IntelligenceAvailability.current() {
-                throw IntelligenceError.unavailable(reason)
-            }
-            throw IntelligenceError.unavailable("Apple Intelligence is not available.")
-        }
+        // Says "unavailable" once, before any page is read, rather than once
+        // per slice.
+        _ = try await LanguageModels.resolve(.statementExtractor)
 
         struct RawRow {
             var date: Date; var amount: Decimal; var payee: String; var reference: String
@@ -137,64 +128,59 @@ public enum StatementExtractor {
         /// retry below is a safety net for a window that is no longer expected
         /// to overflow at all.
         func extract(slice: String) async throws {
-            let session = LanguageModelSession(instructions: """
-                You extract transaction rows from bank and credit card statement text.
-                Report amounts exactly as printed, signed from the account holder's \
-                perspective: purchases, withdrawals and fees are negative; deposits, \
-                salary and refunds are positive. Never invent transactions that are \
-                not in the text.
-                """)
-            do {
-                let response = try await session.respond(
-                    to: "Statement page:\n\n\(slice)",
-                    generating: ModelPage.self,
-                    options: .greedy
-                )
-                if let opening = IntelligenceParsing.amount(response.content.openingBalance) {
-                    previousBalance = opening
-                }
-                let source = SourceGrounding.folded(slice)
-                // A row may not be reported more often than its amount is
-                // printed on this slice. The dedupe set below holds the payee
-                // verbatim, so a restated row worded differently slips past it;
-                // the page cannot be argued with.
-                var reported: [String: Int] = [:]
-                for row in response.content.transactions {
-                    guard let date = IntelligenceParsing.date(row.date),
-                          let amount = IntelligenceParsing.amount(row.amount),
-                          amount != 0,
-                          // The instructions say never to invent a transaction;
-                          // this is what checks. A capped array stops runaway
-                          // generation but not padding — the model fills the
-                          // remaining slots with plausible rows — so a row is
-                          // kept only if both its payee and its amount are
-                          // actually in the text it was extracted from.
-                          SourceGrounding.isNamePrinted(row.payee, in: source),
-                          SourceGrounding.isAmountPrinted(row.amount, in: source)
-                    else { continue }
-                    let digits = row.amount.filter(\.isNumber)
-                    reported[digits, default: 0] += 1
-                    guard reported[digits, default: 0]
-                            <= SourceGrounding.printedCount(row.amount, in: source)
-                    else { continue }
-                    let balance = IntelligenceParsing.amount(row.balanceAfter)
-                    // Dedupe across pages (carried-over rows, repeated headers).
-                    // Include the running balance and reference so two genuinely
-                    // distinct same-day/amount/payee rows (e.g. two identical
-                    // coffees) aren't collapsed — only a truly repeated row, which
-                    // shares its balance and reference too, is dropped.
-                    let key = "\(row.date)|\(abs(amount))|\(row.payee.lowercased())|\(row.reference)|\(row.balanceAfter)"
-                    guard seen.insert(key).inserted else {
-                        if let balance { previousBalance = balance }
-                        continue
-                    }
-                    raw.append(RawRow(date: date, amount: amount, payee: row.payee,
-                                      reference: row.reference,
-                                      previous: previousBalance, balance: balance))
+            let page = try await LanguageModels.respond(
+                .statementExtractor,
+                instructions: """
+                    You extract transaction rows from bank and credit card statement text.
+                    Report amounts exactly as printed, signed from the account holder's \
+                    perspective: purchases, withdrawals and fees are negative; deposits, \
+                    salary and refunds are positive. Never invent transactions that are \
+                    not in the text.
+                    """,
+                prompt: "Statement page:\n\n\(slice)",
+                generating: ModelPage.self)
+            if let opening = IntelligenceParsing.amount(page.openingBalance) {
+                previousBalance = opening
+            }
+            let source = SourceGrounding.folded(slice)
+            // A row may not be reported more often than its amount is
+            // printed on this slice. The dedupe set below holds the payee
+            // verbatim, so a restated row worded differently slips past it;
+            // the page cannot be argued with.
+            var reported: [String: Int] = [:]
+            for row in page.transactions {
+                guard let date = IntelligenceParsing.date(row.date),
+                      let amount = IntelligenceParsing.amount(row.amount),
+                      amount != 0,
+                      // The instructions say never to invent a transaction;
+                      // this is what checks. A capped array stops runaway
+                      // generation but not padding — the model fills the
+                      // remaining slots with plausible rows — so a row is
+                      // kept only if both its payee and its amount are
+                      // actually in the text it was extracted from.
+                      SourceGrounding.isNamePrinted(row.payee, in: source),
+                      SourceGrounding.isAmountPrinted(row.amount, in: source)
+                else { continue }
+                let digits = row.amount.filter(\.isNumber)
+                reported[digits, default: 0] += 1
+                guard reported[digits, default: 0]
+                        <= SourceGrounding.printedCount(row.amount, in: source)
+                else { continue }
+                let balance = IntelligenceParsing.amount(row.balanceAfter)
+                // Dedupe across pages (carried-over rows, repeated headers).
+                // Include the running balance and reference so two genuinely
+                // distinct same-day/amount/payee rows (e.g. two identical
+                // coffees) aren't collapsed — only a truly repeated row, which
+                // shares its balance and reference too, is dropped.
+                let key = "\(row.date)|\(abs(amount))|\(row.payee.lowercased())|\(row.reference)|\(row.balanceAfter)"
+                guard seen.insert(key).inserted else {
                     if let balance { previousBalance = balance }
+                    continue
                 }
-            } catch {
-                throw IntelligenceError.wrap(error)
+                raw.append(RawRow(date: date, amount: amount, payee: row.payee,
+                                  reference: row.reference,
+                                  previous: previousBalance, balance: balance))
+                if let balance { previousBalance = balance }
             }
         }
 
@@ -232,13 +218,25 @@ public enum StatementExtractor {
         // reported if nothing came back at all, so a total failure is still
         // told the truth rather than reported as a statement with no
         // transactions.
+        //
+        // That is for a failure about one slice. A failure about the model
+        // itself — it is unavailable, it is rate-limited because the app
+        // went to the background, the run was cancelled — will be the same
+        // on every slice that follows, and collecting those returned the
+        // first two pages of a six-page statement as the statement. Those
+        // stop the run: an incomplete statement presented as complete is
+        // worse than being asked to try again.
         var firstFailure: IntelligenceError?
         for (index, page) in pages.enumerated() {
             for group in Self.lineGroups(page.text, budget: Self.sliceBudget) {
                 do {
                     try await extractSplitting(group)
+                } catch is CancellationError {
+                    throw CancellationError()
                 } catch {
-                    if firstFailure == nil { firstFailure = IntelligenceError.wrap(error) }
+                    let failure = IntelligenceError.wrap(error)
+                    if failure.endsABatch { throw failure }
+                    if firstFailure == nil { firstFailure = failure }
                 }
             }
             onProgress?(index + 1, pages.count)
@@ -278,8 +276,5 @@ public enum StatementExtractor {
                 payee: row.payee, reference: row.reference))
         }
         return staged.sorted { $0.date < $1.date }
-        #else
-        throw IntelligenceError.unavailable("Apple Intelligence is not available on this platform.")
-        #endif
     }
 }

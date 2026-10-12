@@ -8,9 +8,7 @@
 
 import Foundation
 import FinvestLensEngine
-#if canImport(FoundationModels)
 import FoundationModels
-#endif
 
 /// A transaction (staged or posted) awaiting a category suggestion.
 public struct CategorizationItem: Sendable, Identifiable {
@@ -31,7 +29,7 @@ public struct CategorizationItem: Sendable, Identifiable {
 /// ones that break the sign invariant.
 ///
 /// Deliberately outside ``TransactionCategorizer``: nothing here needs the
-/// on-device model, so nothing here should be gated on macOS 26 — a guard
+/// on-device model, so nothing here should be gated on its availability — a guard
 /// that can only be reached when Apple Intelligence is present is a guard
 /// that cannot be unit-tested.
 enum CategorySuggestionResolver {
@@ -89,10 +87,8 @@ enum CategorySuggestionResolver {
 /// Transport` without a rule ever having been written. Deterministic
 /// sources still take precedence at the call site — the model only fills
 /// gaps, and every suggestion is reviewed before posting.
-@available(macOS 26.0, iOS 26.0, *)
 public enum TransactionCategorizer {
 
-    #if canImport(FoundationModels)
     @Generable
     struct ModelSuggestion {
         @Guide(description: "The number of the transaction being categorised, from the input list")
@@ -103,16 +99,19 @@ public enum TransactionCategorizer {
 
     @Generable
     struct ModelSuggestions {
-        /// Capped at ``batchSize``: there can never be more answers than there
-        /// were transactions to ask about, and without a ceiling the model
-        /// enumerates the *category* list instead — offered three categories
-        /// for one transaction it answered three times. Unbounded, that same
-        /// repetition can run until it exhausts the context window, which is
-        /// a slow failure rather than a wrong answer.
+        /// Capped at ``batchSize``, and each request is made with the array
+        /// fixed at exactly the number of transactions in its batch
+        /// (``LanguageModels/countedSchema(for:property:count:)``).
+        ///
+        /// Without any ceiling the model enumerates the *category* list
+        /// instead of the transactions, and can run on until it exhausts the
+        /// context window — a slow failure rather than a wrong answer. With
+        /// only the ceiling, a batch of one transaction offered three
+        /// categories still came back with three answers. An exact count
+        /// leaves no slots to fill.
         @Guide(description: "One suggestion per input transaction, in order", .maximumCount(8))
         var suggestions: [ModelSuggestion]
     }
-    #endif
 
     /// How many transactions to categorise per model request. The candidate
     /// list is repeated in each session, so batches keep the context small.
@@ -128,13 +127,6 @@ public enum TransactionCategorizer {
         candidates: [CategoryCandidate],
         onProgress: (@Sendable (Int, Int) -> Void)? = nil
     ) async throws -> [UUID: GncGUID] {
-        #if canImport(FoundationModels)
-        guard case .available = IntelligenceAvailability.current() else {
-            if case .unavailable(let reason) = IntelligenceAvailability.current() {
-                throw IntelligenceError.unavailable(reason)
-            }
-            throw IntelligenceError.unavailable("Apple Intelligence is not available.")
-        }
         guard !items.isEmpty, !candidates.isEmpty else { return [:] }
 
         // Spending and receipts are categorised separately, because the
@@ -184,25 +176,17 @@ public enum TransactionCategorizer {
                 return "\(index + 1). \(item.payee)\(memo) (\(item.amount))"
             }.joined(separator: "\n")
 
-            let session = LanguageModelSession(instructions: instructions(for: offered))
-            do {
-                let response = try await session.respond(
-                    to: "Categorise these transactions:\n\(listing)",
-                    generating: ModelSuggestions.self,
-                    options: .greedy
-                )
-                result.merge(
-                    CategorySuggestionResolver.resolve(answers: response.content.suggestions.map { ($0.number, $0.category) },
-                            batch: batch, offered: offered)
-                ) { _, new in new }
-            } catch {
-                throw IntelligenceError.wrap(error)
-            }
+            let response = try await LanguageModels.respond(
+                .transactionCategorizer, instructions: instructions(for: offered),
+                prompt: "Categorise these transactions:\n\(listing)",
+                generating: ModelSuggestions.self,
+                exactly: batch.count, of: "suggestions")
+            result.merge(
+                CategorySuggestionResolver.resolve(answers: response.suggestions.map { ($0.number, $0.category) },
+                        batch: batch, offered: offered)
+            ) { _, new in new }
             onProgress?(batchIndex + 1, batches.count)
         }
         return result
-        #else
-        throw IntelligenceError.unavailable("Apple Intelligence is not available on this platform.")
-        #endif
     }
 }

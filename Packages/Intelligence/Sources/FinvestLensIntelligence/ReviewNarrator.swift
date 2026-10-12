@@ -22,18 +22,30 @@ public struct ReviewSlideFacts: Sendable {
     public var kicker: String
     public var periodLabel: String
     public var currencyCode: String
-    /// Headline figures, label → amount, display order.
+    /// Headline figures, label → amount in `currencyCode`, display order.
     public var figures: [(String, Decimal)]
+    /// Ratios the slide states, label → percent (already ×100): a savings
+    /// rate, a yield, the largest holding's share. Kept apart from `figures`
+    /// because they are not amounts — handed over in one list, the model was
+    /// told "Savings rate percent: 26.5 AUD", and a check that reads a number
+    /// with its unit cannot then tell a true "26.5%" from an invented one.
+    public var ratios: [(String, Decimal)]
+    /// Whole numbers the slide states that are neither: how many disposals,
+    /// how many holdings.
+    public var counts: [(String, Int)]
     /// Changes vs the prior period, label → signed percent (already ×100),
     /// where a comparison exists.
     public var deltaPercents: [(String, Decimal)]
 
     public init(kicker: String, periodLabel: String, currencyCode: String,
-                figures: [(String, Decimal)], deltaPercents: [(String, Decimal)] = []) {
+                figures: [(String, Decimal)], ratios: [(String, Decimal)] = [],
+                counts: [(String, Int)] = [], deltaPercents: [(String, Decimal)] = []) {
         self.kicker = kicker
         self.periodLabel = periodLabel
         self.currencyCode = currencyCode
         self.figures = figures
+        self.ratios = ratios
+        self.counts = counts
         self.deltaPercents = deltaPercents
     }
 }
@@ -50,113 +62,49 @@ public struct ReviewSlideStory: Sendable {
 }
 
 /// The dispose half of "the model proposes; deterministic code disposes":
-/// every numeric token in a story must round-match a listed figure (raw, or
-/// scaled by k/m), a listed delta percent, or be a calendar year. A story
-/// quoting any number not grounded in its facts is rejected — the caller
-/// falls back to the deterministic headline.
+/// every number in a story must round-match a listed figure — as it is, or
+/// in thousands or millions where the story says "k" or "m" — or a listed
+/// change where it carries a percent sign, or be a year the slide names. A
+/// story quoting any number not grounded in its facts is rejected — the
+/// caller falls back to the deterministic headline.
 public enum ReviewStoryValidator {
 
+    /// Whether every number in `story` is one of the slide's facts — read in
+    /// the person's own number format as well as English's
+    /// (``FigureGrounding``).
     public static func isGrounded(_ story: ReviewSlideStory,
                                   facts: ReviewSlideFacts) -> Bool {
-        let text = story.headline + " " + story.insight
-        var candidates: [Decimal] = []
-        for (_, value) in facts.figures {
-            let magnitude = abs(value)
-            candidates.append(magnitude)
-            candidates.append(magnitude / 1_000)
-            candidates.append(magnitude / 1_000_000)
-        }
-        for (_, delta) in facts.deltaPercents {
-            candidates.append(abs(delta))
-        }
-        // Numbers that are part of the slide's own words — the period label
-        // ("FY 2025–26"), the kicker, the figure labels — are quotable text,
-        // not figures.
-        let exemptSource = ([facts.periodLabel, facts.kicker]
-            + facts.figures.map(\.0) + facts.deltaPercents.map(\.0))
+        isGrounded(story, facts: facts, locale: LanguageModels.personLocale)
+    }
+
+    static func isGrounded(_ story: ReviewSlideStory, facts: ReviewSlideFacts,
+                           locale: Locale) -> Bool {
+        FigureGrounding.isGrounded(
+            story.headline + "\n" + story.insight,
+            facts: FigureGrounding.Facts(
+                figures: facts.figures.map(\.1),
+                percentages: facts.ratios.map(\.1) + facts.deltaPercents.map(\.1),
+                // The counts the slide states, and how many figures were
+                // listed: "the 2 largest", "all 3 categories".
+                counts: facts.counts.map(\.1) + Array(0...facts.figures.count),
+                quotableText: labels(of: facts),
+                currencyCode: facts.currencyCode),
+            locale: locale)
+    }
+
+    /// The slide's own words — the period label ("FY 2025–26"), the kicker,
+    /// the figure labels. Numbers in them are text to repeat, not figures,
+    /// and the words themselves reach the model in the language the app was
+    /// built in, whatever language it is asked to answer in.
+    static func labels(of facts: ReviewSlideFacts) -> String {
+        ([facts.periodLabel, facts.kicker] + facts.figures.map(\.0) + facts.ratios.map(\.0)
+            + facts.counts.map(\.0) + facts.deltaPercents.map(\.0))
             .joined(separator: " ")
-        let exempt = numericTokens(in: exemptSource)
-
-        // Calendar years are quotable only when the slide's own words name
-        // them: the label's years (with "FY 2024–25" expanded to 2025) plus a
-        // ±1 neighbourhood for natural YoY prose. The old blanket 1900–2100
-        // exemption let fabricated figures like "$2,000" or "2050" through
-        // ungrounded — the exact failure class this validator exists to stop.
-        var allowedYears: Set<Decimal> = []
-        var namedYears: [Int] = []
-        var suffixes: [Int] = []
-        for token in exempt where token.decimalPlaces == 0 && !token.hasGrouping {
-            let intValue = NSDecimalNumber(decimal: token.value).intValue
-            if (1900...2100).contains(intValue) { namedYears.append(intValue) }
-            else if (0...99).contains(intValue) { suffixes.append(intValue) }
-        }
-        for year in namedYears {
-            for delta in -1...1 { allowedYears.insert(Decimal(year + delta)) }
-            for suffix in suffixes {
-                let expanded = (year / 100) * 100 + suffix
-                if (1900...2100).contains(expanded) { allowedYears.insert(Decimal(expanded)) }
-            }
-        }
-
-        for token in numericTokens(in: text) {
-            // A named calendar year reads as a date, not a figure — but only
-            // ungrouped ("2025", never "2,025") and only years the facts name.
-            if token.decimalPlaces == 0, !token.hasGrouping, allowedYears.contains(token.value) {
-                continue
-            }
-            if exempt.contains(where: {
-                $0.value == token.value && $0.decimalPlaces == token.decimalPlaces
-            }) {
-                continue
-            }
-            let tolerance = halfUnit(at: token.decimalPlaces)
-            let grounded = candidates.contains { abs($0 - token.value) <= tolerance }
-            if !grounded { return false }
-        }
-        return true
-    }
-
-    struct Token { var value: Decimal; var decimalPlaces: Int; var hasGrouping = false }
-
-    static func numericTokens(in text: String) -> [Token] {
-        var tokens: [Token] = []
-        var current = ""
-        func flush() {
-            guard !current.isEmpty else { return }
-            defer { current = "" }
-            let grouped = current.contains(",")
-            let cleaned = current.replacingOccurrences(of: ",", with: "")
-            guard cleaned.contains(where: \.isNumber),
-                  let value = Decimal(string: cleaned) else { return }
-            let places = cleaned.contains(".")
-                ? cleaned.split(separator: ".").last.map { $0.count } ?? 0
-                : 0
-            tokens.append(Token(value: abs(value), decimalPlaces: places, hasGrouping: grouped))
-        }
-        for character in text {
-            if character.isNumber || character == "." || character == "," {
-                current.append(character)
-            } else {
-                flush()
-            }
-        }
-        flush()
-        return tokens
-    }
-
-    /// Half of the last quoted decimal place, plus a hair for Decimal noise —
-    /// "3.83" matches anything in 3.825…3.835.
-    static func halfUnit(at places: Int) -> Decimal {
-        var unit = Decimal(1)
-        for _ in 0..<places { unit /= 10 }
-        return unit / 2 + Decimal(string: "0.0001")!
     }
 }
 
-#if canImport(FoundationModels)
 import FoundationModels
 
-@available(macOS 26.0, iOS 26.0, *)
 public enum ReviewNarrator {
 
     @Generable
@@ -168,49 +116,69 @@ public enum ReviewNarrator {
     }
 
     public static func story(facts: ReviewSlideFacts) async throws -> ReviewSlideStory {
-        guard IntelligenceAvailability.current().isAvailable else {
-            if case .unavailable(let reason) = IntelligenceAvailability.current() {
-                throw IntelligenceError.unavailable(reason)
-            }
-            throw IntelligenceError.unavailable("Apple Intelligence is not available.")
+        // A slide that quotes a number it was not given is never shown; the
+        // rest of the policy — how many drafts, what happens to a sound one
+        // in the wrong language — is the narrators' shared one.
+        try await LanguageModels.firstSoundDraft(
+            text: { $0.headline + " " + $0.insight },
+            quoting: ReviewStoryValidator.labels(of: facts),
+            nothingSound: .modelFailure(
+                String(localized: "The model quoted a number that is not in the slide’s facts."))
+        ) {
+            guard let story = try await draft(facts: facts),
+                  LanguageModels.isCleanProse(story.headline + story.insight),
+                  ReviewStoryValidator.isGrounded(story, facts: facts) else { return nil }
+            return story
         }
+    }
 
-        let figures = facts.figures
-            .map { "- \($0.0): \($0.1) \(facts.currencyCode)" }
+    /// What the model is told to be. Kept apart from the request so that the
+    /// language survey can send these same words with the language order in
+    /// other places, and measure which place works.
+    static let instructions = """
+        You write one slide of a personal financial review, in the voice \
+        of a CFO presenting results: factual, specific, calm. The title \
+        states the slide's conclusion. Quote numbers ONLY as they appear \
+        in the lists — you may round to at most one decimal place or \
+        express thousands as k and millions as m. NEVER derive numbers \
+        that are not listed: no differences, no ratios, no percentages \
+        of your own. If no change figures are listed, do not mention \
+        changes. Never advise.
+        """
+
+    /// The slide's facts as the model reads them. Each number goes as what
+    /// it is: an amount with its currency, a ratio with its percent sign, a
+    /// count with neither.
+    static func prompt(for facts: ReviewSlideFacts) -> String {
+        let figures = (facts.figures.map { "- \($0.0): \($0.1) \(facts.currencyCode)" }
+            + facts.ratios.map { "- \($0.0): \($0.1)%" }
+            + facts.counts.map { "- \($0.0): \($0.1)" })
             .joined(separator: "\n")
         let deltas = facts.deltaPercents
             .map { "- \($0.0): \($0.1 >= 0 ? "+" : "")\($0.1)% vs prior period" }
             .joined(separator: "\n")
-
-        let session = LanguageModelSession(instructions: """
-            You write one slide of a personal financial review, in the voice \
-            of a CFO presenting results: factual, specific, calm. The title \
-            states the slide's conclusion. Quote numbers ONLY as they appear \
-            in the lists — you may round to at most one decimal place or \
-            express thousands as k and millions as m. NEVER derive numbers \
-            that are not listed: no differences, no ratios, no percentages \
-            of your own. If no change figures are listed, do not mention \
-            changes. Never advise.
-            """)
-        let prompt = """
+        return """
             Slide section: \(facts.kicker)
             Period: \(facts.periodLabel)
             Figures:
             \(figures)
             \(deltas.isEmpty ? "" : "Changes:\n\(deltas)")
             """
-        let response = try await session.respond(to: prompt, generating: ModelStory.self)
-        let headline = response.content.headline.trimmingCharacters(in: .whitespacesAndNewlines)
-        let insight = response.content.insight.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !headline.isEmpty else {
-            throw IntelligenceError.modelFailure("The model returned an empty headline.")
-        }
-        let story = ReviewSlideStory(headline: headline, insight: insight)
-        guard ReviewStoryValidator.isGrounded(story, facts: facts) else {
-            throw IntelligenceError.modelFailure(
-                "The model quoted a number that is not in the slide's facts.")
-        }
-        return story
+    }
+
+    /// What the model wrote, before anything has checked it. Separate from
+    /// ``story(facts:)`` so the check can be tested against the model's real
+    /// output in each language, which is the only way to know what it has to
+    /// read.
+    ///
+    /// `nil` when the model wrote no headline: a slide without a title is not
+    /// a draft, and another may have one.
+    static func draft(facts: ReviewSlideFacts) async throws -> ReviewSlideStory? {
+        let response = try await LanguageModels.respond(
+            .reviewNarrator, instructions: instructions, prompt: prompt(for: facts),
+            generating: ModelStory.self)
+        let headline = response.headline.trimmingCharacters(in: .whitespacesAndNewlines)
+        let insight = response.insight.trimmingCharacters(in: .whitespacesAndNewlines)
+        return headline.isEmpty ? nil : ReviewSlideStory(headline: headline, insight: insight)
     }
 }
-#endif

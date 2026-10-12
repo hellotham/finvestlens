@@ -323,6 +323,12 @@ private struct SmartDocumentRow: View {
                 Text("Line items differ from the total by \(AmountFormat.string(analysis.total - analysis.lineItemSum, code: code)) — an adjustment split will be added.")
                     .scaledFont(.caption).foregroundStyle(.orange)
             }
+            if !analysis.readWholeDocument {
+                // Says why the sum may fall short, rather than leaving the
+                // shortfall to speak for itself.
+                Text("This invoice is longer than Apple Intelligence can read at once, so only its first part was read. Line items further down are missing.")
+                    .scaledFont(.caption).foregroundStyle(.orange)
+            }
             if let match {
                 Label("Matches “\(match.transactionDescription)” of \(dateFormat.short(match.datePosted)) from \(match.fundingAccountName).",
                       systemImage: "link")

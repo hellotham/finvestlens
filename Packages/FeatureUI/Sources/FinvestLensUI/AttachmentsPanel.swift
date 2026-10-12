@@ -9,6 +9,7 @@
 import SwiftUI
 import QuickLook
 import FinvestLensEngine
+import FinvestLensIntelligence
 #if os(macOS)
 import AppKit
 import Quartz
@@ -185,8 +186,8 @@ struct AttachmentsPanel: View {
                     Label("Categorise from Attachment", systemImage: "sparkles")
                 }
             }
-            .disabled(!readable || categorising || !model.isIntelligenceAvailable)
-            .help(model.intelligenceUnavailableReason
+            .disabled(!readable || categorising || !model.isIntelligenceAvailable(for: .attachmentInsight))
+            .help(model.intelligenceUnavailableReason(for: .attachmentInsight)
                   ?? "Read the attachment (OCR) and suggest a category for this transaction")
             if let suggestion = categorySuggestion {
                 VStack(alignment: .leading, spacing: 2) {

@@ -18,6 +18,7 @@
 import SwiftUI
 import FinvestLensEngine
 import FinvestLensReports
+import FinvestLensIntelligence
 
 // MARK: - Catalogue
 
@@ -339,7 +340,11 @@ struct ReportGallery: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Label("Financial Review", systemImage: "play.rectangle.fill")
                             .scaledFont(.headline)
-                        Text("The period as a results deck — one message per slide, charts, callouts, on-device insights")
+                        // Two `Text`s, not one over a ternary of literals:
+                        // that would be a `String`, and never localized.
+                        (LanguageModels.leavesDevice(.reviewNarrator)
+                         ? Text("The period as a results deck — one message per slide, charts, callouts, insights from Apple Intelligence")
+                         : Text("The period as a results deck — one message per slide, charts, callouts, on-device insights"))
                             .scaledFont(.caption)
                             .foregroundStyle(.secondary)
                     }

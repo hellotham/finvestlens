@@ -177,7 +177,8 @@ public struct GeneralSettingsView: View {
     }
 }
 
-/// Tabbed Settings window: General + Appearance + Documents.
+/// Tabbed Settings window: General, Appearance, Pricing, Documents and
+/// Apple Intelligence.
 public struct FinvestLensSettingsView: View {
     @Bindable var model: AppModel
 
@@ -193,6 +194,8 @@ public struct FinvestLensSettingsView: View {
                 .tabItem { Label("Pricing", systemImage: "chart.line.uptrend.xyaxis") }
             DocumentSettingsView()
                 .tabItem { Label("Documents", systemImage: "paperclip") }
+            IntelligenceSettingsView()
+                .tabItem { Label("Apple Intelligence", systemImage: "apple.intelligence") }
         }
     }
 }

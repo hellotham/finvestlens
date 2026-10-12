@@ -8,9 +8,7 @@
 
 import Foundation
 import FinvestLensEngine
-#if canImport(FoundationModels)
 import FoundationModels
-#endif
 
 /// One line item read from an invoice, with an optional category suggestion.
 public struct InvoiceLineItem: Sendable, Identifiable {
@@ -32,12 +30,19 @@ public struct InvoiceAnalysis: Sendable {
     public var date: Date?
     public var total: Decimal
     public var lineItems: [InvoiceLineItem]
+    /// `false` when the invoice was longer than the model could read in one
+    /// request and only its leading part was — so line items further down
+    /// are missing, and the review should say so rather than let the sum's
+    /// shortfall speak for itself.
+    public var readWholeDocument: Bool
 
-    public init(vendor: String, date: Date?, total: Decimal, lineItems: [InvoiceLineItem]) {
+    public init(vendor: String, date: Date?, total: Decimal, lineItems: [InvoiceLineItem],
+                readWholeDocument: Bool = true) {
         self.vendor = vendor
         self.date = date
         self.total = total
         self.lineItems = lineItems
+        self.readWholeDocument = readWholeDocument
     }
 
     /// Sum of line items — compare with `total` to surface OCR/extraction
@@ -50,10 +55,8 @@ public struct InvoiceAnalysis: Sendable {
 /// Reads an invoice PDF and proposes an expense split per line item
 /// (`FR-AI-03`), so one card charge can be recorded against the accounts it
 /// actually covers.
-@available(macOS 26.0, iOS 26.0, *)
 public enum InvoiceAnalyzer {
 
-    #if canImport(FoundationModels)
     @Generable
     struct ModelLineItem {
         @Guide(description: "What was purchased, short")
@@ -63,7 +66,11 @@ public enum InvoiceAnalyzer {
     }
 
     @Generable
-    struct ModelInvoice {
+    struct ModelInvoice: DocumentAnswer {
+        /// Fifty line items of answer, at the forty tokens a printed line
+        /// costs, is the whole reserve.
+        static let replyReserve = 2_000
+
         @Guide(description: "Vendor or store name")
         var vendor: String
         @Guide(description: "Invoice date in yyyy-MM-dd format, empty if not shown")
@@ -71,8 +78,8 @@ public enum InvoiceAnalyzer {
         @Guide(description: "Grand total of the invoice as printed")
         var total: String
         /// Fifty lines is past any invoice or receipt this reads in practice,
-        /// and comfortably inside what is left of the 4,096-token window
-        /// after 6,000 characters of invoice text. The ceiling exists to stop
+        /// and what the request keeps back for the answer (`replyReserve`,
+        /// above). The ceiling exists to stop
         /// runaway generation, not to trim real invoices: measured on
         /// statement pages, an unbounded array spent 3,900 tokens repeating
         /// itself and failed, where the same request capped answered in a
@@ -80,39 +87,33 @@ public enum InvoiceAnalyzer {
         @Guide(description: "Every billed line item — one entry per printed line, never merged. Exclude subtotal, tax-only, and total rows; keep discounts as negative amounts.", .maximumCount(50))
         var lineItems: [ModelLineItem]
     }
-    #endif
 
     /// Extracts vendor, date, total, and line items, then categorises each
     /// line item against `candidates` (pass expense accounts).
+    ///
+    /// - Parameter explainRefusal: ask the model why, if it refuses the
+    ///   document — a second request, for when one invoice is being read
+    ///   and a person will see the reason.
     public static func analyze(
         text: String,
-        candidates: [CategoryCandidate]
+        candidates: [CategoryCandidate],
+        explainRefusal: Bool = false
     ) async throws -> InvoiceAnalysis {
-        #if canImport(FoundationModels)
-        guard IntelligenceAvailability.current().isAvailable else {
-            if case .unavailable(let reason) = IntelligenceAvailability.current() {
-                throw IntelligenceError.unavailable(reason)
-            }
-            throw IntelligenceError.unavailable("Apple Intelligence is not available.")
-        }
-
-        let session = LanguageModelSession(instructions: """
+        let instructions = """
             You read invoices and receipts. Extract the vendor, date, grand total, \
             and each billed line item exactly as printed. Each printed line is one \
             line item — never merge adjacent lines, and take each item's amount \
             from the end of its own line. The line items should add up to the \
             grand total. Never invent line items.
-            """)
-        let invoice: ModelInvoice
-        do {
-            invoice = try await session.respond(
-                to: "Invoice text:\n\n\(String(text.prefix(6000)))",
-                generating: ModelInvoice.self,
-                options: .greedy
-            ).content
-        } catch {
-            throw IntelligenceError.wrap(error)
-        }
+            """
+        // The invoice is cut to what the model it runs on can read beside
+        // the instructions and fifty line items of answer — measured in that
+        // model's tokens (`LanguageModels.fit`). An invoice longer than that
+        // is read from the top, and the result says so.
+        let (invoice, truncated) = try await LanguageModels.respond(
+            .invoiceAnalyzer, instructions: instructions,
+            document: text, framing: { "Invoice text:\n\n\($0)" },
+            generating: ModelInvoice.self, explainRefusal: explainRefusal)
 
         var items: [InvoiceLineItem] = invoice.lineItems.compactMap { line in
             guard let amount = IntelligenceParsing.amount(line.amount), amount != 0 else { return nil }
@@ -150,10 +151,8 @@ public enum InvoiceAnalyzer {
             vendor: invoice.vendor,
             date: IntelligenceParsing.date(invoice.date),
             total: IntelligenceParsing.amount(invoice.total) ?? items.reduce(0) { $0 + $1.amount },
-            lineItems: items
+            lineItems: items,
+            readWholeDocument: !truncated
         )
-        #else
-        throw IntelligenceError.unavailable("Apple Intelligence is not available on this platform.")
-        #endif
     }
 }

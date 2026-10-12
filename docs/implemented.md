@@ -3642,10 +3642,13 @@ article, the `SystemLanguageModel.Guardrails` and `.Variant` doc pages, and the
 - *`permissiveContentTransformations`*: tried on the six document sessions
   and reverted the same day — Apple's safety article states it applies only
   to string responses, and every session here is guided generation.
-- *Not adopted*, with reasons, in deferred.md §3a: Private Cloud Compute,
-  the `LanguageModel` protocol and MLX/CoreAI models, image prompts with
-  Vision tools, `DynamicProfile`, `ToolCallingMode`, `Variant` (read-only),
-  `tokenCount`/`contextSize` pre-sizing.
+- *Not adopted* on 9 Oct, on the implementer's own judgement: Private Cloud
+  Compute, the `LanguageModel` protocol and MLX/CoreAI models, image prompts
+  with Vision tools, `DynamicProfile`, `ToolCallingMode`, `Variant`
+  (read-only), `tokenCount`/`contextSize` pre-sizing. **That was wrong** — the
+  instruction was to accommodate the framework, not to choose from it — and
+  it was reversed on 12 Oct 2026: see "Foundation Models 27, properly" below
+  and deferred.md §3a for where each now stands.
 
 Receipts, all on Xcode 27.0 and the 27.0 targets: every package suite passes
 (Engine 294 tests, Persistence 39, Interchange 166, Quotes 171, Rules 13,
@@ -3890,3 +3893,134 @@ the store set at 6.3"; the iPad set from the same build as the regression
 check on the regular shell. Not observed: VoiceOver on a device, the four
 larger accessibility text sizes, and an iPad window dragged across the
 compact threshold with a sheet open.
+
+## Foundation Models 27, properly — and what its own review found (12 Oct 2026)
+
+On 9 Oct the app was moved to the 27 SDK and seven of the framework's changes
+were written off as "consciously not adopted". The instruction had been to
+accommodate the framework, so on 12 Oct that was undone: Apple's
+[*Foundation Models updates*](https://developer.apple.com/documentation/Updates/FoundationModels)
+page and every page it links to were read in a browser that day, with the 27
+SDK's Swift interface and probes of the installed model, and the Intelligence
+package was rebuilt around what they describe. An eight-angle `/code-review`
+of that work the same afternoon then found fifteen defects in it — several
+in claims the code's own comments called "measured" — and those are fixed
+here too. Where each framework change stands is in
+[deferred.md §3a](deferred.md); the prompts and every measurement are in
+[intelligence-prompts.md](intelligence-prompts.md).
+
+- **One seam between a feature and a model (`LanguageModels.swift`).** Ten
+  features each built their own `LanguageModelSession(instructions:)`, which
+  hard-wires the on-device model ten times. Now a feature asks
+  `LanguageModels.respond`, and a request is resolved once: which model
+  (`ModelChoice`), whether it can run, how much it can read, and for a
+  document how much of it fits — all against that one model. Twenty-two
+  `@available(macOS 26…)` attributes and the `canImport(FoundationModels)`
+  branches, dead at a 27.0 floor, are gone.
+- **Documents are cut by the model's own count.** `fit` measures the prompt
+  as it will be sent (`tokenCount(for:)`, 35–85 ms a call), cuts in
+  proportion, and measures again. The first version cut by an estimate the
+  file said "runs high on purpose"; against the model it was a third of the
+  count on rows of digits and half on a bank statement, and three
+  statement-like documents went out up to 1,350 tokens over a 5,386-token
+  budget marked as uncut. The estimate is refitted to the model's measured
+  counts (never under, on seven kinds of text) and is used only where a
+  model has no counter. An invoice too long to read at once is read from the
+  top and the review says so (`InvoiceAnalysis.readWholeDocument`).
+- **Every 27 error has a case** (`IntelligenceError`): refusals, guardrails,
+  overflow, unsupported language, rate limits, timeouts, the on-device
+  model's missing assets, and Private Cloud Compute's quota, network and
+  service failures — each in a sentence, in the catalog's eight languages. A
+  refusal's explanation is asked for only where one document is being read
+  and a person is waiting, and shown only if it is a sentence: asked why it
+  had refused a synthetic dividend statement, the model returned the
+  extraction itself.
+- **A statement is all there or it is an error.** The extractor forgave any
+  slice that failed, which is right for a block the model declines and wrong
+  for a model that has stopped answering: pages one and two came back as the
+  statement. Failures of the model itself — unavailable, rate-limited, out
+  of allowance, cancelled — now stop the run (`endsABatch`), and so they do
+  for a batch of attachments, where each unread file then says why.
+- **Prose is checked, in the reader's language, with its units
+  (`FigureGrounding.swift`).** Only the review slide was checked, and only
+  in English number formats. The report narrator had written a net income
+  out by 31.70, and percentage shares it worked out itself. All three
+  narrators now share one check, and after the review it reads a number with
+  the unit it carries: a percent sign needs a percentage that was given,
+  "66.6k" is 66,600, an amount with its currency is never a day or a year,
+  and a number that cannot be read is not thereby true — the first version
+  passed "24.000,98", "67%" and "15%" for a forecast with a date on the
+  15th. It reads "66 611", "66.611", "90.643,5", "6万6611" and "90日間" as
+  what they are, and a German "15.08." as a date.
+- **One draft policy for the three narrators** (`firstSoundDraft`): three
+  drafts at most; an unsound one is never shown; a sound one in the wrong
+  language is kept in hand; a draft that fails does not cost the one in hand
+  — each narrator's own loop had let it.
+- **The language order, re-measured.** 224 drafts, judged by script and
+  function words rather than by the recogniser the code uses (which called
+  Japanese with Latin account names English): no order, nothing in the
+  language; the order at both ends, eight of eight in six languages and five
+  of eight in French. French follows the language of the facts — sixteen of
+  sixteen when the slide's labels are French — and the review decks' 102
+  labels have never been localized, which is the next change.
+- **Exact row counts from the type's own schema** (`countedSchema`). The
+  budget advisor, asked in Japanese about two categories, filled forty lines
+  and overflowed after 221 seconds. The request is now the `@Generable`
+  type's schema with that one count changed, not a second schema written
+  out beside it.
+- **Private Cloud Compute, built and switched off** (`FR-AI-13`). The
+  default wherever a build can offer it, by the owner's decision, for one
+  invoice or dividend statement at a time and for summaries; categorising,
+  classifying and reading bank statements stay on the device. Compiled in
+  only by `PRIVATE_CLOUD_COMPUTE`, which `PrivateCloudComputeBuildTests`
+  holds to the entitlement, the help text and the privacy policy together;
+  read back from the signature on the Mac; never offered in the Simulator.
+  Each feature that can leave the device says so beside itself, with the
+  daily allowance. Nothing has run against the cloud model: Apple has not
+  assigned the entitlement.
+- **Settings and Help on iPhone and iPad.** The five settings panes were
+  presented only by the Mac's Settings window, so an iPad could not change
+  its accent colour or see where Apple Intelligence runs, and the phone
+  could not open Help. They are a sheet now (`SettingsSheet.swift`), from
+  the phone's More tab, the foot of the iPad's sidebar, and ⌘, in its menu
+  bar; Help's Done button sits in each column, because a toolbar on the
+  split view itself reached neither on the phone.
+- **The register's actions, defined once** (`RegisterActions.swift`) for the
+  regular shell's menu and the phone's, which now offers Reconcile and
+  Auto-Categorise from an account — the latter no longer scoped to a
+  selection the phone's list cannot show.
+- **Review slides hand over ratios as ratios** (`ReviewSlideFacts.ratios`,
+  `.counts`): the model used to be told "Savings rate percent: 26.5 AUD".
+- **Availability is asked per feature**, so one that would run in the cloud
+  is not disabled because the device's model is still downloading.
+
+Also corrected in passing: forecast dates are printed in the Gregorian
+calendar (a Saudi region got "2 Rab. I" for 15 August); the locale phrase
+carries no `@calendar` keyword; Portuguese is Brazilian unless the language
+says otherwise; the string catalog's 59 new entries follow the existing
+catalog's naming and register (Apple 智能, *a* Apple Intelligence, tú and
+tu); the website's requirement line is the released DMG's (macOS 26.5,
+Apple silicon and Intel — read from the 1.1 export); the store listing's
+provider list comes from `QuoteProviderKind` and is held there by
+`StoreListingTests`.
+
+Receipts, all from 12 Oct 2026 on macOS 27.0.1 with Xcode 27.0. Every
+package suite passes — Engine 300, Persistence 50, Interchange 166, Quotes
+171, Rules 13, Reports 181, Cloud 10, Intelligence 170, FeatureUI 760, CLI
+58, Lab 18, Shared 6 (1,903 tests) — and both unsigned app builds succeed.
+The Intelligence suite includes the live model in seven languages. The
+localization gate, the help-manual drift check, the SPDX check and the
+real-data gate pass; the website builds. The failures the review reported
+in the number check, the document cut, the language check and the date
+formatter were reproduced by running the code before they were fixed, and
+are now named tests; the others were confirmed by reading the path. The
+eight live feature tests also pass as each of the seven other locales. The three real-document harnesses pass on the owner's local
+archive, counts only. The phone tour on an iPhone 18 Pro simulator, with the
+synthetic demo book, passes with thirty screens captured; its first run
+"passed" with seventeen, which is how the missing Done button in Help was
+found. The Foundation Models instrument was recorded over the eight live
+feature tests.
+
+Not observed: anything on Private Cloud Compute; the iPad's sidebar footer
+and its ⌘, menu item on screen (the iPad builds; only the phone was toured);
+VoiceOver; a device rather than a simulator.

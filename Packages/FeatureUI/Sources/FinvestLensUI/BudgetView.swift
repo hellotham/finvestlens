@@ -9,6 +9,7 @@
 import SwiftUI
 import FinvestLensEngine
 import FinvestLensReports
+import FinvestLensIntelligence
 
 /// Shows this month's budget-vs-actual with progress bars (`FR-BUD-02`).
 struct BudgetView: View {
@@ -102,7 +103,7 @@ struct BudgetView: View {
                         Button("Done") { dismiss() }
                     }
                 }
-                if model.isIntelligenceAvailable {
+                if model.isIntelligenceAvailable(for: .budgetAdvisor) {
                     ToolbarItem {
                         Button("Suggest Budget", systemImage: "sparkles") { showingSuggest = true }
                             .help("Propose a monthly budget from your spending with Apple Intelligence")

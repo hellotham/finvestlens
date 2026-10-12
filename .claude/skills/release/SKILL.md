@@ -1,6 +1,6 @@
 ---
 name: release
-description: Cut a signed, notarized, stapled FinvestLens DMG — version bump across all four places, build stamp, release notes, then scripts/release-dmg.sh and its verification. User-invoked only; it publishes.
+description: Cut a signed, notarized, stapled FinvestLens DMG — version bump across every place it is written, build stamp, release notes, then scripts/release-dmg.sh and its verification. User-invoked only; it publishes.
 disable-model-invocation: true
 ---
 
@@ -10,19 +10,26 @@ disable-model-invocation: true
 1.1 deliberately (*"don't release it yet though"*), and a release is the one
 action in this repo that reaches other people's machines.
 
-## 0. The version lives in four places, and nothing checks they agree
+## 0. The version lives in several places, and nothing checks they agree
 
-Three `MARKETING_VERSION` entries in `finvestlens.xcodeproj/project.pbxproj`
-(app, widgets, Quick Look) and one `VERSION=` in `scripts/stamp_build_info.sh`.
-They are edited by hand, so they drift silently and the splash screen then
+Ten `MARKETING_VERSION` entries in `finvestlens.xcodeproj/project.pbxproj`
+(five targets — app, widgets, Quick Look and the two test targets — each in
+Debug and Release) and one `VERSION=` in `scripts/stamp_build_info.sh`. They
+are edited by hand, so they drift silently and the splash screen then
 disagrees with the DMG:
 
 ```bash
-grep -c "MARKETING_VERSION = $NEW;" finvestlens.xcodeproj/project.pbxproj   # expect 3
+grep -c "MARKETING_VERSION = $NEW;" finvestlens.xcodeproj/project.pbxproj   # expect 10
 grep -n '^VERSION=' scripts/stamp_build_info.sh
 ```
 
-Bump all four to the same value before anything else.
+The published copy follows the DMG, not the tree: `website/src/data/site.ts`
+(`version`, `file`, `sizeLabel`, `sha256` **and `requirements`**, which
+describes what that file needs), `docs/release-notes.md`, and the README's
+release sentence. App Store Connect carries its own version record per
+platform (`docs/app-store.md`).
+
+Bump every one of them to the same value before anything else.
 
 ## 1. Preflight and CI must both be green
 
@@ -72,8 +79,8 @@ user's step, not yours: it prompts for a password.
 ## 5. Verify the artefact, do not assume it
 
 ```bash
-xcrun stapler validate build/release/FinvestLens.dmg
-spctl -a -t open --context context:primary-signature -v build/release/FinvestLens.dmg
+xcrun stapler validate "build/release/FinvestLens-$NEW.dmg"
+spctl -a -t open --context context:primary-signature -v "build/release/FinvestLens-$NEW.dmg"
 ```
 
 Both must pass. "Notarized" is a claim about an event; these are its receipt.
@@ -90,5 +97,5 @@ confirm before, not after.
 
 ## Report
 
-Version (all four sites), preflight verdict, CI verdict, notarization and
+Version (every site above), preflight verdict, CI verdict, notarization and
 staple results, the tag, and anything **not** run with its reason.

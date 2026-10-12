@@ -89,8 +89,8 @@ struct AutoCategorizeSheet: View {
                                     Label(suggesting ? suggestingLabel : "Suggest Categories",
                                           systemImage: "sparkles")
                                 }
-                                .disabled(suggesting || !model.isIntelligenceAvailable)
-                                .help(model.intelligenceUnavailableReason
+                                .disabled(suggesting || !model.isIntelligenceAvailable(for: .transactionCategorizer))
+                                .help(model.intelligenceUnavailableReason(for: .transactionCategorizer)
                                       ?? "Let Apple Intelligence propose a category for each transaction")
                                 let attachmentCount = pickerItems
                                     .filter { model.hasLinkedDocument($0.transactionID) }.count
@@ -103,7 +103,7 @@ struct AutoCategorizeSheet: View {
                                               systemImage: "doc.text.viewfinder")
                                     }
                                     .disabled(readingAttachments || suggesting
-                                              || !model.isIntelligenceAvailable)
+                                              || !model.isIntelligenceAvailable(for: .attachmentInsight))
                                     .help("OCR each item’s linked attachment and use its text to suggest the category")
                                 }
                                 if let errorMessage {

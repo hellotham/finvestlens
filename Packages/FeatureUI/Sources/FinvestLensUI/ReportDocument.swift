@@ -281,10 +281,9 @@ struct ReportDocumentView: View {
                                 .foregroundStyle(.tint)
                         }
                     }
-                    Text("Commentary is generated on-device from the figures above.")
-                        .scaledFont(.caption2)
-                        .foregroundStyle(.tertiary)
-                } else if document.facts != nil, model.isIntelligenceAvailable {
+                    IntelligenceRunsNote(feature: .reportNarrator,
+                                         onDevice: "Commentary is generated on-device from the figures above.")
+                } else if document.facts != nil, model.isIntelligenceAvailable(for: .reportNarrator) {
                     Button {
                         narrate()
                     } label: {

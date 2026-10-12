@@ -8,9 +8,7 @@
 
 import Foundation
 import FinvestLensEngine
-#if canImport(FoundationModels)
 import FoundationModels
-#endif
 
 /// Observed spending for one category, computed deterministically by the
 /// caller from the book (the model never sees raw transactions).
@@ -65,10 +63,8 @@ public struct BudgetSuggestion: Sendable {
 /// discretionary categories, keeping fixed ones at their observed level,
 /// rounding to human-friendly figures, and explaining each choice. That
 /// keeps the numbers auditable and the model's contribution reviewable.
-@available(macOS 26.0, iOS 26.0, *)
 public enum BudgetAdvisor {
 
-    #if canImport(FoundationModels)
     @Generable
     struct ModelBudgetLine {
         @Guide(description: "The category, copied EXACTLY from the spending list")
@@ -81,60 +77,57 @@ public enum BudgetAdvisor {
 
     @Generable
     struct ModelBudget {
-        /// Capped at the `prefix(40)` the caller offers: one line per input
-        /// category is the whole contract, so more than forty answers means
-        /// the model has started inventing categories or repeating itself.
-        /// Unbounded, that repetition runs until it exhausts the context
-        /// window — see ``StatementExtractor/ModelPage``.
+        /// One line per input category is the whole contract. The forty here
+        /// is the ceiling a static schema can state, and the most categories
+        /// ``suggest(history:monthlyIncome:currencyCode:)`` offers; each
+        /// request is made with `lines` fixed at exactly the number offered
+        /// (``LanguageModels/countedSchema(for:property:count:)``), so the
+        /// model can neither stop short nor go on to budget for categories
+        /// nobody has.
         @Guide(description: "One line per spending category from the input", .maximumCount(40))
         var lines: [ModelBudgetLine]
         @Guide(description: "Two or three sentences summarising the overall plan and any savings opportunity")
         var summary: String
     }
-    #endif
+
+    /// The most categories one request budgets for — ``ModelBudget``'s cap.
+    static let categoryLimit = 40
 
     public static func suggest(
         history: [SpendingHistory],
         monthlyIncome: Decimal,
         currencyCode: String
     ) async throws -> BudgetSuggestion {
-        #if canImport(FoundationModels)
-        guard IntelligenceAvailability.current().isAvailable else {
-            if case .unavailable(let reason) = IntelligenceAvailability.current() {
-                throw IntelligenceError.unavailable(reason)
-            }
-            throw IntelligenceError.unavailable("Apple Intelligence is not available.")
-        }
         guard !history.isEmpty else {
-            return BudgetSuggestion(lines: [], summary: "No spending history to budget from.")
+            return BudgetSuggestion(lines: [], summary: String(localized: "No spending history to budget from."))
         }
 
-        // Keep the request inside the on-device context window.
         let observed = Array(
-            history.sorted { $0.monthlyAverage > $1.monthlyAverage }.prefix(40)
+            history.sorted { $0.monthlyAverage > $1.monthlyAverage }.prefix(categoryLimit)
         )
 
         // The safety guardrails occasionally refuse borderline personal-finance
         // wording; the refusal is deterministic per input, so retrying with a
         // simplified listing sidesteps it, and pure averages remain as a
-        // deterministic floor — the button never comes back empty-handed.
+        // deterministic floor — the button never comes back empty-handed
+        // because of *what was asked*. The floor is for a model that will
+        // not write this plan: it declined it, or its language is not one
+        // it writes. A model that is not there at all — unavailable, busy,
+        // out of allowance — is told to the person instead, because averages
+        // presented as "Apple Intelligence declined" would be untrue.
         do {
             return try await modelSuggestion(observed, monthlyIncome: monthlyIncome,
                                              currencyCode: currencyCode, includeRanges: true)
-        } catch IntelligenceError.guardrailDeclined {
+        } catch let error as IntelligenceError where error.isAboutTheRequest {
             do {
                 return try await modelSuggestion(observed, monthlyIncome: monthlyIncome,
                                                  currencyCode: currencyCode, includeRanges: false)
-            } catch IntelligenceError.guardrailDeclined {
+            } catch let error as IntelligenceError where error.isAboutTheRequest {
                 return averageBasedSuggestion(observed)
             }
         }
-        #else
-        throw IntelligenceError.unavailable("Apple Intelligence is not available on this platform.")
-        #endif
     }
 
-    #if canImport(FoundationModels)
     private static func modelSuggestion(
         _ observed: [SpendingHistory],
         monthlyIncome: Decimal,
@@ -147,61 +140,56 @@ public enum BudgetAdvisor {
                 : "- \(line.fullName): average \(line.monthlyAverage)/month"
         }.joined(separator: "\n")
 
-        let session = LanguageModelSession(instructions: """
-            You fill in a budget planning table. For each spending category you are \
-            given its observed monthly spending; write a target monthly amount in \
-            \(currencyCode) and a short note. Keep essential categories (housing, \
-            utilities, insurance, groceries) near their observed average; set \
-            discretionary categories slightly below average. Round to sensible \
-            whole amounts. Copy category names exactly.
-            """)
-        do {
-            let model = try await session.respond(
-                to: """
-                    Total available per month: \(monthlyIncome) \(currencyCode)
+        let model = try await LanguageModels.respond(
+            .budgetAdvisor,
+            instructions: """
+                You fill in a budget planning table. For each spending category you are \
+                given its observed monthly spending; write a target monthly amount in \
+                \(currencyCode) and a short note. Keep essential categories (housing, \
+                utilities, insurance, groceries) near their observed average; set \
+                discretionary categories slightly below average. Round to sensible \
+                whole amounts. Copy category names exactly.
+                """,
+            prompt: """
+                Total available per month: \(monthlyIncome) \(currencyCode)
 
-                    Observed spending:
-                    \(listing)
-                    """,
-                generating: ModelBudget.self,
-                options: .greedy
-            ).content
+                Observed spending:
+                \(listing)
+                """,
+            generating: ModelBudget.self,
+            exactly: observed.count, of: "lines"
+        )
 
-            var lines: [BudgetSuggestionLine] = []
-            var used = Set<GncGUID>()
-            let candidates = observed.map { CategoryCandidate(id: $0.categoryID, fullName: $0.fullName) }
-            for line in model.lines {
-                guard let hit = AccountNameMatcher.match(line.category, in: candidates),
-                      used.insert(hit.id).inserted,
-                      let amount = IntelligenceParsing.amount(line.monthlyAmount),
-                      amount >= 0
-                else { continue }
-                lines.append(BudgetSuggestionLine(
-                    categoryID: hit.id,
-                    fullName: hit.fullName,
-                    monthlyAmount: amount,
-                    rationale: line.rationale
-                ))
-            }
-            return BudgetSuggestion(lines: lines, summary: model.summary)
-        } catch {
-            throw IntelligenceError.wrap(error)
+        var lines: [BudgetSuggestionLine] = []
+        var used = Set<GncGUID>()
+        let candidates = observed.map { CategoryCandidate(id: $0.categoryID, fullName: $0.fullName) }
+        for line in model.lines {
+            guard let hit = AccountNameMatcher.match(line.category, in: candidates),
+                  used.insert(hit.id).inserted,
+                  let amount = IntelligenceParsing.amount(line.monthlyAmount),
+                  amount >= 0
+            else { continue }
+            lines.append(BudgetSuggestionLine(
+                categoryID: hit.id,
+                fullName: hit.fullName,
+                monthlyAmount: amount,
+                rationale: line.rationale
+            ))
         }
+        return BudgetSuggestion(lines: lines, summary: model.summary)
     }
-    #endif
 
-    /// Deterministic floor when the model declines: each category budgeted at
-    /// its observed monthly average.
+    /// Deterministic floor when the model will not write the plan: each
+    /// category budgeted at its observed monthly average.
     static func averageBasedSuggestion(_ observed: [SpendingHistory]) -> BudgetSuggestion {
         BudgetSuggestion(
             lines: observed.map {
                 BudgetSuggestionLine(categoryID: $0.categoryID,
                                      fullName: $0.fullName,
                                      monthlyAmount: $0.monthlyAverage,
-                                     rationale: "Matches your observed monthly average.")
+                                     rationale: String(localized: "Matches your observed monthly average."))
             },
-            summary: "Budgeted from your monthly averages over the observed period. "
-                + "Apple Intelligence declined to refine this plan, so no trims were applied."
+            summary: String(localized: "Budgeted from your monthly averages over the observed period. Apple Intelligence didn’t refine this plan, so no trims were applied.")
         )
     }
 }
