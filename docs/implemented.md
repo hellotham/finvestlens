@@ -4389,6 +4389,19 @@ which had worked the same thing out against the App Sandbox.
   would have reopened the last book — here, the real one — so `TestHost`
   keeps a test host from reopening a book or asking for notifications.
 
+- **What CI found that the Mac did not** (the push of `284ef57`): the
+  localization gate passed here and failed there on the same tree. The gate
+  assigns each extracted string to a catalog by its source's path. On a Mac
+  the package checkouts are under `~/Library`, name no part of the repo, and
+  were skipped by accident; CI builds with DerivedData *inside* the
+  checkout, which is itself a directory called `finvestlens`, so
+  swift-transformers' own error messages read as the app target's and twenty
+  were reported as shipping untranslated. `scope_for` now sets aside anything
+  under `SourcePackages/` on purpose, `--self-test` holds the path shapes
+  both machines produce (and fails with the rule removed), CI runs it before
+  the check, and the fix was confirmed against the failed run's own
+  artifacts before it was pushed.
+
 Tests. In the packages: the folder as a cache and as plain folders; routing;
 the schema guide word for word, stable between calls, still the schema, and
 complete for every answer type; the order of a supplied model's

@@ -41,6 +41,15 @@ against its own catalog, never the app's.
 Usage:
     scripts/check-localization.py --build             # build both platforms, then check
     scripts/check-localization.py --strings-dir A --strings-dir B
+    scripts/check-localization.py --self-test         # the path scoping, on its own
+
+`--build` on a Mac and the `localization` job in CI are not the same run: the
+paths a `.stringsdata` records differ between them, and the scoping is by
+path. `--self-test` holds the shapes both produce. To see what CI saw, fetch
+its artifacts and check those:
+
+    gh run download <run-id> -p 'stringsdata-*' -D /tmp/strings
+    scripts/check-localization.py --strings-dir /tmp/strings --no-discover
 """
 
 from __future__ import annotations
@@ -173,6 +182,21 @@ def repo_relative(source: str) -> str | None:
 
 def scope_for(source: str) -> str | None:
     """Which catalog owns a source file, or None if it ships no strings."""
+    # A package the project links from elsewhere — MLX, the tokenizer library
+    # — is somebody else's source, checked out by Xcode under DerivedData. Its
+    # strings are its own: not in our catalogs, and not to be demanded of them.
+    #
+    # This has to be said before the path is made repo-relative, and it is
+    # here because of a run that passed on a Mac and failed in CI on the same
+    # tree (12 Oct 2026). Locally DerivedData is under ~/Library, so a
+    # checkout's path names no repo root and was dropped by accident. CI
+    # builds with `-derivedDataPath "$PWD/DerivedData"`, the checkout itself
+    # is a directory called `finvestlens`, and
+    # `…/finvestlens/DerivedData/SourcePackages/checkouts/swift-transformers/…`
+    # read as the app target's own source: twenty of that package's error
+    # messages were reported as strings the app ships untranslated.
+    if "/SourcePackages/" in source:
+        return None
     rel = repo_relative(source)
     if rel is None:
         return None
@@ -288,6 +312,48 @@ def check(catalog_rel: str, emitted: set[str]) -> list[str]:
     return problems
 
 
+def self_test() -> int:
+    """Which catalog a source belongs to, on a Mac and on the runner.
+
+    The scoping is by path, and paths differ between the machine this is
+    written on and the one CI builds on — which is how a gate came to pass
+    in one place and fail in the other. These are the shapes both produce.
+    """
+    app = "finvestlens/Localizable.xcstrings"
+    runner = "/Users/runner/work/finvestlens/finvestlens"
+    mac = "/Volumes/Work/finvestlens"
+    derived = "/Users/someone/Library/Developer/Xcode/DerivedData/finvestlens-abcdefgh"
+    cases: list[tuple[str, str | None]] = [
+        (f"{runner}/finvestlens/ContentView.swift", app),
+        (f"{mac}/finvestlens/ContentView.swift", app),
+        (f"{runner}/Packages/FeatureUI/Sources/FinvestLensUI/Views.swift", app),
+        (f"{mac}/Packages/Intelligence/Sources/FinvestLensIntelligence/LanguageModels.swift", app),
+        (f"{runner}/FinvestLensWidgets/Widgets.swift", "FinvestLensWidgets/Localizable.xcstrings"),
+        (f"{runner}/FinvestLensQuickLook/Preview.swift", "FinvestLensQuickLook/Localizable.xcstrings"),
+        # Tests, and the two command-line tools, ship no strings.
+        (f"{runner}/Packages/FeatureUI/Tests/FinvestLensUITests/SomeTests.swift", None),
+        (f"{runner}/Packages/CLI/Sources/finlens/Main.swift", None),
+        (f"{runner}/Packages/Lab/Sources/finlab/Main.swift", None),
+        # Somebody else's package, wherever Xcode checked it out: inside the
+        # checkout on the runner, under ~/Library on a Mac, under a package's
+        # own `.build` for `swift build`.
+        (f"{runner}/DerivedData/SourcePackages/checkouts/swift-transformers/Sources/Hub/Hub.swift", None),
+        (f"{derived}/SourcePackages/checkouts/mlx-swift-lm/Libraries/MLXLMCommon/Load.swift", None),
+        (f"{mac}/Packages/Persistence/.build/checkouts/GRDB.swift/GRDB/Core/Database.swift", None),
+        # And a path that names no part of this repository at all.
+        ("/usr/lib/swift/Something.swift", None),
+    ]
+    failures = [(source, expected, scope_for(source))
+                for source, expected in cases if scope_for(source) != expected]
+    for source, expected, got in failures:
+        print(f"scope_for({source!r}) is {got!r}, expected {expected!r}")
+    if failures:
+        print(f"\n{len(failures)} of {len(cases)} scoping cases wrong.")
+        return 1
+    print(f"Scoping: all {len(cases)} cases right.")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--build", action="store_true",
@@ -297,7 +363,11 @@ def main() -> int:
     parser.add_argument("--derived-data", help="DerivedData root (default: ask xcodebuild)")
     parser.add_argument("--no-discover", action="store_true",
                         help="don't look for DerivedData; --strings-dir already has everything")
+    parser.add_argument("--self-test", action="store_true",
+                        help="check which catalog a source path is assigned to, and stop")
     args = parser.parse_args()
+    if args.self_test:
+        return self_test()
 
     roots = [pathlib.Path(d).expanduser().resolve() for d in args.strings_dir]
     temp: str | None = None

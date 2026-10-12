@@ -166,5 +166,11 @@ jobs:
       # Both platforms, because each compiles code the other does not: an
       # accessibility label inside an `#else` branch of `#if os(macOS)` shipped
       # untranslated for months while a macOS-only audit reported full coverage.
+      # The check assigns each string to a catalog by the path of the source
+      # it came from, and those paths are this runner's, not a developer's
+      # Mac's: the scoping is tested on its own first, so that a wrong answer
+      # reads as that and not as twenty missing keys.
+      - name: A source path is assigned to the right catalog
+        run: python3 scripts/check-localization.py --self-test
       - name: Every emitted key has an entry, every entry is emitted
         run: python3 scripts/check-localization.py --strings-dir strings --no-discover
