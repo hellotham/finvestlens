@@ -4220,3 +4220,34 @@ Not observed: a deck on screen in any language other than English — the
 translations are in the bundle; nobody has looked at a slide. A method's name
 in a footnote ("FIFO basis") comes from the engine and is not translated.
 
+## Sessions declared by a profile; one kept for a batch measured and declined (12 Oct 2026)
+
+The first of the three adoptions the owner decided on.
+
+- **Every request's session is built from a `LanguageModelSession.
+  DynamicProfile`** (`LanguageModels.FeatureProfile`): the feature's
+  instructions, its model, its sampling mode and its tool-calling mode are
+  declared together, and requests no longer carry options. The whole
+  Intelligence suite passes on sessions built that way, the live model
+  included, and the categoriser asked twice word for word answers the same —
+  the profile's greedy sampling is in effect.
+- **A session kept for a batch was built, measured, and removed.** A
+  statement's slices and an import's rows share their instructions, so one
+  session with a stateless history transform should spare the model working
+  them out again. Three rounds each way: six categoriser requests in 16.80,
+  16.85 and 16.82 s with a session each and 16.75, 16.78 and 16.80 s with one
+  kept; three statement slices in 84.95, 85.73 and 83.57 s against 85.19,
+  85.17 and 82.98 s; the same answers every run. The Foundation Models
+  instrument shows the prefix cache engaging — 381 of about 670 prompt tokens
+  a request — and the time before generation going from about 455 ms to about
+  440, on a request that then generates for 2.3 seconds. Not worth a pool of
+  long-lived sessions.
+- **What `historyTransform` is handed** — everything about to be sent,
+  instructions first and the prompt being asked last — and that an empty
+  array is an error rather than "no history", is written down in
+  intelligence-prompts.md, because the documentation does not say and the
+  first version of the pool got it wrong.
+- The two task-local wrappers (`permittingOffDevice`, and the pool's while it
+  existed) moved from `TaskLocal.withValue(_:operation:isolation:)`, which
+  Swift 6.4 deprecates, to the caller-context form.
+

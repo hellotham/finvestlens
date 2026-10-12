@@ -95,19 +95,28 @@ public enum IntelligenceFeature: String, Sendable, CaseIterable {
     /// every time. The three narrators write commentary, which reads better
     /// with the model's own sampling and has always been asked for that way;
     /// it is also what makes asking them again worth anything.
-    var options: GenerationOptions {
-        var options: GenerationOptions
+    var samplingMode: GenerationOptions.SamplingMode? {
         switch self {
         case .reviewNarrator, .reportNarrator, .forecastNarrator:
-            options = GenerationOptions()
+            nil
         case .documentClassifier, .transactionCategorizer, .attachmentInsight,
              .statementExtractor, .invoiceAnalyzer, .dividendExtractor, .budgetAdvisor:
-            options = GenerationOptions(samplingMode: .greedy)
+            .greedy
         }
-        // No feature registers a tool — every request is one guided
-        // generation — so the 27 tool-calling mode is stated rather than
-        // left to its default of `allowed`.
-        options.toolCallingMode = .disallowed
+    }
+
+    /// No feature registers a tool — every request is one guided generation
+    /// — so the 27 tool-calling mode is stated rather than left to its
+    /// default of `allowed`.
+    var toolCallingMode: GenerationOptions.ToolCallingMode { .disallowed }
+
+    /// The same two values as a request's options, for one made outside the
+    /// seam — the surveys, which build their own sessions to move the
+    /// language order about. A request made through the seam takes them
+    /// from its session's profile (``LanguageModels/FeatureProfile``).
+    var options: GenerationOptions {
+        var options = GenerationOptions(samplingMode: samplingMode)
+        options.toolCallingMode = toolCallingMode
         return options
     }
 }
@@ -235,7 +244,7 @@ public enum LanguageModels {
     }
 
     /// The model `feature` runs on when the command asking has said it may
-    /// (``permittingOffDevice(_:isolation:operation:)``) — what the person's
+    /// (``permittingOffDevice(_:operation:)``) — what the person's
     /// choice means for this feature, and so what a view says before the
     /// button is pressed. A request no command has spoken for runs on the
     /// device whatever this returns.
@@ -287,13 +296,12 @@ public enum LanguageModels {
     ///
     /// Inside another command it can only narrow: what the person was told
     /// is what the outer command told them.
-    public static func permittingOffDevice<Result>(
+    nonisolated(nonsending) public static func permittingOffDevice<Result>(
         _ features: Set<IntelligenceFeature>,
-        isolation: isolated (any Actor)? = #isolation,
-        operation: () async throws -> Result
+        operation: nonisolated(nonsending) () async throws -> Result
     ) async rethrows -> Result {
         let granted = permittedOffDevice.map { $0.intersection(features) } ?? features
-        return try await $permittedOffDevice.withValue(granted, operation: operation, isolation: isolation)
+        return try await $permittedOffDevice.withValue(granted, operation: operation)
     }
 
     /// Where a request runs — the whole rule, reading nothing from the
@@ -577,11 +585,10 @@ public enum LanguageModels {
         try await perform(feature, instructions: instructions, explainRefusal: false) { _, session, _ in
             if let count, let property {
                 let content = try await session.respond(
-                    to: prompt, schema: countedSchema(for: type, property: property, count: count),
-                    options: feature.options).content
+                    to: prompt, schema: countedSchema(for: type, property: property, count: count)).content
                 return try Output(content)
             }
-            return try await session.respond(to: prompt, generating: type, options: feature.options).content
+            return try await session.respond(to: prompt, generating: type).content
         }
     }
 
@@ -613,8 +620,7 @@ public enum LanguageModels {
             resolved, session, sent in
             let fitted = try await fit(document, framing: framing, instructions: sent,
                                        generating: type, resolved: resolved)
-            let answer = try await session.respond(to: framing(fitted.text), generating: type,
-                                                   options: feature.options).content
+            let answer = try await session.respond(to: framing(fitted.text), generating: type).content
             return (answer, fitted.truncated)
         }
     }
@@ -669,7 +675,8 @@ public enum LanguageModels {
         let resolved = try await resolve(feature)
         func attempt(on resolved: Resolved) async throws -> Output {
             let sent = Self.instructions(instructions, for: feature)
-            let session = LanguageModelSession(model: resolved.model, instructions: sent)
+            let session = LanguageModelSession(profile: FeatureProfile(
+                feature: feature, model: resolved.model, instructions: sent))
             do {
                 return try await request(resolved, session, sent)
             } catch is CancellationError {
@@ -690,6 +697,37 @@ public enum LanguageModels {
                 throw IntelligenceError.networkUnavailable
             }
             return try await attempt(on: device)
+        }
+    }
+
+    // MARK: - Sessions
+
+    /// A feature's session, as 27 declares one: the model, how it picks its
+    /// words, whether it may call a tool and what it is told to be, in one
+    /// place (`LanguageModelSession.DynamicProfile`) instead of spread over
+    /// the session's initialiser and every request's options.
+    ///
+    /// A session is made for one request and let go. Keeping one for a
+    /// batch — a statement's slices, an import's rows, which all share
+    /// their instructions — was built and measured, and is not here: the
+    /// model's prefix cache does engage (381 of about 670 prompt tokens on
+    /// every request after the first, by the Foundation Models instrument,
+    /// 12 October 2026), and it takes the 455 ms a request spends before
+    /// generating down to about 440, on a request that then generates for
+    /// 2.3 seconds. Six categoriser requests took 16.80 s one way and 16.78
+    /// the other. See docs/intelligence-prompts.md.
+    struct FeatureProfile: LanguageModelSession.DynamicProfile {
+        let feature: IntelligenceFeature
+        let model: any LanguageModel
+        let instructions: String?
+
+        var body: some LanguageModelSession.DynamicProfile {
+            LanguageModelSession.Profile {
+                if let instructions { Instructions(instructions) }
+            }
+            .model(model)
+            .samplingMode(feature.samplingMode)
+            .toolCallingMode(feature.toolCallingMode)
         }
     }
 

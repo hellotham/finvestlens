@@ -113,9 +113,15 @@ are the next changes, in this order:
   reads a document with Vision itself and gives the model text. The tools
   live in a cross-import overlay (`_Vision_FoundationModels`) that the iOS
   Simulator SDK does not have, so the code path has to be conditional.
-- **`LanguageModelSession.DynamicProfile`.** A profile is where a session's
-  model, sampling, tool mode and reasoning level are declared together, and
-  where tools are offered only when the request has an image for them.
+- **`LanguageModelSession.DynamicProfile`** — *adopted 12 Oct, after this
+  list was written.* Every request's session is built from a profile that
+  declares its instructions, model, sampling and tool-calling mode
+  (`LanguageModels.FeatureProfile`). Keeping one session for a batch, with a
+  stateless history transform, was built and measured and is **not**
+  adopted: the prefix cache engages and saves about 15 ms on a request that
+  takes 2.8 s (intelligence-prompts.md). What is left for a profile to do is
+  offer tools only when the request has an image for them, which belongs to
+  the item above.
 - **A model the person supplies** (`MLXLanguageModel` from a folder they
   choose). The owner's rule covers this one in particular: *the publisher
   provides no APIs and stores no data; everything is supplied by the person

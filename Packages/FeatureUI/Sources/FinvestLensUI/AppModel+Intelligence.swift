@@ -125,7 +125,7 @@ extension AppModel {
     /// device. Every request that can leave the device starts in one of
     /// these — see ``IntelligenceCommand``.
     func running<Result>(
-        _ command: IntelligenceCommand, _ body: () async throws -> Result
+        _ command: IntelligenceCommand, _ body: nonisolated(nonsending) () async throws -> Result
     ) async rethrows -> Result {
         try await LanguageModels.permittingOffDevice(command.features, operation: body)
     }

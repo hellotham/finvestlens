@@ -123,6 +123,12 @@ struct LiveModelTests {
         #expect(suggestions[items[0].id].map { byName[$0] } == "Expenses:Food:Groceries")
         #expect(suggestions[items[1].id].map { byName[$0] } == "Expenses:Entertainment:Streaming")
         #expect(suggestions[items[2].id].map { byName[$0] } == "Income:Salary")
+
+        // The feature's sampling is declared by its session's profile now,
+        // not passed with each request — and it is still greedy: asked
+        // again, word for word, the model answers the same.
+        let again = try await TransactionCategorizer.suggest(items: items, candidates: candidates)
+        #expect(again == suggestions)
     }
 
     @Test("Invoice PDF splits into categorised line items")

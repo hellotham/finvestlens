@@ -555,11 +555,15 @@ struct ModelChoiceTests {
     @Test("Extractors answer the same way every time; the narrators do not; nobody calls a tool")
     func sampling() {
         for feature in IntelligenceFeature.allCases {
-            let options = feature.options
-            #expect(options.toolCallingMode == .disallowed, "\(feature)")
-            let greedy = options.samplingMode == .greedy
+            // What a session's profile declares…
+            #expect(feature.toolCallingMode == .disallowed, "\(feature)")
+            let greedy = feature.samplingMode == .greedy
             let narrates = [.reviewNarrator, .reportNarrator, .forecastNarrator].contains(feature)
             #expect(greedy == !narrates, "\(feature)")
+            // …and the same two values where a request is made outside the
+            // seam, by the surveys.
+            #expect(feature.options.toolCallingMode == feature.toolCallingMode, "\(feature)")
+            #expect((feature.options.samplingMode == .greedy) == greedy, "\(feature)")
         }
     }
 }

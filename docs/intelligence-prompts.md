@@ -46,6 +46,11 @@ model once and adds what a feature does not have to think about:
    in a table; the model's own for the three narrators.
 4. **No tools**: `toolCallingMode = .disallowed`, since no feature registers
    one yet.
+
+   Both are declared by the session's profile
+   (`LanguageModels.FeatureProfile`, a `LanguageModelSession.DynamicProfile`:
+   instructions, model, sampling mode, tool-calling mode), not passed with
+   each request.
 5. **For a document, a cut that fits**: the document is measured by the
    model as it will be sent, cut in proportion and measured again
    (`LanguageModels.fit`), against the window less the instructions, the
@@ -324,6 +329,32 @@ commit that had not touched the package failed on it in German and Japanese.
 A narration is now asked for up to three times; nine drafts all declined
 still fails.
 
+**One session for a batch is not worth keeping.** A statement is read a
+thousand characters a request and an import is categorised eight rows a
+request, all under the same instructions, so a session kept for the batch —
+with a profile's stateless history transform sending each request without the
+ones before it — should let the model reuse what it has already worked out
+about the instructions. It was built and measured, three rounds each way:
+
+| Batch | A session for each request | One session kept | Same answers |
+|---|---|---|---|
+| Categoriser, 6 requests (48 rows, 40 categories) | 16.80, 16.85, 16.82 s | 16.75, 16.78, 16.80 s | every run |
+| Statement, 3 requests (60 rows) | 84.95, 85.73, 83.57 s | 85.19, 85.17, 82.98 s | every run |
+
+The instrument says why. The prefix cache does engage — 381 of about 670
+prompt tokens were served from it on every request of the kept session after
+the first, and none with a session each — and it takes the part of a request
+before generation from about 455 ms to about 440. The request then generates
+for 2.3 seconds (some 130 tokens). So a session is still made for each
+request, and the profile declares it; the pool of kept sessions was removed.
+
+Two things the probe for it established about `historyTransform`, which the
+documentation does not say. The history it is handed is everything about to
+be sent: the instructions entry first, the prompt being asked last, every
+earlier prompt and answer between. And returning an empty array is therefore
+an error, not "no history" — "Transcript must end with a .prompt or
+.toolOutput entry".
+
 ## What the instrument showed
 
 The Foundation Models instrument, recorded on 12 October 2026 with the
@@ -392,3 +423,4 @@ What it confirmed, and what it showed that nothing else had:
 | 12 Oct 2026, after the review of `73b2bd6` | Where a request runs is granted by the command, not assumed from the feature: Categorise from Attachment was gated and described as attachment insight (device) while it also ran the dividend extractor and the invoice analyser (the person's choice). No build could reach Private Cloud Compute, so nothing was sent. Every command that can leave the device now shows where it runs beside its control; the Settings sentence names what stays on the device by command. No prompt changed. |
 | 12 Oct 2026, from the survey that followed | Review slide: a change goes in words on its figure's line, and the instructions ask for it where one is given and forbid describing one where none is ("stable" included); a story that calls unchanged what the slide says changed is declined. Number check: a figure may be cut off at its precision as well as rounded to it; German T€ / T$ / TEUR read as thousands. Forecast prompt measured on a rising and a falling balance and left as it was. |
 | 12 Oct 2026, the decks | The review decks' labels reach the model in the reader's language (they were English literals). The two month counts on the cash-flow slide go as counts; they went as amounts ("Months positive: 7 AUD"). The decks take dividend figures from `dividendBreakdown`, not by looking them up under the report's English labels. |
+| 12 Oct 2026, profiles | Every request's session is built from a `LanguageModelSession.DynamicProfile` that declares its instructions, model, sampling and tool-calling mode; requests no longer carry options. A session kept for a batch was measured and not adopted. No prompt changed. |
