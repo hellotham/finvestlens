@@ -230,5 +230,100 @@ struct FinancialReviewTests {
         let slide = try #require(slides.first { $0.id == "dividends" })
         #expect(slide.callouts.contains { $0.label == "Grossed-up" })
         #expect(slide.facts.figures.contains { $0.0 == "Franked dividends" && $0.1 == 70 })
+        // The bar is the security's cash, which the deck used to find by a
+        // section title ending in "dividends".
+        guard case .categoryBars(let bars) = slide.chart else {
+            Issue.record("the dividends slide should carry bars"); return
+        }
+        #expect(bars.map(\.label) == ["BHP"])
+        #expect(bars.first?.current == 70)
+    }
+
+    // MARK: The decks in the reader's language
+
+    nonisolated private static let builders = ["FinancialReview.swift", "InvestmentReview.swift"]
+
+    nonisolated private static func source(_ name: String) throws -> String {
+        try String(contentsOf: URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("Sources/FinvestLensUI/\(name)"), encoding: .utf8)
+    }
+
+    /// A slide and its callouts carry `String`s, which SwiftUI draws as they
+    /// are. So a literal put straight into one is English in every language
+    /// — on screen, and in the facts the narrator writes from — and nothing
+    /// says so: the two builders held 133 phrases that way. Each has to be a phrase
+    /// in `String(localized:)`; what may stay bare is a slide's id, the
+    /// story cache's key, and a value that is only numbers.
+    @Test("Every word a deck shows or hands the narrator goes through the string catalog",
+          arguments: builders)
+    func nothingIsLeftInEnglish(file: String) throws {
+        let localized = try Regex(#"String\(localized: "(?:[^"\\]|\\.)*"\)"#)
+        let interpolation = try Regex(#"\\\((?:[^()]|\([^()]*\))*\)"#)
+        let wordInLiteral = try Regex(#""[^"]*\p{L}[^"]*""#)
+        var found = 0
+        for (number, line) in try Self.source(file).split(separator: "\n", omittingEmptySubsequences: false).enumerated() {
+            var code = String(line)
+            if let comment = code.range(of: "//") { code = String(code[..<comment.lowerBound]) }
+            found += code.matches(of: localized).count
+            code = code.replacing(localized, with: "")
+            let trimmed = code.trimmingCharacters(in: .whitespaces)
+            guard !trimmed.hasPrefix("id:"), !trimmed.hasPrefix("let key = \"review.story:") else { continue }
+            code = code.replacing(interpolation, with: "")
+            #expect(code.firstMatch(of: wordInLiteral) == nil,
+                    "\(file):\(number + 1) has a bare literal: \(trimmed)")
+        }
+        // The check passes on a file with no strings in it at all.
+        #expect(found > 50, "\(file): only \(found) localized phrases found")
+    }
+
+    @Test("A percentage is written the reader's way")
+    func percentages() throws {
+        let (model, url, _) = try makeCashBook()
+        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        let english = Locale(identifier: "en_AU")
+        #expect(model.reviewPercent(Decimal(string: "8.4")!, locale: english) == "8.4%")
+        #expect(model.reviewPercent(26, places: 0, locale: english) == "26%")
+        #expect(model.reviewPercent(12, locale: english) == "12%")
+        #expect(model.reviewPercent(Decimal(string: "8.4")!, signed: true, locale: english) == "+8.4%")
+        #expect(model.reviewPercent(Decimal(string: "-8.4")!, signed: true, locale: english) == "-8.4%")
+        // A decimal comma, and the space each language puts before the sign.
+        let german = model.reviewPercent(Decimal(string: "8.4")!, locale: Locale(identifier: "de_DE"))
+        #expect(german.hasPrefix("8,4") && german.hasSuffix("%"))
+        let french = model.reviewPercent(Decimal(string: "8.4")!, locale: Locale(identifier: "fr_FR"))
+        #expect(french.hasPrefix("8,4") && french.hasSuffix("%"))
+    }
+
+    @Test("A change is listed under the label of the figure it is a change in")
+    func changesShareTheirFiguresLabel() throws {
+        // The narrator's prompt puts a change on its figure's line by
+        // matching the two labels — which now come out of the catalog, so
+        // they have to be the same phrase and not two that happen to agree
+        // in English.
+        let (model, url, date) = try makeCashBook()
+        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        // A year earlier, so that there is a prior period to compare with.
+        let bank = try #require(model.postableAccounts.first { $0.name == "Bank" }?.id)
+        let salary = try #require(model.postableAccounts.first { $0.name == "Salary" }?.id)
+        let food = try #require(model.postableAccounts.first { $0.name == "Food" }?.id)
+        let earlier = date.addingTimeInterval(-86_400 * 365)
+        _ = try model.addTransaction(date: earlier, description: "t", currency: .aud,
+            splits: [SplitInput(accountID: salary, value: -5_000), SplitInput(accountID: bank, value: 5_000)])
+        _ = try model.addTransaction(date: earlier, description: "t", currency: .aud,
+            splits: [SplitInput(accountID: bank, value: -2_000), SplitInput(accountID: food, value: 2_000)])
+
+        let slides = model.financialReviewSlides(
+            from: date.addingTimeInterval(-86_400 * 30), to: date.addingTimeInterval(86_400), label: "Test")
+        for id in ["highlights", "income", "spending"] {
+            let slide = try #require(slides.first { $0.id == id })
+            #expect(!slide.facts.deltaPercents.isEmpty, "\(id) lists no change")
+            for (label, _) in slide.facts.deltaPercents {
+                #expect(slide.facts.figures.contains { $0.0 == label }, "\(id): no figure is labelled \(label)")
+            }
+        }
+        // Spending fell from 2,000 to 1,500, and the slide says which way.
+        let spending = try #require(slides.first { $0.id == "spending" })
+        #expect(spending.headline == "Spending down 25% at \(AmountFormat.compact(1_500, code: "AUD"))")
+        #expect(spending.callouts.first?.label == "Total spending")
     }
 }

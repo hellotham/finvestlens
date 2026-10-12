@@ -4167,3 +4167,56 @@ pushed.
 Not observed: any note on screen with Private Cloud Compute, which no build
 can show until Apple assigns the entitlement; the empty note's layout on iOS
 (measured on macOS only); VoiceOver.
+
+## The review decks in the reader's language (12 Oct 2026)
+
+The Financial Review and the Investment Review were English in every
+language. A slide carries `String`s — kicker, headline, callout labels, bar
+and waterfall labels, footnote — and SwiftUI draws a `String` as it is, so
+the 133 phrases the two builders held as literals never reached the string
+catalog; and because a `String` emits no key, the catalog's gate had nothing
+to miss.
+
+- **Every phrase is a whole one in `String(localized:)`**, in eight
+  languages: 118 new catalog entries, four of them with plural forms ("1
+  disposal", "2 disposals"), and fifteen the catalog already had. Headlines
+  that were assembled from fragments — "Income" or "Spending", then "up" or
+  "down" — are one sentence per case, since no other language is built that
+  way.
+- **Percentages are written the reader's way** ("8,4 %"), not as a `Decimal`
+  with a percent sign after it; "1 month" is not "1 months".
+- **The labels in a slide's facts are the same phrases**, so the narrator is
+  handed the reader's language, and a change still lands on the line of the
+  figure it is a change in (the prompt matches the two labels, which are now
+  one constant each).
+- **The decks no longer read the dividend report's wording.** They found
+  their totals under the labels "Franked" and "Unfranked" and their bars in
+  sections whose title ended in "dividends" — which the first translated
+  report would have emptied without a word. `dividendBreakdown` hands the
+  figures over as figures, and the report is built from the same value.
+- **The cash-flow slide's month counts go to the narrator as counts.** They
+  went as amounts: "Months positive: 7 AUD".
+- `FinancialReviewTests` reads both builders for a literal that has slipped
+  back (one put back fails it), and holds a change to the label of the figure
+  it is a change in.
+
+Measured: the catalog matches the compiler's extracted keys; the built Mac
+app's bundle carries the phrases in French, German and Japanese, with the
+plural rule on the count. Before the narrator's prompt was changed (previous
+section) English labels got a French reader French ten times in sixteen and
+French labels sixteen in sixteen; after it, sixteen in sixteen either way —
+so this change is for the screen, not for the model.
+
+**Still English, and the same defect:** the report documents. A report's
+KPI, section, row and total labels are `String`s built in English for 29
+documents and drawn verbatim, on screen and in the PDF (`deferred.md` §3a).
+
+Receipts, 12 Oct 2026, on the tree as committed: every package suite passes
+(1,929 tests; FeatureUI 771), both unsigned app builds succeed, and the
+localization gate, the help-manual drift check, the SPDX check and the
+real-data gate pass. CI was green on `5af5881`, all seventeen jobs.
+
+Not observed: a deck on screen in any language other than English — the
+translations are in the bundle; nobody has looked at a slide. A method's name
+in a footnote ("FIFO basis") comes from the engine and is not translated.
+

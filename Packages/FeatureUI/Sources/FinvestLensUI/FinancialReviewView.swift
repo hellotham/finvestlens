@@ -239,6 +239,10 @@ struct SlideCard: View {
                         .scaledFont(.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
+                        // A label that fitted in English may not in German
+                        // or Spanish ("Rentabilidad sobre el dinero
+                        // aportado"); it gives a little before it is cut.
+                        .minimumScaleFactor(0.75)
                     Text(callout.value)
                         .scaledFont(.title2, weight: .semibold)
                         .monospacedDigit()

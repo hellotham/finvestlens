@@ -122,18 +122,20 @@ are the next changes, in this order:
   using the app.* So no model is bundled, no model is downloaded by the app,
   and there is no key or endpoint of the publisher's.
 
-**Measured, and the next change after those:** the review decks hand the
-model their labels in English whatever the app's language, because the two
-builders (`FinancialReview.swift`, `InvestmentReview.swift`) hold 102 label
-literals that were never localized — on screen or in the prompt. With English
-labels the model answered a French reader in French 10 times in 16; with the
-same labels in French, 16 in 16. Localizing them fixes the deck on screen and
-the language at its root. The report documents have the same gap, found while
-reading for that change: a report's KPI, section and row labels
-(`ReportKPI.label` and its neighbours, built for 29 documents in
-`ReportBuilders.swift`, `AppModel+ReportDocuments.swift` and
-`AppModel+FYPack.swift`) are `String`s written in English and drawn verbatim,
-and they are what the report narrator is handed.
+**The review decks are in the reader's language** (done 12 Oct, after the
+commit that set the order above — it was the one change already in hand).
+Their two builders held 133 phrases as bare literals, English on screen in
+every language and English in the facts handed to the narrator; each is now a
+whole phrase in the catalog, in eight languages.
+
+**Open, found while doing that: the report documents are still in English.**
+A report's KPI, section, row and total labels (`ReportKPI.label` and its
+neighbours, built for 29 documents in `ReportBuilders.swift`,
+`AppModel+ReportDocuments.swift` and `AppModel+FYPack.swift`) are `String`s
+written in English and drawn verbatim — on screen, in the exported PDF, and
+in what the report narrator is handed. It is the same defect as the decks',
+several times the size, and the catalog's gate cannot see it: a `String`
+emits no key, so nothing is missing.
 
 ## 4 — Platform & HIG — deferred decisions
 

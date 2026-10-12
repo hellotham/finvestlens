@@ -305,6 +305,16 @@ nothing, and drafts the stricter rounding had been declining only by
 accident. Nothing here catches those; they are the reason the commentary is
 marked as Apple Intelligence's and sits beside figures that are not.
 
+**The decks' own words are in the reader's language, and that is no longer
+what the model's language turns on.** Before the change above, the review
+slide's facts in English got a French reader an answer in French ten times in
+sixteen, and the same facts with French labels sixteen in sixteen — so the
+decks' 133 bare literals looked like the root of it. They are localized now
+(a slide's labels, headline and footnote come from the string catalog, and so
+do the labels in its facts). Re-measured with the change in words: sixteen in
+sixteen with English labels as well. The decks needed it for what is on the
+screen; the model, on this slide, no longer does.
+
 **The live language tests ask three times.** They assert that the model can
 write something the checks accept in each language, and used to fail when one
 narration — three drafts — could not. That is the narrator working: it says
@@ -381,3 +391,4 @@ What it confirmed, and what it showed that nothing else had:
 | 12 Oct 2026, after review | Documents cut by the model's own count; numbers read with their units, and an unreadable number rejected; ratios and counts given as ratios and counts; forecast dates Gregorian; the locale named without keywords; language order re-measured with an independent oracle; one draft policy for the three narrators; a refusal's explanation shown only if it is one; statements read on the device whatever is chosen. |
 | 12 Oct 2026, after the review of `73b2bd6` | Where a request runs is granted by the command, not assumed from the feature: Categorise from Attachment was gated and described as attachment insight (device) while it also ran the dividend extractor and the invoice analyser (the person's choice). No build could reach Private Cloud Compute, so nothing was sent. Every command that can leave the device now shows where it runs beside its control; the Settings sentence names what stays on the device by command. No prompt changed. |
 | 12 Oct 2026, from the survey that followed | Review slide: a change goes in words on its figure's line, and the instructions ask for it where one is given and forbid describing one where none is ("stable" included); a story that calls unchanged what the slide says changed is declined. Number check: a figure may be cut off at its precision as well as rounded to it; German T€ / T$ / TEUR read as thousands. Forecast prompt measured on a rising and a falling balance and left as it was. |
+| 12 Oct 2026, the decks | The review decks' labels reach the model in the reader's language (they were English literals). The two month counts on the cash-flow slide go as counts; they went as amounts ("Months positive: 7 AUD"). The decks take dividend figures from `dividendBreakdown`, not by looking them up under the report's English labels. |

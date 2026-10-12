@@ -69,6 +69,10 @@ extension AppModel {
 
     // MARK: Slides
 
+    // Every phrase is a whole one in `String(localized:)`, for the reason
+    // given in FinancialReview.swift: a slide carries `String`s, and a
+    // literal in one is English wherever it is read.
+
     /// Factsheet page one: value, cost, unrealised, total return.
     private func investmentOverviewSlide(_ portfolio: AdvancedPortfolio,
                                          label: String, code: String) -> ReviewSlide? {
@@ -77,27 +81,33 @@ extension AppModel {
             .sorted { ($0.marketValue ?? 0) > ($1.marketValue ?? 0) }
         guard !valued.isEmpty else { return nil }
 
+        let marketValueLabel = String(localized: "Market value")
+        let costLabel = String(localized: "Cost basis")
+        let returnLabel = String(localized: "Total return")
+        let value = compactAmount(portfolio.totalValue, code)
+
         var callouts: [SlideCallout] = [
-            SlideCallout(label: "Market value", value: compactAmount(portfolio.totalValue, code)),
-            SlideCallout(label: "Cost basis", value: compactAmount(portfolio.totalCost, code)),
-            SlideCallout(label: "Unrealised", value: compactAmount(portfolio.totalUnrealized, code),
+            SlideCallout(label: marketValueLabel, value: value),
+            SlideCallout(label: costLabel, value: compactAmount(portfolio.totalCost, code)),
+            SlideCallout(label: String(localized: "Unrealised"),
+                         value: compactAmount(portfolio.totalUnrealized, code),
                          deltaPositive: portfolio.totalUnrealized >= 0),
         ]
-        var figures: [(String, Decimal)] = [
-            ("Market value", portfolio.totalValue),
-            ("Cost basis", portfolio.totalCost),
-            ("Unrealised gain", portfolio.totalUnrealized),
+        let figures: [(String, Decimal)] = [
+            (marketValueLabel, portfolio.totalValue),
+            (costLabel, portfolio.totalCost),
+            (String(localized: "Unrealised gain"), portfolio.totalUnrealized),
         ]
         var ratios: [(String, Decimal)] = []
-        var headline = "Portfolio valued at \(compactAmount(portfolio.totalValue, code))"
+        var headline = String(localized: "Portfolio valued at \(value)")
         if let returnFraction = portfolio.totalReturnFraction {
             let percent = roundedPercent(returnFraction)
-            callouts.append(SlideCallout(label: "Total return", value: "\(percent)%",
+            callouts.append(SlideCallout(label: returnLabel, value: reviewPercent(percent),
                                          deltaPositive: percent >= 0))
-            ratios.append(("Total return", percent))
+            ratios.append((returnLabel, percent))
             headline = percent >= 0
-                ? "Portfolio of \(compactAmount(portfolio.totalValue, code)) returning \(percent)% on money in"
-                : "Portfolio of \(compactAmount(portfolio.totalValue, code)) down \(-percent)% on money in"
+                ? String(localized: "Portfolio of \(value) returning \(reviewPercent(percent)) on money in")
+                : String(localized: "Portfolio of \(value) down \(reviewPercent(-percent)) on money in")
         }
 
         let bars = valued.prefix(8).map {
@@ -105,12 +115,12 @@ extension AppModel {
         }
         return ReviewSlide(
             id: "inv.dashboard",
-            kicker: "Investment Review · \(label)",
+            kicker: String(localized: "Investment Review · \(label)"),
             headline: headline,
             callouts: callouts,
             chart: .categoryBars(Array(bars)),
-            footnote: "Valued at the most recent recorded prices · \(portfolio.method.displayName) basis · return = (unrealised + realised + income) over money in",
-            facts: ReviewSlideFacts(kicker: "Portfolio overview", periodLabel: label,
+            footnote: String(localized: "Valued at the most recent recorded prices · \(portfolio.method.displayName) basis · return = (unrealised + realised + income) over money in"),
+            facts: ReviewSlideFacts(kicker: String(localized: "Portfolio overview"), periodLabel: label,
                                     currencyCode: code, figures: figures, ratios: ratios))
     }
 
@@ -128,23 +138,25 @@ extension AppModel {
         let topFive = valued.prefix(5).reduce(Decimal(0)) { $0 + ($1.marketValue ?? 0) }
         let topFiveShare = roundedPercent(
             NSDecimalNumber(decimal: topFive / portfolio.totalValue).doubleValue)
+        let holdings = valued.count
 
         return ReviewSlide(
             id: "inv.allocation",
-            kicker: "Allocation",
-            headline: "\(valued.count) holdings; the top five are \(topFiveShare)% of the portfolio",
+            kicker: String(localized: "Allocation"),
+            headline: String(localized: "\(holdings) holdings; the top five are \(reviewPercent(topFiveShare)) of the portfolio"),
             callouts: [
-                SlideCallout(label: "Holdings", value: "\(valued.count)"),
-                SlideCallout(label: "Largest: \(top.symbol)", value: "\(topShare)%"),
-                SlideCallout(label: "Top five", value: "\(topFiveShare)%"),
+                SlideCallout(label: String(localized: "Holdings"), value: "\(holdings)"),
+                SlideCallout(label: String(localized: "Largest: \(top.symbol)"), value: reviewPercent(topShare)),
+                SlideCallout(label: String(localized: "Top five"), value: reviewPercent(topFiveShare)),
             ],
             chart: .allocation(valued.prefix(12).map { ($0.symbol, $0.marketValue ?? 0) }),
-            footnote: "Share of market value · concentration is the factsheet's first risk read",
+            footnote: String(localized: "Share of market value · concentration is the factsheet’s first risk read"),
             facts: ReviewSlideFacts(
-                kicker: "Allocation and concentration", periodLabel: label, currencyCode: code,
+                kicker: String(localized: "Allocation and concentration"), periodLabel: label, currencyCode: code,
                 figures: valued.prefix(5).map { ($0.symbol, $0.marketValue ?? 0) },
-                ratios: [("Largest holding", topShare), ("Top five holdings", topFiveShare)],
-                counts: [("Number of holdings", valued.count)]))
+                ratios: [(String(localized: "Largest holding"), topShare),
+                         (String(localized: "Top five holdings"), topFiveShare)],
+                counts: [(String(localized: "Number of holdings"), holdings)]))
     }
 
     /// Mark-to-market winners and losers.
@@ -162,27 +174,28 @@ extension AppModel {
         let bars = (judged.prefix(4) + judged.suffix(2))
             .map { CategoryBar(label: $0.0, current: $0.1, prior: nil) }
         let headline = best.1 >= abs(worst.1)
-            ? "\(best.0) leads with \(compactAmount(best.1, code)) unrealised"
-            : "\(worst.0) weighs with \(compactAmount(worst.1, code)) unrealised"
+            ? String(localized: "\(best.0) leads with \(compactAmount(best.1, code)) unrealised")
+            : String(localized: "\(worst.0) weighs with \(compactAmount(worst.1, code)) unrealised")
+        let totalLabel = String(localized: "Unrealised total")
 
         return ReviewSlide(
             id: "inv.leaders",
-            kicker: "Performance",
+            kicker: String(localized: "Performance"),
             headline: headline,
             callouts: [
-                SlideCallout(label: "Best: \(best.0)", value: compactAmount(best.1, code),
+                SlideCallout(label: String(localized: "Best: \(best.0)"), value: compactAmount(best.1, code),
                              deltaPositive: true),
-                SlideCallout(label: "Weakest: \(worst.0)", value: compactAmount(worst.1, code),
+                SlideCallout(label: String(localized: "Weakest: \(worst.0)"), value: compactAmount(worst.1, code),
                              deltaPositive: worst.1 >= 0),
-                SlideCallout(label: "Unrealised total",
+                SlideCallout(label: totalLabel,
                              value: compactAmount(portfolio.totalUnrealized, code),
                              deltaPositive: portfolio.totalUnrealized >= 0),
             ],
             chart: .categoryBars(Array(bars)),
-            footnote: "Unrealised gain and loss per holding, at latest recorded prices",
+            footnote: String(localized: "Unrealised gain and loss per holding, at latest recorded prices"),
             facts: ReviewSlideFacts(
-                kicker: "Winners and losers", periodLabel: label, currencyCode: code,
-                figures: [("Unrealised total", portfolio.totalUnrealized)]
+                kicker: String(localized: "Winners and losers"), periodLabel: label, currencyCode: code,
+                figures: [(totalLabel, portfolio.totalUnrealized)]
                     + judged.prefix(4).map { ($0.0, $0.1) }
                     + judged.suffix(2).map { ($0.0, $0.1) }))
     }
@@ -192,46 +205,43 @@ extension AppModel {
     private func investmentIncomeSlide(_ portfolio: AdvancedPortfolio,
                                        from: Date, to: Date,
                                        label: String, code: String) -> ReviewSlide? {
-        guard let document = dividendFrankingDocument(from: from, to: to, periodLabel: label)
-        else { return nil }
-        let franked = document.kpis.first { $0.label == "Franked" }?.amount ?? 0
-        let unfranked = document.kpis.first { $0.label == "Unfranked" }?.amount ?? 0
-        let credits = document.kpis.first { $0.label == "Franking credits" }?.amount ?? 0
+        guard let dividends = dividendBreakdown(from: from, to: to) else { return nil }
+        let franked = dividends.franked
+        let unfranked = dividends.unfranked
+        let credits = dividends.credits
         let periodIncome = franked + unfranked
         guard periodIncome != 0 else { return nil }
 
-        var bySecurity: [String: Decimal] = [:]
-        for section in document.sections where section.title.hasSuffix("dividends") {
-            for row in section.rows { bySecurity[row.label, default: 0] += row.amount ?? 0 }
-        }
-        let bars = bySecurity.sorted { $0.value > $1.value }.prefix(8)
+        let bars = dividends.cashBySecurity.sorted { $0.value > $1.value }.prefix(8)
             .map { CategoryBar(label: $0.key, current: $0.value, prior: nil) }
+        let incomeLabel = String(localized: "Period income")
+        let creditsLabel = String(localized: "Franking credits")
 
         var callouts: [SlideCallout] = [
-            SlideCallout(label: "Period income", value: compactAmount(periodIncome, code)),
-            SlideCallout(label: "Franking credits", value: compactAmount(credits, code)),
+            SlideCallout(label: incomeLabel, value: compactAmount(periodIncome, code)),
+            SlideCallout(label: creditsLabel, value: compactAmount(credits, code)),
         ]
-        var figures: [(String, Decimal)] = [
-            ("Period income", periodIncome),
-            ("Franked", franked), ("Unfranked", unfranked),
-            ("Franking credits", credits),
+        let figures: [(String, Decimal)] = [
+            (incomeLabel, periodIncome),
+            (String(localized: "Franked"), franked), (String(localized: "Unfranked"), unfranked),
+            (creditsLabel, credits),
         ]
         var ratios: [(String, Decimal)] = []
         if portfolio.totalValue > 0 {
             let yield = roundedPercent(
                 NSDecimalNumber(decimal: periodIncome / portfolio.totalValue).doubleValue)
-            callouts.append(SlideCallout(label: "Yield on value", value: "\(yield)%"))
-            ratios.append(("Income yield", yield))
+            callouts.append(SlideCallout(label: String(localized: "Yield on value"), value: reviewPercent(yield)))
+            ratios.append((String(localized: "Income yield"), yield))
         }
 
         return ReviewSlide(
             id: "inv.income",
-            kicker: "Income",
-            headline: "Investment income of \(compactAmount(periodIncome, code)) for \(label)",
+            kicker: String(localized: "Income"),
+            headline: String(localized: "Investment income of \(compactAmount(periodIncome, code)) for \(label)"),
             callouts: callouts,
             chart: .categoryBars(Array(bars)),
-            footnote: "Dividends and distributions classified from the Dividends income tree · yield on closing market value",
-            facts: ReviewSlideFacts(kicker: "Investment income", periodLabel: label,
+            footnote: String(localized: "Dividends and distributions classified from the Dividends income tree · yield on closing market value"),
+            facts: ReviewSlideFacts(kicker: String(localized: "Investment income"), periodLabel: label,
                                     currencyCode: code, figures: figures, ratios: ratios))
     }
 
@@ -249,31 +259,33 @@ extension AppModel {
         for line in report.lines { bySymbol[line.symbol, default: 0] += line.gain }
         let bars = bySymbol.sorted { abs($0.value) > abs($1.value) }.prefix(8)
             .map { CategoryBar(label: $0.key, current: $0.value, prior: nil) }
+        let disposals = report.lines.count
+        let disposalsLabel = String(localized: "Disposals")
 
         let headline = report.totalGain >= 0
-            ? "Realised \(compactAmount(report.totalGain, code)) across \(report.lines.count) disposals"
-            : "Realised a \(compactAmount(-report.totalGain, code)) loss across \(report.lines.count) disposals"
+            ? String(localized: "Realised \(compactAmount(report.totalGain, code)) across \(disposals) disposals")
+            : String(localized: "Realised a \(compactAmount(-report.totalGain, code)) loss across \(disposals) disposals")
         return ReviewSlide(
             id: "inv.realised",
-            kicker: "Realised gains",
+            kicker: String(localized: "Realised gains"),
             headline: headline,
             callouts: [
-                SlideCallout(label: "Realised", value: compactAmount(report.totalGain, code),
+                SlideCallout(label: String(localized: "Realised"), value: compactAmount(report.totalGain, code),
                              deltaPositive: report.totalGain >= 0),
-                SlideCallout(label: "Held > 1 year", value: compactAmount(longTerm, code),
+                SlideCallout(label: String(localized: "Held > 1 year"), value: compactAmount(longTerm, code),
                              deltaPositive: longTerm >= 0),
-                SlideCallout(label: "Held ≤ 1 year", value: compactAmount(shortTerm, code),
+                SlideCallout(label: String(localized: "Held ≤ 1 year"), value: compactAmount(shortTerm, code),
                              deltaPositive: shortTerm >= 0),
-                SlideCallout(label: "Disposals", value: "\(report.lines.count)"),
+                SlideCallout(label: disposalsLabel, value: "\(disposals)"),
             ],
             chart: .categoryBars(Array(bars)),
-            footnote: "\(report.method.displayName) cost basis · the over-a-year split is the CGT-discount boundary",
+            footnote: String(localized: "\(report.method.displayName) cost basis · the over-a-year split is the CGT-discount boundary"),
             facts: ReviewSlideFacts(
-                kicker: "Realised gains", periodLabel: label, currencyCode: code,
-                figures: [("Realised gain", report.totalGain),
-                          ("Held over one year", longTerm),
-                          ("Held one year or less", shortTerm)],
-                counts: [("Disposals", report.lines.count)]))
+                kicker: String(localized: "Realised gains"), periodLabel: label, currencyCode: code,
+                figures: [(String(localized: "Realised gain"), report.totalGain),
+                          (String(localized: "Held over one year"), longTerm),
+                          (String(localized: "Held one year or less"), shortTerm)],
+                counts: [(disposalsLabel, disposals)]))
     }
 
     /// Where the return came from: income + realised + unrealised over
@@ -283,40 +295,46 @@ extension AppModel {
         guard portfolio.totalMoneyIn > 0 else { return nil }
         let gain = portfolio.totalUnrealized + portfolio.totalRealized + portfolio.totalIncome
 
+        let moneyInLabel = String(localized: "Money in")
+        let moneyOutLabel = String(localized: "Money out")
+        let gainLabel = String(localized: "Total gain")
+        let returnLabel = String(localized: "Return on money in")
+        let incomeLabel = String(localized: "Income")
+
         var callouts: [SlideCallout] = [
-            SlideCallout(label: "Money in", value: compactAmount(portfolio.totalMoneyIn, code)),
-            SlideCallout(label: "Money out", value: compactAmount(portfolio.totalMoneyOut, code)),
-            SlideCallout(label: "Total gain", value: compactAmount(gain, code),
+            SlideCallout(label: moneyInLabel, value: compactAmount(portfolio.totalMoneyIn, code)),
+            SlideCallout(label: moneyOutLabel, value: compactAmount(portfolio.totalMoneyOut, code)),
+            SlideCallout(label: gainLabel, value: compactAmount(gain, code),
                          deltaPositive: gain >= 0),
         ]
-        var figures: [(String, Decimal)] = [
-            ("Money in", portfolio.totalMoneyIn),
-            ("Money out", portfolio.totalMoneyOut),
-            ("Income", portfolio.totalIncome),
-            ("Realised gain", portfolio.totalRealized),
-            ("Unrealised gain", portfolio.totalUnrealized),
-            ("Total gain", gain),
+        let figures: [(String, Decimal)] = [
+            (moneyInLabel, portfolio.totalMoneyIn),
+            (moneyOutLabel, portfolio.totalMoneyOut),
+            (incomeLabel, portfolio.totalIncome),
+            (String(localized: "Realised gain"), portfolio.totalRealized),
+            (String(localized: "Unrealised gain"), portfolio.totalUnrealized),
+            (gainLabel, gain),
         ]
         var ratios: [(String, Decimal)] = []
         if let returnFraction = portfolio.totalReturnFraction {
             let percent = roundedPercent(returnFraction)
-            callouts.append(SlideCallout(label: "Return on money in", value: "\(percent)%",
+            callouts.append(SlideCallout(label: returnLabel, value: reviewPercent(percent),
                                          deltaPositive: percent >= 0))
-            ratios.append(("Return on money in", percent))
+            ratios.append((returnLabel, percent))
         }
 
         return ReviewSlide(
             id: "inv.decomposition",
-            kicker: "Return decomposition",
-            headline: "Gains of \(compactAmount(gain, code)) on \(compactAmount(portfolio.totalMoneyIn, code)) invested",
+            kicker: String(localized: "Return decomposition"),
+            headline: String(localized: "Gains of \(compactAmount(gain, code)) on \(compactAmount(portfolio.totalMoneyIn, code)) invested"),
             callouts: callouts,
             chart: .categoryBars([
-                CategoryBar(label: "Income", current: portfolio.totalIncome, prior: nil),
-                CategoryBar(label: "Realised", current: portfolio.totalRealized, prior: nil),
-                CategoryBar(label: "Unrealised", current: portfolio.totalUnrealized, prior: nil),
+                CategoryBar(label: incomeLabel, current: portfolio.totalIncome, prior: nil),
+                CategoryBar(label: String(localized: "Realised"), current: portfolio.totalRealized, prior: nil),
+                CategoryBar(label: String(localized: "Unrealised"), current: portfolio.totalUnrealized, prior: nil),
             ]),
-            footnote: "Gain = income + realised + unrealised · GnuCash's money-in return model",
-            facts: ReviewSlideFacts(kicker: "Return decomposition", periodLabel: label,
+            footnote: String(localized: "Gain = income + realised + unrealised · GnuCash’s money-in return model"),
+            facts: ReviewSlideFacts(kicker: String(localized: "Return decomposition"), periodLabel: label,
                                     currencyCode: code, figures: figures, ratios: ratios))
     }
 }

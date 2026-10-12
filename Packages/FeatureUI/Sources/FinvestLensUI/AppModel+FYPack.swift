@@ -76,27 +76,56 @@ extension AppModel {
         return pages
     }
 
-    /// Dividend & Franking summary: income-statement lines under a Dividends
-    /// subtree, classified per security into franked / unfranked / imputation
-    /// credits by account name — the same shape the book's own dividend
-    /// transactions use (Dividends ▸ TICKER ▸ Franked / Unfranked /
-    /// Imputation Credit). `nil` when the book records no dividend income.
-    func dividendFrankingDocument(from: Date, to: Date, periodLabel: String) -> ReportDocument? {
+    /// A period's dividends by security and kind: what the Dividends &
+    /// Franking report prints, and what the review decks chart. Computed
+    /// once and handed over as figures, so that nothing finds a number by
+    /// the wording of a report — the decks used to look the totals up by
+    /// the labels "Franked" and "Unfranked" and the sections by a title
+    /// ending in "dividends", which the first translated report would have
+    /// silently emptied.
+    struct DividendBreakdown {
+        struct Security {
+            var name: String
+            var franked = Decimal(0)
+            var unfranked = Decimal(0)
+            var imputation = Decimal(0)
+            /// Under the Dividends tree and not named as any of the three.
+            var other = Decimal(0)
+        }
+        var currencyCode: String
+        /// By name.
+        var securities: [Security]
+
+        var franked: Decimal { securities.reduce(0) { $0 + $1.franked } }
+        /// Unfranked, with what the account names did not classify.
+        var unfranked: Decimal { securities.reduce(0) { $0 + $1.unfranked + $1.other } }
+        var credits: Decimal { securities.reduce(0) { $0 + $1.imputation } }
+
+        /// Cash received by security — franked, unfranked and unclassified,
+        /// without the credits — for the securities that had any line of it.
+        var cashBySecurity: [String: Decimal] {
+            var cash: [String: Decimal] = [:]
+            for security in securities
+            where security.franked != 0 || security.unfranked != 0 || security.other != 0 {
+                cash[security.name] = security.franked + security.unfranked + security.other
+            }
+            return cash
+        }
+    }
+
+    /// Income-statement lines under a Dividends subtree, classified per
+    /// security into franked / unfranked / imputation credits by account
+    /// name — the same shape the book's own dividend transactions use
+    /// (Dividends ▸ TICKER ▸ Franked / Unfranked / Imputation Credit). `nil`
+    /// when the book records no dividend income.
+    func dividendBreakdown(from: Date, to: Date) -> DividendBreakdown? {
         guard let statement = incomeStatement(from: from, to: to) else { return nil }
         let dividendLines = statement.income.filter {
             $0.fullName.localizedCaseInsensitiveContains("dividend")
         }
         guard !dividendLines.isEmpty else { return nil }
 
-        struct SecurityDividends {
-            var franked = Decimal(0)
-            var unfranked = Decimal(0)
-            var imputation = Decimal(0)
-            var other = Decimal(0)
-            var total: Decimal { franked + unfranked + imputation + other }
-        }
-
-        var bySecurity: [String: SecurityDividends] = [:]
+        var bySecurity: [String: DividendBreakdown.Security] = [:]
         for line in dividendLines {
             let name = line.name.lowercased()
             // The security is the path component holding the classified leaf;
@@ -106,30 +135,36 @@ extension AppModel {
             let security = isLeafClass
                 ? components.dropLast().last ?? line.name
                 : line.name
-            var entry = bySecurity[security] ?? SecurityDividends()
+            var entry = bySecurity[security] ?? DividendBreakdown.Security(name: security)
             if name.contains("unfranked") { entry.unfranked += line.amount }
             else if name.contains("frank") { entry.franked += line.amount }
             else if name.contains("imputation") { entry.imputation += line.amount }
             else { entry.other += line.amount }
             bySecurity[security] = entry
         }
+        return DividendBreakdown(currencyCode: statement.currencyCode,
+                                 securities: bySecurity.values.sorted { $0.name < $1.name })
+    }
 
-        let ordered = bySecurity.sorted { $0.key < $1.key }
-        let franked = ordered.reduce(Decimal(0)) { $0 + $1.value.franked }
-        let unfranked = ordered.reduce(Decimal(0)) { $0 + $1.value.unfranked + $1.value.other }
-        let imputation = ordered.reduce(Decimal(0)) { $0 + $1.value.imputation }
+    /// The Dividend & Franking summary, as a report. `nil` when the book
+    /// records no dividend income.
+    func dividendFrankingDocument(from: Date, to: Date, periodLabel: String) -> ReportDocument? {
+        guard let breakdown = dividendBreakdown(from: from, to: to) else { return nil }
+        let franked = breakdown.franked
+        let unfranked = breakdown.unfranked
+        let imputation = breakdown.credits
 
-        func rows(_ keyPath: KeyPath<SecurityDividends, Decimal>) -> [ReportDocumentRow] {
-            ordered.compactMap { name, entry in
+        func rows(_ keyPath: KeyPath<DividendBreakdown.Security, Decimal>) -> [ReportDocumentRow] {
+            breakdown.securities.compactMap { entry in
                 let amount = entry[keyPath: keyPath]
-                return amount == 0 ? nil : ReportDocumentRow(label: name, amount: amount)
+                return amount == 0 ? nil : ReportDocumentRow(label: entry.name, amount: amount)
             }
         }
 
         return ReportDocument(
             title: "Dividends & Franking",
             periodLabel: periodLabel,
-            currencyCode: statement.currencyCode,
+            currencyCode: breakdown.currencyCode,
             kpis: [
                 ReportKPI(label: "Franked", amount: franked),
                 ReportKPI(label: "Unfranked", amount: unfranked),

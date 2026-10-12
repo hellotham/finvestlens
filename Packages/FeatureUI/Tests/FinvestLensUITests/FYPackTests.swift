@@ -78,6 +78,17 @@ struct FYPackTests {
         let grossed = try #require(doc.sections.first { $0.title == "Grossed-up total" })
         #expect(grossed.total?.amount == 140)
 
+        // The review decks take the same figures as figures, not by finding
+        // them under the report's wording.
+        let breakdown = try #require(model.dividendBreakdown(
+            from: date.addingTimeInterval(-86_400), to: date.addingTimeInterval(86_400)))
+        #expect(breakdown.franked == 70)
+        #expect(breakdown.unfranked == 40)
+        #expect(breakdown.credits == 30)
+        #expect(breakdown.securities.map(\.name) == ["BHP", "VAS"])
+        // Cash by security: the credit is not cash.
+        #expect(breakdown.cashBySecurity == ["BHP": 70, "VAS": 40])
+
         // The pack skips reports with nothing to say, and includes this one.
         let (from, to) = (date.addingTimeInterval(-86_400), date.addingTimeInterval(86_400))
         let pack = model.financialYearPackPages(from: from, to: to, label: "FY test")

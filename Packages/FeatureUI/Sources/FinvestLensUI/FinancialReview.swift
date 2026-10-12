@@ -133,6 +133,13 @@ extension AppModel {
 
     // MARK: Formatting helpers (deterministic voice)
 
+    // Everything a slide shows or hands the narrator is written here as a
+    // whole phrase in `String(localized:)`. `ReviewSlide` and its callouts
+    // carry `String`s, which SwiftUI draws as they are, so a literal put
+    // straight into one was English in every language: on the slide, and in
+    // the facts the narrator writes from. `FinancialReviewTests` reads this
+    // file for one that has slipped back.
+
     private func money(_ value: Decimal, _ code: String) -> String {
         AmountFormat.string(value, code: code)
     }
@@ -150,9 +157,18 @@ extension AppModel {
         return rounded
     }
 
+    /// A percentage as the reader's locale writes it — "8.4%", "8,4 %".
+    /// `percent` is already times a hundred, and is shown to at most
+    /// `places` decimals.
+    func reviewPercent(_ percent: Decimal, places: Int = 1, signed: Bool = false,
+                       locale: Locale = .autoupdatingCurrent) -> String {
+        let style = Decimal.FormatStyle.Percent(locale: locale).precision(.fractionLength(0...places))
+        return (percent / 100).formatted(signed ? style.sign(strategy: .always()) : style)
+    }
+
     private func deltaText(_ percent: Decimal?) -> (String, Bool)? {
         guard let percent else { return nil }
-        return ("\(percent >= 0 ? "+" : "")\(percent)% YoY", percent >= 0)
+        return (String(localized: "\(reviewPercent(percent, signed: true)) YoY"), percent >= 0)
     }
 
     // MARK: Slides
@@ -168,49 +184,56 @@ extension AppModel {
         let income = current?.totalIncome ?? 0
         let savingsRate: Decimal? = income > 0 ? surplus / income * 100 : nil
 
+        // Said once each: the narrator's prompt puts a change on the line
+        // of the figure with the same label.
+        let netWorthLabel = String(localized: "Net worth")
+        let surplusLabel = String(localized: "Net surplus")
+        let savingsLabel = String(localized: "Savings rate")
+
         var callouts: [SlideCallout] = [
-            SlideCallout(label: "Net worth", value: compact(netWorth, code)),
-            SlideCallout(label: "Net surplus", value: compact(surplus, code),
+            SlideCallout(label: netWorthLabel, value: compact(netWorth, code)),
+            SlideCallout(label: surplusLabel, value: compact(surplus, code),
                          deltaPositive: surplus >= 0),
         ]
         if let savingsRate {
             var rounded = Decimal(); var raw = savingsRate
             NSDecimalRound(&rounded, &raw, 0, .plain)
-            callouts.append(SlideCallout(label: "Savings rate", value: "\(rounded)%"))
+            callouts.append(SlideCallout(label: savingsLabel, value: reviewPercent(rounded, places: 0)))
         }
 
         let months = max(12, Calendar.current.dateComponents([.month], from: from, to: to).month ?? 12)
         let series = netWorthSeries(months: min(months, 24), endingAt: min(to, AppModel.endOfToday()))
 
         let headline = surplus >= 0
-            ? "Net worth \(compact(netWorth, code)) with a \(compact(surplus, code)) surplus"
-            : "Net worth \(compact(netWorth, code)) after a \(compact(-surplus, code)) deficit"
+            ? String(localized: "Net worth \(compact(netWorth, code)) with a \(compact(surplus, code)) surplus")
+            : String(localized: "Net worth \(compact(netWorth, code)) after a \(compact(-surplus, code)) deficit")
         return ReviewSlide(
             id: "highlights",
-            kicker: "Financial Review · \(label)",
+            kicker: String(localized: "Financial Review · \(label)"),
             headline: headline,
             callouts: callouts,
             chart: .netWorthLine(series),
-            footnote: "Net worth as at \(AppDateFormat.current.long(to)) · \(statementEntityName)",
+            footnote: String(localized: "Net worth as at \(AppDateFormat.current.long(to)) · \(statementEntityName)"),
             facts: {
                 var figures: [(String, Decimal)] = [
-                    ("Net worth", netWorth), ("Net surplus", surplus),
-                    ("Income", income), ("Expenses", current?.totalExpenses ?? 0)]
+                    (netWorthLabel, netWorth), (surplusLabel, surplus),
+                    (String(localized: "Income"), income),
+                    (String(localized: "Expenses"), current?.totalExpenses ?? 0)]
                 var deltas: [(String, Decimal)] = []
                 var ratios: [(String, Decimal)] = []
                 if let openingNet {
-                    figures.append(("Opening net worth", openingNet))
-                    figures.append(("Change in net worth", netWorth - openingNet))
+                    figures.append((String(localized: "Opening net worth"), openingNet))
+                    figures.append((String(localized: "Change in net worth"), netWorth - openingNet))
                     if let percent = percentDelta(netWorth, openingNet) {
-                        deltas.append(("Net worth", percent))
+                        deltas.append((netWorthLabel, percent))
                     }
                 }
                 if let savingsRate {
                     var rounded = Decimal(); var raw = savingsRate
                     NSDecimalRound(&rounded, &raw, 1, .plain)
-                    ratios.append(("Savings rate", rounded))
+                    ratios.append((savingsLabel, rounded))
                 }
-                return ReviewSlideFacts(kicker: "Highlights", periodLabel: label,
+                return ReviewSlideFacts(kicker: String(localized: "Highlights"), periodLabel: label,
                                         currencyCode: code, figures: figures, ratios: ratios,
                                         deltaPercents: deltas)
             }())
@@ -225,55 +248,61 @@ extension AppModel {
         guard closingNet != openingNet else { return nil }
         let valuation = closingNet - openingNet - period.netIncome
 
+        let openingLabel = String(localized: "Opening")
+        let closingLabel = String(localized: "Closing")
+        let incomeLabel = String(localized: "Income")
+        let expensesLabel = String(localized: "Expenses")
+        let valuationLabel = String(localized: "Valuation & FX")
+
         var steps: [WaterfallStep] = []
         var running = openingNet
-        steps.append(WaterfallStep(label: "Opening", start: 0, end: openingNet, kind: .anchor))
-        steps.append(WaterfallStep(label: "Income", start: running,
+        steps.append(WaterfallStep(label: openingLabel, start: 0, end: openingNet, kind: .anchor))
+        steps.append(WaterfallStep(label: incomeLabel, start: running,
                                    end: running + period.totalIncome, kind: .rise))
         running += period.totalIncome
-        steps.append(WaterfallStep(label: "Expenses", start: running - period.totalExpenses,
+        steps.append(WaterfallStep(label: expensesLabel, start: running - period.totalExpenses,
                                    end: running, kind: .fall))
         running -= period.totalExpenses
-        steps.append(WaterfallStep(label: "Valuation & FX",
+        steps.append(WaterfallStep(label: valuationLabel,
                                    start: valuation >= 0 ? running : running + valuation,
                                    end: valuation >= 0 ? running + valuation : running,
                                    kind: valuation >= 0 ? .rise : .fall))
         running += valuation
-        steps.append(WaterfallStep(label: "Closing", start: 0, end: closingNet, kind: .anchor))
+        steps.append(WaterfallStep(label: closingLabel, start: 0, end: closingNet, kind: .anchor))
 
         let change = closingNet - openingNet
         let percent = percentDelta(closingNet, openingNet)
         let headline: String
         if let percent {
             headline = change >= 0
-                ? "Net worth grew \(percent)% to \(compact(closingNet, code))"
-                : "Net worth eased \(-percent)% to \(compact(closingNet, code))"
+                ? String(localized: "Net worth grew \(reviewPercent(percent)) to \(compact(closingNet, code))")
+                : String(localized: "Net worth eased \(reviewPercent(-percent)) to \(compact(closingNet, code))")
         } else {
-            headline = "Net worth moved to \(compact(closingNet, code))"
+            headline = String(localized: "Net worth moved to \(compact(closingNet, code))")
         }
         return ReviewSlide(
             id: "bridge",
-            kicker: "Net worth",
+            kicker: String(localized: "Net worth"),
             headline: headline,
             callouts: [
-                SlideCallout(label: "Opening", value: compact(openingNet, code)),
-                SlideCallout(label: "Surplus", value: compact(period.netIncome, code),
+                SlideCallout(label: openingLabel, value: compact(openingNet, code)),
+                SlideCallout(label: String(localized: "Surplus"), value: compact(period.netIncome, code),
                              deltaPositive: period.netIncome >= 0),
-                SlideCallout(label: "Valuation & FX", value: compact(valuation, code),
+                SlideCallout(label: valuationLabel, value: compact(valuation, code),
                              deltaPositive: valuation >= 0),
-                SlideCallout(label: "Closing", value: compact(closingNet, code)),
+                SlideCallout(label: closingLabel, value: compact(closingNet, code)),
             ],
             chart: .waterfall(steps),
-            footnote: "Valuation & FX derived as closing − opening − net surplus",
+            footnote: String(localized: "Valuation & FX derived as closing − opening − net surplus"),
             facts: ReviewSlideFacts(
-                kicker: "Net worth bridge", periodLabel: label, currencyCode: code,
-                figures: [("Opening net worth", openingNet),
-                          ("Income", period.totalIncome),
-                          ("Expenses", period.totalExpenses),
-                          ("Valuation and currency movement", valuation),
-                          ("Change in net worth", change),
-                          ("Closing net worth", closingNet)],
-                deltaPercents: percent.map { [("Net worth", $0)] } ?? []))
+                kicker: String(localized: "Net worth bridge"), periodLabel: label, currencyCode: code,
+                figures: [(String(localized: "Opening net worth"), openingNet),
+                          (incomeLabel, period.totalIncome),
+                          (expensesLabel, period.totalExpenses),
+                          (String(localized: "Valuation and currency movement"), valuation),
+                          (String(localized: "Change in net worth"), change),
+                          (String(localized: "Closing net worth"), closingNet)],
+                deltaPercents: percent.map { [(String(localized: "Net worth"), $0)] } ?? []))
     }
 
     private enum FlowSection { case income, expenses }
@@ -300,52 +329,67 @@ extension AppModel {
         }
 
         let percent = priorTotal.flatMap { percentDelta(total, $0) }
-        let noun = section == .income ? "Income" : "Spending"
+        let isIncome = section == .income
+        let kicker = isIncome ? String(localized: "Income") : String(localized: "Spending")
         let top = ordered.first
+        let amount = compact(total, code)
+        // A whole sentence for each case. Assembled from "Income" or
+        // "Spending" and "up" or "down", it could only be translated a word
+        // at a time, and no language but English is built that way.
         let headline: String
         if let percent, let priorTotal, priorTotal != 0 {
-            let direction = percent >= 0 ? "up" : "down"
-            headline = "\(noun) \(direction) \(abs(percent))% at \(compact(total, code))"
+            let change = reviewPercent(abs(percent))
+            switch (isIncome, percent >= 0) {
+            case (true, true): headline = String(localized: "Income up \(change) at \(amount)")
+            case (true, false): headline = String(localized: "Income down \(change) at \(amount)")
+            case (false, true): headline = String(localized: "Spending up \(change) at \(amount)")
+            case (false, false): headline = String(localized: "Spending down \(change) at \(amount)")
+            }
         } else if let top {
-            headline = "\(noun) of \(compact(total, code)), led by \(top.name)"
+            headline = isIncome ? String(localized: "Income of \(amount), led by \(top.name)")
+                                : String(localized: "Spending of \(amount), led by \(top.name)")
         } else {
-            headline = "\(noun) of \(compact(total, code))"
+            headline = isIncome ? String(localized: "Income of \(amount)")
+                                : String(localized: "Spending of \(amount)")
         }
 
         var callouts: [SlideCallout] = [
-            SlideCallout(label: "Total \(noun.lowercased())", value: compact(total, code),
+            SlideCallout(label: isIncome ? String(localized: "Total income") : String(localized: "Total spending"),
+                         value: amount,
                          delta: deltaText(percent)?.0,
-                         deltaPositive: deltaText(percent).map { section == .income ? $0.1 : !$0.1 }),
+                         deltaPositive: deltaText(percent).map { isIncome ? $0.1 : !$0.1 }),
         ]
         if let top {
             let topValue = (top.total.first ?? nil) ?? 0
-            callouts.append(SlideCallout(label: "Largest: \(top.name)",
+            callouts.append(SlideCallout(label: String(localized: "Largest: \(top.name)"),
                                          value: compact(topValue, code)))
             if total != 0 {
                 var share = topValue / total * 100
                 var rounded = Decimal()
                 NSDecimalRound(&rounded, &share, 0, .plain)
-                callouts.append(SlideCallout(label: "Share of total", value: "\(rounded)%"))
+                callouts.append(SlideCallout(label: String(localized: "Share of total"),
+                                             value: reviewPercent(rounded, places: 0)))
             }
         }
 
-        var figures: [(String, Decimal)] = [("Total", total)]
+        let totalLabel = String(localized: "Total")
+        var figures: [(String, Decimal)] = [(totalLabel, total)]
         if let priorTotal, priorTotal != 0 {
-            figures.append(("Prior period total", priorTotal))
+            figures.append((String(localized: "Prior period total"), priorTotal))
         }
         figures.append(contentsOf: ordered.map { ($0.name, ($0.total.first ?? nil) ?? 0) })
         var deltas: [(String, Decimal)] = []
-        if let percent { deltas.append(("Total", percent)) }
+        if let percent { deltas.append((totalLabel, percent)) }
 
         return ReviewSlide(
-            id: section == .income ? "income" : "spending",
-            kicker: noun,
+            id: isIncome ? "income" : "spending",
+            kicker: kicker,
             headline: headline,
             callouts: callouts,
             chart: .categoryBars(Array(bars)),
-            footnote: prior == nil ? "No prior-period comparison available"
-                                   : "Prior period: one year earlier",
-            facts: ReviewSlideFacts(kicker: noun, periodLabel: label, currencyCode: code,
+            footnote: prior == nil ? String(localized: "No prior-period comparison available")
+                                   : String(localized: "Prior period: one year earlier"),
+            facts: ReviewSlideFacts(kicker: kicker, periodLabel: label, currencyCode: code,
                                     figures: figures, deltaPercents: deltas))
     }
 
@@ -356,28 +400,32 @@ extension AppModel {
         let net = months.reduce(Decimal(0)) { $0 + $1.income - $1.expenses }
         let average = net / Decimal(months.count)
         let positiveMonths = months.filter { $0.income >= $0.expenses }.count
+        let monthlyAverageLabel = String(localized: "Monthly average")
 
         let headline = average >= 0
-            ? "Cash flow positive in \(positiveMonths) of \(months.count) months"
-            : "Cash flow negative on average across \(months.count) months"
+            ? String(localized: "Cash flow positive in \(positiveMonths) of \(months.count) months")
+            : String(localized: "Cash flow negative on average across \(months.count) months")
         return ReviewSlide(
             id: "cashflow",
-            kicker: "Cash flow",
+            kicker: String(localized: "Cash flow"),
             headline: headline,
             callouts: [
-                SlideCallout(label: "Net for period", value: compact(net, code),
+                SlideCallout(label: String(localized: "Net for period"), value: compact(net, code),
                              deltaPositive: net >= 0),
-                SlideCallout(label: "Monthly average", value: compact(average, code),
+                SlideCallout(label: monthlyAverageLabel, value: compact(average, code),
                              deltaPositive: average >= 0),
-                SlideCallout(label: "Positive months", value: "\(positiveMonths)/\(months.count)"),
+                SlideCallout(label: String(localized: "Positive months"),
+                             value: "\(positiveMonths)/\(months.count)"),
             ],
             chart: .monthlyFlows(months),
-            footnote: "Income less expenses, by calendar month",
+            footnote: String(localized: "Income less expenses, by calendar month"),
+            // The two month counts go as counts. They went as figures, and
+            // the narrator was told "Months positive: 7 AUD".
             facts: ReviewSlideFacts(
-                kicker: "Cash flow", periodLabel: label, currencyCode: code,
-                figures: [("Net cash flow", net), ("Monthly average", average),
-                          ("Months positive", Decimal(positiveMonths)),
-                          ("Months in period", Decimal(months.count))]))
+                kicker: String(localized: "Cash flow"), periodLabel: label, currencyCode: code,
+                figures: [(String(localized: "Net cash flow"), net), (monthlyAverageLabel, average)],
+                counts: [(String(localized: "Months positive"), positiveMonths),
+                         (String(localized: "Months in period"), months.count)]))
     }
 
     private func portfolioSlide(to: Date, label: String, code: String) -> ReviewSlide? {
@@ -394,75 +442,72 @@ extension AppModel {
         }
         let best = winners.max { $0.1 < $1.1 }
         let worst = winners.min { $0.1 < $1.1 }
+        let marketValueLabel = String(localized: "Market value")
+        let unrealisedLabel = String(localized: "Unrealised gain")
 
         var callouts: [SlideCallout] = [
-            SlideCallout(label: "Market value", value: compact(portfolio.totalValue, code)),
-            SlideCallout(label: "Unrealised gain", value: compact(portfolio.totalUnrealized, code),
+            SlideCallout(label: marketValueLabel, value: compact(portfolio.totalValue, code)),
+            SlideCallout(label: unrealisedLabel, value: compact(portfolio.totalUnrealized, code),
                          deltaPositive: portfolio.totalUnrealized >= 0),
         ]
-        if let best { callouts.append(SlideCallout(label: "Best: \(best.0)",
+        if let best { callouts.append(SlideCallout(label: String(localized: "Best: \(best.0)"),
                                                    value: compact(best.1, code),
                                                    deltaPositive: best.1 >= 0)) }
         if let worst, worst.0 != best?.0 {
-            callouts.append(SlideCallout(label: "Weakest: \(worst.0)",
+            callouts.append(SlideCallout(label: String(localized: "Weakest: \(worst.0)"),
                                          value: compact(worst.1, code),
                                          deltaPositive: worst.1 >= 0))
         }
 
         let top = valued.first!
-        let headline = "Portfolio of \(compact(portfolio.totalValue, code)) led by \(top.symbol)"
+        let headline = String(localized: "Portfolio of \(compact(portfolio.totalValue, code)) led by \(top.symbol)")
         return ReviewSlide(
             id: "portfolio",
-            kicker: "Portfolio",
+            kicker: String(localized: "Portfolio"),
             headline: headline,
             callouts: callouts,
             chart: .allocation(valued.prefix(12).map { ($0.symbol, $0.marketValue ?? 0) }),
-            footnote: "Valued at the most recent recorded prices · \(portfolio.method.displayName) basis",
+            footnote: String(localized: "Valued at the most recent recorded prices · \(portfolio.method.displayName) basis"),
             facts: ReviewSlideFacts(
-                kicker: "Portfolio", periodLabel: label, currencyCode: code,
-                figures: [("Market value", portfolio.totalValue),
-                          ("Cost basis", portfolio.totalCost),
-                          ("Unrealised gain", portfolio.totalUnrealized)]
-                    + (best.map { [("Best holding \($0.0)", $0.1)] } ?? [])
-                    + (worst.map { [("Weakest holding \($0.0)", $0.1)] } ?? [])))
+                kicker: String(localized: "Portfolio"), periodLabel: label, currencyCode: code,
+                figures: [(marketValueLabel, portfolio.totalValue),
+                          (String(localized: "Cost basis"), portfolio.totalCost),
+                          (unrealisedLabel, portfolio.totalUnrealized)]
+                    + (best.map { [(String(localized: "Best holding \($0.0)"), $0.1)] } ?? [])
+                    + (worst.map { [(String(localized: "Weakest holding \($0.0)"), $0.1)] } ?? [])))
     }
 
     private func dividendSlide(from: Date, to: Date, label: String, code: String) -> ReviewSlide? {
-        guard let document = dividendFrankingDocument(from: from, to: to, periodLabel: label)
-        else { return nil }
-        let franked = document.kpis.first { $0.label == "Franked" }?.amount ?? 0
-        let unfranked = document.kpis.first { $0.label == "Unfranked" }?.amount ?? 0
-        let credits = document.kpis.first { $0.label == "Franking credits" }?.amount ?? 0
+        guard let dividends = dividendBreakdown(from: from, to: to) else { return nil }
+        let franked = dividends.franked
+        let unfranked = dividends.unfranked
+        let credits = dividends.credits
         let total = franked + unfranked
         guard total != 0 || credits != 0 else { return nil }
 
-        // Per-security bars from the document's own sections.
-        var bySecurity: [String: Decimal] = [:]
-        for section in document.sections where section.title.hasSuffix("dividends") {
-            for row in section.rows {
-                bySecurity[row.label, default: 0] += row.amount ?? 0
-            }
-        }
-        let bars = bySecurity.sorted { $0.value > $1.value }.prefix(8)
+        let bars = dividends.cashBySecurity.sorted { $0.value > $1.value }.prefix(8)
             .map { CategoryBar(label: $0.key, current: $0.value, prior: nil) }
+        let creditsLabel = String(localized: "Franking credits")
 
-        let headline = "Dividends of \(compact(total, code)) carrying \(compact(credits, code)) in credits"
+        let headline = String(localized: "Dividends of \(compact(total, code)) carrying \(compact(credits, code)) in credits")
         return ReviewSlide(
             id: "dividends",
-            kicker: "Dividends & franking",
+            kicker: String(localized: "Dividends & franking"),
             headline: headline,
             callouts: [
-                SlideCallout(label: "Franked", value: compact(franked, code)),
-                SlideCallout(label: "Unfranked", value: compact(unfranked, code)),
-                SlideCallout(label: "Franking credits", value: compact(credits, code)),
-                SlideCallout(label: "Grossed-up", value: compact(total + credits, code)),
+                SlideCallout(label: String(localized: "Franked"), value: compact(franked, code)),
+                SlideCallout(label: String(localized: "Unfranked"), value: compact(unfranked, code)),
+                SlideCallout(label: creditsLabel, value: compact(credits, code)),
+                SlideCallout(label: String(localized: "Grossed-up"), value: compact(total + credits, code)),
             ],
             chart: .categoryBars(Array(bars)),
-            footnote: "Classified from the Dividends income tree",
+            footnote: String(localized: "Classified from the Dividends income tree"),
             facts: ReviewSlideFacts(
-                kicker: "Dividends", periodLabel: label, currencyCode: code,
-                figures: [("Franked dividends", franked), ("Unfranked dividends", unfranked),
-                          ("Franking credits", credits), ("Grossed-up total", total + credits)]))
+                kicker: String(localized: "Dividends"), periodLabel: label, currencyCode: code,
+                figures: [(String(localized: "Franked dividends"), franked),
+                          (String(localized: "Unfranked dividends"), unfranked),
+                          (creditsLabel, credits),
+                          (String(localized: "Grossed-up total"), total + credits)]))
     }
 
     private func gainsSlide(from: Date, to: Date, label: String, code: String) -> ReviewSlide? {
@@ -477,26 +522,28 @@ extension AppModel {
         }
         let gains = report.lines.filter { $0.gain > 0 }.count
         let losses = report.lines.filter { $0.gain < 0 }.count
+        let disposals = report.lines.count
+        let disposalsLabel = String(localized: "Disposals")
 
         let headline = total >= 0
-            ? "Realised gains of \(compact(total, code)) across \(report.lines.count) disposals"
-            : "Realised losses of \(compact(-total, code)) across \(report.lines.count) disposals"
+            ? String(localized: "Realised gains of \(compact(total, code)) across \(disposals) disposals")
+            : String(localized: "Realised losses of \(compact(-total, code)) across \(disposals) disposals")
         return ReviewSlide(
             id: "gains",
-            kicker: "Capital gains",
+            kicker: String(localized: "Capital gains"),
             headline: headline,
             callouts: [
-                SlideCallout(label: "Realised", value: compact(total, code),
+                SlideCallout(label: String(localized: "Realised"), value: compact(total, code),
                              deltaPositive: total >= 0),
-                SlideCallout(label: "Disposals", value: "\(report.lines.count)"),
-                SlideCallout(label: "Gains / losses", value: "\(gains) / \(losses)"),
+                SlideCallout(label: disposalsLabel, value: "\(disposals)"),
+                SlideCallout(label: String(localized: "Gains / losses"), value: "\(gains) / \(losses)"),
             ],
             chart: .categoryBars(Array(bars)),
-            footnote: "\(report.method.displayName) cost basis",
+            footnote: String(localized: "\(report.method.displayName) cost basis"),
             facts: ReviewSlideFacts(
-                kicker: "Capital gains", periodLabel: label, currencyCode: code,
-                figures: [("Realised gain", total)] + ranked.prefix(5).map { ($0.key, $0.value) },
-                counts: [("Disposals", report.lines.count)]))
+                kicker: String(localized: "Capital gains"), periodLabel: label, currencyCode: code,
+                figures: [(String(localized: "Realised gain"), total)] + ranked.prefix(5).map { ($0.key, $0.value) },
+                counts: [(disposalsLabel, disposals)]))
     }
 
     private func positionSlide(to: Date, label: String, code: String,
@@ -529,33 +576,44 @@ extension AppModel {
             liquidityMonths = rounded
         }
 
+        let assetsLabel = String(localized: "Assets")
+        let liabilitiesLabel = String(localized: "Liabilities")
+        let netWorthLabel = String(localized: "Net worth")
+        let debtLabel = String(localized: "Debt to assets")
+
         var callouts: [SlideCallout] = [
-            SlideCallout(label: "Assets", value: compact(closing.totalAssets, code)),
-            SlideCallout(label: "Liabilities", value: compact(closing.totalLiabilities, code)),
-            SlideCallout(label: "Debt to assets", value: "\(debtRounded)%"),
+            SlideCallout(label: assetsLabel, value: compact(closing.totalAssets, code)),
+            SlideCallout(label: liabilitiesLabel, value: compact(closing.totalLiabilities, code)),
+            SlideCallout(label: debtLabel, value: reviewPercent(debtRounded)),
         ]
         if let liquidityMonths {
-            callouts.append(SlideCallout(label: "Cash covers", value: "\(liquidityMonths) months"))
+            // The number is written the reader's way, and "1 months" is not
+            // a thing in any of them.
+            let count = liquidityMonths.formatted(.number.precision(.fractionLength(0...1)))
+            callouts.append(SlideCallout(
+                label: String(localized: "Cash covers"),
+                value: liquidityMonths == 1 ? String(localized: "\(count) month")
+                                            : String(localized: "\(count) months")))
         }
 
-        let headline = "Liabilities are \(debtRounded)% of \(compact(closing.totalAssets, code)) in assets"
+        let headline = String(localized: "Liabilities are \(reviewPercent(debtRounded)) of \(compact(closing.totalAssets, code)) in assets")
         return ReviewSlide(
             id: "position",
-            kicker: "Financial position",
+            kicker: String(localized: "Financial position"),
             headline: headline,
             callouts: callouts,
             chart: .categoryBars([
-                CategoryBar(label: "Assets", current: closing.totalAssets, prior: nil),
-                CategoryBar(label: "Liabilities", current: closing.totalLiabilities, prior: nil),
-                CategoryBar(label: "Net worth", current: net, prior: nil),
+                CategoryBar(label: assetsLabel, current: closing.totalAssets, prior: nil),
+                CategoryBar(label: liabilitiesLabel, current: closing.totalLiabilities, prior: nil),
+                CategoryBar(label: netWorthLabel, current: net, prior: nil),
             ]),
-            footnote: "Cash cover = bank and cash balances over average monthly spending (trailing 12 months)",
+            footnote: String(localized: "Cash cover = bank and cash balances over average monthly spending (trailing 12 months)"),
             facts: ReviewSlideFacts(
-                kicker: "Financial position", periodLabel: label, currencyCode: code,
-                figures: [("Assets", closing.totalAssets),
-                          ("Liabilities", closing.totalLiabilities),
-                          ("Net worth", net)],
-                ratios: [("Debt to assets", debtRounded)]))
+                kicker: String(localized: "Financial position"), periodLabel: label, currencyCode: code,
+                figures: [(assetsLabel, closing.totalAssets),
+                          (liabilitiesLabel, closing.totalLiabilities),
+                          (netWorthLabel, net)],
+                ratios: [(debtLabel, debtRounded)]))
     }
 
     // MARK: Insights (Apple Intelligence, cached)
