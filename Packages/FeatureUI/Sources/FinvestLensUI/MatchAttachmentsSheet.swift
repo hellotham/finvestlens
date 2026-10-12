@@ -52,6 +52,8 @@ struct MatchAttachmentsSheet: View {
                             .frame(maxWidth: 320)
                         Text("Reading \( (progress?.done ?? 0) + 1 ) of \(progress?.total ?? 0)…")
                             .foregroundStyle(.secondary)
+                        IntelligenceRunsNote(.matchAttachments)
+                            .frame(maxWidth: 420)
                         Button("Cancel", role: .cancel) { processTask?.cancel() }
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -60,6 +62,7 @@ struct MatchAttachmentsSheet: View {
                         Label("Match Attachments", systemImage: "paperclip.badge.ellipsis")
                     } description: {
                         Text("Pick receipts, invoices or dividend statements (PDF or image). Each is matched to its transaction — in any account — then linked and categorised.")
+                        IntelligenceRunsNote(.matchAttachments)
                     } actions: {
                         Button("Choose Files…") { importerShown = true }
                             .buttonStyle(.borderedProminent)
@@ -79,6 +82,9 @@ struct MatchAttachmentsSheet: View {
                             Text("\(matches.count) files")
                                 .scaledFont(.headline)
                                 .padding(.horizontal, 16).padding(.vertical, 8)
+                            // Choose More… reads another batch from here.
+                            IntelligenceRunsNote(.matchAttachments)
+                                .padding(.horizontal, 16).padding(.bottom, 8)
                             ForEach(matches) { match in
                                 row(match)
                                     .padding(.horizontal, 16).padding(.vertical, 6)

@@ -136,8 +136,12 @@ struct FinancialReviewSheet: View {
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
             }
-            .padding(.bottom, 12)
+            // The Reports menu opens a deck without its card ever being
+            // seen, so the deck says it too.
+            IntelligenceRunsNote(.reviewStory)
+                .padding(.horizontal, 24)
         }
+        .padding(.bottom, 12)
     }
 
     private func rebuild() async {

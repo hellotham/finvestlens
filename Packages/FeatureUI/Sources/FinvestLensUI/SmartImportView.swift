@@ -65,6 +65,9 @@ struct SmartImportSheet: View {
                 } else {
                     Form {
                         TipView(SmartImportTip())
+                        // The tip can be dismissed; where a document goes
+                        // cannot be something only a dismissed tip said.
+                        IntelligenceRunsNote(.invoice, .dividendStatement)
                         ForEach($documents) { $document in
                             Section {
                                 SmartDocumentRow(model: model, document: $document,

@@ -54,6 +54,8 @@ struct PrivateCloudComputeBuildTests {
                     "Smart Import's help still says nothing is sent anywhere")
             #expect(!help.contains("using Apple Intelligence on this device"),
                     "Suggest Budget's help still says it runs on this device")
+            #expect(!help.contains("commentary written on this device"),
+                    "the review decks' help still says their commentary is written on this device")
             #expect(help.contains("Private Cloud Compute"), "the help does not mention Private Cloud Compute")
             #expect(policy.contains("Private Cloud Compute"),
                     "the privacy policy does not mention Private Cloud Compute")
@@ -61,6 +63,29 @@ struct PrivateCloudComputeBuildTests {
             // And the other way about: a build that cannot use it does not
             // describe it as something the app does.
             #expect(!help.contains("Private Cloud Compute"))
+        }
+    }
+
+    /// Three commands start reading when their sheet opens — Smart Import,
+    /// Suggest Budget, and a review deck as each slide is shown. With
+    /// Private Cloud Compute as the default, the first of those requests
+    /// would leave the device with nothing yet on screen having said so:
+    /// the note is in the sheet, and is drawn as the request is made.
+    ///
+    /// Whether that is acceptable, or the first off-device request should
+    /// be announced once and wait for an answer, is the owner's decision —
+    /// it is theirs that Private Cloud Compute is the default at all. It is
+    /// written up in `docs/deferred.md` §3a under a heading this test looks
+    /// for, so the entitlement cannot land with the question still open.
+    @Test("The build condition waits for the owner's decision on the first off-device request")
+    func firstRequestDecisionIsMade() throws {
+        let project = try String(contentsOf: Self.root
+            .appendingPathComponent("finvestlens.xcodeproj/project.pbxproj"), encoding: .utf8)
+        let deferred = try String(contentsOf: Self.root
+            .appendingPathComponent("docs/deferred.md"), encoding: .utf8)
+        let open = deferred.contains("Open — the owner's decision: the first request off the device")
+        if project.contains("PRIVATE_CLOUD_COMPUTE") {
+            #expect(!open, "docs/deferred.md §3a still lists the first off-device request as undecided")
         }
     }
 }

@@ -126,20 +126,46 @@ struct PrivateCloudQuotaNote: View {
     }
 }
 
-/// One line saying where a feature's request goes, shown beside the feature.
+/// One line saying where a command's requests go, shown beside the command.
 ///
-/// On the device it says so, as the app always has. Where the request would
-/// go to Private Cloud Compute it says that instead — the sentence a person
-/// needs before they press the button, not after — and the allowance note
-/// follows when there is one.
+/// Where any of them would go to Private Cloud Compute it says that — the
+/// sentence a person needs before they press the button, not after — and the
+/// allowance note follows when there is one. On the device it says
+/// `onDevice`, where the view has always said something, and nothing where
+/// it has not: a build that sends nothing looks as it did.
+///
+/// It takes commands, not features, on purpose. The command is what grants
+/// a feature leave to run off the device (``AppModel/running(_:_:)``), so a
+/// note written from the same case cannot describe a different set of
+/// requests from the one that is made.
 struct IntelligenceRunsNote: View {
-    let feature: IntelligenceFeature
-    /// What the feature produces, for the on-device sentence: "Commentary is
-    /// generated on-device from the figures above."
-    let onDevice: LocalizedStringKey
+    let commands: [IntelligenceCommand]
+    let onDevice: LocalizedStringKey?
+    /// Read for its side effect: the note is redrawn when the choice is
+    /// changed. On the Mac, Settings is another window, and a note that
+    /// read the preference only when it was first drawn went on saying "on
+    /// this device" beside a button that no longer was.
+    @AppStorage(LanguageModels.choiceDefaultsKey) private var stored = ""
+
+    init(_ commands: IntelligenceCommand..., onDevice: LocalizedStringKey? = nil) {
+        self.commands = commands
+        self.onDevice = onDevice
+    }
 
     var body: some View {
-        if LanguageModels.leavesDevice(feature) {
+        let _ = stored
+        IntelligenceRanNote(offDevice: commands.contains(where: \.leavesDevice), onDevice: onDevice)
+    }
+}
+
+/// The same line about a request that has already been made: where it *was*
+/// sent, which the person may since have changed their mind about.
+struct IntelligenceRanNote: View {
+    let offDevice: Bool
+    let onDevice: LocalizedStringKey?
+
+    var body: some View {
+        if offDevice {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Uses Apple’s Private Cloud Compute. What it reads is sent to Apple to process; Apple says it isn’t stored or made accessible to Apple.")
                     .scaledFont(.caption)
@@ -147,7 +173,7 @@ struct IntelligenceRunsNote: View {
                     .fixedSize(horizontal: false, vertical: true)
                 PrivateCloudQuotaNote()
             }
-        } else {
+        } else if let onDevice {
             Text(onDevice)
                 .scaledFont(.caption)
                 .foregroundStyle(.secondary)

@@ -113,6 +113,9 @@ struct ReportDocumentView: View {
     @Bindable var model: AppModel
     let document: ReportDocument
     @State private var commentary: [String]?
+    /// Where the commentary on screen was written — which is not always
+    /// where the next one would be.
+    @State private var commentaryLeftDevice = false
     @State private var narrating = false
     @State private var narrationError: String?
 
@@ -281,8 +284,8 @@ struct ReportDocumentView: View {
                                 .foregroundStyle(.tint)
                         }
                     }
-                    IntelligenceRunsNote(feature: .reportNarrator,
-                                         onDevice: "Commentary is generated on-device from the figures above.")
+                    IntelligenceRanNote(offDevice: commentaryLeftDevice,
+                                        onDevice: "Commentary is generated on-device from the figures above.")
                 } else if document.facts != nil, model.isIntelligenceAvailable(for: .reportNarrator) {
                     Button {
                         narrate()
@@ -291,6 +294,7 @@ struct ReportDocumentView: View {
                               systemImage: "sparkles")
                     }
                     .disabled(narrating)
+                    IntelligenceRunsNote(.reportCommentary)
                 }
                 if let narrationError {
                     Text(narrationError).scaledFont(.caption).foregroundStyle(.red)
@@ -307,10 +311,14 @@ struct ReportDocumentView: View {
                                   periodLabel: document.periodLabel,
                                   currencyCode: document.currencyCode,
                                   headline: facts.headline, lines: facts.lines)
+        // Asked before the request, of the same list the request runs under.
+        let leavesDevice = IntelligenceCommand.reportCommentary.leavesDevice
         Task {
             defer { narrating = false }
-            do { commentary = try await model.reportCommentary(for: request) }
-            catch { narrationError = error.localizedDescription }
+            do {
+                commentary = try await model.reportCommentary(for: request)
+                commentaryLeftDevice = leavesDevice
+            } catch { narrationError = error.localizedDescription }
         }
     }
 }

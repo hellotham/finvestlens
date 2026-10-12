@@ -55,42 +55,122 @@ struct GroundingSurvey {
         }
     }
 
+    /// A balance that rises and one that falls: which way it goes is the
+    /// first thing an outlook says, and no check of numbers reads it.
     @Test("Forecast outlooks", arguments: locales)
     func forecast(identifier: String) async {
         let locale = Locale(identifier: identifier)
         await LanguageModels.$localeOverride.withValue(locale) {
-            for _ in 0..<surveyDrafts {
-                guard let outlook = try? await ForecastNarrator.draft(facts: Fixtures.forecast) else {
-                    print("SURVEY forecast \(identifier) FAILED"); continue
-                }
-                let all = [outlook.headline] + outlook.insights
-                let inLanguage = LanguageModels.isInPersonLanguage(
-                    all.joined(separator: " "), quoting: ForecastNarrator.labels(of: Fixtures.forecast))
-                for (index, text) in all.enumerated() {
-                    line(index == 0 ? "forecast-headline" : "forecast", identifier,
-                         ForecastNarrator.isGrounded(text, facts: Fixtures.forecast), inLanguage, text)
+            for (name, facts) in [("rising", Fixtures.forecast), ("falling", Fixtures.fallingForecast)] {
+                for _ in 0..<surveyDrafts {
+                    guard let outlook = try? await ForecastNarrator.draft(facts: facts) else {
+                        print("SURVEY forecast-\(name) \(identifier) FAILED"); continue
+                    }
+                    let all = [outlook.headline] + outlook.insights
+                    let inLanguage = LanguageModels.isInPersonLanguage(
+                        all.joined(separator: " "), quoting: ForecastNarrator.labels(of: facts))
+                    for (index, text) in all.enumerated() {
+                        line(index == 0 ? "forecast-\(name)-headline" : "forecast-\(name)", identifier,
+                             ForecastNarrator.isGrounded(text, facts: facts), inLanguage, text)
+                    }
                 }
             }
         }
     }
 
+    /// Three slides, because a change reaches the model three ways: on the
+    /// line of a spending total, on the line of a net worth beside five
+    /// other figures, and on a line of its own. Each draft is printed with
+    /// the three things a story has to be — numbers that are facts, prose
+    /// without the model's format in it, and the listed change stated.
     @Test("Review slides", arguments: locales)
     func review(identifier: String) async {
         let locale = Locale(identifier: identifier)
         await LanguageModels.$localeOverride.withValue(locale) {
-            for _ in 0..<surveyDrafts {
-                guard let story = try? await ReviewNarrator.draft(facts: Fixtures.spending) else {
-                    print("SURVEY review \(identifier) FAILED"); continue
+            for (name, facts) in Fixtures.slides {
+                for _ in 0..<surveyDrafts {
+                    guard let story = try? await ReviewNarrator.draft(facts: facts) else {
+                        print("SURVEY review-\(name) \(identifier) FAILED"); continue
+                    }
+                    let text = story.headline + " " + story.insight
+                    let inLanguage = LanguageModels.isInPersonLanguage(
+                        text, quoting: ReviewStoryValidator.labels(of: facts))
+                    let clean = LanguageModels.isCleanProse(text)
+                    let change = ReviewStoryValidator.statesAListedChange(story, facts: facts)
+                    line("review-\(name)", identifier, ReviewStoryValidator.isGrounded(story, facts: facts),
+                         inLanguage, "\(clean ? "clean" : "DEBRIS") \(change ? "change" : "NOCHANGE") "
+                            + story.headline + " ‖ " + story.insight)
                 }
-                let inLanguage = LanguageModels.isInPersonLanguage(
-                    story.headline + " " + story.insight,
-                    quoting: ReviewStoryValidator.labels(of: Fixtures.spending))
-                line("review", identifier, ReviewStoryValidator.isGrounded(story, facts: Fixtures.spending),
-                     inLanguage, story.headline + " ‖ " + story.insight)
             }
         }
     }
 }
+}
+
+private let replayPath = ProcessInfo.processInfo.environment["FL_SURVEY_REPLAY"] ?? ""
+
+/// The review drafts in a saved survey log, put through the checks as they
+/// are now — no model, no requests. What a change to a check costs and
+/// buys is then counted on every draft already collected, instead of being
+/// judged from the handful that prompted it:
+///
+///     FL_SURVEY_REPLAY=/path/to/survey.log swift test \
+///         --package-path Packages/Intelligence --filter SurveyReplay
+///
+/// A log from before the survey named its slides is the spending slide.
+@Suite("A saved survey, through today's checks", .enabled(if: !replayPath.isEmpty))
+struct SurveyReplay {
+
+    @Test("Review drafts")
+    func review() throws {
+        let log = try String(contentsOfFile: replayPath, encoding: .utf8)
+        var counts: [String: [String: Int]] = [:]
+        func count(_ slide: String, _ column: String) { counts[slide, default: [:]][column, default: 0] += 1 }
+        for line in log.split(separator: "\n") where line.hasPrefix("SURVEY review") {
+            var fields = line.split(separator: " ", omittingEmptySubsequences: true).map(String.init)
+            guard fields.count > 4, fields[3] != "FAILED" else { continue }
+            let slide = fields[1].hasPrefix("review-") ? String(fields[1].dropFirst("review-".count)) : "spending"
+            guard let facts = Fixtures.slides.first(where: { $0.name == slide })?.facts else { continue }
+            let locale = Locale(identifier: fields[2])
+            let wasGrounded = fields[3] == "ok"
+            fields.removeFirst(5)
+            // Later logs carry two more verdicts before the text.
+            if ["clean", "DEBRIS"].contains(fields.first ?? "") { fields.removeFirst(2) }
+            let parts = fields.joined(separator: " ").components(separatedBy: " ‖ ")
+            let story = ReviewSlideStory(headline: parts[0], insight: parts.dropFirst().joined(separator: " ‖ "))
+            let grounded = ReviewStoryValidator.isGrounded(story, facts: facts, locale: locale)
+            let clean = LanguageModels.isCleanProse(story.headline + story.insight)
+            let states = ReviewStoryValidator.statesAListedChange(story, facts: facts, locale: locale)
+            let contradicts = ReviewStoryValidator.contradictsAListedChange(story, facts: facts, locale: locale)
+            count(slide, "drafts")
+            if !grounded { count(slide, "number check") }
+            if !clean { count(slide, "debris") }
+            if grounded, clean {
+                count(slide, "sound before the word check")
+                if states { count(slide, "… quoting the change") }
+                if contradicts { count(slide, "… calling it unchanged") } else { count(slide, "shown") }
+            }
+            if grounded != wasGrounded {
+                count(slide, wasGrounded ? "number check: now declined" : "number check: now accepted")
+                print("REPLAY \(wasGrounded ? "NOW-DECLINED" : "NOW-ACCEPTED") \(slide) \(fields.isEmpty ? "" : locale.identifier) \(story.headline) ‖ \(story.insight)")
+            }
+            if grounded, clean, contradicts {
+                print("REPLAY UNCHANGED \(slide) \(locale.identifier) \(story.headline) ‖ \(story.insight)")
+            }
+            // Shown without the change in it: where to read for a way of
+            // saying "nothing changed" that the word check does not know.
+            if grounded, clean, !states, !contradicts {
+                print("REPLAY SILENT \(slide) \(locale.identifier) \(story.headline) ‖ \(story.insight)")
+            }
+        }
+        let columns = ["drafts", "number check", "debris", "sound before the word check",
+                       "… quoting the change", "… calling it unchanged", "shown",
+                       "number check: now accepted", "number check: now declined"]
+        for slide in counts.keys.sorted() {
+            let row = columns.map { "\($0) \(counts[slide]?[$0] ?? 0)" }.joined(separator: " | ")
+            print("REPLAY TOTAL \(slide): \(row)")
+        }
+    }
 }
 
 private let languageDrafts = Int(ProcessInfo.processInfo.environment["FL_LANGUAGE_SURVEY"] ?? "") ?? 0

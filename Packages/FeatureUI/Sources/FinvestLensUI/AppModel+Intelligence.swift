@@ -23,6 +23,57 @@ import FinvestLensInterchange
 import FinvestLensIntelligence
 import FinvestLensReports
 
+/// Something a person asks Apple Intelligence to do, named by what it may
+/// send: the features it runs that follow the person's choice of model.
+///
+/// One list, read twice. The command runs inside ``AppModel/running(_:_:)``,
+/// so a feature it does not name cannot leave this device from it; and its
+/// view shows ``IntelligenceRunsNote`` for the same case, so what a person is
+/// told and what is done are one set. `IntelligenceCommandTests` fails a case
+/// that is run and never shown, or shown and never run.
+///
+/// Commands that only ever run on this device — Auto-Categorise, an import's
+/// category suggestions, reading a bank statement — have no case: there is
+/// nothing for them to grant.
+public enum IntelligenceCommand: String, CaseIterable, Sendable {
+    /// One invoice, read for its line items: Smart Import, and splitting a
+    /// charge by its invoice.
+    case invoice
+    /// One dividend statement: Smart Import, and recording a dividend.
+    case dividendStatement
+    /// Match Attachments. Every picked file is read as a dividend statement
+    /// or as an invoice, whatever it is.
+    case matchAttachments
+    /// Categorise from Attachment. The category itself is chosen on this
+    /// device — but the attachment is also read as a dividend statement, and
+    /// as an invoice for its line items.
+    case categoriseFromAttachment
+    /// Suggest Budget: six months of spending by category.
+    case budget
+    /// The forecast's outlook: projected balances and scheduled movements.
+    case forecast
+    /// A report's commentary: the report's own figures.
+    case reportCommentary
+    /// A review deck's story for a slide: that slide's figures.
+    case reviewStory
+
+    /// The features this command may run off this device.
+    public var features: Set<IntelligenceFeature> {
+        switch self {
+        case .invoice: [.invoiceAnalyzer]
+        case .dividendStatement: [.dividendExtractor]
+        case .matchAttachments, .categoriseFromAttachment: [.invoiceAnalyzer, .dividendExtractor]
+        case .budget: [.budgetAdvisor]
+        case .forecast: [.forecastNarrator]
+        case .reportCommentary: [.reportNarrator]
+        case .reviewStory: [.reviewNarrator]
+        }
+    }
+
+    /// Whether the command would send what it reads off this device now.
+    public var leavesDevice: Bool { features.contains(where: LanguageModels.leavesDevice) }
+}
+
 /// Apple Intelligence features (`FR-AI-01…06`). Everything here follows the
 /// same contract: extraction and suggestion run on Apple's models — on the
 /// device, or on Private Cloud Compute where the build offers it and the
@@ -67,6 +118,16 @@ extension AppModel {
         if let reason = intelligenceUnavailableReason(for: feature) {
             throw IntelligenceError.unavailable(reason)
         }
+    }
+
+    /// Runs `body` as `command`: the features the command names may run
+    /// where the person chose, and nothing else it reaches leaves this
+    /// device. Every request that can leave the device starts in one of
+    /// these — see ``IntelligenceCommand``.
+    func running<Result>(
+        _ command: IntelligenceCommand, _ body: () async throws -> Result
+    ) async rethrows -> Result {
+        try await LanguageModels.permittingOffDevice(command.features, operation: body)
     }
 
     // MARK: Category candidates
@@ -296,6 +357,15 @@ extension AppModel {
     public func matchAttachments(
         urls: [URL],
         onProgress: (@MainActor (Int, Int) -> Void)? = nil
+    ) async -> [AttachmentMatch] {
+        await running(.matchAttachments) {
+            await matchAttachmentsAsPermitted(urls: urls, onProgress: onProgress)
+        }
+    }
+
+    private func matchAttachmentsAsPermitted(
+        urls: [URL],
+        onProgress: (@MainActor (Int, Int) -> Void)?
     ) async -> [AttachmentMatch] {
         guard isIntelligenceAvailable(for: .invoiceAnalyzer) else {
             let note = intelligenceUnavailableReason(for: .invoiceAnalyzer)
@@ -1187,10 +1257,17 @@ extension AppModel {
     }
 
     /// Reads the transaction's linked attachment (PDF or image — OCR as
-    /// needed) and asks the on-device model for the best category from the
-    /// book's chart *and* a friendly payee. Works whether or not the
-    /// transaction is already categorised. Returns `nil` when the model has no
-    /// confident answer.
+    /// needed) and asks for the best category from the book's chart *and* a
+    /// friendly payee. Works whether or not the transaction is already
+    /// categorised. Returns `nil` when the model has no confident answer.
+    ///
+    /// Three requests, not one, and they do not all run in the same place.
+    /// The category is chosen on this device (attachment insight — which is
+    /// why that is the feature required here). But the attachment is first
+    /// read as a dividend statement if it looks like one, and afterwards as
+    /// an invoice for its line items, and those two follow the person's
+    /// choice of model: this is ``IntelligenceCommand/categoriseFromAttachment``,
+    /// and its button says so.
     public func suggestCategoryFromAttachment(
         for transactionID: GncGUID
     ) async throws -> AttachmentCategorySuggestion? {
@@ -1206,12 +1283,15 @@ extension AppModel {
                     : String(localized: "The attachment file was not found."))
         }
         let text = try await Task.detached { try await DocumentText.extractText(from: url) }.value
-        return try await attachmentSuggestion(for: transactionID, text: text)
+        return try await running(.categoriseFromAttachment) {
+            try await attachmentSuggestion(for: transactionID, text: text)
+        }
     }
 
-    /// The suggestion core, over already-extracted document text — shared by
-    /// the sidebar (which resolves the transaction's link) and the bulk
-    /// match-attachments flow (which brings its own files).
+    /// The suggestion core, over already-extracted document text. Reached
+    /// through ``suggestCategoryFromAttachment(for:)``, which is what lets
+    /// its two document readers follow the person's choice; called from
+    /// anywhere else they run on this device.
     func attachmentSuggestion(
         for transactionID: GncGUID, text: String
     ) async throws -> AttachmentCategorySuggestion? {
@@ -1557,9 +1637,11 @@ extension AppModel {
     public func analyzeInvoicePDF(_ data: Data) async throws -> InvoiceAnalysis {
         try requireIntelligence(for: .invoiceAnalyzer)
         let text = try await Task.detached { try await DocumentText.extractText(from: data) }.value
-        return try await InvoiceAnalyzer.analyze(text: text,
-                                                 candidates: categoryCandidates(includeIncome: false),
-                                                 explainRefusal: true)
+        return try await running(.invoice) {
+            try await InvoiceAnalyzer.analyze(text: text,
+                                              candidates: categoryCandidates(includeIncome: false),
+                                              explainRefusal: true)
+        }
     }
 
     // MARK: FR-AI-04 — Dividend statements
@@ -1568,7 +1650,9 @@ extension AppModel {
     public func extractDividendStatement(_ data: Data) async throws -> DividendStatementDetails {
         try requireIntelligence(for: .dividendExtractor)
         let text = try await Task.detached { try await DocumentText.extractText(from: data) }.value
-        return try await DividendExtractor.extract(text: text, explainRefusal: true)
+        return try await running(.dividendStatement) {
+            try await DividendExtractor.extract(text: text, explainRefusal: true)
+        }
     }
 
     /// Books a reviewed dividend: cash to the chosen account, income split
@@ -1686,16 +1770,18 @@ extension AppModel {
         return reportCurrency.round(total / Decimal(windows.count))
     }
 
-    /// Proposes a monthly budget from spending history via the on-device model.
+    /// Proposes a monthly budget from spending history.
     public func suggestBudget(months: Int = 6) async throws -> BudgetSuggestion {
         try requireIntelligence(for: .budgetAdvisor)
         let history = spendingHistory(months: months)
         guard !history.isEmpty else {
             throw IntelligenceError.modelFailure(String(localized: "There is no spending history yet to budget from."))
         }
-        return try await BudgetAdvisor.suggest(history: history,
-                                               monthlyIncome: monthlyIncomeAverage(months: months),
-                                               currencyCode: reportCurrency.mnemonic)
+        return try await running(.budget) {
+            try await BudgetAdvisor.suggest(history: history,
+                                            monthlyIncome: monthlyIncomeAverage(months: months),
+                                            currencyCode: reportCurrency.mnemonic)
+        }
     }
 
     /// Writes accepted suggestion lines into the first budget (creating a
@@ -1768,7 +1854,7 @@ extension AppModel {
         guard let facts = forecastFacts(months: months) else {
             throw IntelligenceError.modelFailure(String(localized: "There is no asset account to forecast yet."))
         }
-        return try await ForecastNarrator.narrate(facts: facts)
+        return try await running(.forecast) { try await ForecastNarrator.narrate(facts: facts) }
     }
 
     /// Annual-report-style notes for a computed report (`FR-AI-06`). The
@@ -1776,6 +1862,6 @@ extension AppModel {
     /// calculates.
     public func reportCommentary(for facts: ReportFacts) async throws -> [String] {
         try requireIntelligence(for: .reportNarrator)
-        return try await ReportNarrator.narrate(facts: facts)
+        return try await running(.reportCommentary) { try await ReportNarrator.narrate(facts: facts) }
     }
 }

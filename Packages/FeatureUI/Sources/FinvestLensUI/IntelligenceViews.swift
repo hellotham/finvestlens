@@ -355,6 +355,12 @@ struct DividendImportSheet: View {
                             Text("Reading statement with Apple Intelligence…")
                                 .foregroundStyle(.secondary)
                         }
+                        // Smart Import hands this sheet a statement it has
+                        // already read, and says where beside it; the sheet
+                        // reads one itself only when opened without.
+                        if payload.prefilled == nil {
+                            IntelligenceRunsNote(.dividendStatement)
+                        }
                     }
                 }
                 Section("Dividend") {
@@ -496,6 +502,7 @@ struct BudgetSuggestSheet: View {
                             LabeledContent("Average monthly income",
                                            value: AmountFormat.string(incomeAverage,
                                                                       code: model.reportCurrency.mnemonic))
+                            IntelligenceRunsNote(.budget)
                         }
                         Section("Proposed monthly amounts") {
                             ForEach(suggestion.lines) { line in
@@ -508,6 +515,8 @@ struct BudgetSuggestSheet: View {
                         ProgressView()
                         Text("Analysing six months of spending with Apple Intelligence…")
                             .foregroundStyle(.secondary)
+                        IntelligenceRunsNote(.budget)
+                            .frame(maxWidth: 420)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }

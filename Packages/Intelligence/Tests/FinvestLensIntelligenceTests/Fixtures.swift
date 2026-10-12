@@ -44,6 +44,37 @@ enum Fixtures {
                   ("Housing", Decimal(string: "25680.00")!)],
         deltaPercents: [("Total spending", Decimal(string: "-8.4")!)])
 
+    /// The deck's opening slide: a change in something that is itself listed
+    /// (net worth), and a ratio. The figures add up, and agree with
+    /// ``income``.
+    static let highlights = ReviewSlideFacts(
+        kicker: "Highlights", periodLabel: "FY 2025–26", currencyCode: "AUD",
+        figures: [("Net worth", Decimal(string: "412350.40")!),
+                  ("Net surplus", Decimal(string: "24032.68")!),
+                  ("Income", Decimal(string: "90643.50")!),
+                  ("Expenses", Decimal(string: "66610.82")!),
+                  ("Opening net worth", Decimal(string: "381200.00")!),
+                  ("Change in net worth", Decimal(string: "31150.40")!)],
+        ratios: [("Savings rate", Decimal(string: "26.5")!)],
+        deltaPercents: [("Net worth", Decimal(string: "8.2")!)])
+
+    /// The net-worth bridge: a change in something that is *not* listed
+    /// under that name, so it goes to the model on a line of its own.
+    static let bridge = ReviewSlideFacts(
+        kicker: "Net worth bridge", periodLabel: "FY 2025–26", currencyCode: "AUD",
+        figures: [("Opening net worth", Decimal(string: "381200.00")!),
+                  ("Income", Decimal(string: "90643.50")!),
+                  ("Expenses", Decimal(string: "66610.82")!),
+                  ("Valuation and currency movement", Decimal(string: "7117.72")!),
+                  ("Change in net worth", Decimal(string: "31150.40")!),
+                  ("Closing net worth", Decimal(string: "412350.40")!)],
+        deltaPercents: [("Net worth", Decimal(string: "8.2")!)])
+
+    /// The review slides the survey asks about, by name.
+    static let slides: [(name: String, facts: ReviewSlideFacts)] = [
+        ("spending", spending), ("highlights", highlights), ("bridge", bridge),
+    ]
+
     /// An income statement: three headline figures that add up, two lines.
     static let income = ReportFacts(
         reportTitle: "Income Statement", periodLabel: "FY 2025–26", currencyCode: "AUD",
@@ -67,6 +98,17 @@ enum Fixtures {
         lowestBalanceDate: day(2026, 8, 2),
         upcoming: [(day(2026, 8, 1), "Rent", -2600), (day(2026, 8, 15), "Salary", 5200)],
         recentMonthlyNet: 450)
+
+    /// The same account running down: the outlook a person most needs to be
+    /// told straight, and the one whose change goes to the model as a
+    /// negative number.
+    static let fallingForecast = ForecastFacts(
+        currencyCode: "AUD", accountName: "Everyday", horizonDays: 90,
+        openingBalance: 9420, closingBalance: 6105, lowestBalance: 2480,
+        lowestBalanceDate: day(2026, 8, 21),
+        upcoming: [(day(2026, 8, 1), "Rent", -2600), (day(2026, 8, 15), "Salary", 5200),
+                   (day(2026, 8, 20), "Car repair", -3400)],
+        recentMonthlyNet: -1100)
 
     /// Two spending categories and an income to budget them from.
     static func spendingHistory() -> [SpendingHistory] {

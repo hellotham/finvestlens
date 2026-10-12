@@ -237,7 +237,7 @@ When it arrives, in the same change as the entitlement and the
 `PRIVATE_CLOUD_COMPUTE` condition: add it to the promotional text and both
 Apple Intelligence sections; replace "These run on your device…" and "Your
 figures are not sent to us or to anyone else", which stop being true of
-invoices, dividend statements and summaries; add the paragraph below to the
+receipts, invoices, dividend statements, attachments and summaries; add the paragraph below to the
 privacy policy; and rewrite the three help passages
 `PrivateCloudComputeBuildTests` names. That test fails until the help and the
 policy are done, so the entitlement cannot land alone.
@@ -272,13 +272,26 @@ policy are done, so the entitlement cannot land alone.
   And, only with the Private Cloud Compute entitlement:
 
   > *Apple's Private Cloud Compute.* Where it is available, FinvestLens can
-  > use Apple's Private Cloud Compute to read an invoice or a dividend
-  > statement you ask it to read, and to write summaries of your reports. What
-  > it reads is sent to Apple to process. Apple states that data processed by
-  > Private Cloud Compute is not stored or made accessible to Apple. You can
-  > keep everything on your device instead, in Settings ▸ Apple Intelligence;
-  > categorising transactions and reading bank statements always stay on your
-  > device.
+  > use Apple's Private Cloud Compute. Match Attachments, Categorise from
+  > Attachment and Split from Invoice send the documents they read; Smart
+  > Import sends the invoices and dividend statements it finds; and
+  > commentary on reports and reviews, budget suggestions and the forecast
+  > outlook send the figures they are written from. Apple states that data
+  > processed by Private Cloud Compute is not stored or made accessible to
+  > Apple. You can keep everything on your device instead, in Settings ▸
+  > Apple Intelligence. A PDF imported as a bank statement is always read on
+  > your device, and Auto-Categorise and an import's category suggestions
+  > always run on it.
+
+  (Corrected twice on 12 Oct 2026, before anything was published. The first
+  draft ended "categorising transactions and reading bank statements always
+  stay on your device"; Categorise from Attachment does not — it chooses the
+  category on the device but reads the attachment as an invoice and as a
+  dividend statement. The second said "bank statements are always read on
+  your device"; a statement picked in Match Attachments, or attached to a
+  transaction, is read as an invoice like any other file. So the paragraph
+  now names commands, as the Settings sentence does, because commands are
+  what the routing is decided by.)
 
 - **Screenshots** are uploaded for Mac, iPad 13", iPhone 6.3" and 6.9"
   ([app-store.md](app-store.md)).

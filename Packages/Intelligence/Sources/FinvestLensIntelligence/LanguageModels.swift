@@ -234,15 +234,88 @@ public enum LanguageModels {
         privateCloudComputeEnabled ? .privateCloud : .onDevice
     }
 
-    /// The model `feature` would run on now.
+    /// The model `feature` runs on when the command asking has said it may
+    /// (``permittingOffDevice(_:isolation:operation:)``) — what the person's
+    /// choice means for this feature, and so what a view says before the
+    /// button is pressed. A request no command has spoken for runs on the
+    /// device whatever this returns.
     public static func choice(for feature: IntelligenceFeature) -> ModelChoice {
-        guard feature.followsModelChoice else { return .onDevice }
-        let wanted = choiceOverride ?? preferredChoice
-        // Private Cloud Compute that cannot serve right now falls back to the
-        // device rather than failing: the fallback is the more private of the
-        // two, so nothing a person chose is exceeded by it.
-        if wanted == .privateCloud, !availability(of: .privateCloud).isAvailable { return .onDevice }
-        return wanted
+        route(feature, wanted: choiceOverride ?? preferredChoice, permitted: [feature],
+              privateCloudServes: availability(of: .privateCloud).isAvailable)
+    }
+
+    /// The model a request for `feature` made *now, in this task* is sent
+    /// to: ``choice(for:)`` if the command in progress has named the
+    /// feature, and the device if it has not.
+    ///
+    /// - Parameter privateCloudServes: asked of the model itself, except by
+    ///   the tests, which have no other way to stand where a build with the
+    ///   entitlement stands.
+    static func requestRoute(
+        for feature: IntelligenceFeature,
+        privateCloudServes: @autoclosure () -> Bool = availability(of: .privateCloud).isAvailable
+    ) -> ModelChoice {
+        route(feature, wanted: choiceOverride ?? preferredChoice, permitted: permittedOffDevice ?? [],
+              privateCloudServes: privateCloudServes())
+    }
+
+    // MARK: - What a command may send
+
+    /// The features the current task may run off this device, or `nil`
+    /// outside any command — which permits none.
+    ///
+    /// Where a request runs used to be the feature's business alone, while
+    /// the app told people about it command by command: a gate, a line of
+    /// help, a sentence in Settings. Two lists, and they drifted. Categorise
+    /// from Attachment checked and described "attachment insight", which
+    /// stays on the device, and then read the same attachment as a dividend
+    /// statement and as an invoice, which follow the person's choice — so
+    /// with Private Cloud Compute chosen, a document left the device from a
+    /// command that Settings said never sent one (found by the review of
+    /// 73b2bd6, 12 October 2026; no build could reach Private Cloud Compute
+    /// then, so nothing was sent).
+    ///
+    /// So leaving the device is something a command grants, by naming the
+    /// features, from the same list its view reads to say where it runs. The
+    /// failure left over is the private one: a path that names nothing stays
+    /// on the device.
+    @TaskLocal static var permittedOffDevice: Set<IntelligenceFeature>?
+
+    /// Runs `operation` as a command that has told the person `features` may
+    /// run where they chose. Every other feature it reaches — and every
+    /// feature reached from outside such a command — runs on this device.
+    ///
+    /// Inside another command it can only narrow: what the person was told
+    /// is what the outer command told them.
+    public static func permittingOffDevice<Result>(
+        _ features: Set<IntelligenceFeature>,
+        isolation: isolated (any Actor)? = #isolation,
+        operation: () async throws -> Result
+    ) async rethrows -> Result {
+        let granted = permittedOffDevice.map { $0.intersection(features) } ?? features
+        return try await $permittedOffDevice.withValue(granted, operation: operation, isolation: isolation)
+    }
+
+    /// Where a request runs — the whole rule, reading nothing from the
+    /// process, so that it is tested in builds that cannot reach Private
+    /// Cloud Compute at all (which, until Apple assigns the entitlement, is
+    /// every build).
+    ///
+    /// Private Cloud Compute that cannot serve right now falls back to the
+    /// device rather than failing: the fallback is the more private of the
+    /// two, so nothing a person chose is exceeded by it.
+    static func route(
+        _ feature: IntelligenceFeature, wanted: ModelChoice,
+        permitted: Set<IntelligenceFeature>, privateCloudServes: @autoclosure () -> Bool
+    ) -> ModelChoice {
+        switch wanted {
+        case .onDevice:
+            return .onDevice
+        case .privateCloud:
+            guard feature.followsModelChoice, permitted.contains(feature), privateCloudServes()
+            else { return .onDevice }
+            return .privateCloud
+        }
     }
 
     // MARK: - Describing
@@ -265,7 +338,8 @@ public enum LanguageModels {
         availability(of: choice(for: feature))
     }
 
-    /// Whether `feature` would send what it is given off this device now.
+    /// Whether `feature` would send what it is given off this device now,
+    /// from a command that permits it.
     public static func leavesDevice(_ feature: IntelligenceFeature) -> Bool {
         choice(for: feature) != .onDevice
     }
@@ -280,6 +354,16 @@ public enum LanguageModels {
     /// Where the figures go, in one sentence. People must be able to tell
     /// whether a feature sends their data to a server.
     ///
+    /// Everything in it is named by command, not by kind of document or
+    /// kind of work, because that is how the routing is decided
+    /// (``permittedOffDevice``). Two earlier wordings were not, and each
+    /// promised something a command did not keep: "Categorising … always
+    /// run[s] on this device", when Categorise from Attachment also reads
+    /// its attachment as an invoice and as a dividend statement; and then
+    /// "Bank statements are always read on this device", when a statement
+    /// picked in Match Attachments, or attached to a transaction, is read
+    /// as an invoice like any other file.
+    ///
     /// What happens to a request on Private Cloud Compute is Apple's to say,
     /// and the sentence says it is Apple saying it. "Apple Intelligence &
     /// Privacy" (apple.com/legal/privacy/data/en/intelligence-engine, dated
@@ -290,7 +374,7 @@ public enum LanguageModels {
         case .onDevice:
             String(localized: "Runs on this device. Your books and documents never leave it.")
         case .privateCloud:
-            String(localized: "Invoices and dividend statements you ask Apple Intelligence to read, and the figures it writes about, are sent to Apple’s Private Cloud Compute to process. Apple says what is sent there isn’t stored or made accessible to Apple. Categorising and reading bank statements always run on this device.")
+            String(localized: "Match Attachments, Categorise from Attachment and Split from Invoice send the documents they read to Apple’s Private Cloud Compute to process. Smart Import sends the invoices and dividend statements it finds, and commentary on reports and reviews, budget suggestions and the forecast outlook send the figures they are written from. Apple says what is sent there isn’t stored or made accessible to Apple. A PDF imported as a bank statement is read on this device, and Auto-Categorise and an import’s category suggestions always run on it.")
         }
     }
 
@@ -360,8 +444,11 @@ public enum LanguageModels {
                  count: { try? await onDevice.tokenCount(for: $0) })
     }
 
+    /// The model this request runs on: the person's choice where the command
+    /// in progress has named the feature (``permittedOffDevice``), and the
+    /// device otherwise.
     static func resolve(_ feature: IntelligenceFeature) async throws -> Resolved {
-        try await resolve(feature, as: choice(for: feature))
+        try await resolve(feature, as: requestRoute(for: feature))
     }
 
     private static func resolve(_ feature: IntelligenceFeature, as choice: ModelChoice) async throws -> Resolved {

@@ -29,7 +29,9 @@ struct ReconcileTip: Tip {
 /// offers Private Cloud Compute the tip says that instead of promising that
 /// nothing leaves.
 struct SmartImportTip: Tip {
-    private var usesPrivateCloud: Bool { LanguageModels.leavesDevice(.invoiceAnalyzer) }
+    private var usesPrivateCloud: Bool {
+        IntelligenceCommand.invoice.leavesDevice || IntelligenceCommand.dividendStatement.leavesDevice
+    }
 
     var title: Text {
         usesPrivateCloud ? Text("Read statements with Apple Intelligence") : Text("Read statements on device")

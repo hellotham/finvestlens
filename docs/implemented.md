@@ -3971,12 +3971,14 @@ here too. Where each framework change stands is in
 - **Private Cloud Compute, built and switched off** (`FR-AI-13`). The
   default wherever a build can offer it, by the owner's decision, for one
   invoice or dividend statement at a time and for summaries; categorising,
-  classifying and reading bank statements stay on the device. Compiled in
+  classifying and reading bank statements stay on the device *("categorising"
+  was too wide a word — see the next section)*. Compiled in
   only by `PRIVATE_CLOUD_COMPUTE`, which `PrivateCloudComputeBuildTests`
   holds to the entitlement, the help text and the privacy policy together;
   read back from the signature on the Mac; never offered in the Simulator.
   Each feature that can leave the device says so beside itself, with the
-  daily allowance. Nothing has run against the cloud model: Apple has not
+  daily allowance. *(Not so at this commit: three of the eleven controls that
+  start such a request did. Corrected in the next section.)* Nothing has run against the cloud model: Apple has not
   assigned the entitlement.
 - **Settings and Help on iPhone and iPad.** The five settings panes were
   presented only by the Mac's Settings window, so an iPad could not change
@@ -4024,3 +4026,144 @@ feature tests.
 Not observed: anything on Private Cloud Compute; the iPad's sidebar footer
 and its ⌘, menu item on screen (the iPad builds; only the phone was toured);
 VoiceOver; a device rather than a simulator.
+
+## Leaving the device is granted by the command; a slide may not call unchanged what changed (12 Oct 2026)
+
+Two things, found one after the other. The first by the automated security
+review of `73b2bd6` and an independent read of the fix; the second by the
+survey run to find out why the sweep before the commit had failed.
+
+### Where a request runs
+
+The security review reported one finding, and it was right. **Categorise
+from Attachment** was gated, described and disclosed as *attachment
+insight*, which always runs on the device — and it is three requests, not
+one: the attachment is first read as a dividend statement if it looks like
+one (`DividendExtractor`), the category is then chosen (`AttachmentInsight`),
+and the attachment is read again as an invoice for its line items
+(`InvoiceAnalyzer`). The first and third follow the person's choice of model.
+With Private Cloud Compute chosen, a document would have left the device
+from a command that Settings said never sent one: its sentence ended
+"Categorising and reading bank statements always run on this device".
+**Nothing was sent**: no build holds the entitlement, so no build can reach
+the cloud model (`LanguageModels.privateCloudComputeEnabled`).
+
+The cause was two lists. Where a request runs was decided per *feature*
+(`followsModelChoice`); what a person is told was written per *command*.
+Nothing held them together, so they were made one:
+
+- **A request leaves the device only from a command that names it.**
+  `LanguageModels.permittedOffDevice` is a task-local set of features, `nil`
+  outside a command; `permittingOffDevice(_:)` sets it, and can only narrow
+  inside another. `route` is the whole rule and reads nothing from the
+  process, and `requestRoute` joins the task's leave to it, so both are
+  tested with the cloud assumed present. A path that names nothing stays on
+  the device — the failure left over is the private one.
+- **`IntelligenceCommand`** (FeatureUI) is the list — one invoice, one
+  dividend statement, Match Attachments, Categorise from Attachment, Suggest
+  Budget, the forecast outlook, report commentary, a review deck's story —
+  each with the features it may send. `AppModel.running(_:)` is the one
+  caller of `permittingOffDevice`, and all ten call sites of those features
+  sit behind it.
+- **`IntelligenceRunsNote` takes commands**, not features, redraws when the
+  choice is changed in another window, and is shown by every view that
+  starts a command. Where nothing leaves the device the new notes draw
+  nothing — an empty view is no view, checked by rendering each kind of
+  container with and without one and comparing the pixels (macOS; a
+  throwaway harness).
+- **The Settings sentence names commands**, in all eight languages, because
+  commands are what the routing is decided by. It took two attempts: the
+  first rewrite said "Bank statements are always read on this device", which
+  a statement picked in Match Attachments does not keep — it is read as an
+  invoice, like any other file. The unpublished privacy-policy paragraph in
+  `app-store-listing.md` carried both mistakes and has both corrections.
+
+The independent read of that fix found what the fix had got wrong, and each
+was checked against the code before it was acted on:
+
+- The reworded Settings sentence was still false (above).
+- A review deck opened from the Reports menu never shows the card that
+  carried the note. The deck has its own now.
+- A report's note appeared only once its commentary had been written. It is
+  beside the button, and the line under finished commentary says where that
+  commentary *was* written, not where the next would be.
+- The note beside Link to Existing… was drawn only after the read had begun;
+  it is on the document editor for as long as the button is. Match
+  Attachments' results, from which Choose More… reads another batch, have
+  one. The review cards' notes are beside the cards, not inside their
+  buttons — the allowance note can hold a button of its own.
+- The Record Dividend sheet said it read a statement when Smart Import, the
+  only thing that opens it, had already read one.
+- The structural test asserted that a note existed *somewhere* in the
+  package. It passed with the Attachments panel's note removed, because the
+  editor had one for the same command — so a receipt written into this
+  section an hour earlier ("exactly those two cases failed") had stopped
+  being true of the tree. `IntelligenceCommandTests` now holds each of the
+  model's nine entry points to the file that calls it, requires every grant
+  to go through `running`, and finds `permittingOffDevice` called in exactly
+  one place. Four mutations on the final tree — a view dropping its note
+  while another file keeps one, the deck dropping its note while the cards
+  keep theirs, a command dropping its grant, a view granting for itself —
+  fail four tests, and nothing else.
+- Nothing tested the line that joins the task's leave to the route. It has
+  a function and a test.
+- `PrivateCloudComputeBuildTests` named two of the three help passages that
+  stop being true with the entitlement. It names the third.
+
+**One thing that read could not be settled here**, because it is the
+owner's: Smart Import, Suggest Budget and the review decks start when their
+sheet opens, so the first request leaves before the note has been seen. The
+choices are written up in `deferred.md` §3a, and the entitlement cannot land
+while that paragraph is headed "Open".
+
+The delegated reviewer was told never to list or search `imports/`, and
+reported that one of its searches had been rooted at the repository's top
+and so walked that folder's directory entries; it opened only `.swift`
+files, of which there are none there, and printed nothing from it.
+
+### What a slide says about a change
+
+The Intelligence suite failed in the sweep before this commit — in the live
+language tests, on a German and a Japanese slide, with no change to that
+package's requests. Sixty-four fresh drafts of the slide were surveyed to
+find out why, and then 272 more of three slides and 96 forecast outlooks as
+each thing they showed was followed up.
+Everything is in [intelligence-prompts.md](intelligence-prompts.md); in
+short:
+
+- **Half the slides the number check accepted were false.** Given "Total
+  spending: -8.4% vs prior period", 59 of 107 accepted drafts said spending
+  was stable or unchanged. The change now reaches the model in words on the
+  line of the figure it is a change in, and the instructions forbid
+  describing a change — or stability — that is not listed: 0 of 181.
+- **A check for it as well** (`contradictsAListedChange`): a story that
+  does not quote a listed change of a percent or more and uses one of the
+  model's own ways of saying "nothing changed" is declined. It declines the
+  59 and none of the 181.
+- **A figure cut off at its precision is the figure.** Twelve of
+  forty-eight drafts of the opening slide were declined for writing
+  31,150.40 as "31.1k".
+- **German thousands** ("66.61 T$") are read as thousands.
+- **The live language tests ask for a narration three times.** One
+  narration finding nothing sound is the narrator working, and at the
+  measured rates it failed a seven-language run about one time in six.
+- **`SurveyReplay`** puts a saved survey through today's checks without
+  asking the model anything, so a change to a check is scored on every
+  draft already collected.
+
+What the surveys also showed, and nothing here fixes: a true number said of
+the wrong thing — a balance "higher by 9,420" when 9,420 is where it ends.
+Five forecast headlines of ninety-six, and three review drafts.
+
+Receipts, 12 Oct 2026, macOS 27.0.1 with Xcode 27.0, on the tree as
+committed. Every package suite passes — Engine 300, Persistence 50,
+Interchange 166, Quotes 171, Rules 13, Reports 181, Cloud 10, Intelligence
+185, FeatureUI 768, CLI 58, Lab 18, Shared 6 (1,926 tests) — with the live
+model in seven languages inside the Intelligence figure; both unsigned app
+builds succeed; the localization gate, the help-manual drift check, the SPDX
+check and the real-data gate pass. CI was green on `73b2bd6` before this was
+pushed.
+
+Not observed: any note on screen with Private Cloud Compute, which no build
+can show until Apple assigns the entitlement; the empty note's layout on iOS
+(measured on macOS only); VoiceOver.

@@ -577,7 +577,7 @@ extension AppModel {
         guard !reviewStoryDeclined.contains(key),
               isIntelligenceAvailable(for: .reviewNarrator) else { return nil }
         do {
-            let story = try await ReviewNarrator.story(facts: slide.facts)
+            let story = try await running(.reviewStory) { try await ReviewNarrator.story(facts: slide.facts) }
             reviewStoryCache[key] = story
             return story
         } catch let error as IntelligenceError where !error.endsABatch {

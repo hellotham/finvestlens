@@ -189,6 +189,10 @@ struct AttachmentsPanel: View {
             .disabled(!readable || categorising || !model.isIntelligenceAvailable(for: .attachmentInsight))
             .help(model.intelligenceUnavailableReason(for: .attachmentInsight)
                   ?? "Read the attachment (OCR) and suggest a category for this transaction")
+            // The category is chosen on this device, but the attachment is
+            // also read as an invoice and as a dividend statement, and those
+            // follow the person's choice — so this says so before the press.
+            IntelligenceRunsNote(.categoriseFromAttachment)
             if let suggestion = categorySuggestion {
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {

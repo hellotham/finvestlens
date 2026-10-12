@@ -3230,6 +3230,15 @@ struct TransactionEditorSheet: View {
                         }
                     }
                 }
+                // Linking this document to a transaction reads it for a
+                // category as well — the same command as the Attachments
+                // panel's button, reached by Link to Existing… — so it is
+                // said for as long as that can be pressed. (The condition
+                // is repeated here because a section with nothing in it is
+                // still drawn.)
+                if documentPrefill != nil, IntelligenceCommand.categoriseFromAttachment.leavesDevice {
+                    Section { IntelligenceRunsNote(.categoriseFromAttachment) }
+                }
                 // The register row itself — the same view the account register
                 // edits with, opened out, hosted beside the document. One
                 // editing UI, not a resembling copy: same cells, same cursor,
@@ -3329,6 +3338,7 @@ struct TransactionEditorSheet: View {
                         }
                         .disabled(analyzingInvoice)
                         .help("Read an invoice PDF and split this transaction across its line items")
+                        IntelligenceRunsNote(.invoice)
                     }
                     // Fed by `Book.allTags`: the Tags cell is free text, so
                     // reusing a tag means remembering how you spelled it — the

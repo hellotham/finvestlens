@@ -151,6 +151,39 @@ struct NumberReadingTests {
         #expect(units("90 days") == [.none])
     }
 
+    @Test("German accounts count thousands with a capital T before the currency")
+    func germanThousands() {
+        #expect(units("66.61 T$") == [.thousands])
+        #expect(units("66,6 T€") == [.thousands])
+        #expect(units("250 TEUR") == [.thousands])
+        #expect(units("66,6 TAUD") == [.thousands])
+        // A German word that begins with a T is a word.
+        #expect(units("90 Tage") == [.none])
+        #expect(units("3 Tonnen") == [.none])
+        #expect(units("5 tage") == [.none])
+        // In a book kept in paʻanga, T$ is the currency and nothing more.
+        #expect(FigureGrounding.runs(in: "66.61 T$", currencyCode: "TOP").map(\.unit) != [.thousands])
+    }
+
+    @Test("The German slides the check wrongly declined are grounded")
+    func germanSurveyDrafts() {
+        // Two drafts of eight, 12 October 2026: true figures, in thousands,
+        // in a form the check did not know.
+        let german = Locale(identifier: "de_DE")
+        #expect(ReviewStoryValidator.isGrounded(ReviewSlideStory(
+            headline: "Gesamtausgaben FY 2025–26 stabil bei 66.61 T$",
+            insight: "Die Gesamtausgaben belaufen sich auf 66.61 T$, wobei die Ausgaben für Wohnen mit 25.68 T$ den höchsten Anteil haben. Die Gesamtzahl blieb im Vergleich zum Vorjahr nahezu unverändert."),
+            facts: Fixtures.spending, locale: german))
+        #expect(ReviewStoryValidator.isGrounded(ReviewSlideStory(
+            headline: "Gesamtausgaben FY 2025–26 bei 66.61 T$",
+            insight: "Die Gesamtausgaben betragen 66.61 T$, wobei die Ausgaben für Wohnen mit 25.68 T$ den höchsten Anteil haben. Der Gesamtbetrag verzeichnet einen Rückgang von 8,4% gegenüber dem vorherigen Zeitraum."),
+            facts: Fixtures.spending, locale: german))
+        // The form does not make a wrong figure right: housing is 25.68.
+        #expect(!ReviewStoryValidator.isGrounded(ReviewSlideStory(
+            headline: "Gesamtausgaben bei 66.61 T$", insight: "Wohnen liegt bei 26.8 T$."),
+            facts: Fixtures.spending, locale: german))
+    }
+
     @Test("Unit words in katakana survive the folding of full-width digits")
     func katakanaUnits() {
         // Foundation's width transform halves katakana too, after which
@@ -279,6 +312,125 @@ struct GroundingTests {
         #expect(slide("Die Ausgaben sanken um 8,4 Prozent", german))
     }
 
+    @Test("A figure cut off at its precision is the figure, as one rounded to it is")
+    func cutOffOrRounded() {
+        // 31,150.40 — "31.2k" rounded, "31.1k" with the rest dropped. Twelve
+        // of forty-eight drafts of one slide were declined for the second.
+        let facts = Fixtures.highlights
+        func story(_ text: String) -> Bool {
+            ReviewStoryValidator.isGrounded(ReviewSlideStory(headline: text, insight: ""),
+                                            facts: facts, locale: english)
+        }
+        #expect(story("Net worth rose by 31.2k AUD"))
+        #expect(story("Net worth rose by 31.1k AUD"))
+        #expect(story("Net worth rose by 31,150 AUD"))
+        #expect(story("Net worth rose by 31,150.4 AUD"))
+        // Expenses are 66,610.82: the cents may be dropped or rounded up.
+        #expect(story("Expenses of 66,610 AUD"))
+        #expect(story("Expenses of 66,611 AUD"))
+        // Above what rounding gives, or merely near, is still nobody's figure.
+        #expect(!story("Net worth rose by 31.3k AUD"))
+        #expect(!story("Net worth rose by 31.0k AUD"))
+        #expect(!story("Expenses of 66,612 AUD"))
+        #expect(!story("Expenses of 66,609 AUD"))
+        #expect(!story("Expenses of 66.62k AUD"))
+        // A surplus of 24,032.68 is not "24,000" — that is rounding to a
+        // precision the figure does not show.
+        #expect(!story("A surplus of 24,000 AUD"))
+        #expect(story("A surplus of 24k AUD"))
+        // The same for a percentage: 8.2 is "8%", and not "9%" or "8.3%".
+        #expect(story("Net worth grew 8%"))
+        #expect(!story("Net worth grew 9%"))
+        #expect(!story("Net worth grew 8.3%"))
+    }
+
+    @Test("A story is known to have quoted the change it was given")
+    func quotedChange() {
+        func states(_ text: String, _ locale: Locale, _ facts: ReviewSlideFacts = Fixtures.spending) -> Bool {
+            ReviewStoryValidator.statesAListedChange(ReviewSlideStory(headline: text, insight: ""),
+                                                     facts: facts, locale: locale)
+        }
+        #expect(states("Total spending down 8.4% as groceries and housing dominate", english))
+        #expect(states("Spending fell 8% on the prior period", english))
+        #expect(states("Gesamtausgaben sanken um 8,4 % auf 66.611 AUD", german))
+        #expect(states("総支出は前年比8.4%減少し、全体で66,611 AUDでした。", japanese))
+        #expect(states("总支出下降8.4%：各项开支分布", chinese))
+        // The amount is not the percentage, and another percentage is not this one.
+        #expect(!states("Total spending at 66610.82 AUD for FY 2025–26", english))
+        #expect(!states("Housing is 38.5% of spending", english))
+        // A slide that lists no change asks for none.
+        #expect(states("Income of 90,643.50 AUD", english,
+                       ReviewSlideFacts(kicker: "Income", periodLabel: "FY 2025–26", currencyCode: "AUD",
+                                        figures: [("Total", Decimal(string: "90643.50")!)])))
+    }
+
+    @Test("A story that calls unchanged what the slide says changed is declined", arguments: [
+        // Each as the 27 model wrote it for a slide that listed -8.4%, and
+        // as the number check accepted it, 12 October 2026.
+        ("Total spending at 66610.82 AUD with stable categories ‖ No change in spending compared to prior period.", "en_AU"),
+        ("Total spending remained at 66610.82 AUD ‖ Total spending stood at 66610.82 AUD, with groceries at 12480.55 AUD and housing at 25680 AUD.", "en_AU"),
+        ("Gesamtausgaben bei 66610.82 AUD ‖ Die Gesamtsumme blieb unverändert im Vergleich zum Vorjahr.", "de_DE"),
+        ("El gasto total se mantuvo estable en 66611 AUD durante el período. ‖ El gasto en comestibles fue de 12481 AUD.", "es_ES"),
+        ("Spesa totale stabile a 66.6k AUD nel periodo FY 2025–26 ‖ I dati confermano la stabilità complessiva rispetto al periodo precedente.", "it_IT"),
+        ("FY 2025–26の総支出は66,611 AUDで安定 ‖ 総支出の推移は前期と比べて変動なし。", "ja_JP"),
+        ("Gastos totais se mantêm estáveis em 66.6k AUD ‖ Não há variação percentual comparativa.", "pt_BR"),
+        ("总支出达66610.82澳元，住房占比最高 ‖ 杂货支出12480.55澳元也保持稳定。", "zh_Hans_CN"),
+    ])
+    func unchangedIsDeclined(text: String, identifier: String) {
+        let parts = text.components(separatedBy: " ‖ ")
+        let story = ReviewSlideStory(headline: parts[0], insight: parts[1])
+        let locale = Locale(identifier: identifier)
+        #expect(ReviewStoryValidator.isGrounded(story, facts: Fixtures.spending, locale: locale),
+                "the number check accepted this when it was written")
+        #expect(ReviewStoryValidator.contradictsAListedChange(story, facts: Fixtures.spending, locale: locale))
+    }
+
+    @Test("Saying which way it went, or nothing about it, is not calling it unchanged")
+    func changeWithoutContradiction() {
+        func contradicts(_ headline: String, _ insight: String, _ locale: Locale,
+                         _ facts: ReviewSlideFacts = Fixtures.spending) -> Bool {
+            ReviewStoryValidator.contradictsAListedChange(
+                ReviewSlideStory(headline: headline, insight: insight), facts: facts, locale: locale)
+        }
+        #expect(!contradicts("Total spending down 8.4% as groceries and housing dominate",
+                             "Total spending decreased by 8.4% on the prior period.", english))
+        // Quoting the change excuses an opinion about it.
+        #expect(!contradicts("Spending down 8.4%, though broadly stable",
+                             "Housing remained the largest category.", english))
+        // Silence is not a claim, and neither is the change as an amount.
+        #expect(!contradicts("Total spending at 66610.82 AUD for FY 2025–26",
+                             "Total spending reached 66610.82 AUD, with groceries at 12480.55 AUD.", english))
+        #expect(!contradicts("Net worth increased by 31.1k AUD",
+                             "Net worth rose by 31.1k AUD, driven by a surplus of 24.0k AUD.", english,
+                             Fixtures.highlights))
+        // A slide that lists no change, or one under a percent, has nothing
+        // to contradict.
+        let noChange = ReviewSlideFacts(kicker: "Income", periodLabel: "FY 2025–26", currencyCode: "AUD",
+                                        figures: [("Total", Decimal(string: "90643.50")!)])
+        #expect(!contradicts("Income stable at 90.6k AUD", "", english, noChange))
+        var slight = Fixtures.spending
+        slight.deltaPercents = [("Total spending", Decimal(string: "-0.3")!)]
+        #expect(!contradicts("Total spending stable at 66.6k AUD", "", english, slight))
+    }
+
+    @Test("A change reaches the model in words, on the line of the figure it is a change in")
+    func promptPutsTheChangeWithItsFigure() {
+        let spending = ReviewNarrator.prompt(for: Fixtures.spending)
+        #expect(spending.contains("- Total spending: 66610.82 AUD — down 8.4% on the prior period"))
+        #expect(!spending.contains("Changes:"))
+        #expect(!spending.contains("-8.4"))
+        // Where what changed is not itself a listed figure, it has a line
+        // of its own, in the same words.
+        let bridge = ReviewNarrator.prompt(for: Fixtures.bridge)
+        #expect(bridge.contains("Changes:\n- Net worth: up 8.2% on the prior period"))
+        #expect(bridge.contains("- Closing net worth: 412350.4 AUD"))
+        // A ratio keeps its percent sign and a figure with no change says nothing of one.
+        let highlights = ReviewNarrator.prompt(for: Fixtures.highlights)
+        #expect(highlights.contains("- Net worth: 412350.4 AUD — up 8.2% on the prior period"))
+        #expect(highlights.contains("- Savings rate: 26.5%"))
+        #expect(highlights.contains("- Income: 90643.5 AUD\n"))
+    }
+
     @Test("A separator that is not marking thousands does not make a new number true", arguments: [
         ("une hausse de 2,6 %", "fr_FR"),     // 26 was the label's "26"
         ("une hausse de 6,7 %", "fr_FR"),     // 67 was 66,610.82 in thousands
@@ -327,6 +479,14 @@ struct GroundingTests {
             insight: "Os gastos totais foram de 66.611 AUD, com compras de mercearia totalizando 12.501 AUD e despesas com moradia de 25.700 AUD."),
             facts: Fixtures.spending, locale: Locale(identifier: "pt_BR")))
         #expect(!slide("总支出保持稳定，其中住房支出为25680澳元，占总支出约38%。", chinese))
+        // 8 review drafts × 8 languages, later the same day: ten declined.
+        // Groceries are 12,480.55 — 12.48 in thousands, not 12.49.
+        #expect(!ReviewStoryValidator.isGrounded(ReviewSlideStory(
+            headline: "El gasto total se situó en 66.61 k AUD para el periodo FY 2025–26.",
+            insight: "El gasto en vivienda alcanzó 25.68 k AUD, mientras que los alimentos representaron 12.49 k AUD. El gasto total se mantuvo en 66.61 k AUD."),
+            facts: Fixtures.spending, locale: spanish))
+        // A share the model worked out for itself, four times of eight.
+        #expect(!slide("总支出为 66611 澳元，其中住房支出为 25680 澳元，占总支出的 38.5%。杂货支出为 12480.55 澳元。", chinese))
     }
 
     // MARK: True, in a form the first check could not read
@@ -440,25 +600,55 @@ extension Live {
 /// What a narrator returns has already passed its own number check, so
 /// applying the check again here would assert nothing. What is asserted is
 /// what the check cannot guarantee: that the model, in this language, can
-/// write *something* the check accepts within the narrator's three drafts,
-/// and that it comes back in the language asked — judged by an oracle that
-/// is not the one the code uses (`Fixtures.reads(_:as:)`).
+/// write *something* the check accepts, and that it comes back in the
+/// language asked — judged by an oracle that is not the one the code uses
+/// (`Fixtures.reads(_:as:)`).
 ///
-/// The language is asked for twice before it is called a failure. A narrator
-/// that gets three sound drafts in the wrong language in a row returns the
-/// first of them, by design, so a single narration in the wrong language is
-/// the contract working and not a defect. In the 12 October survey one draft
-/// in sixty-three outside English came back in English.
+/// A narration is asked for up to three times before either is called a
+/// failure, because one narration failing is the contract working:
+///
+/// - **Nothing sound in three drafts.** The narrator then says so and the
+///   slide keeps its own headline. This used to fail the test, and it is
+///   not rare: of 64 review drafts on 12 October the check declined ten —
+///   four of the eight in Chinese, where the model works out shares it was
+///   told not to. Half of all drafts declined is three in a row one
+///   narration in eight, so a run of seven languages failed about one time
+///   in six with nothing wrong (it did, in German and Japanese, in the
+///   sweep before a commit that had not touched this package).
+/// - **Sound, in the wrong language.** A narrator that gets three such
+///   drafts in a row returns the first of them, by design. In the same
+///   day's earlier survey one draft in sixty-three outside English came
+///   back in English.
+///
+/// Nine drafts all declined is a different matter, and still fails.
 @Suite("Prose comes back in the person's language", .enabled(if: Fixtures.modelAvailable),
        .timeLimit(.minutes(10)), .serialized)
 struct LiveLanguageTests {
 
-    /// `ask`'s answer — asked once more if the first is not in the language.
+    /// `ask`'s answer: the first of up to three narrations that is in the
+    /// language. Failing that, the last one that was at least sound — for
+    /// the caller's language expectation to fail on, with the text — and
+    /// failing that, the narrator's own "nothing sound".
+    ///
+    /// Only that outcome is asked about again. A model that is unavailable,
+    /// busy or refusing is not a draft, and is thrown at once.
     private func narrated<Answer>(in identifier: String, text: (Answer) -> String,
                                   _ ask: () async throws -> Answer) async throws -> Answer {
         try await LanguageModels.$localeOverride.withValue(Locale(identifier: identifier)) {
-            let first = try await ask()
-            return Fixtures.reads(text(first), as: identifier) ? first : try await ask()
+            var sound: Answer?
+            var declined: IntelligenceError?
+            for _ in 0..<3 {
+                do {
+                    let answer = try await ask()
+                    if Fixtures.reads(text(answer), as: identifier) { return answer }
+                    sound = answer
+                } catch let error as IntelligenceError {
+                    guard case .modelFailure = error else { throw error }
+                    declined = error
+                }
+            }
+            if let sound { return sound }
+            throw declined ?? IntelligenceError.modelFailure("no narration")
         }
     }
 

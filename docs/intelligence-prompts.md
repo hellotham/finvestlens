@@ -65,12 +65,37 @@ none.
 | Attachment insight | `AttachmentInsight.analyze` — first 1,600 characters | device | greedy | category must be in the chart offered |
 | Categoriser | `TransactionCategorizer.suggest` — exactly one answer per transaction | device | greedy | category must be one that was offered; money out is never offered income |
 | Budget advisor | `BudgetAdvisor.suggest` — exactly one line per category | the person's choice | greedy | category must be one that was offered; averages if the model will not write a plan |
-| Review slide | `ReviewNarrator.story` | the person's choice | model's own | `FigureGrounding`; clean prose; language; three drafts |
+| Review slide | `ReviewNarrator.story` — a change goes in words on the line of the figure it is a change in | the person's choice | model's own | `FigureGrounding`; clean prose; must not call unchanged what the slide says changed; language; three drafts |
 | Report notes | `ReportNarrator.narrate` | the person's choice | model's own | `FigureGrounding`; clean prose; language; three drafts |
 | Forecast outlook | `ForecastNarrator.narrate` | the person's choice | model's own | `FigureGrounding`, including the dates; clean prose; language; three drafts |
 
 "The person's choice" is the device in every build so far: Private Cloud
 Compute needs an entitlement no build has (deferred.md §3a).
+
+It is also the device for any request that no command has named. A feature
+runs on the person's choice only inside `LanguageModels.permittingOffDevice`,
+entered by a command with the list of features it may send
+(`IntelligenceCommand` in FeatureUI); the same list is what the view beside
+the command reads to say where it runs. Eight commands have one:
+
+| Command | May send | Also runs, always on the device |
+|---|---|---|
+| Split from Invoice; Smart Import's invoices | invoice analyser | the categoriser, for each line item the invoice read finds; the document classifier (Smart Import) |
+| Smart Import's dividend statements | dividend extractor | document classifier |
+| Match Attachments | dividend extractor, invoice analyser | the categoriser, for line items; attachment insight, as the fallback for a file whose invoice pass placed nothing |
+| Categorise from Attachment — the Attachments panel's button, and linking a document to an existing transaction | dividend extractor, invoice analyser | attachment insight, which is what chooses the category; the categoriser, for line items |
+| Suggest Budget | budget advisor | — |
+| Forecast outlook | forecast narrator | — |
+| Report commentary | report narrator | — |
+| Review deck story | review narrator | — |
+
+Auto-Categorise (its Read Attachments pass included), an import's category
+suggestions and a PDF imported as a bank statement have no command: nothing
+in them can leave. (The Record Dividend sheet can read a statement itself and
+would do so as the second row's command, but Smart Import — the only thing
+that opens it — hands it one already read.) What stays on the device is a
+matter of command, not of document: a bank statement picked in Match
+Attachments is read as an invoice, like any other file.
 
 ## What a token costs
 
@@ -216,6 +241,79 @@ LiveModelTests` and so on.
 report counts, never contents) pass after the rework: statements, 8 tests in
 107 seconds; scans and receipts, 2 tests in 34 seconds.
 
+**A change goes in words, with the figure it is a change in.** The review
+slide's facts used to end with a list of their own — "Changes: - Total
+spending: -8.4% vs prior period" — and the model mostly did not connect it
+to anything. Of 128 drafts of that slide in eight languages, the number check
+passed 107; 25 of those quoted the change, and 59 said spending was "stable",
+"unchanged", had "remained at" its total or that there was "no change" —
+sixteen of sixteen in Italian. A check that reads numbers finds nothing wrong
+with that. The change now goes on the figure's own line, as a word and a
+percentage ("- Total spending: 66610.82 AUD — down 8.4% on the prior
+period"; on a line of its own, in the same words, where what changed is not
+itself a listed figure), and the instructions ask for the direction and the
+percentage where one is given and forbid describing a change, or stability,
+where none is. Measured on 208 drafts across three slide shapes — a spending
+total, a net worth beside five other figures, and a change with a line of its
+own:
+
+| Slide | Drafts | Declined: a number | Declined: format debris | Shown | Of those shown, quoting the change | Calling it unchanged |
+|---|---|---|---|---|---|---|
+| Spending (old prompt) | 128 | 18 | 7 | 48 after the word check below; 107 before it | 25 | 59 |
+| Spending | 112 | 14 | 5 | 96 | 96 | 0 |
+| Net-worth bridge | 48 | 5 | 2 | 43 | 43 | 0 |
+| Highlights | 48 | 6 | 0 | 42 | 25 | 0 |
+
+(A draft can be declined for both reasons. On the opening slide a story says
+"net worth rose 31.2k" as readily as "8.2%", which is why not every one
+quotes the percentage, and why quoting it is not required.) Behind the
+prompt there is now a check as well, because the prompt's effect is the
+installed model's and that model changes with the system: a story about a
+slide that lists a change of a percent or more, which does not quote it and
+uses one of the model's own ways of saying "nothing changed" in the eight
+languages, is declined (`ReviewStoryValidator.contradictsAListedChange`). It
+is the one check here that reads words rather than numbers, and it is kept
+that narrow. Replayed over every draft above (`SurveyReplay`, which puts a
+saved survey through today's checks without asking the model anything), it
+declines the 59 and none of the 181 written under the new prompt.
+
+**A figure cut off is the figure.** The number check held the model to
+rounding: 31,150.40 could be "31.2k" and not "31.1k", and 66,610.82 could be
+"66,611" and not "66,610". Twelve of forty-eight drafts of the opening slide
+were declined for a "31.1k" with every other number in them right. A figure
+may now be rounded to the precision it is written at *or* cut off at it —
+neither invents anything — and still not written above what rounding gives
+("12.49k" for 12,480.55, which the model does write) or merely somewhere
+near.
+
+**German thousands.** Asked for thousands "as k", the model wrote a German
+reader "66.61 T$" in two drafts of eight — the accountant's form, as in T€
+and TEUR — and both were declined as figures nobody had listed. The check
+reads a capital T before a currency symbol or code as thousands (and not in a
+book kept in paʻanga, whose own symbol is T$).
+
+**What these checks cannot see.** Every number in a story being one of the
+facts does not make it said of the right thing. Of 96 forecast headlines —
+64 on a balance that rises and 32 on one that falls — none gave the wrong
+direction, with the change handed over as a bare signed number, so that
+prompt is unchanged. But four said the balance would end "higher by 9,420",
+which is the closing balance and not the rise (Spanish twice, Italian twice),
+and one German headline called a falling balance "negative" when its lowest
+point was 2,480. And three review drafts in Portuguese wrote that expenses
+were "above the opening value" — true numbers in a sentence that means
+nothing, and drafts the stricter rounding had been declining only by
+accident. Nothing here catches those; they are the reason the commentary is
+marked as Apple Intelligence's and sits beside figures that are not.
+
+**The live language tests ask three times.** They assert that the model can
+write something the checks accept in each language, and used to fail when one
+narration — three drafts — could not. That is the narrator working: it says
+so, and the slide keeps its own headline. With half of all drafts declined in
+one language, three in a row is one narration in eight, and a sweep before a
+commit that had not touched the package failed on it in German and Japanese.
+A narration is now asked for up to three times; nine drafts all declined
+still fails.
+
 ## What the instrument showed
 
 The Foundation Models instrument, recorded on 12 October 2026 with the
@@ -281,3 +379,5 @@ What it confirmed, and what it showed that nothing else had:
 | 9 Oct 2026 | Classifier guidance moved from instructions into the prompt (any instructions tripped the 27 guardrail on an invoice). |
 | 12 Oct 2026 | Locale phrase first; language order twice for prose; exact row counts for the budget advisor and categoriser; grounding for report and forecast narrators and number formats per language; forecast dates localised and the change given as a fact. |
 | 12 Oct 2026, after review | Documents cut by the model's own count; numbers read with their units, and an unreadable number rejected; ratios and counts given as ratios and counts; forecast dates Gregorian; the locale named without keywords; language order re-measured with an independent oracle; one draft policy for the three narrators; a refusal's explanation shown only if it is one; statements read on the device whatever is chosen. |
+| 12 Oct 2026, after the review of `73b2bd6` | Where a request runs is granted by the command, not assumed from the feature: Categorise from Attachment was gated and described as attachment insight (device) while it also ran the dividend extractor and the invoice analyser (the person's choice). No build could reach Private Cloud Compute, so nothing was sent. Every command that can leave the device now shows where it runs beside its control; the Settings sentence names what stays on the device by command. No prompt changed. |
+| 12 Oct 2026, from the survey that followed | Review slide: a change goes in words on its figure's line, and the instructions ask for it where one is given and forbid describing one where none is ("stable" included); a story that calls unchanged what the slide says changed is declined. Number check: a figure may be cut off at its precision as well as rounded to it; German T€ / T$ / TEUR read as thousands. Forecast prompt measured on a rising and a falling balance and left as it was. |

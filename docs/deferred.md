@@ -76,10 +76,34 @@ them are in [intelligence-prompts.md](intelligence-prompts.md).
 | Locale and language instructions | **Adopted**, placed where measurement says they work (224 drafts, judged by an oracle that is not the code's own). |
 | `GenerationOptions.ToolCallingMode` | **Adopted as far as it applies**: no feature registers a tool yet, so every request states `.disallowed`. |
 | Run-time schemas (`GenerationSchema`) | **Adopted** for the budget advisor and the categoriser, whose answers now have exactly as many rows as the request — as the `@Generable` type's own schema with one count changed (`LanguageModels.countedSchema`), not a second schema written by hand. |
-| `PrivateCloudComputeLanguageModel` | **Built, and switched off until Apple grants the entitlement.** Where a build can offer it, it is the default (the owner's decision) for reading one invoice or dividend statement at a time and for writing summaries; categorising, classifying and reading bank statements stay on the device. The choice is in Settings on every platform, each feature that can leave the device says so where it is used, and the daily allowance is shown there. It is compiled in only by the `PRIVATE_CLOUD_COMPUTE` condition, which must land with the `com.apple.developer.private-cloud-compute` entitlement, the help text and the privacy policy — `PrivateCloudComputeBuildTests` fails on any one without the others — and is never offered in the Simulator. **Nothing has run against the cloud model**: a request without the entitlement ends the process. That leaves three things only a granted entitlement can settle: whether the prompts behave as they do on the device; which reasoning level each feature should ask for (Apple: start at `moderate` and evaluate); and how the allowance holds up in a batch. Apple's request form answered "not currently enrolled in the App Store Small Business Program" for this account on 12 Oct, after the approval had arrived; the owner has a support request open. |
+| `PrivateCloudComputeLanguageModel` | **Built, and switched off until Apple grants the entitlement.** Where a build can offer it, it is the default (the owner's decision) for reading a receipt, invoice, dividend statement or attachment and for writing summaries; Auto-Categorise, an import's category suggestions, classifying and reading bank statements stay on the device. The choice is in Settings on every platform; each of the eight commands that can leave the device shows where it runs in the view that starts it (`IntelligenceCommand`, `IntelligenceRunsNote`; a request no command has named stays on the device) — beside the button where there is one to press, and in the sheet as it runs for the three that start when their sheet opens, which is the open decision below — and the daily allowance is shown there. It is compiled in only by the `PRIVATE_CLOUD_COMPUTE` condition, which must land with the `com.apple.developer.private-cloud-compute` entitlement, the help text and the privacy policy — `PrivateCloudComputeBuildTests` fails on any one without the others — and is never offered in the Simulator. **Nothing has run against the cloud model**: a request without the entitlement ends the process. That leaves three things only a granted entitlement can settle: whether the prompts behave as they do on the device; which reasoning level each feature should ask for (Apple: start at `moderate` and evaluate); and how the allowance holds up in a batch. Apple's request form answered "not currently enrolled in the App Store Small Business Program" for this account on 12 Oct, after the approval had arrived; the owner has a support request open. |
 | `SystemLanguageModel.Variant` | Read-only (no initialiser takes one). The installed model reports "AFM 3 Core Advanced"; nothing in the app depends on which. |
 | `Guardrails.permissiveContentTransformations` | Does not apply: Apple's safety article (re-read 12 Oct) says "This mode only works for generating a string value", and every request here is guided generation. |
 | Foundation Models instrument | Recorded on 12 Oct with the owner's consent to its unencrypted capture; see intelligence-prompts.md for what it showed. |
+
+**Open — the owner's decision: the first request off the device.** Three
+commands start reading when their sheet opens: Smart Import (once the files
+are picked), Suggest Budget, and a review deck (a story is asked for as each
+slide is shown). With Private Cloud Compute as the default, the first of
+those requests would leave the device before anything on screen had said so:
+the note is in the sheet and is drawn as the request is made, and the
+sentence in Settings is read only by someone who opens Settings. Three ways
+to settle it:
+
+- *Announce it once.* Before the first request of any kind that would leave
+  the device, say what Private Cloud Compute is and ask — Private Cloud
+  Compute as the default answer, "keep on this device" as the other. One
+  extra press, once, and every later request is an informed one.
+- *Wait for a press.* Those three commands do not start by themselves while
+  they would leave the device: the sheet shows the note and a button. One
+  extra press every time.
+- *Leave it.* The note beside each command and the sentence in Settings are
+  the disclosure.
+
+It is the owner's because making Private Cloud Compute the default was. No
+build can reach Private Cloud Compute until Apple assigns the entitlement, so
+nothing waits on the answer today, and `PrivateCloudComputeBuildTests` fails
+if the build condition is set while this paragraph is still headed "Open".
 
 **Decided by the owner, 12 Oct 2026, and not yet built at this commit** — they
 are the next changes, in this order:
@@ -104,7 +128,12 @@ builders (`FinancialReview.swift`, `InvestmentReview.swift`) hold 102 label
 literals that were never localized — on screen or in the prompt. With English
 labels the model answered a French reader in French 10 times in 16; with the
 same labels in French, 16 in 16. Localizing them fixes the deck on screen and
-the language at its root.
+the language at its root. The report documents have the same gap, found while
+reading for that change: a report's KPI, section and row labels
+(`ReportKPI.label` and its neighbours, built for 29 documents in
+`ReportBuilders.swift`, `AppModel+ReportDocuments.swift` and
+`AppModel+FYPack.swift`) are `String`s written in English and drawn verbatim,
+and they are what the report narrator is handed.
 
 ## 4 — Platform & HIG — deferred decisions
 

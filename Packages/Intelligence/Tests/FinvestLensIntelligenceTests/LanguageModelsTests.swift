@@ -435,6 +435,113 @@ struct ModelChoiceTests {
         }
     }
 
+    // The rule itself, with Private Cloud Compute assumed to be there and
+    // serving — which no build can yet be, and which is the only state in
+    // which the rule decides anything.
+
+    @Test("A request no command has spoken for stays on the device, whatever is chosen")
+    func unpermittedStaysOnDevice() {
+        for feature in IntelligenceFeature.allCases {
+            #expect(LanguageModels.route(feature, wanted: .privateCloud, permitted: [],
+                                         privateCloudServes: true) == .onDevice, "\(feature)")
+        }
+    }
+
+    @Test("A command's leave covers the features it names and no other")
+    func permissionIsPerFeature() {
+        let named: Set<IntelligenceFeature> = [.invoiceAnalyzer]
+        for feature in IntelligenceFeature.allCases {
+            let routed = LanguageModels.route(feature, wanted: .privateCloud, permitted: named,
+                                              privateCloudServes: true)
+            #expect(routed == (feature == .invoiceAnalyzer ? .privateCloud : .onDevice), "\(feature)")
+        }
+    }
+
+    @Test("Naming a feature that always runs on the device does not send it anywhere")
+    func permissionCannotWidenTheFeatureList() {
+        let everything = Set(IntelligenceFeature.allCases)
+        for feature in IntelligenceFeature.allCases {
+            let routed = LanguageModels.route(feature, wanted: .privateCloud, permitted: everything,
+                                              privateCloudServes: true)
+            #expect(routed == (feature.followsModelChoice ? .privateCloud : .onDevice), "\(feature)")
+        }
+    }
+
+    @Test("Permitted or not, a cloud that is not serving and a choice of the device both mean the device")
+    func permissionDoesNotOverrideTheChoice() {
+        let everything = Set(IntelligenceFeature.allCases)
+        for feature in IntelligenceFeature.allCases {
+            #expect(LanguageModels.route(feature, wanted: .privateCloud, permitted: everything,
+                                         privateCloudServes: false) == .onDevice, "\(feature)")
+            #expect(LanguageModels.route(feature, wanted: .onDevice, permitted: everything,
+                                         privateCloudServes: true) == .onDevice, "\(feature)")
+        }
+    }
+
+    @Test("A request is routed by the leave of the command it is made in")
+    func requestsFollowTheCommandInProgress() async {
+        // The line that joins the task's leave to the route. Without it the
+        // rule and the task-local are each correct and nothing uses them:
+        // the six tests above passed with `resolve` reading the feature
+        // alone. Private Cloud Compute is assumed chosen and serving.
+        await LanguageModels.$choiceOverride.withValue(.privateCloud) {
+            for feature in IntelligenceFeature.allCases {
+                #expect(LanguageModels.requestRoute(for: feature, privateCloudServes: true) == .onDevice,
+                        "\(feature), outside any command")
+            }
+            await LanguageModels.permittingOffDevice([.invoiceAnalyzer]) {
+                #expect(LanguageModels.requestRoute(for: .invoiceAnalyzer, privateCloudServes: true) == .privateCloud)
+                #expect(LanguageModels.requestRoute(for: .dividendExtractor, privateCloudServes: true) == .onDevice)
+                #expect(LanguageModels.requestRoute(for: .attachmentInsight, privateCloudServes: true) == .onDevice)
+                // And in this build, where it does not serve, nothing does.
+                #expect(LanguageModels.requestRoute(for: .invoiceAnalyzer) == .onDevice)
+            }
+            // What a view is told agrees with what a permitted request does.
+            for feature in IntelligenceFeature.allCases {
+                let shown = LanguageModels.route(feature, wanted: .privateCloud, permitted: [feature],
+                                                 privateCloudServes: true)
+                let sent = await LanguageModels.permittingOffDevice([feature]) {
+                    LanguageModels.requestRoute(for: feature, privateCloudServes: true)
+                }
+                #expect(shown == sent, "\(feature)")
+            }
+        }
+    }
+
+    @Test("A command's leave lasts as long as the command, and reaches the work it starts")
+    func permissionIsScoped() async {
+        #expect(LanguageModels.permittedOffDevice == nil)
+        let named: Set<IntelligenceFeature> = [.invoiceAnalyzer, .dividendExtractor]
+        await LanguageModels.permittingOffDevice(named) {
+            #expect(LanguageModels.permittedOffDevice == named)
+            // Match Attachments reads its files in a task group.
+            let inChildren = await withTaskGroup(of: Set<IntelligenceFeature>?.self) { group in
+                for _ in 0..<3 { group.addTask { LanguageModels.permittedOffDevice } }
+                var seen: [Set<IntelligenceFeature>?] = []
+                for await value in group { seen.append(value) }
+                return seen
+            }
+            #expect(inChildren == [named, named, named])
+            // Work that leaves the command's structure leaves its leave behind.
+            let detached = await Task.detached { LanguageModels.permittedOffDevice }.value
+            #expect(detached == nil)
+        }
+        #expect(LanguageModels.permittedOffDevice == nil)
+    }
+
+    @Test("A command inside another can narrow what may leave, never widen it")
+    func nestedPermissionNarrows() async {
+        await LanguageModels.permittingOffDevice([.dividendExtractor]) {
+            await LanguageModels.permittingOffDevice([.invoiceAnalyzer, .dividendExtractor]) {
+                #expect(LanguageModels.permittedOffDevice == [.dividendExtractor])
+            }
+            await LanguageModels.permittingOffDevice([.budgetAdvisor]) {
+                #expect(LanguageModels.permittedOffDevice == [])
+            }
+            #expect(LanguageModels.permittedOffDevice == [.dividendExtractor])
+        }
+    }
+
     @Test("A stored preference this build cannot honour reads as the build's default")
     func storedChoice() {
         #expect(LanguageModels.choice(stored: nil) == .onDevice)

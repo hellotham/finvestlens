@@ -57,7 +57,7 @@ enum FigureGrounding {
         /// The request's currency — a code after the number or a symbol
         /// before it. An amount, so never a day, a month or a year.
         case currency
-        /// "k", "thousand", "mil", "Tsd", "千": the number counts thousands.
+        /// "k", "thousand", "mil", "Tsd", "T€", "千": the number counts thousands.
         case thousands
         /// "m", "million", "Mio", "百万".
         case millions
@@ -122,6 +122,39 @@ enum FigureGrounding {
         var currencyCode: String = ""
     }
 
+    /// Whether `text` states one of `percentages` — as a percentage, in any
+    /// of the forms a percentage is read in, rounded or not.
+    static func quotesPercentage(_ text: String, anyOf percentages: [Decimal],
+                                 locale: Locale = LanguageModels.personLocale) -> Bool {
+        let continental = writesDecimalComma(locale)
+        let wanted = percentages.map { abs($0) }
+        return runs(in: text).contains { run in
+            run.unit == .percent && readings(of: run.text, continental: continental).contains { token in
+                wanted.contains { agrees($0, with: token.value, places: token.decimalPlaces) }
+            }
+        }
+    }
+
+    /// Whether `written`, a number given to `places` decimals and counting
+    /// `scale` each, is `fact` as someone would write it at that precision:
+    /// rounded to it, or cut off at it.
+    ///
+    /// Cut off, as well as rounded, because that is how figures are
+    /// shortened in practice and it invents nothing: 31,150.40 is "31.2k"
+    /// rounded and "31.1k" with the rest dropped, and 66,610.82 is "66,611"
+    /// and "66,610". Holding the model to rounding alone declined twelve of
+    /// forty-eight drafts of one slide on 12 October 2026 for a "31.1k",
+    /// with every other number in them right. What it still does not admit
+    /// is a figure *above* what rounding gives — "12.49k" for 12,480.55 —
+    /// or one that is simply somewhere near.
+    static func agrees(_ fact: Decimal, with written: Decimal, places: Int, scale: Decimal = 1) -> Bool {
+        let difference = fact - written * scale
+        if abs(difference) <= halfUnit(at: places) * scale { return true }
+        var lastPlace = Decimal(1)
+        for _ in 0..<places { lastPlace /= 10 }
+        return difference >= 0 && difference < lastPlace * scale
+    }
+
     /// Whether every number in `text` is one the facts support.
     static func isGrounded(_ text: String, facts: Facts, locale: Locale = LanguageModels.personLocale) -> Bool {
         let continental = writesDecimalComma(locale)
@@ -174,7 +207,6 @@ enum FigureGrounding {
         }
 
         func tokenSupported(_ token: Token, _ unit: Unit) -> Bool {
-            let tolerance = halfUnit(at: token.decimalPlaces)
             let whole = token.decimalPlaces == 0 && !token.hasGrouping
             // The request's own words may be repeated, unit and all.
             if labelled.contains(where: {
@@ -182,8 +214,8 @@ enum FigureGrounding {
             }) {
                 return true
             }
-            let isFigure = figures.contains { abs($0 - token.value) <= tolerance }
-            let isPercentage = percentages.contains { abs($0 - token.value) <= tolerance }
+            let isFigure = figures.contains { agrees($0, with: token.value, places: token.decimalPlaces) }
+            let isPercentage = percentages.contains { agrees($0, with: token.value, places: token.decimalPlaces) }
             switch unit {
             case .percent:
                 // One of the percentages given, and nothing else: not a
@@ -192,7 +224,9 @@ enum FigureGrounding {
                 return isPercentage
             case .thousands, .millions, .myriads, .hundredMillions:
                 guard let scale = unit.scale else { return false }
-                return figures.contains { abs($0 - token.value * scale) <= tolerance * scale }
+                return figures.contains {
+                    agrees($0, with: token.value, places: token.decimalPlaces, scale: scale)
+                }
             case .currency:
                 // An amount, so not a day, a month, a year or a count.
                 return isFigure
@@ -433,6 +467,18 @@ enum FigureGrounding {
             if next == nil || !(next!.isLetter) { return first == "k" ? .thousands : .millions }
         }
         let code = currencyCode.lowercased()
+        // German accounts count thousands with a capital T in front of the
+        // currency: "66,6 T€", "250 TEUR", "66.61 T$". Asked for thousands
+        // "as k", the 27 model wrote a German reader "66.61 T$" in two drafts
+        // of eight (12 October 2026) and both were declined as figures
+        // nobody had listed. Read from the text as written, capitals and
+        // all, so that no word beginning with a t is taken for it — and not
+        // in a book kept in paʻanga, whose own symbol is T$.
+        if code != "top", cursor < characters.count, characters[cursor] == "T" {
+            let rest = String(characters[(cursor + 1)..<min(characters.count, cursor + 5)])
+            if let symbol = rest.first, "$€£¥".contains(symbol) { return .thousands }
+            if rest.hasPrefix("EUR") || (!code.isEmpty && rest.hasPrefix(code.uppercased())) { return .thousands }
+        }
         if !code.isEmpty, after.hasPrefix(code) || before.hasSuffix(code) { return .currency }
         if let symbol = before.last, "$€£¥₹₩".contains(symbol) { return .currency }
         if after.hasPrefix("澳元") || after.hasPrefix("美元") || after.hasPrefix("欧元") || after.hasPrefix("円")

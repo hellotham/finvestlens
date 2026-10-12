@@ -44924,49 +44924,49 @@
         }
       }
     },
-    "Invoices and dividend statements you ask Apple Intelligence to read, and the figures it writes about, are sent to Apple’s Private Cloud Compute to process. Apple says what is sent there isn’t stored or made accessible to Apple. Categorising and reading bank statements always run on this device.": {
+    "Match Attachments, Categorise from Attachment and Split from Invoice send the documents they read to Apple’s Private Cloud Compute to process. Smart Import sends the invoices and dividend statements it finds, and commentary on reports and reviews, budget suggestions and the forecast outlook send the figures they are written from. Apple says what is sent there isn’t stored or made accessible to Apple. A PDF imported as a bank statement is read on this device, and Auto-Categorise and an import’s category suggestions always run on it.": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Rechnungen und Dividendenabrechnungen, die Apple Intelligence auf Ihren Wunsch liest, und die Zahlen, über die es schreibt, werden zur Verarbeitung an Apples Private Cloud Compute gesendet. Laut Apple wird das Gesendete weder gespeichert noch Apple zugänglich gemacht. Das Kategorisieren und das Lesen von Kontoauszügen erfolgen immer auf diesem Gerät."
+            "value": "„Anhänge zuordnen“, „Aus Anhang kategorisieren“ und „Aus Rechnung aufteilen“ senden die Dokumente, die sie lesen, zur Verarbeitung an Apples Private Cloud Compute. „Intelligenter Import“ sendet die Rechnungen und Dividendenabrechnungen, die er findet, und Kommentare zu Berichten, Budgetvorschläge und der Ausblick der Prognose senden die Zahlen, aus denen sie geschrieben werden. Laut Apple wird das Gesendete weder gespeichert noch Apple zugänglich gemacht. Ein als Kontoauszug importiertes PDF wird auf diesem Gerät gelesen, und „Automatisch kategorisieren“ sowie die Kategorievorschläge beim Import laufen immer auf diesem Gerät."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Las facturas y los informes de dividendos que pides a Apple Intelligence que lea, y las cifras sobre las que escribe, se envían a Private Cloud Compute de Apple para su procesamiento. Apple afirma que lo enviado no se almacena ni queda accesible para Apple. La categorización y la lectura de extractos bancarios siempre se ejecutan en este dispositivo."
+            "value": "«Emparejar adjuntos», «Categorizar desde el adjunto» y «Desglosar desde la factura» envían los documentos que leen a Private Cloud Compute de Apple para su procesamiento. «Importación inteligente» envía las facturas y los informes de dividendos que encuentra, y los comentarios de informes y revisiones, las sugerencias de presupuesto y las perspectivas de la previsión envían las cifras a partir de las cuales se redactan. Apple afirma que lo enviado no se almacena ni queda accesible para Apple. Un PDF importado como extracto bancario se lee en este dispositivo, y «Categorizar automáticamente» y las sugerencias de categorías de una importación siempre se ejecutan en él."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Les factures et les avis de dividendes que vous demandez à Apple Intelligence de lire, ainsi que les chiffres sur lesquels elle écrit, sont envoyés à Private Cloud Compute d’Apple pour être traités. Apple indique que ce qui y est envoyé n’est ni stocké ni rendu accessible à Apple. La catégorisation et la lecture des relevés bancaires s’effectuent toujours sur cet appareil."
+            "value": "« Associer les pièces jointes », « Catégoriser depuis la pièce jointe » et « Ventiler depuis la facture » envoient les documents qu’ils lisent à Private Cloud Compute d’Apple pour y être traités. « Import intelligent » envoie les factures et les avis de dividendes qu’il trouve, et les commentaires des rapports et des revues, les propositions de budget et les perspectives de la prévision envoient les chiffres à partir desquels ils sont rédigés. Apple indique que ce qui y est envoyé n’est ni stocké ni rendu accessible à Apple. Un PDF importé comme relevé bancaire est lu sur cet appareil, et « Catégoriser automatiquement » ainsi que les propositions de catégories d’un import s’exécutent toujours sur cet appareil."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Le fatture e gli avvisi di dividendo che chiedi ad Apple Intelligence di leggere, e le cifre di cui scrive, vengono inviati a Private Cloud Compute di Apple per l’elaborazione. Apple dichiara che quanto inviato non viene conservato né reso accessibile ad Apple. La categorizzazione e la lettura degli estratti conto vengono sempre eseguite su questo dispositivo."
+            "value": "«Abbina allegati», «Categorizza dall’allegato» e «Suddividi dalla fattura» inviano i documenti che leggono a Private Cloud Compute di Apple per l’elaborazione. «Importazione intelligente» invia le fatture e gli avvisi di dividendo che trova, e i commenti a resoconti e analisi, i suggerimenti di budget e le prospettive della previsione inviano le cifre da cui vengono scritti. Apple dichiara che quanto inviato non viene conservato né reso accessibile ad Apple. Un PDF importato come estratto conto viene letto su questo dispositivo, e «Categorizza automaticamente» e i suggerimenti di categoria di un’importazione vengono sempre eseguiti su questo dispositivo."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Apple Intelligence に読み取りを依頼した請求書と配当通知、および Apple Intelligence が文章にする数値は、処理のため Apple の Private Cloud Compute に送信されます。Apple によると、送信された内容は保存されず、Apple がアクセスすることもできません。分類と銀行明細の読み取りは常にこのデバイス上で行われます。"
+            "value": "「添付ファイルを照合」「添付ファイルから分類」「請求書から分割」は、読み取る書類を処理のため Apple の Private Cloud Compute に送信します。「スマート読み込み」は見つけた請求書と配当通知を送信し、レポートとレビューの解説、予算の提案、予測の見通しは、その元になる数値を送信します。Apple によると、送信された内容は保存されず、Apple がアクセスすることもできません。銀行明細として読み込んだ PDF はこのデバイス上で読み取られ、「自動分類」と読み込み時のカテゴリ提案は常にこのデバイス上で行われます。"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "As faturas e os avisos de dividendos que você pede à Apple Intelligence para ler, e os valores sobre os quais ela escreve, são enviados ao Private Cloud Compute da Apple para processamento. A Apple afirma que o que é enviado não é armazenado nem fica acessível à Apple. A categorização e a leitura de extratos bancários são sempre executadas neste dispositivo."
+            "value": "«Associar anexos», «Categorizar pelo anexo» e «Dividir a partir da fatura» enviam os documentos que leem ao Private Cloud Compute da Apple para processamento. A «Importação inteligente» envia as faturas e os avisos de dividendos que encontra, e os comentários de relatórios e análises, as sugestões de orçamento e as perspectivas da previsão enviam os valores a partir dos quais são escritos. A Apple afirma que o que é enviado não é armazenado nem fica acessível à Apple. Um PDF importado como extrato bancário é lido neste dispositivo, e «Categorizar automaticamente» e as sugestões de categorias de uma importação são sempre executados nele."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "你让 Apple 智能读取的发票和股息通知，以及它所描述的数字，会发送到 Apple 的 Private Cloud Compute 进行处理。Apple 表示，发送的内容不会被存储，Apple 也无法访问。分类和银行对账单的读取始终在此设备上运行。"
+            "value": "「匹配附件」「根据附件分类」和「按发票拆分」会把所读取的文稿发送到 Apple 的 Private Cloud Compute 进行处理。「智能导入」会发送它找到的发票和股息通知；报表和综述的评述、预算建议和预测展望会发送其所依据的数字。Apple 表示，发送的内容不会被存储，Apple 也无法访问。作为银行对账单导入的 PDF 在此设备上读取，「自动分类」和导入时的类别推荐也始终在此设备上运行。"
           }
         }
       }

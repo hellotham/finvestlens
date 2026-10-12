@@ -342,7 +342,7 @@ struct ReportGallery: View {
                             .scaledFont(.headline)
                         // Two `Text`s, not one over a ternary of literals:
                         // that would be a `String`, and never localized.
-                        (LanguageModels.leavesDevice(.reviewNarrator)
+                        (IntelligenceCommand.reviewStory.leavesDevice
                          ? Text("The period as a results deck — one message per slide, charts, callouts, insights from Apple Intelligence")
                          : Text("The period as a results deck — one message per slide, charts, callouts, on-device insights"))
                             .scaledFont(.caption)
@@ -353,6 +353,12 @@ struct ReportGallery: View {
                     .background(.tint.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
                 }
                 .buttonStyle(.plain)
+                // A deck asks for a story as each slide is shown, so the
+                // card that opens it is the place to say where the slide's
+                // figures go. Beside the card rather than in it: the note
+                // can carry a button of its own.
+                IntelligenceRunsNote(.reviewStory)
+                    .frame(maxWidth: 440, alignment: .leading)
                 Button {
                     passportShown = true
                 } label: {
@@ -384,6 +390,8 @@ struct ReportGallery: View {
                         .background(.tint.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
                     }
                     .buttonStyle(.plain)
+                    IntelligenceRunsNote(.reviewStory)
+                        .frame(maxWidth: 440, alignment: .leading)
                 }
                 Text("Tax Time").scaledFont(.title2).fontWeight(.semibold)
                 Button {

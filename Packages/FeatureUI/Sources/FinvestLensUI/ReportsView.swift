@@ -192,8 +192,9 @@ struct ForecastView: View {
         wiAmount = ""; wiLabel = ""; showAddWhatIf = false
     }
 
-    /// Plain-language outlook on the forecast, written by the on-device
-    /// model from the computed numbers (`FR-AI-06`).
+    /// Plain-language outlook on the forecast, written from the computed
+    /// numbers (`FR-AI-06`) — on the model the person chose, which the bar
+    /// says when that is not this device.
     private var outlookBar: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
@@ -206,6 +207,7 @@ struct ForecastView: View {
                 .scaledFont(.caption)
                 .disabled(generatingOutlook)
             }
+            IntelligenceRunsNote(.forecast)
             if let insights {
                 Text(insights.headline).scaledFont(.callout).fontWeight(.medium)
                 ForEach(insights.insights, id: \.self) { insight in
