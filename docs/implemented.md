@@ -4306,3 +4306,99 @@ Not done, and why: the dividend extractor, the attachment reader and the
 classifier are not shown pictures — not measured. Nothing here has run on
 Private Cloud Compute, where a picture would be sent as the text is.
 
+
+## A model of the person's own, run by MLX (12 Oct 2026)
+
+The third of the three adoptions the owner decided on, and the one their
+rule was written for: *the publisher provides no APIs and stores no data;
+everything is supplied by the person using the app.* Modelled on HelloNotes,
+which had worked the same thing out against the App Sandbox.
+
+- **What a person does.** Settings ▸ Apple Intelligence takes a folder of
+  MLX models — on a Mac the panel opens at `~/.cache/huggingface/hub`, where
+  other MLX tools keep theirs — and lists the ones the app can run, each
+  with what its weights weigh. One picker says where everything runs: on
+  this device with Apple's model, on Private Cloud Compute where a build
+  offers it, or on one of those models by name. The model chosen serves
+  every feature. Nothing is bundled, recommended or downloaded; the folder
+  is read and never written.
+- **Where it lives.** `SuppliedModelFolder` (Intelligence) reads a folder: a
+  Hub cache's `models--org--name/snapshots/<revision>` or a plain model
+  folder, weights weighed through the cache's links. `SuppliedModelStore`
+  (FeatureUI) keeps the folder as a security-scoped bookmark, the choice,
+  and whether it can run now, and hands the model to `LanguageModels.supply`.
+  What runs it is `MLXModelLoader`, in the **app target** — MLX's Metal
+  library is built only by Xcode, so no package links it — behind
+  `SuppliedModelLoader`. The loader is given a downloader that refuses.
+- **The seam.** `ModelChoice.supplied` routes every feature to the model
+  where it can serve and to Apple's where it cannot; it needs no command's
+  leave, because nothing leaves. It is declared as guided generation only.
+- **Four things measured, and built on the measurement**
+  (intelligence-prompts.md has the tables):
+  1. MLX holds an answer to its schema and never shows the model the
+     schema, so every `@Guide` went unread. The schema is written into the
+     instructions (`SchemaGuide`) — as JSON Schema in declared order. The
+     first version wrote a list in words, which on eight invented documents
+     scored *below saying nothing* on one model (31 of 44 against 35) and
+     the JSON Schema 44 of 44 on both.
+  2. Apple's locale phrase, first as Apple's model needs it, cost another
+     model its answers (six wrong in 152, none in 304 elsewhere); for a
+     supplied model it goes last.
+  3. An answer has a token ceiling by feature, so a model that derails
+     fails in bounded time instead of writing for three minutes.
+  4. A supplied model's answer is put right of whitespace spelt out as text
+     before it is read, and the statement reader reads a slice again in
+     halves when an answer shows it lost its place. A 120-row statement went
+     from 74–106 rows kept to 120.
+- **It is never called Apple Intelligence.** Seventeen sentences named
+  Apple Intelligence as the one reading, writing, declining or taking too
+  long. Each has a second wording for the person's own model — chosen by
+  which model would answer, or for a failure which one was last asked — in
+  eight languages. One of them (`Let Apple Intelligence propose a category…`)
+  had never been localized at all: `reason ?? "literal"` is a `String`.
+- **Acknowledgements.** MLX and what it needs are ten more packages in the
+  app, MIT and Apache-2.0. Settings ▸ Acknowledgements lists what is linked,
+  on every platform, and **Licences…** shows the licence and notice files
+  themselves — fifteen texts for seventeen works, copied from the package
+  checkouts into the app bundle by `scripts/build-third-party-licenses.py`.
+  (The first version showed a name, an SPDX identifier and a link, which is
+  not a notice; the review said so.)
+- **What two independent reviews of the change found, and what was done.**
+  A second reading whose half failed lost the rows the first reading had —
+  it is held now until both halves are in, and the logic takes its reader as
+  a parameter so that eight scripted cases test it. MLX reports a model that
+  is *loading* as "downloading", which the loader read as unusable: opening
+  Settings during a first request sent everything after it to Apple's model.
+  A model whose folder was changed, or which left its folder, was never let
+  go of. The reason under the picker was not redrawn when it changed, and
+  buttons elsewhere went stale when the person switched models in another
+  window. A request that got no further than Apple's model's own refusal
+  was described as the person's model's. Someone with no Apple Intelligence
+  whose own model could not serve was told about Apple Intelligence. A
+  half-arrived revision hid the whole one beside it; weights in numbered
+  parts counted as a model with one part present; a file kept online by a
+  provider other than iCloud was not noticed. Three more tooltips built as
+  `reason ?? "literal"` had never been localized. All fixed, each with a
+  test where a test can reach it.
+- **What it costs a build.** Every `xcodebuild` passes
+  `-skipPackagePluginValidation` (mlx-swift's `CudaBuild` plug-in), and a
+  fresh machine needs the Metal toolchain; CI, the localization gate, the
+  release script, the skills and the documented commands all carry both.
+- **A launch that hosts tests opens nothing.** The live harness runs inside
+  the app. Xcode launches it like any other launch, and session restore
+  would have reopened the last book — here, the real one — so `TestHost`
+  keeps a test host from reopening a book or asking for notifications.
+
+Tests. In the packages: the folder as a cache and as plain folders; routing;
+the schema guide word for word, stable between calls, still the schema, and
+complete for every answer type; the order of a supplied model's
+instructions; the answer ceilings; tidying and debris; failures worded for
+either model; the store with a stand-in loader (what is listed, handed over,
+remembered across a launch, let go of); every sentence that names Apple
+Intelligence accounted for, with both mutations failing; and the
+acknowledgements held against `Package.resolved`. In the app's own target:
+`SuppliedModelLiveTests`, every feature on a real model.
+
+Not done, and why: deferred.md §3a lists it — pictures, reasoning, a
+statement reader tuned for a large window, reading again for anything but a
+statement, prose in another language, and any run on an iPhone or iPad.

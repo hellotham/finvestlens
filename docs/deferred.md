@@ -105,8 +105,8 @@ build can reach Private Cloud Compute until Apple assigns the entitlement, so
 nothing waits on the answer today, and `PrivateCloudComputeBuildTests` fails
 if the build condition is set while this paragraph is still headed "Open".
 
-**Decided by the owner, 12 Oct 2026, and not yet built at this commit** — they
-are the next changes, in this order:
+**Decided by the owner, 12 Oct 2026** — all three since adopted, in this
+order, each with what was deliberately left out:
 
 - **Images in prompts, with Vision's `OCRTool` and `BarcodeReaderTool`** —
   *adopted 12 Oct, after this list was written, for the invoice reader.*
@@ -132,11 +132,42 @@ are the next changes, in this order:
   takes 2.8 s (intelligence-prompts.md). What is left for a profile to do is
   offer tools only when the request has an image for them, which belongs to
   the item above.
-- **A model the person supplies** (`MLXLanguageModel` from a folder they
-  choose). The owner's rule covers this one in particular: *the publisher
-  provides no APIs and stores no data; everything is supplied by the person
-  using the app.* So no model is bundled, no model is downloaded by the app,
-  and there is no key or endpoint of the publisher's.
+- **A model the person supplies** — *adopted 12 Oct, after this list was
+  written.* Settings ▸ Apple Intelligence takes a folder of MLX models and
+  lists the ones the app can run; the one chosen there does everything Apple
+  Intelligence does here, on the device (`SuppliedModelStore`,
+  `MLXModelLoader`, architecture.md §11). The owner's rule covers this one
+  in particular — *the publisher provides no APIs and stores no data;
+  everything is supplied by the person using the app* — so no model is
+  bundled, the app downloads none (the loader is handed a downloader that
+  refuses, and is never asked for one by a model given as a folder), and
+  there is no key or endpoint of the publisher's. **Deliberately not done:**
+  - *Pictures.* A supplied model is declared as guided generation and
+    nothing more, so the invoice reader reads text for it, as it does on the
+    iOS Simulator. Whether a given open model sees, and whether Vision's
+    tools work through MLX's tool calling, has not been measured.
+  - *Reasoning.* A model that can reason before it answers is not asked to:
+    it is declared without that capability. It would be slower, and it has
+    not been measured against what the features need.
+  - *A statement reader tuned for it.* A statement is still read a thousand
+    characters at a time, which is right for Apple's model and slow on a
+    large one: 120 rows took eight to nine and a half minutes on one
+    26-billion-parameter model and fourteen on another, every row kept
+    (intelligence-prompts.md). A
+    larger slice for a larger window has not been tried.
+  - *Reading again, for anything but a statement.* An answer that loses its
+    place is read again in halves by the statement reader only. An invoice
+    or a budget that comes back wrong is checked as it always was and not
+    asked for a second time.
+  - *Prose in the reader's language.* Every request made of a supplied model
+    so far was in English. The language order is sent as it is to Apple's
+    model; whether an open model obeys it has not been measured.
+  - *iPhone and iPad.* The code is the same and builds for both, and MLX
+    cannot run in the Simulator, so nothing there has been run. A phone has
+    room for a small model only, and the app says so when one outweighs a
+    quarter of the device's memory.
+  - *Removing or fetching a model.* The folder is the person's, and other
+    tools' besides: the app reads it and writes nothing to it.
 
 **The review decks are in the reader's language** (done 12 Oct, after the
 commit that set the order above — it was the one change already in hand).

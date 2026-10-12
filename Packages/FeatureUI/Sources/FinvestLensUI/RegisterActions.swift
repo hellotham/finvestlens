@@ -67,8 +67,10 @@ struct RegisterActions: View {
                 model.smartImportRequested = true
             }
             .disabled(model.smartImportUnavailableReason != nil)
-            .help(model.smartImportUnavailableReason
-                  ?? "Import bank statements, dividend statements, and invoices — each PDF is identified and handled automatically")
+            // A `Text` either way: `reason ?? "literal"` is a `String`, which
+            // `.help` shows as written — in English, in every language.
+            .help(model.smartImportUnavailableReason.map { Text(verbatim: $0) }
+                  ?? Text("Import bank statements, dividend statements, and invoices — each PDF is identified and handled automatically"))
         }
         Button("Auto-Categorise…", systemImage: "sparkles") {
             // The sheet categorises the selection when there is one. The
@@ -84,8 +86,8 @@ struct RegisterActions: View {
                 model.presentedPanel = .matchAttachments
             }
             .disabled(model.matchAttachmentsUnavailableReason != nil)
-            .help(model.matchAttachmentsUnavailableReason
-                  ?? "Pick receipts and statements — each is matched to its transaction, linked, and categorised")
+            .help(model.matchAttachmentsUnavailableReason.map { Text(verbatim: $0) }
+                  ?? Text("Pick receipts and statements — each is matched to its transaction, linked, and categorised"))
         }
     }
 }

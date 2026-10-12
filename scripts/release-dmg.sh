@@ -96,6 +96,7 @@ xcodebuild archive \
     -configuration Release \
     -destination 'generic/platform=macOS' \
     -archivePath "$ARCHIVE" \
+    -skipPackagePluginValidation \
     -allowProvisioningUpdates \
     DEVELOPMENT_TEAM="$TEAM_ID" \
     CODE_SIGN_STYLE=Automatic \

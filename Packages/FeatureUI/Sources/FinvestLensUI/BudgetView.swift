@@ -106,7 +106,9 @@ struct BudgetView: View {
                 if model.isIntelligenceAvailable(for: .budgetAdvisor) {
                     ToolbarItem {
                         Button("Suggest Budget", systemImage: "sparkles") { showingSuggest = true }
-                            .help("Propose a monthly budget from your spending with Apple Intelligence")
+                            .help(Text(for: .budgetAdvisor,
+                                       apple: "Propose a monthly budget from your spending with Apple Intelligence",
+                                       own: "Propose a monthly budget from your spending with your model"))
                             .sheet(isPresented: $showingSuggest) {
                                 BudgetSuggestSheet(model: model)
                             }

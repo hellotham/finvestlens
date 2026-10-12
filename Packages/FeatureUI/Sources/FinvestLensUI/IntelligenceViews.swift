@@ -90,8 +90,14 @@ struct AutoCategorizeSheet: View {
                                           systemImage: "sparkles")
                                 }
                                 .disabled(suggesting || !model.isIntelligenceAvailable(for: .transactionCategorizer))
+                                // A `Text` either way: `reason ?? "literal"`
+                                // is a `String`, which `.help` shows as it is
+                                // written — in English, in every language.
                                 .help(model.intelligenceUnavailableReason(for: .transactionCategorizer)
-                                      ?? "Let Apple Intelligence propose a category for each transaction")
+                                    .map { Text(verbatim: $0) }
+                                      ?? Text(for: .transactionCategorizer,
+                                              apple: "Let Apple Intelligence propose a category for each transaction",
+                                              own: "Let your model propose a category for each transaction"))
                                 let attachmentCount = pickerItems
                                     .filter { model.hasLinkedDocument($0.transactionID) }.count
                                 if attachmentCount > 0 {
@@ -352,7 +358,9 @@ struct DividendImportSheet: View {
                     Section {
                         HStack(spacing: 10) {
                             ProgressView().controlSize(.small)
-                            Text("Reading statement with Apple Intelligence…")
+                            Text(for: .dividendExtractor,
+                                 apple: "Reading statement with Apple Intelligence…",
+                                 own: "Reading statement with your model…")
                                 .foregroundStyle(.secondary)
                         }
                         // Smart Import hands this sheet a statement it has
@@ -513,7 +521,9 @@ struct BudgetSuggestSheet: View {
                 } else {
                     VStack(spacing: 12) {
                         ProgressView()
-                        Text("Analysing six months of spending with Apple Intelligence…")
+                        Text(for: .budgetAdvisor,
+                             apple: "Analysing six months of spending with Apple Intelligence…",
+                             own: "Analysing six months of spending with your model…")
                             .foregroundStyle(.secondary)
                         IntelligenceRunsNote(.budget)
                             .frame(maxWidth: 420)

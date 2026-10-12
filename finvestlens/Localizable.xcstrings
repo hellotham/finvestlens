@@ -213,6 +213,53 @@
         }
       }
     },
+    "%@ can’t be used right now.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ kann gerade nicht verwendet werden."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ no se puede usar en este momento."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ ne peut pas être utilisé pour le moment."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ non può essere usato in questo momento."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ は現在使用できません。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ não pode ser usado no momento."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 目前无法使用。"
+          }
+        }
+      }
+    },
     "%@ cost basis": {
       "extractionState": "manual",
       "localizations": {
@@ -397,6 +444,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ 没有该证券的公司数据。"
+          }
+        }
+      }
+    },
+    "%@ isn’t in the models folder any more. Choose another in Settings ▸ Apple Intelligence.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ befindet sich nicht mehr im Modellordner. Wählen Sie unter Einstellungen ▸ Apple Intelligence ein anderes aus."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ ya no está en la carpeta de modelos. Elige otro en Ajustes ▸ Apple Intelligence."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ ne se trouve plus dans le dossier des modèles. Choisissez-en un autre dans Réglages ▸ Apple Intelligence."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ non è più nella cartella dei modelli. Scegline un altro in Impostazioni ▸ Apple Intelligence."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ はモデルフォルダにもうありません。「設定 ▸ Apple Intelligence」で別のモデルを選択してください。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ não está mais na pasta de modelos. Escolha outro em Ajustes ▸ Apple Intelligence."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 已不在模型文件夹中。请在「设置 ▸ Apple 智能」中选取其他模型。"
           }
         }
       }
@@ -1688,6 +1782,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@：净额 %@，税收抵免 %@"
+          }
+        }
+      }
+    },
+    "%@’s weights are %@, on a device with %@ of memory. It may fail to load, or be stopped while it runs.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Gewichte von %1$@ sind %2$@ groß – auf einem Gerät mit %3$@ Arbeitsspeicher. Das Modell lässt sich möglicherweise nicht laden oder wird während der Ausführung beendet."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los pesos de %1$@ ocupan %2$@, en un dispositivo con %3$@ de memoria. Puede que el modelo no se cargue o que se detenga mientras se ejecuta."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les poids de %1$@ pèsent %2$@, sur un appareil doté de %3$@ de mémoire. Le modèle risque de ne pas se charger ou d’être arrêté en cours d’exécution."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I pesi di %1$@ occupano %2$@, su un dispositivo con %3$@ di memoria. Il modello potrebbe non caricarsi o essere interrotto durante l’esecuzione."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ の重みは %2$@ あり、このデバイスのメモリは %3$@ です。読み込めないか、実行中に停止されることがあります。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Os pesos de %1$@ ocupam %2$@, em um dispositivo com %3$@ de memória. O modelo pode não carregar ou ser interrompido durante a execução."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ 的权重为 %2$@，而此设备的内存为 %3$@。模型可能无法载入，或在运行时被停止。"
           }
         }
       }
@@ -9016,49 +9157,49 @@
         }
       }
     },
-    "**Suggest Budget** proposes monthly figures from six months of spending, using Apple Intelligence on this device.": {
+    "**Suggest Budget** proposes monthly figures from six months of spending, using Apple Intelligence — or a model of your own — on this device.": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "**Budget vorschlagen** schlägt Monatsbeträge aus sechs Monaten Ausgaben vor, mit Apple Intelligence auf diesem Gerät."
+            "value": "**Budget vorschlagen** schlägt Monatsbeträge aus sechs Monaten Ausgaben vor, mit Apple Intelligence — oder einem eigenen Modell — auf diesem Gerät."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "**Sugerir presupuesto** propone cifras mensuales a partir de seis meses de gastos, usando Apple Intelligence en este dispositivo."
+            "value": "**Sugerir presupuesto** propone cifras mensuales a partir de seis meses de gastos, usando Apple Intelligence —o un modelo propio— en este dispositivo."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "**Proposer un budget** suggère des montants mensuels d’après six mois de dépenses, avec Apple Intelligence sur cet appareil."
+            "value": "**Proposer un budget** suggère des montants mensuels d’après six mois de dépenses, avec Apple Intelligence — ou un modèle à vous — sur cet appareil."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "**Suggerisci budget** propone importi mensili da sei mesi di spese, con Apple Intelligence su questo dispositivo."
+            "value": "**Suggerisci budget** propone importi mensili da sei mesi di spese, con Apple Intelligence — o un tuo modello — su questo dispositivo."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "**予算を提案** は、6 か月分の支出から月次の金額を、このデバイス上の Apple Intelligence で提案します。"
+            "value": "**予算を提案** は、6 か月分の支出から月次の金額を、このデバイス上の Apple Intelligence（または自分のモデル）で提案します。"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "**Sugerir orçamento** propõe valores mensais a partir de seis meses de gastos, usando a Apple Intelligence neste dispositivo."
+            "value": "**Sugerir orçamento** propõe valores mensais a partir de seis meses de gastos, usando a Apple Intelligence — ou um modelo seu — neste dispositivo."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "**建议预算** 会借助设备端的 Apple 智能，依据六个月的支出提出月度金额建议。"
+            "value": "**建议预算** 会借助设备端的 Apple 智能（或你自己的模型），依据六个月的支出提出月度金额建议。"
           }
         }
       }
@@ -10200,6 +10341,53 @@
         }
       }
     },
+    "A client for the Hugging Face Hub that the tokenizer library links. FinvestLens downloads nothing with it.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein Client für den Hugging Face Hub, den die Tokenizer-Bibliothek einbindet. FinvestLens lädt damit nichts herunter."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un cliente del Hugging Face Hub que la biblioteca de tokenizadores enlaza. FinvestLens no descarga nada con él."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un client du Hugging Face Hub lié par la bibliothèque de tokeniseurs. FinvestLens ne télécharge rien avec lui."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un client per l’Hugging Face Hub collegato dalla libreria dei tokenizzatori. FinvestLens non scarica nulla con esso."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "トークナイザライブラリがリンクする Hugging Face Hub クライアント。FinvestLens がこれを使って何かをダウンロードすることはありません。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Um cliente do Hugging Face Hub vinculado pela biblioteca de tokenizadores. O FinvestLens não baixa nada com ele."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分词器库所链接的 Hugging Face Hub 客户端。FinvestLens 不会用它下载任何内容。"
+          }
+        }
+      }
+    },
     "A corporate bond has no ticker, so no share-price service can find it. **FIIG** prices Australian corporate bonds by **ISIN** instead, needs no key, and is chosen per security — so one update run can serve your shares and your bonds at once.": {
       "extractionState": "manual",
       "localizations": {
@@ -10682,6 +10870,53 @@
         }
       }
     },
+    "A large model reads slowly — a page of a statement can take minutes — and how well it reads is the model’s own doing, so the review screen matters more, not less.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein großes Modell liest langsam — eine Auszugsseite kann Minuten dauern — und wie gut es liest, liegt am Modell selbst. Der Prüfbildschirm ist deshalb wichtiger, nicht unwichtiger."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un modelo grande lee despacio —una página de un extracto puede tardar minutos— y lo bien que lea depende del propio modelo, así que la pantalla de revisión importa más, no menos."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un grand modèle lit lentement — une page de relevé peut prendre plusieurs minutes — et la qualité de sa lecture ne dépend que de lui : l’écran de vérification compte donc davantage, pas moins."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un modello grande legge lentamente — una pagina di estratto conto può richiedere alcuni minuti — e la qualità della lettura dipende dal modello stesso: la schermata di revisione conta quindi di più, non di meno."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "大きなモデルは読み取りに時間がかかります（明細 1 ページに数分かかることがあります）。読み取りの精度はモデル次第なので、確認画面はいっそう重要になります。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Um modelo grande lê devagar — uma página de extrato pode levar minutos — e a qualidade da leitura depende do próprio modelo; por isso a tela de revisão importa mais, não menos."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "大型模型读取较慢 — 一页对账单可能需要数分钟 — 而读取效果取决于模型本身，因此审阅界面更为重要，而不是相反。"
+          }
+        }
+      }
+    },
     "A long-range projection seeded from your own book, with assumptions you can edit and one-off life events you can add. Figures can be shown in today's money.": {
       "extractionState": "manual",
       "localizations": {
@@ -10819,6 +11054,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "最低还款额不足以支付该债务的利息 — 永远无法还清。"
+          }
+        }
+      }
+    },
+    "A model of your own": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein eigenes Modell"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un modelo propio"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un modèle à vous"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un tuo modello"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自分のモデル"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Um modelo seu"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自己的模型"
           }
         }
       }
@@ -11855,6 +12137,53 @@
         }
       }
     },
+    "Acknowledgements": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Danksagungen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Agradecimientos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remerciements"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riconoscimenti"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "謝辞"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Agradecimentos"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "致谢"
+          }
+        }
+      }
+    },
     "Allocation and concentration": {
       "extractionState": "manual",
       "localizations": {
@@ -11898,6 +12227,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "资产配置与集中度"
+          }
+        }
+      }
+    },
+    "Analysing six months of spending with your model…": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sechs Monate Ausgaben werden mit Ihrem Modell analysiert …"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analizando seis meses de gastos con tu modelo…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analyse de six mois de dépenses avec votre modèle…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analisi di sei mesi di spese con il tuo modello…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "お使いのモデルで 6 か月分の支出を分析中…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analisando seis meses de gastos com o seu modelo…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在使用你的模型分析六个月的支出…"
           }
         }
       }
@@ -20270,6 +20646,53 @@
         }
       }
     },
+    "Bank statements, dividend statements and invoices are read on this device by your own model and turned into transactions to review — nothing leaves this device.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kontoauszüge, Dividendenabrechnungen und Rechnungen werden auf diesem Gerät von Ihrem eigenen Modell gelesen und in Buchungen zur Prüfung umgewandelt — nichts verlässt dieses Gerät."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los extractos bancarios, los informes de dividendos y las facturas los lee tu propio modelo en este dispositivo y los convierte en transacciones para revisar: nada sale de este dispositivo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les relevés bancaires, avis de dividendes et factures sont lus sur cet appareil par votre propre modèle et transformés en opérations à vérifier — rien ne quitte cet appareil."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estratti conto, avvisi di dividendo e fatture vengono letti su questo dispositivo dal tuo modello e trasformati in transazioni da rivedere: nulla esce da questo dispositivo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "銀行明細、配当通知、請求書はお使いのモデルがこのデバイス上で読み取り、確認用の取引に変換します。データがこのデバイスから出ることはありません。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Extratos bancários, avisos de dividendos e faturas são lidos neste dispositivo pelo seu próprio modelo e convertidos em transações para revisão — nada sai deste dispositivo."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "银行对账单、股息通知和发票由你自己的模型在此设备上读取并转换为待审阅的交易 — 数据不会离开此设备。"
+          }
+        }
+      }
+    },
     "Bank statements, dividend statements and invoices are read on-device by Apple Intelligence and turned into transactions to review — nothing leaves this device.": {
       "extractionState": "manual",
       "localizations": {
@@ -21492,6 +21915,100 @@
         }
       }
     },
+    "Bring your own model. FinvestLens doesn’t provide one, recommend one or download one: point it at a folder of MLX models in Files, and choose one under Where it runs. It runs on this device.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bringen Sie Ihr eigenes Modell mit. FinvestLens stellt keines bereit, empfiehlt keines und lädt keines herunter: Geben Sie in „Dateien“ einen Ordner mit MLX-Modellen an und wählen Sie eines unter „Wo es läuft“. Es läuft auf diesem Gerät."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trae tu propio modelo. FinvestLens no proporciona ninguno, ni lo recomienda ni lo descarga: indícale en Archivos una carpeta con modelos MLX y elige uno en «Dónde se ejecuta». Se ejecuta en este dispositivo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apportez votre propre modèle. FinvestLens n’en fournit pas, n’en recommande pas et n’en télécharge pas : indiquez-lui dans Fichiers un dossier de modèles MLX, puis choisissez-en un sous « Où elle s’exécute ». Il s’exécute sur cet appareil."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Porta il tuo modello. FinvestLens non ne fornisce, non ne consiglia e non ne scarica: indicagli in File una cartella di modelli MLX e scegline uno in «Dove viene eseguita». Viene eseguito su questo dispositivo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自分のモデルを使えます。FinvestLens はモデルを提供せず、推奨もせず、ダウンロードもしません。「ファイル」で MLX モデルのフォルダを指定し、「実行場所」でモデルを選択してください。モデルはこのデバイス上で実行されます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Traga seu próprio modelo. O FinvestLens não fornece, não recomenda e não baixa nenhum: indique em Arquivos uma pasta com modelos MLX e escolha um em «Onde é executada». Ele é executado neste dispositivo."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用你自己的模型。FinvestLens 不提供、不推荐也不下载任何模型：请在「文件」中指定一个存放 MLX 模型的文件夹，然后在「运行位置」下选取一个。模型在此设备上运行。"
+          }
+        }
+      }
+    },
+    "Bring your own model. FinvestLens doesn’t provide one, recommend one or download one: point it at a folder of MLX models — other MLX tools keep theirs in ~/.cache/huggingface/hub — and choose one under Where it runs. It runs on this device.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bringen Sie Ihr eigenes Modell mit. FinvestLens stellt keines bereit, empfiehlt keines und lädt keines herunter: Geben Sie einen Ordner mit MLX-Modellen an – andere MLX-Werkzeuge legen ihre unter ~/.cache/huggingface/hub ab – und wählen Sie eines unter „Wo es läuft“. Es läuft auf diesem Gerät."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trae tu propio modelo. FinvestLens no proporciona ninguno, ni lo recomienda ni lo descarga: indícale una carpeta con modelos MLX —otras herramientas MLX guardan los suyos en ~/.cache/huggingface/hub— y elige uno en «Dónde se ejecuta». Se ejecuta en este dispositivo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apportez votre propre modèle. FinvestLens n’en fournit pas, n’en recommande pas et n’en télécharge pas : indiquez-lui un dossier de modèles MLX — les autres outils MLX rangent les leurs dans ~/.cache/huggingface/hub — et choisissez-en un sous « Où elle s’exécute ». Il s’exécute sur cet appareil."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Porta il tuo modello. FinvestLens non ne fornisce, non ne consiglia e non ne scarica: indicagli una cartella di modelli MLX — gli altri strumenti MLX tengono i loro in ~/.cache/huggingface/hub — e scegline uno in «Dove viene eseguita». Viene eseguito su questo dispositivo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自分のモデルを使えます。FinvestLens はモデルを提供せず、推奨もせず、ダウンロードもしません。MLX モデルのフォルダを指定し（ほかの MLX ツールは ~/.cache/huggingface/hub に保存します）、「実行場所」でモデルを選択してください。モデルはこのデバイス上で実行されます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Traga seu próprio modelo. O FinvestLens não fornece, não recomenda e não baixa nenhum: indique uma pasta com modelos MLX — outras ferramentas MLX guardam os delas em ~/.cache/huggingface/hub — e escolha um em «Onde é executada». Ele é executado neste dispositivo."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用你自己的模型。FinvestLens 不提供、不推荐也不下载任何模型：请指定一个存放 MLX 模型的文件夹（其他 MLX 工具将模型保存在 ~/.cache/huggingface/hub），然后在「运行位置」下选取一个。模型在此设备上运行。"
+          }
+        }
+      }
+    },
     "Browse accounts": {
       "extractionState": "manual",
       "localizations": {
@@ -21723,6 +22240,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "根据所观察期间的月均支出制定预算。Apple 智能未对此方案进行优化，因此未作任何削减。"
+          }
+        }
+      }
+    },
+    "Budgeted from your monthly averages over the observed period. Your model didn’t refine this plan, so no trims were applied.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Budgetiert anhand Ihrer Monatsdurchschnitte im beobachteten Zeitraum. Ihr Modell hat diesen Plan nicht verfeinert, daher wurden keine Kürzungen vorgenommen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Presupuestado a partir de tus promedios mensuales del periodo observado. Tu modelo no afinó este plan, por lo que no se aplicaron recortes."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Budget établi à partir de vos moyennes mensuelles sur la période observée. Votre modèle n’a pas affiné ce plan ; aucune réduction n’a donc été appliquée."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Budget ricavato dalle tue medie mensili nel periodo osservato. Il tuo modello non ha perfezionato questo piano, quindi non sono state applicate riduzioni."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "対象期間の月平均をもとに予算を作成しました。お使いのモデルはこの計画を調整しなかったため、削減は行われていません。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Orçado a partir das suas médias mensais no período observado. Seu modelo não refinou este plano, portanto nenhum corte foi aplicado."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "根据所观察期间的月均支出制定预算。你的模型未对此方案进行优化，因此未作任何削减。"
           }
         }
       }
@@ -22522,6 +23086,194 @@
           "stringUnit": {
             "state": "translated",
             "value": "净资产变动"
+          }
+        }
+      }
+    },
+    "Change…": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ändern …"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cambiar…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modifier…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cambia…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "変更…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alterar…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更改…"
+          }
+        }
+      }
+    },
+    "Choose a model of your own in Settings ▸ Apple Intelligence.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wählen Sie unter Einstellungen ▸ Apple Intelligence ein eigenes Modell aus."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elige un modelo propio en Ajustes ▸ Apple Intelligence."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisissez un modèle à vous dans Réglages ▸ Apple Intelligence."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scegli un tuo modello in Impostazioni ▸ Apple Intelligence."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「設定 ▸ Apple Intelligence」で自分のモデルを選択してください。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escolha um modelo seu em Ajustes ▸ Apple Intelligence."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请在「设置 ▸ Apple 智能」中选取自己的模型。"
+          }
+        }
+      }
+    },
+    "Choose Folder…": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ordner auswählen …"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seleccionar carpeta…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisir un dossier…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scegli cartella…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フォルダを選択…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escolher pasta…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选取文件夹…"
+          }
+        }
+      }
+    },
+    "Choose the folder your MLX models are in. Click Open to let FinvestLens read them.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wählen Sie den Ordner aus, in dem Ihre MLX-Modelle liegen. Klicken Sie auf „Öffnen“, damit FinvestLens sie lesen darf."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elige la carpeta donde están tus modelos MLX. Haz clic en Abrir para permitir que FinvestLens los lea."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisissez le dossier qui contient vos modèles MLX. Cliquez sur Ouvrir pour autoriser FinvestLens à les lire."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scegli la cartella che contiene i tuoi modelli MLX. Fai clic su Apri per consentire a FinvestLens di leggerli."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MLX モデルが入っているフォルダを選択してください。「開く」をクリックすると、FinvestLens がモデルを読み取れるようになります。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escolha a pasta onde estão seus modelos MLX. Clique em Abrir para permitir que o FinvestLens os leia."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选取存放 MLX 模型的文件夹。点按「打开」以允许 FinvestLens 读取这些模型。"
           }
         }
       }
@@ -42920,6 +43672,100 @@
       "extractionState": "manual",
       "shouldTranslate": false
     },
+    "FinvestLens couldn’t keep access to “%@”. Choose the folder again.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FinvestLens konnte den Zugriff auf „%@“ nicht behalten. Wählen Sie den Ordner erneut aus."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FinvestLens no pudo conservar el acceso a «%@». Vuelve a elegir la carpeta."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FinvestLens n’a pas pu conserver l’accès à « %@ ». Choisissez à nouveau le dossier."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FinvestLens non è riuscito a mantenere l’accesso a «%@». Scegli di nuovo la cartella."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FinvestLens は「%@」へのアクセスを保持できませんでした。フォルダをもう一度選択してください。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O FinvestLens não conseguiu manter o acesso a «%@». Escolha a pasta novamente."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FinvestLens 无法保留对「%@」的访问权限。请重新选取该文件夹。"
+          }
+        }
+      }
+    },
+    "FinvestLens doesn’t download models. “%@” has to be in your models folder.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FinvestLens lädt keine Modelle herunter. „%@“ muss sich in Ihrem Modellordner befinden."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FinvestLens no descarga modelos. «%@» tiene que estar en tu carpeta de modelos."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FinvestLens ne télécharge pas de modèles. « %@ » doit se trouver dans votre dossier des modèles."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FinvestLens non scarica modelli. «%@» deve trovarsi nella tua cartella dei modelli."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FinvestLens はモデルをダウンロードしません。「%@」はモデルフォルダに入っている必要があります。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O FinvestLens não baixa modelos. «%@» precisa estar na sua pasta de modelos."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FinvestLens 不会下载模型。「%@」必须位于你的模型文件夹中。"
+          }
+        }
+      }
+    },
     "FinvestLens Help": {
       "extractionState": "manual",
       "localizations": {
@@ -42963,6 +43809,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "FinvestLens 帮助"
+          }
+        }
+      }
+    },
+    "FinvestLens is built with these open-source projects. Thank you to their authors and contributors.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FinvestLens baut auf diesen Open-Source-Projekten auf. Vielen Dank an ihre Autorinnen, Autoren und Mitwirkenden."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FinvestLens está hecho con estos proyectos de código abierto. Gracias a sus autores y colaboradores."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FinvestLens est construit avec ces projets open source. Merci à leurs auteurs et contributeurs."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FinvestLens è realizzato con questi progetti open source. Grazie ai loro autori e collaboratori."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FinvestLens は次のオープンソースプロジェクトを利用して作られています。作者とコントリビューターの皆さまに感謝します。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O FinvestLens é feito com estes projetos de código aberto. Obrigado aos seus autores e colaboradores."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FinvestLens 基于以下开源项目构建。感谢它们的作者和贡献者。"
+          }
+        }
+      }
+    },
+    "FinvestLens is free software under the GNU General Public License, version 3 or later.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FinvestLens ist freie Software unter der GNU General Public License, Version 3 oder neuer."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FinvestLens es software libre bajo la Licencia Pública General de GNU, versión 3 o posterior."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FinvestLens est un logiciel libre sous la licence publique générale GNU, version 3 ou ultérieure."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FinvestLens è software libero distribuito con la GNU General Public License, versione 3 o successiva."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FinvestLens は、GNU 一般公衆利用許諾書（GPL）バージョン 3 またはそれ以降の下で提供されるフリーソフトウェアです。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O FinvestLens é software livre sob a Licença Pública Geral GNU, versão 3 ou posterior."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FinvestLens 是自由软件，依据 GNU 通用公共许可证第 3 版或更高版本发布。"
           }
         }
       }
@@ -46710,6 +47650,53 @@
         }
       }
     },
+    "Import bank statements, dividend statements, and invoices — each PDF is identified and handled automatically": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kontoauszüge, Dividendenabrechnungen und Rechnungen importieren — jedes PDF wird automatisch erkannt und verarbeitet"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importar extractos bancarios, informes de dividendos y facturas: cada PDF se identifica y se procesa automáticamente"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importer des relevés bancaires, avis de dividendes et factures — chaque PDF est identifié et traité automatiquement"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importa estratti conto, avvisi di dividendo e fatture: ogni PDF viene riconosciuto e gestito automaticamente"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "銀行明細、配当通知、請求書を読み込みます。各 PDF は自動的に判別して処理されます"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importar extratos bancários, avisos de dividendos e faturas — cada PDF é identificado e tratado automaticamente"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导入银行对账单、股息通知和发票 — 每个 PDF 都会被自动识别并处理"
+          }
+        }
+      }
+    },
     "Importing %@…": {
       "extractionState": "manual",
       "localizations": {
@@ -46794,6 +47781,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "Incluir %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "包含 %@"
+          }
+        }
+      }
+    },
+    "Includes %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enthält %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Incluye %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comprend %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Include %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ を含みます"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inclui %@"
           }
         },
         "zh-Hans": {
@@ -47321,6 +48355,147 @@
         }
       }
     },
+    "Let Apple Intelligence propose a category for each transaction": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Intelligence eine Kategorie für jede Buchung vorschlagen lassen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deja que Apple Intelligence proponga una categoría para cada transacción"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Laisser Apple Intelligence proposer une catégorie pour chaque opération"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lascia che Apple Intelligence proponga una categoria per ogni transazione"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "各取引のカテゴリを Apple Intelligence に提案させます"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deixe a Apple Intelligence sugerir uma categoria para cada transação"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "让 Apple 智能为每笔交易推荐类别"
+          }
+        }
+      }
+    },
+    "Let your model propose a category for each transaction": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ihr Modell eine Kategorie für jede Buchung vorschlagen lassen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deja que tu modelo proponga una categoría para cada transacción"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Laisser votre modèle proposer une catégorie pour chaque opération"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lascia che il tuo modello proponga una categoria per ogni transazione"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "各取引のカテゴリをお使いのモデルに提案させます"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deixe seu modelo sugerir uma categoria para cada transação"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "让你的模型为每笔交易推荐类别"
+          }
+        }
+      }
+    },
+    "Let your model propose a destination account for each row": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ihr Modell ein Zielkonto für jede Zeile vorschlagen lassen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deja que tu modelo proponga una cuenta de destino para cada fila"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Laisser votre modèle proposer un compte de destination pour chaque ligne"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lascia che il tuo modello proponga un conto di destinazione per ogni riga"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "各行の移動先勘定科目をお使いのモデルに提案させます"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deixe seu modelo sugerir uma conta de destino para cada linha"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "让你的模型为每一行推荐目标科目"
+          }
+        }
+      }
+    },
     "Liabilities are %@ of %@ in assets": {
       "extractionState": "manual",
       "localizations": {
@@ -47364,6 +48539,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "负债占资产 %2$@ 的 %1$@"
+          }
+        }
+      }
+    },
+    "Licences": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lizenzen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Licencias"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Licences"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Licenze"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ライセンス"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Licenças"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "许可证"
+          }
+        }
+      }
+    },
+    "Licences…": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lizenzen …"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Licencias…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Licences…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Licenze…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ライセンス…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Licenças…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "许可证…"
           }
         }
       }
@@ -55101,6 +56370,53 @@
         }
       }
     },
+    "Models folder": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modellordner"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carpeta de modelos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dossier des modèles"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cartella dei modelli"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "モデルフォルダ"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pasta de modelos"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "模型文件夹"
+          }
+        }
+      }
+    },
     "Money": {
       "extractionState": "manual",
       "localizations": {
@@ -59727,6 +61043,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "已停止交易"
+          }
+        }
+      }
+    },
+    "No models in this folder that FinvestLens can run.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In diesem Ordner gibt es keine Modelle, die FinvestLens ausführen kann."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En esta carpeta no hay modelos que FinvestLens pueda ejecutar."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce dossier ne contient aucun modèle que FinvestLens puisse exécuter."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In questa cartella non ci sono modelli che FinvestLens possa eseguire."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このフォルダには、FinvestLens で実行できるモデルがありません。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não há modelos nesta pasta que o FinvestLens possa executar."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此文件夹中没有 FinvestLens 可以运行的模型。"
           }
         }
       }
@@ -64977,6 +66340,53 @@
         }
       }
     },
+    "Open language models behind Apple’s Foundation Models": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Offene Sprachmodelle hinter Apples Foundation Models"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modelos de lenguaje abiertos tras Foundation Models de Apple"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modèles de langage ouverts derrière Foundation Models d’Apple"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modelli linguistici aperti dietro Foundation Models di Apple"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple の Foundation Models の背後で動くオープンな言語モデル"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modelos de linguagem abertos por trás do Foundation Models da Apple"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 Apple 的 Foundation Models 之下运行开放语言模型"
+          }
+        }
+      }
+    },
     "Open Linked Document": {
       "extractionState": "manual",
       "localizations": {
@@ -65631,6 +67041,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "在账簿中展开该交易——选中后按 ⌘E，或点击其展开箭头。"
+          }
+        }
+      }
+    },
+    "Open-source packages": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open-Source-Pakete"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paquetes de código abierto"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paquets open source"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pacchetti open source"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オープンソースパッケージ"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pacotes de código aberto"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "开源软件包"
           }
         }
       }
@@ -67984,6 +69441,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "在左侧选择一个页面，或使用搜索。"
+          }
+        }
+      }
+    },
+    "Pick receipts and statements — each is matched to its transaction, linked, and categorised": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Belege und Auszüge auswählen — jedes Dokument wird seiner Buchung zugeordnet, verknüpft und kategorisiert"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elige recibos y extractos: cada uno se empareja con su transacción, se vincula y se categoriza"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisissez des reçus et des relevés — chacun est associé à son opération, lié et catégorisé"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scegli ricevute ed estratti conto: ciascuno viene abbinato alla sua transazione, collegato e categorizzato"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "領収書や明細を選択します。それぞれが該当する取引に照合され、リンクされ、分類されます"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escolha recibos e extratos — cada um é associado à sua transação, vinculado e categorizado"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选取收据和对账单 — 每一份都会与对应的交易匹配、关联并分类"
           }
         }
       }
@@ -71952,6 +73456,53 @@
         }
       }
     },
+    "Propose a monthly budget from your spending with your model": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mit Ihrem Modell ein Monatsbudget aus Ihren Ausgaben vorschlagen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proponer un presupuesto mensual a partir de tus gastos con tu modelo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proposer un budget mensuel d’après vos dépenses avec votre modèle"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proponi un budget mensile in base alle tue spese con il tuo modello"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "お使いのモデルが支出から月次予算を提案します"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sugerir um orçamento mensal a partir dos seus gastos com o seu modelo"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "借助你的模型，根据你的支出生成月度预算建议"
+          }
+        }
+      }
+    },
     "Proposed monthly amounts": {
       "extractionState": "manual",
       "localizations": {
@@ -73543,6 +75094,53 @@
         }
       }
     },
+    "Read the attachment (OCR) and suggest a category for this transaction": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anhang lesen (OCR) und eine Kategorie für diese Buchung vorschlagen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leer el adjunto (OCR) y sugerir una categoría para esta transacción"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lire la pièce jointe (OCR) et proposer une catégorie pour cette opération"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leggi l’allegato (OCR) e suggerisci una categoria per questa transazione"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添付ファイルを読み取り（OCR）、この取引のカテゴリを提案します"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ler o anexo (OCR) e sugerir uma categoria para esta transação"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "读取附件（OCR）并为此交易推荐类别"
+          }
+        }
+      }
+    },
     "Read the preview: it names how many accounts will be closed, and the totals per currency.": {
       "extractionState": "manual",
       "localizations": {
@@ -73915,6 +75513,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在使用 Apple 智能读取对账单…"
+          }
+        }
+      }
+    },
+    "Reading statement with your model": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auszug wird mit Ihrem Modell gelesen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leyendo el extracto con tu modelo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lecture du relevé avec votre modèle"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lettura dell’estratto conto con il tuo modello"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "お使いのモデルで明細を読み取り中"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lendo o extrato com o seu modelo"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在使用你的模型读取对账单"
+          }
+        }
+      }
+    },
+    "Reading statement with your model…": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auszug wird mit Ihrem Modell gelesen …"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leyendo el extracto con tu modelo…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lecture du relevé avec votre modèle…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lettura dell’estratto conto con il tuo modello…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "お使いのモデルで明細を読み取り中…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lendo o extrato com o seu modelo…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在使用你的模型读取对账单…"
           }
         }
       }
@@ -80959,6 +82651,100 @@
         }
       }
     },
+    "Runs a model of your own, on Apple silicon": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Führt ein eigenes Modell auf Apple Chips aus"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ejecuta un modelo propio en chips de Apple"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exécute un modèle à vous sur puce Apple"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esegue un tuo modello su chip Apple"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自分のモデルを Apple シリコン上で実行"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Executa um modelo seu em chips da Apple"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 Apple 芯片上运行自己的模型"
+          }
+        }
+      }
+    },
+    "Runs on this device, on the model you chose, for everything Apple Intelligence does here. Your books and documents never leave it. FinvestLens doesn’t provide the model or download it: it is yours, in a folder you pointed to.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Läuft auf diesem Gerät, mit dem von Ihnen gewählten Modell, für alles, was Apple Intelligence hier erledigt. Ihre Bücher und Dokumente verlassen es nie. FinvestLens stellt das Modell nicht bereit und lädt es nicht herunter: Es gehört Ihnen und liegt in einem Ordner, den Sie angegeben haben."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se ejecuta en este dispositivo, con el modelo que elegiste, para todo lo que Apple Intelligence hace aquí. Tus libros y documentos nunca salen de él. FinvestLens no proporciona el modelo ni lo descarga: es tuyo y está en una carpeta que tú indicaste."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "S’exécute sur cet appareil, avec le modèle que vous avez choisi, pour tout ce qu’Apple Intelligence fait ici. Vos livres et documents ne le quittent jamais. FinvestLens ne fournit pas le modèle et ne le télécharge pas : il est à vous, dans un dossier que vous avez indiqué."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Viene eseguita su questo dispositivo, con il modello che hai scelto, per tutto ciò che Apple Intelligence fa qui. I tuoi libri e documenti non lo lasciano mai. FinvestLens non fornisce il modello e non lo scarica: è tuo, in una cartella che hai indicato."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このデバイス上で、選択したモデルを使って実行されます。ここで Apple Intelligence が行うすべての処理が対象です。帳簿や書類がデバイスの外に出ることはありません。FinvestLens はモデルを提供せず、ダウンロードもしません。モデルはあなたのもので、指定したフォルダにあります。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "É executada neste dispositivo, com o modelo que você escolheu, para tudo o que a Apple Intelligence faz aqui. Seus livros e documentos nunca saem dele. O FinvestLens não fornece o modelo nem o baixa: ele é seu e está em uma pasta que você indicou."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在此设备上运行，使用你选取的模型，适用于 Apple 智能在此处所做的一切。你的账簿和文稿绝不会离开设备。FinvestLens 不提供也不下载模型：模型是你自己的，位于你指定的文件夹中。"
+          }
+        }
+      }
+    },
     "Runs on this device. Your books and documents never leave it.": {
       "extractionState": "manual",
       "localizations": {
@@ -85154,6 +86940,53 @@
         }
       }
     },
+    "Settings ▸ Apple Intelligence can use an open model you already have in place of Apple’s: choose a folder of MLX models, then choose one of them under Where it runs. It does everything here that Apple Intelligence does, on this device. FinvestLens doesn’t provide a model, recommend one or download one.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unter Einstellungen ▸ Apple Intelligence können Sie anstelle von Apples Modell ein offenes Modell verwenden, das Sie bereits besitzen: Wählen Sie einen Ordner mit MLX-Modellen und dann eines davon unter „Wo es läuft“. Es erledigt hier alles, was Apple Intelligence erledigt, auf diesem Gerät. FinvestLens stellt kein Modell bereit, empfiehlt keines und lädt keines herunter."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En Ajustes ▸ Apple Intelligence puedes usar un modelo abierto que ya tengas en lugar del de Apple: elige una carpeta con modelos MLX y luego uno de ellos en «Dónde se ejecuta». Hace aquí todo lo que hace Apple Intelligence, en este dispositivo. FinvestLens no proporciona ningún modelo, ni lo recomienda ni lo descarga."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dans Réglages ▸ Apple Intelligence, vous pouvez utiliser un modèle ouvert que vous possédez déjà à la place de celui d’Apple : choisissez un dossier de modèles MLX, puis l’un d’eux sous « Où elle s’exécute ». Il fait ici tout ce que fait Apple Intelligence, sur cet appareil. FinvestLens ne fournit aucun modèle, n’en recommande pas et n’en télécharge pas."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In Impostazioni ▸ Apple Intelligence puoi usare un modello aperto che hai già al posto di quello di Apple: scegli una cartella di modelli MLX e poi uno di essi in «Dove viene eseguita». Fa qui tutto ciò che fa Apple Intelligence, su questo dispositivo. FinvestLens non fornisce alcun modello, non ne consiglia e non ne scarica."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「設定 ▸ Apple Intelligence」では、Apple のモデルの代わりに、すでにお持ちのオープンモデルを使えます。MLX モデルのフォルダを選択し、「実行場所」でその中のモデルを選択してください。ここで Apple Intelligence が行うすべての処理を、このデバイス上で行います。FinvestLens はモデルを提供せず、推奨もせず、ダウンロードもしません。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Em Ajustes ▸ Apple Intelligence, você pode usar um modelo aberto que já tenha no lugar do modelo da Apple: escolha uma pasta com modelos MLX e depois um deles em «Onde é executada». Ele faz aqui tudo o que a Apple Intelligence faz, neste dispositivo. O FinvestLens não fornece nenhum modelo, não recomenda nem baixa nenhum."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在「设置 ▸ Apple 智能」中，你可以使用自己已有的开放模型来代替 Apple 的模型：选取一个存放 MLX 模型的文件夹，然后在「运行位置」下选取其中一个。它在此设备上完成 Apple 智能在此处所做的一切。FinvestLens 不提供、不推荐也不下载任何模型。"
+          }
+        }
+      }
+    },
     "Settings ▸ Documents takes two folders, a primary and a secondary — receipts in one and statements in the other, say. A file inside either is linked **relatively**, the same way GnuCash does it, so the book and its documents can move together — onto a NAS, or to a new Mac — without breaking. A file outside both is linked by its full path, which still works but does not travel.": {
       "localizations": {
         "de": {
@@ -87041,6 +88874,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "排序此列表"
+          }
+        }
+      }
+    },
+    "Source code": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quellcode"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Código fuente"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Code source"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Codice sorgente"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ソースコード"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Código-fonte"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "源代码"
           }
         }
       }
@@ -91105,6 +92985,53 @@
         }
       }
     },
+    "The book’s SQLite store": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der SQLite-Speicher des Buchs"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El almacén SQLite del libro"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le stockage SQLite du livre"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L’archivio SQLite del libro"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "帳簿の SQLite ストア"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O armazenamento SQLite do livro"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "账簿的 SQLite 存储"
+          }
+        }
+      }
+    },
     "The commentary quoted figures that are not in this report, so it was discarded.": {
       "extractionState": "manual",
       "localizations": {
@@ -92141,6 +94068,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "模型引用了幻灯片数据中没有的数字。"
+          }
+        }
+      }
+    },
+    "The model you chose isn’t in the models folder any more. Choose another in Settings ▸ Apple Intelligence.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das gewählte Modell befindet sich nicht mehr im Modellordner. Wählen Sie unter Einstellungen ▸ Apple Intelligence ein anderes aus."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El modelo que elegiste ya no está en la carpeta de modelos. Elige otro en Ajustes ▸ Apple Intelligence."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le modèle que vous avez choisi ne se trouve plus dans le dossier des modèles. Choisissez-en un autre dans Réglages ▸ Apple Intelligence."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il modello che hai scelto non è più nella cartella dei modelli. Scegline un altro in Impostazioni ▸ Apple Intelligence."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選択したモデルはモデルフォルダにもうありません。「設定 ▸ Apple Intelligence」で別のモデルを選択してください。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O modelo que você escolheu não está mais na pasta de modelos. Escolha outro em Ajustes ▸ Apple Intelligence."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你选取的模型已不在模型文件夹中。请在「设置 ▸ Apple 智能」中选取其他模型。"
           }
         }
       }
@@ -93225,6 +95199,53 @@
         }
       }
     },
+    "Their chat templates": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deren Chat-Vorlagen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sus plantillas de chat"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leurs gabarits de conversation"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I loro template di chat"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "それらのチャットテンプレート"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seus templates de chat"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "它们的对话模板"
+          }
+        }
+      }
+    },
     "Theme": {
       "extractionState": "manual",
       "localizations": {
@@ -93930,6 +95951,53 @@
         }
       }
     },
+    "This device can’t run a model of your own.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieses Gerät kann kein eigenes Modell ausführen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este dispositivo no puede ejecutar un modelo propio."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cet appareil ne peut pas exécuter un modèle à vous."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questo dispositivo non può eseguire un tuo modello."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このデバイスでは自分のモデルを実行できません。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este dispositivo não consegue executar um modelo seu."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此设备无法运行自己的模型。"
+          }
+        }
+      }
+    },
     "This device does not support Apple Intelligence.": {
       "extractionState": "manual",
       "localizations": {
@@ -94020,6 +96088,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "此文稿过长，Apple 智能 无法一次读完。"
+          }
+        }
+      }
+    },
+    "This document is too long for your model to read in one piece.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieses Dokument ist zu lang, als dass Ihr Modell es in einem Stück lesen könnte."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este documento es demasiado largo para que tu modelo lo lea de una sola vez."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce document est trop long pour que votre modèle le lise d’un seul tenant."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questo documento è troppo lungo perché il tuo modello lo legga in una volta sola."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この書類は長すぎるため、お使いのモデルが一度に読み取ることができません。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este documento é longo demais para o seu modelo ler de uma só vez."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此文稿过长，你的模型无法一次读完。"
           }
         }
       }
@@ -94255,6 +96370,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "此发票超出了 Apple 智能一次可读取的长度，因此只读取了开头部分。后面的明细项目未包含在内。"
+          }
+        }
+      }
+    },
+    "This invoice is longer than your model can read at once, so only its first part was read. Line items further down are missing.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Rechnung ist länger, als Ihr Modell auf einmal lesen kann; daher wurde nur der erste Teil gelesen. Weiter unten stehende Positionen fehlen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esta factura es más larga de lo que tu modelo puede leer de una vez, así que solo se leyó la primera parte. Faltan las partidas que aparecen más abajo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cette facture est plus longue que ce que votre modèle peut lire en une fois ; seule sa première partie a donc été lue. Les lignes situées plus bas sont absentes."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questa fattura è più lunga di quanto il tuo modello possa leggere in una volta, quindi ne è stata letta solo la prima parte. Mancano le voci più in basso."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この請求書はお使いのモデルが一度に読み取れる長さを超えているため、最初の部分だけを読み取りました。それより後の明細行は含まれていません。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esta fatura é mais longa do que o seu modelo consegue ler de uma vez, então apenas a primeira parte foi lida. Os itens mais abaixo estão faltando."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此发票超出了你的模型一次可读取的长度，因此只读取了开头部分。后面的明细项目未包含在内。"
           }
         }
       }
@@ -95148,6 +97310,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "以今日币值计"
+          }
+        }
+      }
+    },
+    "Tokenizers for those models": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tokenizer für diese Modelle"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tokenizadores para esos modelos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tokeniseurs pour ces modèles"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tokenizzatori per quei modelli"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "それらのモデル用のトークナイザ"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tokenizadores para esses modelos"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这些模型的分词器"
           }
         }
       }
@@ -98613,6 +100822,53 @@
         }
       }
     },
+    "Used by the libraries above": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Von den obigen Bibliotheken verwendet"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usado por las bibliotecas anteriores"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Utilisé par les bibliothèques ci-dessus"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usato dalle librerie qui sopra"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上記のライブラリが使用"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usado pelas bibliotecas acima"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "供上述库使用"
+          }
+        }
+      }
+    },
     "Used to match this security at providers that key by identifier rather than ticker.": {
       "extractionState": "manual",
       "localizations": {
@@ -102069,6 +104325,476 @@
         }
       }
     },
+    "Your model could not process this request: %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ihr Modell konnte diese Anfrage nicht verarbeiten: %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu modelo no pudo procesar esta solicitud: %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Votre modèle n’a pas pu traiter cette demande : %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il tuo modello non è riuscito a elaborare questa richiesta: %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "お使いのモデルはこのリクエストを処理できませんでした：%@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seu modelo não conseguiu processar esta solicitação: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的模型无法处理此请求：%@"
+          }
+        }
+      }
+    },
+    "Your model declined this request: %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ihr Modell hat diese Anfrage abgelehnt: %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu modelo rechazó esta solicitud: %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Votre modèle a refusé cette demande : %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il tuo modello ha rifiutato questa richiesta: %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "お使いのモデルはこのリクエストを拒否しました：%@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seu modelo recusou esta solicitação: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的模型拒绝了此请求：%@"
+          }
+        }
+      }
+    },
+    "Your model declined to process this content. Enter the details manually instead.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ihr Modell hat die Verarbeitung dieses Inhalts abgelehnt. Geben Sie die Angaben stattdessen manuell ein."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu modelo rechazó procesar este contenido. Introduce los datos manualmente."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Votre modèle a refusé de traiter ce contenu. Saisissez plutôt les informations manuellement."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il tuo modello ha rifiutato di elaborare questo contenuto. Inserisci i dati manualmente."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "お使いのモデルはこの内容の処理を拒否しました。代わりに手動で入力してください。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seu modelo recusou processar este conteúdo. Insira os dados manualmente."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的模型拒绝处理此内容。请改为手动输入详细信息。"
+          }
+        }
+      }
+    },
+    "Your model doesn’t support this language.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ihr Modell unterstützt diese Sprache nicht."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu modelo no admite este idioma."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Votre modèle ne prend pas en charge cette langue."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il tuo modello non supporta questa lingua."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "お使いのモデルはこの言語に対応していません。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seu modelo não oferece suporte a este idioma."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的模型不支持此语言。"
+          }
+        }
+      }
+    },
+    "Your model had nothing to say about this report.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ihr Modell hatte zu diesem Bericht nichts anzumerken."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu modelo no tenía nada que comentar sobre este informe."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Votre modèle n’a rien trouvé à dire sur ce rapport."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il tuo modello non aveva nulla da osservare su questo resoconto."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "お使いのモデルはこのレポートについて書くことがありませんでした。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seu modelo não tinha nada a dizer sobre este relatório."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的模型对此报表没有可写的内容。"
+          }
+        }
+      }
+    },
+    "Your model is busy right now. Try again in a moment.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ihr Modell ist gerade ausgelastet. Versuchen Sie es gleich noch einmal."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu modelo está ocupado en este momento. Inténtalo de nuevo en un momento."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Votre modèle est occupé pour le moment. Réessayez dans un instant."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il tuo modello è occupato in questo momento. Riprova tra un attimo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "お使いのモデルは現在処理中です。しばらくしてからもう一度お試しください。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seu modelo está ocupado no momento. Tente novamente em instantes."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的模型当前繁忙。请稍后重试。"
+          }
+        }
+      }
+    },
+    "Your model took too long to answer. Try again.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ihr Modell hat zu lange für die Antwort gebraucht. Versuchen Sie es erneut."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu modelo tardó demasiado en responder. Inténtalo de nuevo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Votre modèle a mis trop de temps à répondre. Réessayez."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il tuo modello ha impiegato troppo tempo a rispondere. Riprova."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "お使いのモデルの応答に時間がかかりすぎました。もう一度お試しください。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seu modelo demorou demais para responder. Tente novamente."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的模型响应时间过长。请重试。"
+          }
+        }
+      }
+    },
+    "Your Own Model": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eigenes Modell"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu propio modelo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Votre propre modèle"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il tuo modello"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自分のモデル"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seu próprio modelo"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自己的模型"
+          }
+        }
+      }
+    },
+    "Your Own Model · %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eigenes Modell · %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu propio modelo · %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Votre propre modèle · %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il tuo modello · %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自分のモデル · %@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seu próprio modelo · %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自己的模型 · %@"
+          }
+        }
+      }
+    },
+    "Your Own Model · not in the models folder": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eigenes Modell · nicht im Modellordner"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu propio modelo · no está en la carpeta de modelos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Votre propre modèle · absent du dossier des modèles"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il tuo modello · non è nella cartella dei modelli"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自分のモデル · モデルフォルダにありません"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seu próprio modelo · não está na pasta de modelos"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自己的模型 · 不在模型文件夹中"
+          }
+        }
+      }
+    },
     "Your transactions": {
       "extractionState": "manual",
       "localizations": {
@@ -104244,6 +106970,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "— 多笔分录 —"
+          }
+        }
+      }
+    },
+    "“%@” in %@ hasn’t downloaded to this device yet.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„%1$@“ in %2$@ wurde noch nicht auf dieses Gerät geladen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "«%1$@», de %2$@, aún no se ha descargado en este dispositivo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "« %1$@ », dans %2$@, n’a pas encore été téléchargé sur cet appareil."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "«%1$@» in %2$@ non è ancora stato scaricato su questo dispositivo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%2$@ の「%1$@」は、まだこのデバイスにダウンロードされていません。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "«%1$@», em %2$@, ainda não foi baixado para este dispositivo."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%2$@ 中的「%1$@」尚未下载到此设备。"
           }
         }
       }

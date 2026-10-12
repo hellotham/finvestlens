@@ -27,8 +27,8 @@ swift test --package-path Packages/Shared --skip writeReadRoundTripThroughAppGro
 ## 2. Both platform builds
 
 ```bash
-xcodebuild build -scheme finvestlens -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO
-xcodebuild build -scheme finvestlens -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO
+xcodebuild build -scheme finvestlens -destination 'platform=macOS' -skipPackagePluginValidation CODE_SIGNING_ALLOWED=NO
+xcodebuild build -scheme finvestlens -destination 'generic/platform=iOS Simulator' -skipPackagePluginValidation CODE_SIGNING_ALLOWED=NO
 ```
 
 Both must succeed. "Both platforms build" may only be reported when both

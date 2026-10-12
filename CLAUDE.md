@@ -29,14 +29,24 @@ The Shared `--skip` matters: that test round-trips through the real App Group co
 The app (both platforms must build before committing):
 
 ```bash
-xcodebuild build -scheme finvestlens -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO
-xcodebuild build -scheme finvestlens -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO
+xcodebuild build -scheme finvestlens -destination 'platform=macOS' -skipPackagePluginValidation CODE_SIGNING_ALLOWED=NO
+xcodebuild build -scheme finvestlens -destination 'generic/platform=iOS Simulator' -skipPackagePluginValidation CODE_SIGNING_ALLOWED=NO
 ```
+
+`-skipPackagePluginValidation` is not optional. The app target links MLX
+(`finvestlens/MLXModelLoader.swift` — a model the person supplies runs through
+it), and mlx-swift's `Cmlx` target carries a build-tool plug-in, `CudaBuild`.
+Xcode's GUI asks once to "Trust & Enable" it; a command-line build has nobody to
+ask and stops at `Validate plug-in "CudaBuild" in package "mlx-swift"`. The same
+target compiles Metal shaders, so a fresh machine also needs
+`xcodebuild -downloadComponent MetalToolchain` (CI runs it). The twelve packages
+under `Packages/` depend on none of this — `swift test` is unchanged, and only
+the app target can see MLX.
 
 Those are build-only checks. To **run** the macOS app, build it signed instead:
 
 ```bash
-xcodebuild build -scheme finvestlens -destination 'platform=macOS' -allowProvisioningUpdates
+xcodebuild build -scheme finvestlens -destination 'platform=macOS' -skipPackagePluginValidation -allowProvisioningUpdates
 ```
 
 `CODE_SIGNING_ALLOWED=NO` embeds no entitlements at all, so the app loses its
@@ -51,7 +61,20 @@ Everything headless that *writes* belongs to **`finlab`** instead (`Packages/Lab
 
 Website (`website/`, Astro 7 + Tailwind 4, served at `hellotham.com/finvestlens/`): `npm ci`, then `npm run dev` / `npm run build`. After editing the in-app help (`Packages/FeatureUI/Sources/FinvestLensUI/HelpContent.swift`), run `node scripts/build-manual.mjs` in `website/` and commit the regenerated `src/data/manual.json` — CI fails if it drifts. The site serves under the `/finvestlens` base path: route every internal href and asset through `url()` from `src/data/site.ts`, never a bare absolute path (those 404 on Pages).
 
+After the project's packages change (`AcknowledgementsTests` fails when they have), run `python3 scripts/build-third-party-licenses.py` and commit the regenerated `finvestlens/ThirdPartyLicenses.txt`: it is the licence and notice files of everything linked into the app, copied out of the package checkouts, and Settings ▸ Acknowledgements shows it. `--check` says whether it is current.
+
 Release DMG: `scripts/release-dmg.sh` (archive → notarize + staple the app → build, sign, notarize + staple the DMG; uses the `hellotham-notary` keychain profile).
+
+A model the person supplies is asked for real by `SuppliedModelLiveTests`, in the app's own test target (`finvestlensTests`) because only the app links MLX. It skips itself unless a folder and a model in it are named, downloads nothing, and takes about twenty minutes on a 26B model — most of it one 120-row statement, read twice:
+
+```bash
+TEST_RUNNER_FL_MLX_LOG=/tmp/mlx.log \
+TEST_RUNNER_FL_MLX_FOLDER=~/.cache/huggingface/hub TEST_RUNNER_FL_MLX_MODEL=gemma-4-26b-a4b-it-4bit \
+xcodebuild test -scheme finvestlens -destination 'platform=macOS' \
+  -only-testing:finvestlensTests/SuppliedModelLiveTests -skipPackagePluginValidation CODE_SIGNING_ALLOWED=NO
+```
+
+`xcodebuild` keeps no console log of a hosted run, so timings and the row-by-row diagnostics go to the file `FL_MLX_LOG` names. The tests run *inside the app*, which Xcode launches to host them; `TestHost` (in `finvestlensApp.swift`) is why that launch reopens no book — before it, session restore opened the last one, which here is the real book.
 
 Live harnesses in the FeatureUI test target skip themselves unless env vars are set: `FL_PERF_FILE=/path/to/Book.finvestlens` enables the real-book perf/report/planning/round-trip harnesses; `FL_FINLENS=/path/to/finlens` points the CLI parity tests at a built binary. The UI test target's `ScreenshotTests` likewise needs `TEST_RUNNER_FL_SHOT_DIR` and `TEST_RUNNER_FL_SHOT_BOOK` (`TEST_RUNNER_FL_TOUR=1` for the phone tour, `TEST_RUNNER_FL_DUMP=1` for an accessibility dump).
 

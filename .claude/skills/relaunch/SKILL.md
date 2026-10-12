@@ -50,7 +50,7 @@ proves nothing.)
 ## 2. Build signed
 
 ```bash
-xcodebuild build -scheme finvestlens -destination 'platform=macOS' -allowProvisioningUpdates
+xcodebuild build -scheme finvestlens -destination 'platform=macOS' -skipPackagePluginValidation -allowProvisioningUpdates
 ```
 
 Signed, not `CODE_SIGNING_ALLOWED=NO`: the unsigned build embeds no

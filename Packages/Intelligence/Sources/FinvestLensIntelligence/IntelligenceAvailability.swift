@@ -146,25 +146,46 @@ public enum IntelligenceError: LocalizedError {
         }
     }
 
+    /// The failure in words — which say whose model it was. A person who
+    /// brought their own is not told that Apple Intelligence declined
+    /// something it was never shown (``LanguageModels/speaksOfOwnModel``).
     public var errorDescription: String? {
+        description(ofOwnModel: LanguageModels.speaksOfOwnModel)
+    }
+
+    /// - Parameter ownModel: whether the model that was asked is one the
+    ///   person supplied.
+    func description(ofOwnModel ownModel: Bool) -> String {
         switch self {
         case .unavailable(let reason): return reason
         case .emptyDocument:
             return String(localized: "No readable text was found in the document.")
         case .guardrailDeclined:
-            return String(localized: "Apple Intelligence declined to process this content (safety guardrails). Enter the details manually instead.")
+            return ownModel
+                ? String(localized: "Your model declined to process this content. Enter the details manually instead.")
+                : String(localized: "Apple Intelligence declined to process this content (safety guardrails). Enter the details manually instead.")
         case .refused(let explanation):
-            return String(localized: "Apple Intelligence declined this request: \(explanation)")
+            return ownModel
+                ? String(localized: "Your model declined this request: \(explanation)")
+                : String(localized: "Apple Intelligence declined this request: \(explanation)")
         case .contextOverflow:
-            return String(localized: "This document is too long for Apple Intelligence to read in one piece.")
+            return ownModel
+                ? String(localized: "This document is too long for your model to read in one piece.")
+                : String(localized: "This document is too long for Apple Intelligence to read in one piece.")
         case .recognitionFailed:
             return String(localized: "The text in this document could not be read on this device. Enter the details manually instead.")
         case .unsupportedLanguage:
-            return String(localized: "Apple Intelligence doesn’t support this language yet.")
+            return ownModel
+                ? String(localized: "Your model doesn’t support this language.")
+                : String(localized: "Apple Intelligence doesn’t support this language yet.")
         case .busy:
-            return String(localized: "Apple Intelligence is busy right now. Try again in a moment.")
+            return ownModel
+                ? String(localized: "Your model is busy right now. Try again in a moment.")
+                : String(localized: "Apple Intelligence is busy right now. Try again in a moment.")
         case .timedOut:
-            return String(localized: "Apple Intelligence took too long to answer. Try again.")
+            return ownModel
+                ? String(localized: "Your model took too long to answer. Try again.")
+                : String(localized: "Apple Intelligence took too long to answer. Try again.")
         case .quotaReached(let resetDate):
             if let resetDate {
                 return String(localized: "You’ve reached today’s Private Cloud Compute limit. It resets \(resetDate.formatted(.relative(presentation: .named))).")
@@ -173,7 +194,9 @@ public enum IntelligenceError: LocalizedError {
         case .networkUnavailable:
             return String(localized: "Couldn’t reach Private Cloud Compute. Check your internet connection.")
         case .modelFailure(let detail):
-            return String(localized: "Apple Intelligence could not process this request: \(detail)")
+            return ownModel
+                ? String(localized: "Your model could not process this request: \(detail)")
+                : String(localized: "Apple Intelligence could not process this request: \(detail)")
         }
     }
 

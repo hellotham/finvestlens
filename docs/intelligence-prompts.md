@@ -466,6 +466,181 @@ What it confirmed, and what it showed that nothing else had:
   cut back to the instructions before each request) is for; see
   deferred.md §3a.
 
+## A model the person supplies
+
+Settings ▸ Apple Intelligence can put an open model of the person's own in
+Apple's place (`FR-AI-14`): a folder of MLX models they point the app at,
+and one of them chosen. The prompts are the same. Four things about the
+*request* are not, each because of something read or measured.
+
+| | |
+|---|---|
+| Date | 12 October 2026 |
+| System | macOS 27.0.1 (26A434), Xcode 27.0 (27A266a), Apple M3 Max, 128 GB |
+| What runs it | mlx-swift-lm at `3e6ea1e` (`MLXFoundationModels`), mlx-swift 0.31.6, swift-transformers 1.3.5 |
+| Models asked | `gemma-4-26b-a4b-it-4bit` (14 GB) and `Qwen3.8-27B-4bit` (15 GB), both `mlx-community` conversions, as they lay in the Hugging Face cache |
+| Declared as | guided generation and nothing else: shown no pictures, offered no tools, not asked to reason |
+| Window planned against | 16,384 tokens on a Mac, 8,192 elsewhere. There is no token counter for these, so a document is fitted by the estimate |
+
+Every figure below is from invented documents — five invoices and receipts
+and three statement pages written for the purpose, and the pages
+`LiveModelTests` asks Apple's model about.
+
+### 1. The answer's schema goes into the instructions
+
+Apple's models are given a request's schema with the request, and the model
+reads each `@Guide`. MLX uses the schema as a grammar and nothing else: its
+adapter makes a system message of the instructions and a user message of the
+prompt, compiles the schema into a constraint on the tokens that may come
+next, and never shows it to the model
+(`MLXFoundationModels/TranscriptConverter.swift`, `runSchemaGeneration`). The
+model writes the right keys knowing them only by name — and the guides are
+where a feature says that a date is `yyyy-MM-dd`, that money out is
+negative, that a reference is empty when the page shows none.
+
+So the schema is written out (`SchemaGuide`). **In what form was decided by
+a survey, and the first form tried was the wrong one.** Forty-four things to
+get right — vendor, date, total, the number of lines and their sum, for five
+invoices; each row's date and amount, the row count and the date format, for
+three statement pages:
+
+| What the model was told about the answer | Gemma 4 26B | Qwen 3.8 27B |
+|---|---|---|
+| Nothing (the request as MLX makes it) | 35 of 44 | 28 of 44 |
+| A list in words — `- total: Grand total of the invoice as printed` — after the instructions | 31 | 37 |
+| The same list, before the instructions | 27, and one answer that ran for minutes and did not decode | 37 |
+| The schema as `JSONEncoder` writes it, after | 43 | 44 |
+| **The schema with its properties in declared order, after** | **44** | **44** |
+| The same, before | 44 | 44 |
+
+With nothing said, dates came back as printed ("14 March 2026", "03 May"
+with no year — which no row survives), the whole row was copied into
+"reference", and quantities stayed on the item names. A list in words was
+worse than that on one model: `name: meaning` reads as the *form of the
+answer*, and the model wrote `vendor: ` and `lineItems: [` into string
+values while the grammar forced JSON around them. JSON Schema says the same
+things in the notation the model is being held to.
+
+What is sent is the schema's own encoding with two changes: properties in
+the order the type declares (which is the order the grammar makes the model
+write them in — the encoder's order is a dictionary's, different on every
+launch), and three keys left out that say nothing (`x-order`, `title`,
+`additionalProperties`). `SchemaGuideTests` holds the text for a statement
+page word for word.
+
+### 2. The person's locale goes last, not first
+
+For Apple's model the locale phrase opens the instructions, and at the end
+it made the 27 model refuse a document (above). Gemma is the other way
+about. The same eight documents, asked twice each (76 things to get right a
+form), with "The person's locale is en_AU." in four places:
+
+| Where the phrase was | Right |
+|---|---|
+| First, as Apple's model is given it | 74 of 76 — and 72 of 76 through the app's own request path |
+| After the feature's instructions, before the schema | 76 |
+| **Last, after the schema** | **76** |
+| Left out | 76 — and 76 of 76 through the app's own request path |
+
+Six wrong in 152 with the phrase first, none in 304 without it there: an
+amount or a payee came back as `": "`, and on one page the rows stopped
+after the second. The same request did not always fail the same way — one
+pass lost two rows, the next wrote all four with a Cyrillic letter in a
+payee — so a supplied model's answer is not reproducible request for
+request, although its sampling is greedy.
+
+So for a supplied model the order is: the feature's instructions, the
+schema, the locale (`LanguageModels.suppliedInstructions`). The language
+order for prose is at both ends, as for Apple's model; that has **not** been
+measured on a supplied model, in any language but English.
+
+### 3. An answer has a ceiling
+
+Left alone, MLX stops an answer at 4,096 tokens. On a 26-billion-parameter
+model that is three minutes, and it is what one badly formed guide cost in
+a trial: 186 seconds of a string value filling with the model arguing with
+itself until the tokens ran out. Each feature's request to a supplied model carries a
+ceiling of some three times its largest real answer
+(`IntelligenceFeature.suppliedAnswerCeiling`: 128 tokens for a document's
+kind, 1,024 for a slide, 3,072 for a statement slice, 4,096 for an invoice
+or a budget). An answer that reaches it comes back cut short, fails to
+decode, and is reported as a failure. No request to Apple's models sets one:
+their own window is the bound.
+
+### 4. An answer is put right before it is read, and read again if it lost its place
+
+Two things go wrong that are the model's and not the page's, both seen on a
+120-row statement:
+
+- **Whitespace spelt out.** Part-way through an answer the model starts
+  writing a gap as a backslash and an "n": `CARD PURCHASE\n1013 SYDNEY`
+  where the page has a space. Twenty-seven of the 102 rows written came back
+  that way in one run, and every one was dropped — a payee with a stray "n"
+  in it is not a name printed on the page. In every string of a supplied model's answer
+  a line break or tab, real or spelt out, becomes a space
+  (`LanguageModels.tidied`), once, at the seam.
+- **A field's form where its value goes.** A date comes back as `": "`, and
+  the rows after it are missing: eighteen of 120 were never written. The
+  statement reader takes that as the mark of an answer that lost its place
+  (`IntelligenceParsing.isDebris`: the grammar's own punctuation and nothing
+  else, or — for a date, an amount or a balance — a bare word and a colon)
+  and reads the slice again in two halves, at most twice
+  (`StatementExtractor.reading`). The second reading is held until both
+  halves are in: if either fails, the first reading is what is kept, checked
+  as it always was. A dash where a page shows no amount, or a payee printed
+  as "Interest:", is not debris.
+
+The same 120 rows, three ways:
+
+| | Rows kept of 120 | Time |
+|---|---|---|
+| As first built | 74, 105 and 106 in three runs | 414–454 s |
+| With answers put right | 99 and 118 in two runs | (one request a slice: 353 and 391 s) |
+| And slices read again | **120**, in both runs made | 499 and 566 s |
+
+Neither is specific to statements in what it guards against, and only the
+first is applied everywhere: an invoice or a budget whose answer loses its
+place is not asked for again. The second applies to whichever model reads
+the statement — Apple's has not been seen to write debris, and would be read
+again if it did.
+
+### What each feature did
+
+`SuppliedModelLiveTests`, in the app's own test target, points a
+`SuppliedModelStore` at a folder, chooses a model the way Settings does, and
+calls each feature by its public entry point. On the code as committed,
+one request at a time — fourteen tests, all passing on Gemma; Qwen's column
+is from the run before the review's fixes, with its long statement run
+again after them:
+
+| Feature, on an invented document | Gemma 4 26B | Qwen 3.8 27B |
+|---|---|---|
+| Statement page, four rows — signed and dated | right, 16 s | right, 23 s |
+| Three documents told apart | right, 2.7 s | right, 6.8 s |
+| Three transactions categorised, and the same again | right both times, 6 s each | right both times, 11 s each |
+| Invoice of three lines, split and categorised | right, 14 s | right, 23.5 s |
+| Dividend statement — franked, unfranked, credits | right, 6.1 s | right, 10.6 s |
+| A receipt naming a transaction's category | right, 2.2 s | right, 4.8 s |
+| Budget for two categories, with reasons | right, 8.8 s | amounts right; one line of two given no reason, in both runs made, 10–11 s |
+| Report notes, a review slide, a forecast outlook — each passing the number check | written, 6–8 s each | written, 11–17 s each |
+| Statement of 120 rows over three pages | 120 rows, 566 s | 120 rows, 825 s |
+
+The first request after launch also loads the model, and that is in the
+first figure it appears in. The times are one run each on a machine doing
+other work, and are for scale, not for comparison.
+
+**Nothing was fetched.** The loader is handed a downloader that refuses, and
+for a model given as a folder MLX never asks it
+(`MLXLMCommon/ModelFactory.swift`, `resolve`); the tokenizer is read from
+the folder with `FileManager`
+(`swift-transformers`, `Hub.swift`, `loadConfig(modelFolder:)`). Checked from
+outside as well: the test host's open network sockets were listed every ten
+seconds through a whole run — the model loading and every request above —
+and there were none in 105 samples (`lsof -a -p <pid> -i`, which showed four
+for another process on the same machine when it was first tried). That is a sample, not
+a trace: a connection opened and closed inside ten seconds would not be in
+it.
+
 ## What has not been run
 
 - **Private Cloud Compute.** Nothing can be sent to it without Apple's
@@ -474,6 +649,12 @@ What it confirmed, and what it showed that nothing else had:
   reasoning level each feature should ask for, and how the daily allowance
   holds up in a batch.
 - **A device.** Every run was on a Mac.
+- **A supplied model, beyond what is above.** Two models, of one size, on one
+  Mac. Not run: a small model (the kind an iPhone has room for), any model
+  on an iPhone or iPad (MLX cannot run in the Simulator), prose in any
+  language but English, a document long enough to be cut to fit a supplied
+  model's window, and a model asked to reason first or shown a picture —
+  neither of which the app does.
 
 ## Changelog
 
@@ -487,3 +668,4 @@ What it confirmed, and what it showed that nothing else had:
 | 12 Oct 2026, the decks | The review decks' labels reach the model in the reader's language (they were English literals). The two month counts on the cash-flow slide go as counts; they went as amounts ("Months positive: 7 AUD"). The decks take dividend figures from `dividendBreakdown`, not by looking them up under the report's English labels. |
 | 12 Oct 2026, profiles | Every request's session is built from a `LanguageModelSession.DynamicProfile` that declares its instructions, model, sampling and tool-calling mode; requests no longer carry options. A session kept for a batch was measured and not adopted. No prompt changed. |
 | 12 Oct 2026, pictures | The invoice reader is shown a document's picture where one document is read and it is one, with Vision's `OCRTool` and — where Vision finds a code — `BarcodeReaderTool`; the reading kept is chosen against the document's own text. Image decoding honours the photograph's orientation. The text prompt is unchanged. |
+| 12 Oct 2026, a model of the person's own | A model the person supplies (MLX) can stand in Apple's place for every feature. For it alone: the answer's schema is written into the instructions as JSON Schema in declared order; the locale phrase goes last; each feature's answer has a token ceiling; an answer's strings are put right of whitespace spelt out as text; and the statement reader reads a slice again in halves when an answer shows it lost its place (this last for any model). No prompt sent to Apple's models changed. |

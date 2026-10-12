@@ -189,7 +189,9 @@ public enum BudgetAdvisor {
                                      monthlyAmount: $0.monthlyAverage,
                                      rationale: String(localized: "Matches your observed monthly average."))
             },
-            summary: String(localized: "Budgeted from your monthly averages over the observed period. Apple Intelligence didn’t refine this plan, so no trims were applied.")
+            summary: LanguageModels.speaksOfOwnModel
+                ? String(localized: "Budgeted from your monthly averages over the observed period. Your model didn’t refine this plan, so no trims were applied.")
+                : String(localized: "Budgeted from your monthly averages over the observed period. Apple Intelligence didn’t refine this plan, so no trims were applied.")
         )
     }
 }

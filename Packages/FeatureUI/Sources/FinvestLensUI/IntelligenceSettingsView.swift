@@ -15,9 +15,13 @@
 //  The same paragraph asks that as much as possible be processed locally,
 //  which is why the pane also says what never leaves the device.
 //
-//  The choice is offered only in a build that holds Apple's Private Cloud
-//  Compute entitlement (`LanguageModels.privateCloudComputeEnabled`). Without
-//  it there is one place Apple Intelligence can run, and the pane says which.
+//  Private Cloud Compute is offered only in a build that holds Apple's
+//  entitlement (`LanguageModels.privateCloudComputeEnabled`). A model the
+//  person supplies is offered wherever the app can run one: they choose a
+//  folder of models here, and each model in it is an entry in the same
+//  picker, so "which model" is one decision (`SuppliedModelStore`). With
+//  neither there is one place Apple Intelligence can run, and the pane says
+//  which.
 //
 
 import SwiftUI
@@ -41,22 +45,93 @@ public struct IntelligenceSettingsView: View {
     /// (`LanguageModels.defaultChoice`), not a value written here on their
     /// behalf.
     @AppStorage(LanguageModels.choiceDefaultsKey) private var stored = ""
+    @State private var choosingFolder = false
 
     public init() {}
+
+    private var supplied: SuppliedModelStore { .shared }
 
     /// The model the stored preference selects — the package's rule, not a
     /// second copy of it, so this pane cannot show one model while requests
     /// go to another.
     private var choice: ModelChoice { LanguageModels.choice(stored: stored) }
 
-    private var choiceBinding: Binding<String> {
-        Binding(get: { choice.rawValue }, set: { stored = $0 })
+    /// One entry in the picker. Apple's models are entries by where they
+    /// run; a model the person supplies is an entry by *which* model, one
+    /// for each in their folder — so that "which model" is one decision in
+    /// one control, and not a second one made somewhere else (HelloNotes
+    /// tried a single "MLX" entry with the model chosen below it, and a
+    /// model picked there while the control said "System" ran nothing).
+    private enum Option: Hashable {
+        case onDevice, privateCloud
+        /// By ``SuppliedModelFile/id``.
+        case supplied(String)
+    }
+
+    private var options: [Option] {
+        var options: [Option] = [.onDevice]
+        if LanguageModels.offeredChoices.contains(.privateCloud) { options.append(.privateCloud) }
+        if supplied.isOffered {
+            options += supplied.models.map { .supplied($0.id) }
+            // A choice still on a model the folder no longer holds stays in
+            // the list, named for what it is, rather than the control
+            // showing something else as selected.
+            if choice == .supplied, supplied.chosen == nil { options.append(.supplied(supplied.chosenID ?? "")) }
+        }
+        return options
+    }
+
+    private var selection: Binding<Option> {
+        Binding(
+            get: {
+                switch choice {
+                case .onDevice: .onDevice
+                case .privateCloud: .privateCloud
+                case .supplied: .supplied(supplied.chosenID ?? "")
+                }
+            },
+            set: { option in
+                switch option {
+                case .onDevice:
+                    stored = ModelChoice.onDevice.rawValue
+                    supplied.letGo()
+                case .privateCloud:
+                    stored = ModelChoice.privateCloud.rawValue
+                    supplied.letGo()
+                case .supplied(let id):
+                    if let model = supplied.models.first(where: { $0.id == id }) { supplied.use(model) }
+                }
+            })
+    }
+
+    private func title(of option: Option) -> String {
+        switch option {
+        case .onDevice: LanguageModels.title(of: .onDevice)
+        case .privateCloud: LanguageModels.title(of: .privateCloud)
+        case .supplied(let id):
+            supplied.models.first { $0.id == id }.map { String(localized: "Your Own Model · \($0.name)") }
+                ?? String(localized: "Your Own Model · not in the models folder")
+        }
+    }
+
+    /// Why the chosen model cannot serve now, if it cannot. For the
+    /// person's own model the store is asked, not the model seam: the store
+    /// is observable, so the line is drawn again when the answer arrives —
+    /// which is after the model was picked, because asking takes a moment.
+    private func unavailableReason(of choice: ModelChoice) -> String? {
+        let availability: IntelligenceAvailability = switch choice {
+        case .onDevice: .available
+        case .privateCloud: LanguageModels.availability(of: .privateCloud)
+        case .supplied: supplied.availability
+        }
+        if case .unavailable(let reason) = availability { return reason }
+        return nil
     }
 
     public var body: some View {
-        let offered = LanguageModels.offeredChoices
+        let options = options
         let choice = choice
-        Form {
+        withModelsFolderPanel(Form {
             Section("Apple Intelligence") {
                 switch LanguageModels.availability(of: .onDevice) {
                 case .available:
@@ -71,17 +146,17 @@ public struct IntelligenceSettingsView: View {
             }
 
             Section("Where it runs") {
-                if offered.count > 1 {
-                    Picker("Read documents and write summaries", selection: choiceBinding) {
-                        ForEach(offered) { option in
-                            Text(verbatim: LanguageModels.title(of: option)).tag(option.rawValue)
+                if options.count > 1 {
+                    Picker("Read documents and write summaries", selection: selection) {
+                        ForEach(options, id: \.self) { option in
+                            Text(verbatim: title(of: option)).tag(option)
                         }
                     }
-                    if choice == .privateCloud,
-                       case .unavailable(let reason) = LanguageModels.availability(of: .privateCloud) {
+                    if let reason = unavailableReason(of: choice) {
                         Text(verbatim: reason)
                             .scaledFont(.caption)
                             .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
                 Text(verbatim: LanguageModels.privacySummary(of: choice))
@@ -92,11 +167,114 @@ public struct IntelligenceSettingsView: View {
                     PrivateCloudQuotaNote()
                 }
             }
+
+            if supplied.isOffered {
+                suppliedSection
+            }
         }
         .formStyle(.grouped)
+        .fileImporter(isPresented: $choosingFolder, allowedContentTypes: [.folder]) { result in
+            if case .success(let url) = result { supplied.chooseFolder(url) }
+        })
         .windowFloor(minWidth: 440, minHeight: 300)
         .navigationTitle("Apple Intelligence")
+        // The folder is other tools' too: a model fetched since launch is
+        // listed when the pane is next opened, not at the next launch.
+        .task { await supplied.refresh() }
+        // The failure is drawn in the pane, below where the person was
+        // looking when they chose the folder; VoiceOver is told as well.
+        .onChange(of: supplied.lastError) { _, error in
+            if let error { AccessibilityNotification.Announcement(error).post() }
+        }
     }
+
+    // MARK: A model the person supplies
+
+    /// The folder of models, and what is in it. Choosing *which* model is
+    /// the picker's job above; this says where they come from.
+    private var suppliedSection: some View {
+        Section {
+            LabeledContent("Models folder") {
+                HStack(spacing: 8) {
+                    if let folder = supplied.folder {
+                        Text(verbatim: folder.lastPathComponent)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
+                    // Two `Text`s, not a ternary of literals: that would be
+                    // a `String`, and never localized.
+                    Button {
+                        choosingFolder = true
+                    } label: {
+                        supplied.folder == nil ? Text("Choose Folder…") : Text("Change…")
+                    }
+                }
+            }
+            ForEach(supplied.models) { model in
+                LabeledContent {
+                    Text(verbatim: model.bytes.formatted(.byteCount(style: .file)))
+                } label: {
+                    Text(verbatim: model.name)
+                }
+            }
+            if supplied.folder != nil, supplied.models.isEmpty {
+                Text("No models in this folder that FinvestLens can run.")
+                    .foregroundStyle(.secondary)
+            }
+            if choice == .supplied, let caution = supplied.sizeCaution {
+                Label {
+                    Text(verbatim: caution).fixedSize(horizontal: false, vertical: true)
+                } icon: {
+                    Image(systemName: "exclamationmark.triangle")
+                }
+                .scaledFont(.caption)
+            }
+            if let error = supplied.lastError {
+                Text(verbatim: error)
+                    .scaledFont(.caption)
+                    .foregroundStyle(.red)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        } header: {
+            Text("Your Own Model")
+        } footer: {
+            // Where a folder of models is found differs: a Mac has the cache
+            // other MLX tools share, an iPhone or iPad has Files.
+            #if os(macOS)
+            Text("Bring your own model. FinvestLens doesn’t provide one, recommend one or download one: point it at a folder of MLX models — other MLX tools keep theirs in ~/.cache/huggingface/hub — and choose one under Where it runs. It runs on this device.")
+            #else
+            Text("Bring your own model. FinvestLens doesn’t provide one, recommend one or download one: point it at a folder of MLX models in Files, and choose one under Where it runs. It runs on this device.")
+            #endif
+        }
+    }
+
+    #if os(macOS)
+    /// The folder panel opens where other MLX tools keep their models, and
+    /// says what granting it means. It runs outside the sandbox, so it can
+    /// show a folder the app cannot yet read.
+    ///
+    /// This wraps the `fileImporter` and does not sit inside it: the
+    /// importer reads these from its own environment, which flows inward —
+    /// applied to the form with the importer attached outside it, the panel
+    /// opened wherever the app's last one had (found in HelloNotes).
+    private func withModelsFolderPanel(_ presenter: some View) -> some View {
+        presenter
+            .fileDialogDefaultDirectory(Self.huggingFaceCache)
+            .fileDialogMessage("Choose the folder your MLX models are in. Click Open to let FinvestLens read them.")
+    }
+
+    /// `~/.cache/huggingface/hub` in the person's real home — the sandbox
+    /// gives the app a home of its own.
+    private static var huggingFaceCache: URL? {
+        guard let entry = getpwuid(getuid()), let home = entry.pointee.pw_dir else { return nil }
+        return URL(fileURLWithPath: String(cString: home)).appending(path: ".cache/huggingface/hub")
+    }
+    #else
+    /// No shared cache on iPhone or iPad to start in: the picker opens where
+    /// Files does.
+    private func withModelsFolderPanel(_ presenter: some View) -> some View { presenter }
+    #endif
 }
 
 /// Today's Private Cloud Compute allowance, where there is something to say
@@ -123,6 +301,23 @@ struct PrivateCloudQuotaNote: View {
                 }
             }
         }
+    }
+}
+
+extension Text {
+    /// One sentence in two wordings: of Apple Intelligence, and of a model
+    /// the person supplied — whichever would answer `feature` now.
+    ///
+    /// Every sentence that names Apple Intelligence as the one doing the
+    /// work was written when nothing else could be. Beside a model the
+    /// person got from somewhere else it would put Apple's name to that
+    /// model's reading, so each such sentence has a second wording and this
+    /// chooses between them. Both are literals at the call site, typed as
+    /// keys, so both are extracted and translated.
+    @MainActor
+    init(for feature: IntelligenceFeature, apple: LocalizedStringKey, own: LocalizedStringKey) {
+        SuppliedModelStore.shared.observe()
+        self = LanguageModels.usesOwnModel(for: feature) ? Text(own) : Text(apple)
     }
 }
 

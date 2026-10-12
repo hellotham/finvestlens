@@ -359,6 +359,19 @@ public enum HelpBook {
                 statements with unsigned debit and credit columns and no running balance are \
                 the case most worth checking.
                 """),
+            .heading("A model of your own"),
+            .text("""
+                Settings ▸ Apple Intelligence can use an open model you already have in \
+                place of Apple’s: choose a folder of MLX models, then choose one of them \
+                under Where it runs. It does everything here that Apple Intelligence \
+                does, on this device. FinvestLens doesn’t provide a model, recommend one \
+                or download one.
+                """),
+            .text("""
+                A large model reads slowly — a page of a statement can take minutes — \
+                and how well it reads is the model’s own doing, so the review screen \
+                matters more, not less.
+                """),
         ])
 
     static let categorising = HelpTopic(
@@ -459,7 +472,7 @@ public enum HelpBook {
                 """),
             .bullets([
                 "**Auto-budget** fills in amounts from what you actually spent.",
-                "**Suggest Budget** proposes monthly figures from six months of spending, using Apple Intelligence on this device.",
+                "**Suggest Budget** proposes monthly figures from six months of spending, using Apple Intelligence — or a model of your own — on this device.",
                 "The dashboard's Cashflow vs Budget card shows how the current period is tracking.",
             ]),
             .text("""

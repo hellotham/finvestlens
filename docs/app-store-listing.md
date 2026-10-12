@@ -97,6 +97,7 @@ FinvestLens comes to the App Store, and to iPhone.
 • Apple Intelligence features are rebuilt for the new on-device model: a long bank statement is read to its last page, summaries are written in your language, and every figure in a summary is checked against your own numbers before you see it.
 • Saving no longer holds the window, and everyday edits in large books are faster.
 • Choosing another report while one is open now shows that report.
+• Mac: Settings ▸ Apple Intelligence can use an open model of your own, from a folder of MLX models, in place of Apple's. FinvestLens provides no model and downloads none.
 
 FinvestLens 1.2 requires iOS 27, iPadOS 27 or macOS 27.
 ```
@@ -195,7 +196,8 @@ APPLE INTELLIGENCE, ON YOUR MAC
 • Read a PDF bank statement, an invoice or a dividend statement into transactions you review before anything is posted
 • Suggested categories, and a proposed budget from your own spending
 • Plain-language notes on a report or a forecast, in your language, with every figure checked against your numbers
-These run on your Mac with Apple Intelligence, where it is available and turned on. Your figures are not sent to us or to anyone else.
+• Or bring your own model: point FinvestLens at a folder of MLX models and one of them does this work instead
+These run on your Mac — with Apple Intelligence, where it is available and turned on, or with a model you supply. FinvestLens provides no model and downloads none. Your figures are not sent to us or to anyone else.
 
 YOURS TO KEEP
 • Keep your book on your Mac, in iCloud Drive or on a network share, and open it on iPhone and iPad as well
@@ -219,8 +221,25 @@ NETWORK. The app contacts a network service in two situations, both started by t
 
 APPLE INTELLIGENCE. Category suggestions, budget proposals, document reading and report notes run on Apple Foundation Models on the device, where Apple Intelligence is available and turned on. Where it is not, those commands are disabled and say why; every other feature works without it. The app contains no third-party AI services and no API keys for any.
 
+A MODEL OF THE PERSON'S OWN. In Settings ▸ Apple Intelligence a person can choose a folder of open-weight models in MLX format that they already have, and one of the models in it. That model then does the same work on the device, in place of Apple's, through MLX (open source under the MIT licence, copyright Apple Inc.). The app contains no model, recommends none and downloads none; it only reads the folder the person grants. To review without one, leave the setting on "On This Device".
+
 The app makes no in-app purchases and shows no advertising.
 ```
+
+## A model of the person's own
+
+**In the Mac copy and the reviewer notes; not in the iPhone and iPad
+description.** On a Mac every feature has been run on two open models
+(intelligence-prompts.md). On iPhone and iPad the same code builds and the
+pane is there, and nothing has been run: MLX cannot run in the Simulator and
+no device run has been made. The copy says what has been seen to work.
+
+What the copy may and may not say, from what the app does
+(`FR-AI-14`): the model is the person's — FinvestLens provides none,
+recommends none and downloads none — it runs on the device, and it is *not*
+Apple Intelligence, so no sentence credits its work to Apple. The MLX
+libraries are linked into the app and acknowledged in Settings ▸
+Acknowledgements.
 
 ## Private Cloud Compute
 

@@ -14,7 +14,7 @@ ad-hoc signature changes each build, so TCC never remembers the grant. Use the
 unsigned command only to check that it compiles. To run it:
 
 ```bash
-xcodebuild build -scheme finvestlens -destination 'platform=macOS' -allowProvisioningUpdates
+xcodebuild build -scheme finvestlens -destination 'platform=macOS' -skipPackagePluginValidation -allowProvisioningUpdates
 ```
 
 **`kill -9`:** the app holds an advisory lock beside the book

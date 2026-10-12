@@ -48,6 +48,11 @@ public enum ModelChoice: String, Sendable, CaseIterable, Identifiable {
     /// only in a build that holds Apple's managed entitlement — see
     /// ``LanguageModels/privateCloudComputeEnabled``.
     case privateCloud
+    /// A model the person supplies — an open model in a folder they chose,
+    /// run on this device. Nothing leaves it, and nothing about the model is
+    /// the publisher's: it is not bundled, and the app does not fetch it.
+    /// Offered only where the app can run one (``LanguageModels/suppliesModels``).
+    case supplied
 
     public var id: String { rawValue }
 }
@@ -113,6 +118,33 @@ public enum IntelligenceFeature: String, Sendable, CaseIterable {
     /// — so the 27 tool-calling mode is stated rather than left to its
     /// default of `allowed`.
     var toolCallingMode: GenerationOptions.ToolCallingMode { .disallowed }
+
+    /// The most tokens a model the person supplied may spend on one answer.
+    ///
+    /// Apple's models are bounded by their own window, and nothing here sets
+    /// a limit for them. A supplied model is planned against a window
+    /// several times the size, and left alone MLX stops it at 4,096 tokens —
+    /// on a 26-billion-parameter model, three minutes of writing nothing of
+    /// use, which is what one malformed prompt cost in the survey of
+    /// 12 October 2026 (``SchemaGuide``). An answer that reaches its ceiling
+    /// comes back cut short and fails to decode, so a derailed request ends
+    /// as a failure in bounded time and not as a wait.
+    ///
+    /// Each ceiling is some three times the largest answer the feature
+    /// rightly gives, and no closer: MLX starts steering an answer towards
+    /// its close when a quarter of the ceiling is left, so a ceiling near
+    /// the real maximum would clip real answers.
+    var suppliedAnswerCeiling: Int {
+        switch self {
+        case .documentClassifier: 128               // one kind
+        case .attachmentInsight: 384                // a category and a payee
+        case .transactionCategorizer: 1_024         // eight suggestions
+        case .dividendExtractor: 1_024              // a dozen short fields
+        case .reviewNarrator, .reportNarrator, .forecastNarrator: 1_024
+        case .statementExtractor: 3_072             // twenty rows
+        case .invoiceAnalyzer, .budgetAdvisor: 4_096    // fifty lines; forty categories
+        }
+    }
 
     /// The same two values as a request's options, for one made outside the
     /// seam — the surveys, which build their own sessions to move the
@@ -217,8 +249,68 @@ public enum LanguageModels {
     /// rather than shown as unavailable: a choice that can never work in this
     /// build is not a choice.
     public static var offeredChoices: [ModelChoice] {
-        privateCloudComputeEnabled ? ModelChoice.allCases : [.onDevice]
+        [.onDevice] + (privateCloudComputeEnabled ? [.privateCloud] : []) + (suppliesModels ? [.supplied] : [])
     }
+
+    // MARK: - A model the person supplies
+
+    /// The person's own model, as the app target hands it over: what it is
+    /// called, how much it can hold, whether it can run now, and how to get
+    /// it as a `LanguageModel`.
+    ///
+    /// The package knows nothing more about it than that. What runs it (MLX)
+    /// is the app target's business — a package that linked it could not be
+    /// built or tested by `swift build`, which does not compile the Metal
+    /// library MLX needs — so the app registers the model here, the way it
+    /// declares a Private Cloud Compute build.
+    public struct SuppliedModel: Sendable {
+        public var name: String
+        /// Tokens of context the model is planned against.
+        public var contextSize: Int
+        public var availability: IntelligenceAvailability
+        /// Whether the model has to be *told* what an answer's fields hold.
+        /// What runs it says: MLX holds an answer to the schema's shape and
+        /// never shows the model the schema (see ``SchemaGuide``).
+        public var needsFieldGuide: Bool
+        public var make: @Sendable () throws -> any LanguageModel
+
+        public init(name: String, contextSize: Int, availability: IntelligenceAvailability,
+                    needsFieldGuide: Bool = true,
+                    make: @escaping @Sendable () throws -> any LanguageModel) {
+            self.name = name
+            self.contextSize = contextSize
+            self.availability = availability
+            self.needsFieldGuide = needsFieldGuide
+            self.make = make
+        }
+    }
+
+    private static let suppliedStorage = Mutex<(offered: Bool, model: SuppliedModel?, missing: String?)>((false, nil, nil))
+
+    /// Says that this app can run a model the person supplies. Called once
+    /// at launch by a target that links something to run one with; without
+    /// it the choice is not offered at all.
+    public static func offerSuppliedModels() {
+        suppliedStorage.withLock { $0.offered = true }
+    }
+
+    /// Whether a model the person supplies is something this app can run.
+    public static var suppliesModels: Bool { suppliedStorage.withLock { $0.offered } }
+
+    /// The model the person has chosen, or `nil` when they have chosen none.
+    /// Set again whenever the choice, or whether it can run, changes.
+    ///
+    /// - Parameter reason: with no model, why there is none — "the model you
+    ///   chose isn't in the models folder any more" is more use to someone
+    ///   than being told to choose one.
+    public static func supply(_ model: SuppliedModel?, because reason: String? = nil) {
+        suppliedStorage.withLock {
+            $0.model = model
+            $0.missing = model == nil ? reason : nil
+        }
+    }
+
+    public static var supplied: SuppliedModel? { suppliedStorage.withLock { $0.model } }
 
     /// What a stored preference means in this build: the model it names if
     /// this build offers it, and the build's default otherwise — so a
@@ -254,7 +346,8 @@ public enum LanguageModels {
     /// device whatever this returns.
     public static func choice(for feature: IntelligenceFeature) -> ModelChoice {
         route(feature, wanted: choiceOverride ?? preferredChoice, permitted: [feature],
-              privateCloudServes: availability(of: .privateCloud).isAvailable)
+              privateCloudServes: availability(of: .privateCloud).isAvailable,
+              suppliedServes: availability(of: .supplied).isAvailable)
     }
 
     /// The model a request for `feature` made *now, in this task* is sent
@@ -269,7 +362,8 @@ public enum LanguageModels {
         privateCloudServes: @autoclosure () -> Bool = availability(of: .privateCloud).isAvailable
     ) -> ModelChoice {
         route(feature, wanted: choiceOverride ?? preferredChoice, permitted: permittedOffDevice ?? [],
-              privateCloudServes: privateCloudServes())
+              privateCloudServes: privateCloudServes(),
+              suppliedServes: availability(of: .supplied).isAvailable)
     }
 
     // MARK: - What a command may send
@@ -316,9 +410,18 @@ public enum LanguageModels {
     /// Private Cloud Compute that cannot serve right now falls back to the
     /// device rather than failing: the fallback is the more private of the
     /// two, so nothing a person chose is exceeded by it.
+    ///
+    /// A model the person supplies is theirs for everything. Which features
+    /// follow the choice is a rule about Private Cloud Compute — work done by
+    /// the hundred against a daily allowance, requests that leave the device
+    /// — and none of it applies to a model on the person's own machine; and
+    /// someone who supplies a model because Apple's is not available to them
+    /// has no other to fall back to. Where theirs cannot serve, Apple's is
+    /// tried, as it would have been.
     static func route(
         _ feature: IntelligenceFeature, wanted: ModelChoice,
-        permitted: Set<IntelligenceFeature>, privateCloudServes: @autoclosure () -> Bool
+        permitted: Set<IntelligenceFeature>, privateCloudServes: @autoclosure () -> Bool,
+        suppliedServes: @autoclosure () -> Bool = false
     ) -> ModelChoice {
         switch wanted {
         case .onDevice:
@@ -327,6 +430,8 @@ public enum LanguageModels {
             guard feature.followsModelChoice, permitted.contains(feature), privateCloudServes()
             else { return .onDevice }
             return .privateCloud
+        case .supplied:
+            return suppliedServes() ? .supplied : .onDevice
         }
     }
 
@@ -339,6 +444,10 @@ public enum LanguageModels {
         case .privateCloud:
             privateCloud.map { IntelligenceAvailability($0.availability) }
                 ?? .unavailable(reason: String(localized: "Private Cloud Compute isn’t available in this version of FinvestLens."))
+        case .supplied:
+            supplied?.availability ?? .unavailable(
+                reason: suppliedStorage.withLock { $0.missing }
+                    ?? String(localized: "Choose a model of your own in Settings ▸ Apple Intelligence."))
         }
     }
 
@@ -347,19 +456,40 @@ public enum LanguageModels {
     /// choice can run on Private Cloud Compute while the device's own model
     /// is still downloading, which asking about the device alone gets wrong.
     public static func availability(for feature: IntelligenceFeature) -> IntelligenceAvailability {
-        availability(of: choice(for: feature))
+        saying(availability(of: choice(for: feature)), wanted: choiceOverride ?? preferredChoice,
+               own: availability(of: .supplied))
+    }
+
+    /// What is said of a feature's availability: what the model it was
+    /// routed to says — unless that model cannot serve and the person's own
+    /// model is the one they chose, in which case why *theirs* cannot.
+    ///
+    /// Where theirs cannot serve, Apple's is tried, and where Apple's can
+    /// nobody needs a reason. Where it cannot either, the reason used to be
+    /// Apple's: someone who supplied a model because their Mac has no Apple
+    /// Intelligence, and whose weights had not finished syncing, was told
+    /// "This device does not support Apple Intelligence" — true, and nothing
+    /// to do with what was wrong.
+    static func saying(
+        _ routed: IntelligenceAvailability, wanted: ModelChoice, own: @autoclosure () -> IntelligenceAvailability
+    ) -> IntelligenceAvailability {
+        guard !routed.isAvailable, wanted == .supplied else { return routed }
+        let own = own()
+        return own.isAvailable ? routed : own
     }
 
     /// Whether `feature` would send what it is given off this device now,
     /// from a command that permits it.
     public static func leavesDevice(_ feature: IntelligenceFeature) -> Bool {
-        choice(for: feature) != .onDevice
+        choice(for: feature) == .privateCloud
     }
 
     public static func title(of choice: ModelChoice) -> String {
         switch choice {
         case .onDevice: String(localized: "On This Device")
         case .privateCloud: String(localized: "Private Cloud Compute")
+        case .supplied: supplied.map { String(localized: "Your Own Model · \($0.name)") }
+            ?? String(localized: "Your Own Model")
         }
     }
 
@@ -385,6 +515,8 @@ public enum LanguageModels {
         switch choice {
         case .onDevice:
             String(localized: "Runs on this device. Your books and documents never leave it.")
+        case .supplied:
+            String(localized: "Runs on this device, on the model you chose, for everything Apple Intelligence does here. Your books and documents never leave it. FinvestLens doesn’t provide the model or download it: it is yours, in a folder you pointed to.")
         case .privateCloud:
             String(localized: "Match Attachments, Categorise from Attachment and Split from Invoice send the documents they read to Apple’s Private Cloud Compute to process. Smart Import sends the invoices and dividend statements it finds, and commentary on reports and reviews, budget suggestions and the forecast outlook send the figures they are written from. Apple says what is sent there isn’t stored or made accessible to Apple. A PDF imported as a bank statement is read on this device, and Auto-Categorise and an import’s category suggestions always run on it.")
         }
@@ -431,6 +563,9 @@ public enum LanguageModels {
         /// The on-device model does; Private Cloud Compute has a window and
         /// no counter, and ``TokenBudget/estimate(_:)`` stands in.
         let count: (@Sendable (String) async -> Int?)?
+        /// Whether this model is to be told in words what an answer's fields
+        /// hold (``SchemaGuide``). Apple's models read the schema itself.
+        var needsFieldGuide = false
     }
 
     private static let privateCloudContext = Mutex<Int?>(nil)
@@ -448,6 +583,8 @@ public enum LanguageModels {
             guard let size = try? await privateCloud.contextSize else { return 32_768 }
             privateCloudContext.withLock { $0 = size }
             return size
+        case .supplied:
+            return supplied?.contextSize ?? onDevice.contextSize
         }
     }
 
@@ -464,7 +601,58 @@ public enum LanguageModels {
     }
 
     private static func resolve(_ feature: IntelligenceFeature, as choice: ModelChoice) async throws -> Resolved {
+        // Recorded before the model is resolved, not after: a request that
+        // gets no further than "Apple's model does not write this language"
+        // was still Apple's, and is not to be described as the person's own
+        // model's because theirs was the last one that answered.
+        lastAsked.withLock { $0 = choice }
+        return try await model(for: feature, as: choice)
+    }
+
+    // MARK: - Whose model is spoken of
+
+    /// The model the latest request was resolved to.
+    private static let lastAsked = Mutex<ModelChoice?>(nil)
+
+    /// Whether what is said *of a request that has been made* — that it was
+    /// declined, took too long, had nothing to say — should speak of the
+    /// person's own model rather than of Apple Intelligence.
+    ///
+    /// It is the model the latest request was resolved to, and before any
+    /// request the one a request would be. Every sentence that named Apple
+    /// Intelligence as the one that had answered was written when it was the
+    /// only one that could; said of a model the person downloaded from
+    /// somewhere else, it puts Apple's name to what that model did.
+    ///
+    /// Asked of the latest request and not of the error, because an
+    /// ``IntelligenceError`` does not say who raised it and its cases are
+    /// matched in forty places that would each have to carry the answer.
+    /// The latest request is the one being described wherever this is read:
+    /// a supplied model serves every feature, so two requests in flight are
+    /// never on a supplied model and on Apple's at once.
+    static var speaksOfOwnModel: Bool {
+        (lastAsked.withLock { $0 } ?? choice(for: .statementExtractor)) == .supplied
+    }
+
+    /// Whether `feature` would be answered now by a model the person
+    /// supplied — for what is said beside a command *before* it runs.
+    public static func usesOwnModel(for feature: IntelligenceFeature) -> Bool {
+        choice(for: feature) == .supplied
+    }
+
+    /// For tests: forget which model was asked last.
+    static func forgetLastAsked() { lastAsked.withLock { $0 = nil } }
+
+    private static func model(for feature: IntelligenceFeature, as choice: ModelChoice) async throws -> Resolved {
         if case .unavailable(let reason) = availability(of: choice) {
+            // A request that fell to Apple's model because the person's own
+            // could not serve, and found Apple's could not either, fails
+            // for the reason theirs could not.
+            if choice == .onDevice,
+               case .unavailable(let own) = saying(.unavailable(reason: reason), wanted: choiceOverride ?? preferredChoice,
+                                                   own: availability(of: .supplied)) {
+                throw IntelligenceError.unavailable(own)
+            }
             throw IntelligenceError.unavailable(reason)
         }
         switch choice {
@@ -490,6 +678,22 @@ public enum LanguageModels {
             }
             return Resolved(choice: .privateCloud, model: privateCloud,
                             contextSize: await contextSize(of: .privateCloud), count: nil)
+        case .supplied:
+            guard let supplied else {
+                throw IntelligenceError.unavailable(
+                    String(localized: "Choose a model of your own in Settings ▸ Apple Intelligence."))
+            }
+            // Whether it writes the person's language is the model's to know
+            // and nothing here can ask it; the narrators check what comes
+            // back. It has no token counter either, so documents are fitted
+            // by the estimate.
+            do {
+                return Resolved(choice: .supplied, model: try supplied.make(),
+                                contextSize: supplied.contextSize, count: nil,
+                                needsFieldGuide: supplied.needsFieldGuide)
+            } catch {
+                throw IntelligenceError.unavailable(error.localizedDescription)
+            }
         }
     }
 
@@ -586,13 +790,12 @@ public enum LanguageModels {
         generating type: Output.Type = Output.self,
         exactly count: Int? = nil, of property: String? = nil
     ) async throws -> Output {
-        try await perform(feature, instructions: instructions, explainRefusal: false) { _, session, _ in
-            if let count, let property {
-                let content = try await session.respond(
-                    to: prompt, schema: countedSchema(for: type, property: property, count: count)).content
-                return try Output(content)
-            }
-            return try await session.respond(to: prompt, generating: type).content
+        let counted = count.flatMap { count in
+            property.map { countedSchema(for: type, property: $0, count: count) }
+        }
+        return try await perform(feature, instructions: instructions, explainRefusal: false,
+                                 schema: counted ?? Output.generationSchema) { resolved, session, _ in
+            try await answer(from: session, to: prompt, as: type, counted: counted, resolved: resolved)
         }
     }
 
@@ -620,13 +823,71 @@ public enum LanguageModels {
         document: String, framing: (String) -> String,
         generating type: Output.Type = Output.self, explainRefusal: Bool = false
     ) async throws -> (answer: Output, truncated: Bool) {
-        try await perform(feature, instructions: instructions, explainRefusal: explainRefusal) {
-            resolved, session, sent in
+        try await perform(feature, instructions: instructions, explainRefusal: explainRefusal,
+                          schema: Output.generationSchema) { resolved, session, sent in
             let fitted = try await fit(document, framing: framing, instructions: sent,
                                        generating: type, resolved: resolved)
-            let answer = try await session.respond(to: framing(fitted.text), generating: type).content
+            let answer = try await answer(from: session, to: framing(fitted.text), as: type,
+                                          counted: nil, resolved: resolved)
             return (answer, fitted.truncated)
         }
+    }
+
+    /// One answer from `session`, as `Output`.
+    ///
+    /// Apple's models are asked for the type itself. A model the person
+    /// supplied is asked for its content, which is put right before it is
+    /// read as the type (``tidied(_:)-(GeneratedContent)``) — as is an
+    /// answer whose row count the request fixed, which has no other form.
+    private static func answer<Output: Generable>(
+        from session: LanguageModelSession, to prompt: String, as type: Output.Type,
+        counted: GenerationSchema?, resolved: Resolved
+    ) async throws -> Output {
+        guard resolved.needsFieldGuide || counted != nil else {
+            return try await session.respond(to: prompt, generating: type).content
+        }
+        let content = try await session.respond(to: prompt, schema: counted ?? Output.generationSchema).content
+        return try Output(resolved.needsFieldGuide ? tidied(content) : content)
+    }
+
+    /// A supplied model's answer with the whitespace it wrote as *text*
+    /// put back as whitespace.
+    ///
+    /// Held to a grammar, an open model part-way through an answer starts
+    /// writing a gap as a backslash and an `n` — "CARD PURCHASE\\n1013
+    /// SYDNEY" where the page has a space. Seen on Gemma 4 26B reading a
+    /// long statement (12 October 2026): 28 of 102 rows came back that way,
+    /// and every one was dropped, because a payee with a stray "n" in it is
+    /// not a name printed on the page. Nothing a feature reads off a page or
+    /// writes about a figure has a line break in it, so in every string of
+    /// the answer a line break, a tab, or either one spelt out becomes a
+    /// space, and runs of spaces become one.
+    ///
+    /// Done here, once, and not in each feature: it is a property of how
+    /// these models write under a grammar, not of what was asked.
+    static func tidied(_ content: GeneratedContent) -> GeneratedContent {
+        guard let object = try? JSONSerialization.jsonObject(
+                  with: Data(content.jsonString.utf8), options: [.fragmentsAllowed]),
+              let data = try? JSONSerialization.data(
+                  withJSONObject: tidied(object), options: [.fragmentsAllowed, .withoutEscapingSlashes]),
+              let rebuilt = try? GeneratedContent(json: String(decoding: data, as: UTF8.self))
+        else { return content }
+        return rebuilt
+    }
+
+    private static func tidied(_ value: Any) -> Any {
+        switch value {
+        case let text as String: tidied(text)
+        case let list as [Any]: list.map { tidied($0) }
+        case let object as [String: Any]: object.mapValues { tidied($0) }
+        default: value
+        }
+    }
+
+    static func tidied(_ text: String) -> String {
+        var text = text
+        for spelt in ["\\n", "\\r", "\\t"] { text = text.replacingOccurrences(of: spelt, with: " ") }
+        return text.split(whereSeparator: { $0.isWhitespace || $0.isNewline }).joined(separator: " ")
     }
 
     /// `Output`'s own schema with its array property `property` fixed at
@@ -672,18 +933,24 @@ public enum LanguageModels {
     ///
     /// - Parameter request: given the model it is running on, a session for
     ///   it, and the instructions as that session was given them.
+    ///   - schema: the answer's schema, which a model that is not shown it
+    ///     is told in words (``SchemaGuide``).
     private static func perform<Output>(
         _ feature: IntelligenceFeature, instructions: String?, explainRefusal: Bool,
+        schema: GenerationSchema,
         readings: PictureReadings? = nil, readsCodes: Bool = false,
         _ request: (Resolved, LanguageModelSession, String?) async throws -> Output
     ) async throws -> Output {
         let resolved = try await resolve(feature)
         func attempt(on resolved: Resolved) async throws -> Output {
             if readings != nil, !canSee(resolved) { throw CannotShowPictures() }
-            let sent = Self.instructions(instructions, for: feature)
+            let sent = resolved.needsFieldGuide
+                ? Self.suppliedInstructions(instructions, for: feature, schema: schema)
+                : Self.instructions(instructions, for: feature)
             let session = LanguageModelSession(profile: FeatureProfile(
                 feature: feature, model: resolved.model, instructions: sent,
-                readings: readings, readsCodes: readsCodes))
+                readings: readings, readsCodes: readsCodes,
+                answerCeiling: resolved.choice == .supplied ? feature.suppliedAnswerCeiling : nil))
             do {
                 return try await request(resolved, session, sent)
             } catch is CancellationError {
@@ -740,6 +1007,10 @@ public enum LanguageModels {
         var readings: PictureReadings? = nil
         /// Whether the barcode reader is offered beside the text reader.
         var readsCodes = false
+        /// The most tokens the answer may take, where the model is one a
+        /// ceiling is set for (``IntelligenceFeature/suppliedAnswerCeiling``);
+        /// `nil` leaves the model to its own.
+        var answerCeiling: Int? = nil
 
         var body: some LanguageModelSession.DynamicProfile {
             if let readings {
@@ -758,6 +1029,7 @@ public enum LanguageModels {
                 .model(model)
                 .samplingMode(feature.samplingMode)
                 .toolCallingMode(feature.toolCallingMode)
+                .maximumResponseTokens(answerCeiling)
             }
         }
     }
@@ -856,7 +1128,7 @@ public enum LanguageModels {
         do {
             let answer: Output = try await perform(
                 feature, instructions: instructions, explainRefusal: false,
-                readings: readings, readsCodes: readingCodes
+                schema: Output.generationSchema, readings: readings, readsCodes: readingCodes
             ) { _, session, _ in
                 try await session.respond(generating: type) {
                     prompt
@@ -990,6 +1262,43 @@ public enum LanguageModels {
         parts.append(base)
         if let order { parts.append(order) }
         return parts.joined(separator: "\n")
+    }
+
+    /// The instructions for a model the person supplied: the feature's own,
+    /// then the answer's schema (``SchemaGuide``) because such a model is not
+    /// shown it, then the person's locale.
+    ///
+    /// **The locale goes last here, where for Apple's model it goes first,
+    /// and both are measured.** Apple's article asks for its phrase at the
+    /// start, and at the end the 27 model refused a document (above). Given
+    /// to Gemma 4 26B at the start, the same phrase unsettled the answer
+    /// itself: of 152 things to get right on eight synthetic documents, six
+    /// were wrong — an amount or a payee came back as `": "`, or a page's
+    /// rows stopped short — while with the phrase after the feature's own
+    /// instructions, after the schema, or left out, none of 304 was
+    /// (12 October 2026; the table is in `docs/intelligence-prompts.md`).
+    /// The phrase was written for Apple's model; to another it is one more
+    /// sentence, and where it sits is that model's to be measured on.
+    ///
+    /// The language order is at both ends, as it is for Apple's model. That
+    /// has not been measured on a supplied model: what was asked of two of
+    /// them was asked in English.
+    ///
+    /// A feature that sends no instructions sends the schema alone. What
+    /// kept the classifier's instructions empty is a guardrail of Apple's
+    /// model, and this is not said to that one.
+    static func suppliedInstructions(_ base: String?, for feature: IntelligenceFeature,
+                                     schema: GenerationSchema, locale: Locale = personLocale) -> String? {
+        let order = feature.answersInProse
+            ? responseLanguage(for: locale).map { "You MUST respond in \($0)." } : nil
+        let phrase = Locale.Language(identifier: "en_US").isEquivalent(to: locale.language)
+            ? nil : "The person's locale is \(localeName(locale))."
+        let sections = [
+            [order, base].compactMap { $0 }.joined(separator: "\n"),
+            SchemaGuide.text(for: schema) ?? "",
+            [phrase, order].compactMap { $0 }.joined(separator: "\n"),
+        ].filter { !$0.isEmpty }
+        return sections.isEmpty ? nil : sections.joined(separator: "\n\n")
     }
 
     /// `locale` as language and region — "en_AU", "zh_Hans_CN" — without the

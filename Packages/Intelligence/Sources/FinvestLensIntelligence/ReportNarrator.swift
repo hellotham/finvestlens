@@ -60,7 +60,9 @@ public enum ReportNarrator {
             quoting: labels(of: facts),
             nothingSound: .modelFailure(wroteSomething
                 ? String(localized: "The commentary quoted figures that are not in this report, so it was discarded.")
-                : String(localized: "Apple Intelligence had nothing to say about this report."))
+                : LanguageModels.speaksOfOwnModel
+                    ? String(localized: "Your model had nothing to say about this report.")
+                    : String(localized: "Apple Intelligence had nothing to say about this report."))
         ) {
             let drafted = try await draft(facts: facts)
             wroteSomething = wroteSomething || !drafted.isEmpty

@@ -177,8 +177,8 @@ public struct GeneralSettingsView: View {
     }
 }
 
-/// Tabbed Settings window: General, Appearance, Pricing, Documents and
-/// Apple Intelligence.
+/// Tabbed Settings window: General, Appearance, Pricing, Documents, Apple
+/// Intelligence and Acknowledgements.
 public struct FinvestLensSettingsView: View {
     @Bindable var model: AppModel
 
@@ -196,6 +196,8 @@ public struct FinvestLensSettingsView: View {
                 .tabItem { Label("Documents", systemImage: "paperclip") }
             IntelligenceSettingsView()
                 .tabItem { Label("Apple Intelligence", systemImage: "apple.intelligence") }
+            AcknowledgementsView()
+                .tabItem { Label("Acknowledgements", systemImage: "heart") }
         }
     }
 }

@@ -49,7 +49,8 @@ it (minutes), and the same build is attached to a version for review.
 ```bash
 # macOS
 xcodebuild archive -scheme finvestlens -destination 'generic/platform=macOS' \
-  -archivePath build/FinvestLens-macOS.xcarchive -allowProvisioningUpdates
+  -archivePath build/FinvestLens-macOS.xcarchive -skipPackagePluginValidation \
+  -allowProvisioningUpdates
 xcodebuild -exportArchive -archivePath build/FinvestLens-macOS.xcarchive \
   -exportOptionsPlist ExportOptions-AppStore-macOS.plist -exportPath build/export-macOS \
   -allowProvisioningUpdates
@@ -58,7 +59,8 @@ xcodebuild -exportArchive -archivePath build/FinvestLens-macOS.xcarchive \
 ```bash
 # iOS
 xcodebuild archive -scheme finvestlens -destination 'generic/platform=iOS' \
-  -archivePath build/FinvestLens-iOS.xcarchive -allowProvisioningUpdates
+  -archivePath build/FinvestLens-iOS.xcarchive -skipPackagePluginValidation \
+  -allowProvisioningUpdates
 xcodebuild -exportArchive -archivePath build/FinvestLens-iOS.xcarchive \
   -exportOptionsPlist ExportOptions-AppStore-iOS.plist -exportPath build/export-iOS \
   -allowProvisioningUpdates
@@ -105,7 +107,7 @@ platform). Never a real book, never `imports/`.
   xcodebuild test -project finvestlens.xcodeproj -scheme finvestlens \
     -destination 'platform=iOS Simulator,id=<udid>' \
     -only-testing:finvestlensUITests/ScreenshotTests/testCaptureStoreScreenshots \
-    -parallel-testing-enabled NO CODE_SIGNING_ALLOWED=NO
+    -parallel-testing-enabled NO -skipPackagePluginValidation CODE_SIGNING_ALLOWED=NO
   ```
 
   `TEST_RUNNER_FL_SHOT_PERIOD` overrides the period (default: the previous

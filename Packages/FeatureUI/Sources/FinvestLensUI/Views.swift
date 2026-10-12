@@ -1152,7 +1152,9 @@ private struct StatementProgressCard: View {
         .padding(20)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
         .shadow(radius: 8)
-        .accessibilityLabel("Reading statement with Apple Intelligence")
+        .accessibilityLabel(Text(for: .statementExtractor,
+                                 apple: "Reading statement with Apple Intelligence",
+                                 own: "Reading statement with your model"))
     }
 }
 
@@ -3562,7 +3564,9 @@ struct TransactionEditorSheet: View {
         }
         lines = [funding] + items
         if !analysis.readWholeDocument {
-            commitError = String(localized: "This invoice is longer than Apple Intelligence can read at once, so only its first part was read. Line items further down are missing.")
+            commitError = LanguageModels.usesOwnModel(for: .invoiceAnalyzer)
+                ? String(localized: "This invoice is longer than your model can read at once, so only its first part was read. Line items further down are missing.")
+                : String(localized: "This invoice is longer than Apple Intelligence can read at once, so only its first part was read. Line items further down are missing.")
         }
     }
 

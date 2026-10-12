@@ -187,8 +187,10 @@ struct AttachmentsPanel: View {
                 }
             }
             .disabled(!readable || categorising || !model.isIntelligenceAvailable(for: .attachmentInsight))
-            .help(model.intelligenceUnavailableReason(for: .attachmentInsight)
-                  ?? "Read the attachment (OCR) and suggest a category for this transaction")
+            // A `Text` either way: `reason ?? "literal"` is a `String`, which
+            // `.help` shows as written — in English, in every language.
+            .help(model.intelligenceUnavailableReason(for: .attachmentInsight).map { Text(verbatim: $0) }
+                  ?? Text("Read the attachment (OCR) and suggest a category for this transaction"))
             // The category is chosen on this device, but the attachment is
             // also read as an invoice and as a dividend statement, and those
             // follow the person's choice — so this says so before the press.

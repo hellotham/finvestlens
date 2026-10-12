@@ -58,6 +58,113 @@ public enum StatementExtractor {
         var transactions: [ModelTransaction]
     }
 
+    /// What every request is told, and how a slice is put to the model — in
+    /// one place so that a harness asking why a row went missing asks the
+    /// model exactly what the reader asks it.
+    static let instructions = """
+        You extract transaction rows from bank and credit card statement text.
+        Report amounts exactly as printed, signed from the account holder's \
+        perspective: purchases, withdrawals and fees are negative; deposits, \
+        salary and refunds are positive. Never invent transactions that are \
+        not in the text.
+        """
+
+    static func prompt(for slice: String) -> String { "Statement page:\n\n\(slice)" }
+
+    /// Reads `text` whole; where it will not go through, or comes back with
+    /// the debris of an answer gone wrong, halves it on a line boundary and
+    /// reads each half in document order, so the running balance and the
+    /// dedupe set still see rows in the order they were printed.
+    ///
+    /// What reads a slice is handed in, so that this — which decides what a
+    /// statement import keeps when a model misbehaves — can be tested with
+    /// answers that are scripted rather than hoped for.
+    ///
+    /// - Parameters:
+    ///   - rereads: how many more times a slice may be halved because its
+    ///     *answer* went wrong. Halving for overflow has no such limit: a
+    ///     slice that does not fit never will.
+    ///   - read: one request over one slice.
+    ///   - keep: what is done with each answer that is to be kept, with the
+    ///     slice it was read from.
+    static func reading(
+        _ text: String, rereads: Int = 2,
+        read: (String) async throws -> ModelPage,
+        keep: (ModelPage, String) -> Void
+    ) async throws {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        let lines = trimmed.split(separator: "\n", omittingEmptySubsequences: false)
+        func halves(rereads: Int, keep: (ModelPage, String) -> Void) async throws {
+            let middle = lines.count / 2
+            try await reading(lines[..<middle].joined(separator: "\n"), rereads: rereads, read: read, keep: keep)
+            try await reading(lines[middle...].joined(separator: "\n"), rereads: rereads, read: read, keep: keep)
+        }
+
+        let page: ModelPage
+        do {
+            let answered = try await read(trimmed)
+            page = answered
+        } catch IntelligenceError.contextOverflow {
+            // Only overflow is worth retrying smaller. A guardrail refusal or
+            // an unavailable model would fail identically on both halves and
+            // on all four quarters, so halving those would turn one failure
+            // into 2n slow ones and still report the same thing.
+            //
+            // A single line that will not go through is a real failure too,
+            // not something more halving can fix.
+            guard lines.count > 1 else { throw IntelligenceError.contextOverflow }
+            try await halves(rereads: rereads, keep: keep)
+            return
+        }
+
+        // An answer that has lost its place — a date that is ": ", an amount
+        // that is "date:" — is short as well as wrong: on a supplied model,
+        // eighteen of a hundred and twenty rows were never written at all,
+        // each time after a row like that (12 October 2026). The rows that
+        // are sound are not the trouble; the ones that are missing are, and
+        // only reading again finds them. A shorter slice is a shorter
+        // answer, with less of it to go wrong.
+        guard rereads > 0, lines.count > 1, hasDebris(page) else {
+            keep(page, trimmed)
+            return
+        }
+        // The second reading is held until both halves are in. If either
+        // fails, the first reading is what there is, and what the checks
+        // keep of it is kept — as it always was. (Kept as they came, a
+        // failed second half left the slice with half its rows where the
+        // reading being replaced had most of them; and an overflow beneath
+        // was caught above and both halves read a second time.)
+        var held: [(ModelPage, String)] = []
+        do {
+            try await halves(rereads: rereads - 1) { held.append(($0, $1)) }
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            let failure = IntelligenceError.wrap(error)
+            if failure.endsABatch { throw failure }
+            keep(page, trimmed)
+            return
+        }
+        for (page, slice) in held { keep(page, slice) }
+    }
+
+    /// Whether an answer carries the debris of having gone wrong part-way
+    /// (``IntelligenceParsing/isDebris(_:)``), in any field of any row.
+    ///
+    /// A date or an amount is debris either way it can be. A payee is only
+    /// when it is the grammar's own punctuation: a page can print a payee
+    /// as one word and a colon ("Interest:"), and reading that page again
+    /// in halves — six more requests — would find the same word.
+    static func hasDebris(_ page: ModelPage) -> Bool {
+        IntelligenceParsing.isDebris(page.openingBalance) || page.transactions.contains {
+            IntelligenceParsing.isDebris($0.date) || IntelligenceParsing.isDebris($0.amount)
+                || IntelligenceParsing.isDebris($0.balanceAfter)
+                || IntelligenceParsing.isStructuralDebris($0.payee)
+                || IntelligenceParsing.isStructuralDebris($0.reference)
+        }
+    }
+
     /// How much statement text to put in one request.
     ///
     /// Not a context-window limit — the window is dominated by *output*, which
@@ -127,18 +234,16 @@ public enum StatementExtractor {
         /// So slicing is for answer quality, not for fitting, and the halving
         /// retry below is a safety net for a window that is no longer expected
         /// to overflow at all.
-        func extract(slice: String) async throws {
-            let page = try await LanguageModels.respond(
+        func read(slice: String) async throws -> ModelPage {
+            try await LanguageModels.respond(
                 .statementExtractor,
-                instructions: """
-                    You extract transaction rows from bank and credit card statement text.
-                    Report amounts exactly as printed, signed from the account holder's \
-                    perspective: purchases, withdrawals and fees are negative; deposits, \
-                    salary and refunds are positive. Never invent transactions that are \
-                    not in the text.
-                    """,
-                prompt: "Statement page:\n\n\(slice)",
+                instructions: Self.instructions,
+                prompt: Self.prompt(for: slice),
                 generating: ModelPage.self)
+        }
+
+        /// Folds what one request found on one slice into `raw`.
+        func fold(_ page: ModelPage, from slice: String) {
             if let opening = IntelligenceParsing.amount(page.openingBalance) {
                 previousBalance = opening
             }
@@ -177,35 +282,12 @@ public enum StatementExtractor {
                     if let balance { previousBalance = balance }
                     continue
                 }
+                // What cannot be a reference is not kept as one: at the end
+                // of its rereads an answer may still carry ": " there.
                 raw.append(RawRow(date: date, amount: amount, payee: row.payee,
-                                  reference: row.reference,
+                                  reference: IntelligenceParsing.isDebris(row.reference) ? "" : row.reference,
                                   previous: previousBalance, balance: balance))
                 if let balance { previousBalance = balance }
-            }
-        }
-
-        /// Tries `text` whole; on refusal, halves it on a line boundary and
-        /// tries each half in document order, so the running balance and the
-        /// dedupe set still see rows in the order they were printed.
-        func extractSplitting(_ text: String) async throws {
-            let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmed.isEmpty else { return }
-            do {
-                try await extract(slice: trimmed)
-                return
-            } catch IntelligenceError.contextOverflow {
-                // Only overflow is worth retrying smaller. A guardrail refusal
-                // or an unavailable model would fail identically on both halves
-                // and on all four quarters, so halving those would turn one
-                // failure into 2n slow ones and still report the same thing.
-                //
-                // A single line that will not go through is a real failure too,
-                // not something more halving can fix.
-                let lines = trimmed.split(separator: "\n", omittingEmptySubsequences: false)
-                guard lines.count > 1 else { throw IntelligenceError.contextOverflow }
-                let middle = lines.count / 2
-                try await extractSplitting(lines[..<middle].joined(separator: "\n"))
-                try await extractSplitting(lines[middle...].joined(separator: "\n"))
             }
         }
 
@@ -230,7 +312,7 @@ public enum StatementExtractor {
         for (index, page) in pages.enumerated() {
             for group in Self.lineGroups(page.text, budget: Self.sliceBudget) {
                 do {
-                    try await extractSplitting(group)
+                    try await Self.reading(group, read: read(slice:), keep: fold)
                 } catch is CancellationError {
                     throw CancellationError()
                 } catch {

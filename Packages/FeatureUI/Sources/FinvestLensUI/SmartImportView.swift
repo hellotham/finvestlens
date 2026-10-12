@@ -329,7 +329,9 @@ private struct SmartDocumentRow: View {
             if !analysis.readWholeDocument {
                 // Says why the sum may fall short, rather than leaving the
                 // shortfall to speak for itself.
-                Text("This invoice is longer than Apple Intelligence can read at once, so only its first part was read. Line items further down are missing.")
+                Text(for: .invoiceAnalyzer,
+                     apple: "This invoice is longer than Apple Intelligence can read at once, so only its first part was read. Line items further down are missing.",
+                     own: "This invoice is longer than your model can read at once, so only its first part was read. Line items further down are missing.")
                     .scaledFont(.caption).foregroundStyle(.orange)
             }
             if let match {

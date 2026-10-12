@@ -257,7 +257,9 @@ struct ImportView: View {
                                       systemImage: "sparkles")
                             }
                             .disabled(suggesting)
-                            .help("Let Apple Intelligence propose a destination account for each row")
+                            .help(Text(for: .transactionCategorizer,
+                                       apple: "Let Apple Intelligence propose a destination account for each row",
+                                       own: "Let your model propose a destination account for each row"))
                             if let suggestError {
                                 Text(suggestError).scaledFont(.caption).foregroundStyle(.red)
                             }

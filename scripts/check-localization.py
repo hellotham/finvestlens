@@ -117,7 +117,10 @@ def extract(into: pathlib.Path) -> None:
         out.mkdir(parents=True, exist_ok=True)
         result = subprocess.run(
             ["xcodebuild", "build", "-scheme", "finvestlens",
-             "-destination", destination, "CODE_SIGNING_ALLOWED=NO",
+             "-destination", destination,
+             # mlx-swift carries a build-tool plug-in; a headless build has
+             # nobody to press "Trust & Enable", and fails validating it.
+             "-skipPackagePluginValidation", "CODE_SIGNING_ALLOWED=NO",
              "OTHER_SWIFT_FLAGS=$(inherited) -emit-localized-strings "
              f"-emit-localized-strings-path {out}"],
             cwd=REPO, capture_output=True, text=True, check=False)

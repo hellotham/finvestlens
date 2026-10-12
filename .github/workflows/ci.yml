@@ -105,6 +105,15 @@ jobs:
             echo "::error::Xcode $major selected; the 27.0 deployment targets need Xcode 27 or later"
             exit 1
           fi
+      # The app links MLX so that a model the person supplies can run in it
+      # (`finvestlens/MLXModelLoader.swift`). mlx-swift's Cmlx target compiles
+      # Metal shaders, and Xcode 27 ships the Metal toolchain as a component to
+      # download: without it the build stops at "cannot execute tool 'metal'
+      # due to missing Metal Toolchain". The same package carries a build-tool
+      # plug-in (`CudaBuild`) that a headless build has nobody to trust on its
+      # behalf, hence `-skipPackagePluginValidation` below.
+      - name: Install the Metal toolchain
+        run: xcodebuild -downloadComponent MetalToolchain
       # `-emit-localized-strings` is passed through OTHER_SWIFT_FLAGS because
       # Xcode extracts only the targets that own a String Catalog — the app and
       # the extensions — and never the SPM packages, where most of the strings
@@ -116,6 +125,7 @@ jobs:
           xcodebuild build \
             -scheme finvestlens \
             -destination '${{ matrix.destination }}' \
+            -skipPackagePluginValidation \
             -derivedDataPath "$PWD/DerivedData" \
             CODE_SIGNING_ALLOWED=NO \
             OTHER_SWIFT_FLAGS="\$(inherited) -emit-localized-strings -emit-localized-strings-path $PWD/strings/packages"

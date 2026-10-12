@@ -43,6 +43,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 }
 #endif
 
+/// Whether this launch is the host of a unit-test bundle (`finvestlensTests`).
+///
+/// Xcode runs those tests *inside* the app, which it launches like any other
+/// launch — so session restore reopened the last book, which on the
+/// maintainer's Mac is the real one, for a test run that never asked for a
+/// book at all. A host opens nothing and asks for no permission. The UI tests
+/// are not this: they drive a separate copy of the app, launched with its own
+/// arguments, and that process carries neither variable.
+enum TestHost {
+    static let isActive: Bool = {
+        let environment = ProcessInfo.processInfo.environment
+        return environment["XCTestConfigurationFilePath"] != nil || environment["XCTestBundlePath"] != nil
+    }()
+}
+
 @main
 struct finvestlensApp: App {
     @State private var model = AppModel()
@@ -55,6 +70,10 @@ struct finvestlensApp: App {
         #if PRIVATE_CLOUD_COMPUTE
         IntelligenceBuild.offersPrivateCloudCompute()
         #endif
+        // A model the person supplies is run by MLX, which only this target
+        // links (see `MLXModelLoader`). Nothing is loaded here: this says
+        // that one can be chosen, and reads the folder they pointed at.
+        SuppliedModelStore.shared.install(MLXModelLoader())
     }
     /// Mirrors the register's View ▸ Style picker into the menu bar.
     @AppStorage("registerViewStyle") private var registerStyle = RegisterStyle.basic
@@ -99,10 +118,11 @@ struct finvestlensApp: App {
                 // Ask once for permission to deliver bill/alert notifications
                 // (FR-PLAN-05). The system prompts only on first launch; later
                 // syncs are no-ops until granted.
-                .task { await AlertNotificationScheduler.requestAuthorization() }
+                .task { if !TestHost.isActive { await AlertNotificationScheduler.requestAuthorization() } }
                 // Reopen the last book on launch (window/state restoration),
-                // when the General setting allows it.
-                .task { await model.reopenLastBookIfEnabled() }
+                // when the General setting allows it — and never as the host
+                // of a unit test, whose launch is nobody's session.
+                .task { if !TestHost.isActive { await model.reopenLastBookIfEnabled() } }
                 // In-context feature tips (TipKit).
                 .task { try? Tips.configure([.displayFrequency(.immediate),
                                              .datastoreLocation(.applicationDefault)]) }

@@ -7,7 +7,7 @@
 //
 //  The app's settings on iPhone and iPad.
 //
-//  On the Mac the five panes are the tabs of the Settings window, which the
+//  On the Mac the panes are the tabs of the Settings window, which the
 //  system opens from the app menu. iOS has no such window, and until
 //  12 October 2026 nothing presented the panes there at all: an iPad could
 //  not change its accent colour, enter a price provider's key, or see where
@@ -52,6 +52,11 @@ struct SettingsSheet: View {
                     IntelligenceSettingsView()
                 } label: {
                     Label("Apple Intelligence", systemImage: "apple.intelligence")
+                }
+                NavigationLink {
+                    AcknowledgementsView()
+                } label: {
+                    Label("Acknowledgements", systemImage: "heart")
                 }
             }
             .navigationTitle("Settings")

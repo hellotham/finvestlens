@@ -72,6 +72,9 @@ public enum IntelligenceCommand: String, CaseIterable, Sendable {
 
     /// Whether the command would send what it reads off this device now.
     public var leavesDevice: Bool { features.contains(where: LanguageModels.leavesDevice) }
+
+    /// Whether the command would be answered by a model the person supplied.
+    public var usesOwnModel: Bool { features.contains(where: LanguageModels.usesOwnModel) }
 }
 
 /// Apple Intelligence features (`FR-AI-01…06`). Everything here follows the
@@ -91,11 +94,13 @@ extension AppModel {
     /// about the device's own model for every feature disabled the ones that
     /// could have run without it.
     public func isIntelligenceAvailable(for feature: IntelligenceFeature) -> Bool {
-        LanguageModels.availability(for: feature).isAvailable
+        SuppliedModelStore.shared.observe()
+        return LanguageModels.availability(for: feature).isAvailable
     }
 
     /// Why `feature` is disabled, for menu help and tooltips.
     public func intelligenceUnavailableReason(for feature: IntelligenceFeature) -> String? {
+        SuppliedModelStore.shared.observe()
         if case .unavailable(let reason) = LanguageModels.availability(for: feature) { return reason }
         return nil
     }

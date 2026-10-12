@@ -37,7 +37,12 @@ struct SmartImportTip: Tip {
         usesPrivateCloud ? Text("Read statements with Apple Intelligence") : Text("Read statements on device")
     }
     var message: Text? {
-        usesPrivateCloud
+        // A model the person supplied reads everything, on the device — and
+        // is not Apple Intelligence, so the tip does not say it is.
+        if IntelligenceCommand.invoice.usesOwnModel {
+            return Text("Bank statements, dividend statements and invoices are read on this device by your own model and turned into transactions to review — nothing leaves this device.")
+        }
+        return usesPrivateCloud
             ? Text("Bank statements are read on this device and turned into transactions to review. Invoices and dividend statements are read with Apple’s Private Cloud Compute — you can keep them on this device in Settings.")
             : Text("Bank statements, dividend statements and invoices are read on-device by Apple Intelligence and turned into transactions to review — nothing leaves this device.")
     }
