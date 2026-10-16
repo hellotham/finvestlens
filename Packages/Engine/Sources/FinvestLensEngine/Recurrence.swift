@@ -47,14 +47,14 @@ public extension RecurrencePeriod {
     /// A human-facing name for a picker.
     var displayName: String {
         switch self {
-        case .daily: "Daily"
-        case .weekly: "Weekly"
-        case .monthly: "Monthly"
-        case .yearly: "Yearly"
-        case .once: "Once"
-        case .endOfMonth: "Monthly (last day)"
-        case .nthWeekday: "Monthly (same weekday)"
-        case .lastWeekday: "Monthly (last weekday)"
+        case .daily: String(localized: "Daily")
+        case .weekly: String(localized: "Weekly")
+        case .monthly: String(localized: "Monthly")
+        case .yearly: String(localized: "Yearly")
+        case .once: String(localized: "Once")
+        case .endOfMonth: String(localized: "Monthly (last day)")
+        case .nthWeekday: String(localized: "Monthly (same weekday)")
+        case .lastWeekday: String(localized: "Monthly (last weekday)")
         }
     }
 }

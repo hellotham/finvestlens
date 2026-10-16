@@ -180,32 +180,43 @@ documents, the annual-report statements, the gallery and an open report,
 period names and labels, and what surrounds them — 247 phrases. See
 `implemented.md`, "The reports in the reader's language".
 
-**Open, found while doing that: it is not only the reports.** Everything the
-catalog's gate checks is a key the compiler emitted, and a `String` emits
-none. Setting every string literal that reads as English against the keys
-emitted for its own file — both platforms, every package the app ships —
-leaves several hundred that a reader meets in English whatever their
-language:
+**Everything a reader meets is in their language** (done 17 Oct): the
+undo names, toasts, errors, the engine's names for things, the open and save
+panels, Siri's phrases and what the app writes into a new book — and a gate
+that reads the source, so that a `String` a reader sees cannot ship in
+English again (`scripts/check-localization.py`, the *unseen* check). See
+`implemented.md`, "Everything a reader meets".
 
-- the name of every undo action ("Undo Delete Transaction" in the Edit menu,
-  and in the audit trail) — some 150 call sites behind seven functions that
-  take a `String`;
-- the toasts, and most error and information messages (`showToast`,
-  `DocumentError`, the import, quote, Box and book-file errors);
-- names the Engine and Reports packages give things and the app shows as
-  they are: reconcile states, recurrence periods, find operators and fields,
-  stock-transaction kinds, cost-basis methods, alert titles and messages,
-  the wellbeing measures, an account's type;
-- labels passed to helpers that take a `String` (the planning, stock and
-  currency sheets), the open and save panels' titles, the book-load progress
-  caption, what an intent says aloud;
-- what the app writes *into* a book in English: the starter chart of
-  accounts, and memos and descriptions such as "Closing Entries" — a
-  decision more than a translation, since other code and GnuCash read some
-  of them back.
+**English on purpose**, each line with its reason in
+`scripts/localization-exempt.tsv`:
 
-Being done next, with a gate that reads the source the way the count did, so
-that a `String` a reader sees cannot go in unnoticed again.
+- *Formats other programs read*: GnuCash XML, GnuCash CSV, Ledger, HTTP and
+  Box's API, SQL, file signatures, bank-export column names.
+- *What a model is told*: the prompts, the words they are checked against,
+  and the stability and percent vocabularies the narrators' validators match
+  (`docs/intelligence-prompts.md` gives the reasons prompts are English).
+- *What GnuCash writes into a book and code reads back*: the root, orphan,
+  imbalance and trading accounts; a business payment's action and memo; an
+  invoice posting's read-only reason; ISO's English currency names (shown,
+  a currency takes the reader's name from the locale). GnuCash's reports are
+  the oracle for the business features, so their strings stay as GnuCash
+  writes them.
+- *The Australian dividend accounts* (`Income:Dividends:Franked Dividends`
+  and the rest), which the financial-year pack classifies by their English
+  names. A book outside Australia has no use for them.
+- *A cheque's legal line*, English by design (`CheckPrinting.swift` says why).
+- *Help search keywords*: search matches the reader's language and these
+  English synonyms as well, so a term learned from GnuCash still finds its
+  page (`HelpView.swift`).
+- *What only a developer or `finlab` reads*: GnuCash import notes (the app
+  does not show them), debug descriptions, programming errors, a trace file,
+  the simulator's note about MLX.
+
+**Not done, and why:** nothing has been looked at on screen in a language
+other than English; the App Shortcuts phrases have not been spoken to Siri;
+and the gate's idea of "reads as English" does not see a lone lower-case
+word or text built without a literal (`Text(kind.rawValue)`), which are for
+review — this pass found and fixed the ten such sites it could find.
 
 ## 4 — Platform & HIG — deferred decisions
 

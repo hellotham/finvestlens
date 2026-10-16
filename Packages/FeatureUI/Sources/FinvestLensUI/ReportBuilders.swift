@@ -681,20 +681,6 @@ extension AppModel {
         }
     }
 
-    /// An interval by name, for the control that chooses one. The engine's
-    /// `displayName` is English.
-    static func intervalName(_ step: AverageBalanceStep) -> String {
-        switch step {
-        case .day: String(localized: "Day")
-        case .week: String(localized: "Week")
-        case .twoWeeks: String(localized: "Fortnight")
-        case .month: String(localized: "Month")
-        case .quarter: String(localized: "Quarter")
-        case .halfYear: String(localized: "Half-year")
-        case .year: String(localized: "Year")
-        }
-    }
-
     /// The heading over an average-balance table: "By month". A whole phrase
     /// for each interval, because "by" + a lowercased noun is English's way
     /// of saying it and nobody else's (German keeps the capital; Japanese has

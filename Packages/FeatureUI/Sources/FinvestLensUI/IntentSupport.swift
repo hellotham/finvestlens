@@ -65,15 +65,15 @@ public enum IntentSupport {
 
     /// "Your net worth is $X."
     public static func netWorthSummary() -> String {
-        guard let book = lastBook() else { return "No FinvestLens book has been opened yet." }
+        guard let book = lastBook() else { return String(localized: "No FinvestLens book has been opened yet.") }
         let currency = baseCurrency(book)
         let value = FinancialReports.netWorthSeries(book, dates: [Date()], currency: currency).last?.netWorth ?? 0
-        return "Your net worth is \(money(value, currency))."
+        return String(localized: "Your net worth is \(money(value, currency)).")
     }
 
     /// "You have N upcoming bills totalling $X."
     public static func upcomingBillsSummary() -> String {
-        guard let book = lastBook() else { return "No FinvestLens book has been opened yet." }
+        guard let book = lastBook() else { return String(localized: "No FinvestLens book has been opened yet.") }
         let currency = baseCurrency(book)
         let now = Date()
         let bills = FinancialReports.billReminders(
@@ -127,13 +127,13 @@ public enum IntentSupport {
 
     /// The current alerts as a spoken/short summary.
     public static func alertsSummary() -> String {
-        guard let book = lastBook() else { return "No FinvestLens book has been opened yet." }
+        guard let book = lastBook() else { return String(localized: "No FinvestLens book has been opened yet.") }
         let currency = baseCurrency(book)
         let alerts = FinancialReports.alerts(book, scheduled: decodeScheduled(book),
                                              currency: currency)
-        guard !alerts.isEmpty else { return "Nothing needs your attention." }
+        guard !alerts.isEmpty else { return String(localized: "Nothing needs your attention.") }
         let top = alerts.prefix(3).map(\.title).joined(separator: "; ")
-        return alerts.count <= 3 ? top : "\(top); and \(alerts.count - 3) more."
+        return alerts.count <= 3 ? top : String(localized: "\(top); and \(alerts.count - 3) more.")
     }
 
     // MARK: - Widget / Quick Look snapshot (FR-PLT-03)

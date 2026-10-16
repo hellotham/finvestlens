@@ -387,15 +387,17 @@ struct finvestlensApp: App {
                 Button("Smart Import PDFs…") { model.smartImportRequested = true }
                     .keyboardShortcut("i", modifiers: [.command, .shift])
                     .disabled(!model.isOpen || model.smartImportUnavailableReason != nil)
-                    .help(model.smartImportUnavailableReason
-                          ?? "Import bank statements, dividend statements, and invoices — each PDF is identified and handled automatically")
+                    // `reason ?? "literal"` is a `String`, which `.help` shows as
+                    // written — English in every language; a `Text` either way.
+                    .help(model.smartImportUnavailableReason.map { Text(verbatim: $0) }
+                          ?? Text("Import bank statements, dividend statements, and invoices — each PDF is identified and handled automatically"))
                 Button("Auto-Categorise Transactions…") { model.presentedPanel = .autoCategorize }
                     .disabled(!model.isOpen)
                 Button("Match Attachments…") { model.presentedPanel = .matchAttachments }
                     .keyboardShortcut("m", modifiers: [.command, .shift])
                     .disabled(!model.isOpen || model.matchAttachmentsUnavailableReason != nil)
-                    .help(model.matchAttachmentsUnavailableReason
-                          ?? "Pick receipts and statements — each is matched to its transaction, linked, and categorised")
+                    .help(model.matchAttachmentsUnavailableReason.map { Text(verbatim: $0) }
+                          ?? Text("Pick receipts and statements — each is matched to its transaction, linked, and categorised"))
                 // Mode switching (⌘1…⌘7) lives in the View menu, where the
                 // HIG puts commands that change what is displayed. A second
                 // "Dashboard" item sat here on ⌥⌘0 and did less than its twin —

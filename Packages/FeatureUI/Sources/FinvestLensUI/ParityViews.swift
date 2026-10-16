@@ -71,7 +71,7 @@ struct LinkedDocumentsView: View {
             Image(systemName: doc.isWeb ? "link" : (doc.exists ? "doc.fill" : "doc.badge.gearshape"))
                 .foregroundStyle(doc.exists ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
             VStack(alignment: .leading, spacing: 2) {
-                Text(doc.description.isEmpty ? "(no description)" : doc.description)
+                Text(doc.description.isEmpty ? String(localized: "(no description)") : doc.description)
                     .scaledFont(.body)
                 HStack(spacing: 6) {
                     Text(dateFormat.short(doc.date))
@@ -225,7 +225,7 @@ struct CloseBookView: View {
 
     @State private var date = Date()
     @State private var equityID: GncGUID?
-    @State private var description = "Closing Entries"
+    @State private var description = String(localized: "Closing Entries")
     @State private var posted: Int?
 
     private var equityChoices: [(id: GncGUID, name: String)] { model.equityAccountChoices }
@@ -412,7 +412,7 @@ struct CreateLoanPaymentSheet: View {
     var onCreated: () -> Void
     @Environment(\.dismiss) private var dismiss
 
-    @State private var name = "Loan payment"
+    @State private var name = String(localized: "Loan payment")
     @State private var startDate = Date()
     @State private var fromID: GncGUID?
     @State private var principalID: GncGUID?

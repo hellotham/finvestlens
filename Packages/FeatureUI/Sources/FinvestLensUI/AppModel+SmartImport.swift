@@ -240,7 +240,7 @@ extension AppModel {
             let residual = -funding.value - allocated
             if residual != 0, let account = fallback
                 ?? analysis.lineItems.first?.suggestedCategoryID.flatMap({ book.account(with: $0) }) {
-                transaction.addSplit(account: account, value: residual, memo: "Invoice adjustment")
+                transaction.addSplit(account: account, value: residual, memo: String(localized: "Invoice adjustment"))
             }
             if !analysis.vendor.isEmpty && transaction.transactionDescription.isEmpty {
                 transaction.transactionDescription = analysis.vendor
@@ -283,7 +283,7 @@ extension AppModel {
         let residual = analysis.total - allocated
         if residual != 0 {
             splits.append(SplitInput(accountID: firstCategory.guid, value: residual,
-                                     memo: "Invoice adjustment"))
+                                     memo: String(localized: "Invoice adjustment")))
         }
         // A reference read from a code on the invoice goes where a cheque
         // number would: it is what the payee will look the payment up by.

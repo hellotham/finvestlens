@@ -36,7 +36,7 @@ public enum CostBasisMethod: String, Codable, Sendable, CaseIterable, Identifiab
         switch self {
         case .fifo: return "FIFO"
         case .lifo: return "LIFO"
-        case .average: return "Average cost"
+        case .average: return String(localized: "Average cost")
         }
     }
 }
@@ -55,8 +55,8 @@ public enum FeeTreatment: String, Codable, Sendable, CaseIterable, Identifiable 
 
     public var displayName: String {
         switch self {
-        case .includeInBasis: return "Include in basis"
-        case .ignore: return "Ignore fees"
+        case .includeInBasis: return String(localized: "Include in basis")
+        case .ignore: return String(localized: "Ignore fees")
         }
     }
 }

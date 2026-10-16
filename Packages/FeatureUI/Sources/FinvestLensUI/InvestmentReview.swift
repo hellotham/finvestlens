@@ -119,7 +119,7 @@ extension AppModel {
             headline: headline,
             callouts: callouts,
             chart: .categoryBars(Array(bars)),
-            footnote: String(localized: "Valued at the most recent recorded prices · \(AppModel.costBasisName(portfolio.method)) basis · return = (unrealised + realised + income) over money in"),
+            footnote: String(localized: "Valued at the most recent recorded prices · \(portfolio.method.displayName) basis · return = (unrealised + realised + income) over money in"),
             facts: ReviewSlideFacts(kicker: String(localized: "Portfolio overview"), periodLabel: label,
                                     currencyCode: code, figures: figures, ratios: ratios))
     }
@@ -279,7 +279,7 @@ extension AppModel {
                 SlideCallout(label: disposalsLabel, value: "\(disposals)"),
             ],
             chart: .categoryBars(Array(bars)),
-            footnote: String(localized: "\(AppModel.costBasisName(report.method)) cost basis · the over-a-year split is the CGT-discount boundary"),
+            footnote: String(localized: "\(report.method.displayName) cost basis · the over-a-year split is the CGT-discount boundary"),
             facts: ReviewSlideFacts(
                 kicker: String(localized: "Realised gains"), periodLabel: label, currencyCode: code,
                 figures: [(String(localized: "Realised gain"), report.totalGain),

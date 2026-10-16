@@ -104,7 +104,7 @@ public final class LoadWarnings: @unchecked Sendable {
         if kvpFrames > 0 { parts.append(String(localized: "\(kvpFrames) detail records")) }
         if addresses > 0 { parts.append(String(localized: "\(addresses) addresses")) }
         if guids > 0 { parts.append(String(localized: "\(guids) identifiers")) }
-        let list = parts.joined(separator: ", ")
+        let list = parts.formatted(.list(type: .and))
         return String(localized: "Opened with \(list) unreadable and defaulted — consider Repair Book and check the audit trail.")
     }
 

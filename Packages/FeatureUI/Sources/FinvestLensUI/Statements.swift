@@ -522,7 +522,7 @@ struct StatementBuilder {
 
     private func basisNote(asOf: Date, comparativeLabel: String?) -> StatementNote {
         let commodity = book.rootAccount.commodity
-        let currency = commodity.fullName.isEmpty ? commodity.mnemonic : commodity.fullName
+        let currency = commodity.localizedName
         var body = [
             String(localized: "Prepared from the accounting records of the book on an accrual basis."),
             String(localized: "Assets are stated at estimated current value: securities at the most recent recorded market price, foreign-currency balances translated at the nearest recorded exchange rate."),
@@ -728,7 +728,7 @@ struct StatementBuilder {
 
     private func unitsLabel() -> String {
         let commodity = book.rootAccount.commodity
-        let name = commodity.fullName.isEmpty ? commodity.mnemonic : commodity.fullName
+        let name = commodity.localizedName
         return String(localized: "All amounts in \(name) (\(commodity.mnemonic))")
     }
 }

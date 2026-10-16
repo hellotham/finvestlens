@@ -86,7 +86,7 @@ struct AutoCategorizeSheet: View {
                                 Button {
                                     suggest()
                                 } label: {
-                                    Label(suggesting ? suggestingLabel : "Suggest Categories",
+                                    Label(suggesting ? suggestingLabel : String(localized: "Suggest Categories"),
                                           systemImage: "sparkles")
                                 }
                                 .disabled(suggesting || !model.isIntelligenceAvailable(for: .transactionCategorizer))
@@ -105,7 +105,7 @@ struct AutoCategorizeSheet: View {
                                         suggestFromAttachments()
                                     } label: {
                                         Label(readingAttachments ? readingLabel
-                                              : "Read Attachments (\(attachmentCount))",
+                                              : String(localized: "Read Attachments (\(attachmentCount))"),
                                               systemImage: "doc.text.viewfinder")
                                     }
                                     .disabled(readingAttachments || suggesting
@@ -158,8 +158,8 @@ struct AutoCategorizeSheet: View {
 
     private var emptyMessage: String {
         scopeCount == nil
-            ? "Every transaction already has a category."
-            : "The selected transactions already have a category."
+            ? String(localized: "Every transaction already has a category.")
+            : String(localized: "The selected transactions already have a category.")
     }
 
     /// A read-only summary of a learned split plan, with a checkbox to accept it.
@@ -203,15 +203,15 @@ struct AutoCategorizeSheet: View {
     }
 
     private var suggestingLabel: String {
-        if let progress { return "Suggesting… (\(progress.done)/\(progress.total))" }
-        return "Suggesting…"
+        if let progress { return String(localized: "Suggesting… (\(progress.done)/\(progress.total))") }
+        return String(localized: "Suggesting…")
     }
 
     private var readingLabel: String {
         if let attachmentProgress {
-            return "Reading… (\(attachmentProgress.done)/\(attachmentProgress.total))"
+            return String(localized: "Reading… (\(attachmentProgress.done)/\(attachmentProgress.total))")
         }
-        return "Reading…"
+        return String(localized: "Reading…")
     }
 
     /// The opt-in attachment pass: OCR each unplaced item's linked document and

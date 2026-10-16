@@ -23,17 +23,30 @@ struct SnapshotEntry: TimelineEntry {
     let snapshot: WidgetSnapshot
 }
 
+private extension WidgetSnapshot {
+    /// What the gallery shows before the app has published anything, in the
+    /// reader's language. The shared placeholder is built in a package, and a
+    /// package's strings resolve against the bundle they run in — here the
+    /// widget's, whose catalog is its own.
+    static var gallery: WidgetSnapshot {
+        var snapshot = WidgetSnapshot.placeholder
+        snapshot.upcomingBills = String(localized: "No upcoming bills")
+        snapshot.netWorth = Decimal.zero.formatted(.currency(code: Locale.current.currency?.identifier ?? "USD"))
+        return snapshot
+    }
+}
+
 struct SnapshotProvider: TimelineProvider {
     func placeholder(in context: Context) -> SnapshotEntry {
-        SnapshotEntry(date: entryDate, snapshot: .placeholder)
+        SnapshotEntry(date: entryDate, snapshot: .gallery)
     }
 
     func getSnapshot(in context: Context, completion: @escaping (SnapshotEntry) -> Void) {
-        completion(SnapshotEntry(date: entryDate, snapshot: WidgetSnapshot.read() ?? .placeholder))
+        completion(SnapshotEntry(date: entryDate, snapshot: WidgetSnapshot.read() ?? .gallery))
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<SnapshotEntry>) -> Void) {
-        let entry = SnapshotEntry(date: entryDate, snapshot: WidgetSnapshot.read() ?? .placeholder)
+        let entry = SnapshotEntry(date: entryDate, snapshot: WidgetSnapshot.read() ?? .gallery)
         // The app reloads on save/open; this periodic refresh is only a backstop
         // for when the app has not run for a while.
         let next = Calendar.current.date(byAdding: .hour, value: 6, to: entryDate) ?? entry.date

@@ -17,13 +17,13 @@ public enum AverageBalanceStep: String, Codable, Sendable, CaseIterable, Identif
 
     public var displayName: String {
         switch self {
-        case .day: "Day"
-        case .week: "Week"
-        case .twoWeeks: "Fortnight"
-        case .month: "Month"
-        case .quarter: "Quarter"
-        case .halfYear: "Half-year"
-        case .year: "Year"
+        case .day: String(localized: "Day")
+        case .week: String(localized: "Week")
+        case .twoWeeks: String(localized: "Fortnight")
+        case .month: String(localized: "Month")
+        case .quarter: String(localized: "Quarter")
+        case .halfYear: String(localized: "Half-year")
+        case .year: String(localized: "Year")
         }
     }
 

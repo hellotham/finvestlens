@@ -149,6 +149,24 @@ struct BookLoadProgressTests {
         #expect(!all.contains { $0.stage == .finishing })
     }
 
+    /// The caption was a verb and a noun side by side — a sentence in English
+    /// only, and neither word in the catalog. Each pair is a phrase now.
+    @Test("Every stage reads as one phrase, for each thing an operation does")
+    func labels() {
+        func label(_ stage: BookLoadProgress.Stage, _ operation: BookLoadProgress.Operation) -> String {
+            BookLoadProgress(stage: stage, completed: 0, total: 0, fraction: 0, operation: operation).label
+        }
+        #expect(label(.transactions, .reading) == "Reading transactions")
+        #expect(label(.prices, .writing) == "Writing prices")
+        #expect(label(.accounts, .parsing) == "Parsing accounts")
+        #expect(label(.finishing, .parsing) == "Preparing your accounts")
+        let operations: [BookLoadProgress.Operation] = [.reading, .writing, .parsing]
+        let labels = BookLoadProgress.Stage.allCases.flatMap { stage in operations.map { label(stage, $0) } }
+        #expect(labels.allSatisfy { !$0.isEmpty })
+        // A store read says it is reading unless told otherwise.
+        #expect(BookLoadProgress(stage: .prices, completed: 1, total: 2, fraction: 0.5).label == "Reading prices")
+    }
+
     /// ~250,000 rows must not mean 250,000 reports: the hop to the main actor
     /// would cost more than the load.
     @Test("Reporting is throttled to about one per percent")

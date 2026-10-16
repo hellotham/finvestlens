@@ -54,7 +54,7 @@ struct EmergencyRecordsView: View {
 
     private func unlockIfNeeded(force: Bool = false) async {
         guard requireAuth, !unlocked, force || !authFailed else { return }
-        let ok = await model.authenticator.authenticate(reason: "view emergency records")
+        let ok = await model.authenticator.authenticate(reason: String(localized: "view emergency records"))
         unlocked = ok
         authFailed = !ok
     }
@@ -142,7 +142,7 @@ struct AuditLogSheet: View {
                 let entries = model.auditLogTail()
                 if entries.isEmpty {
                     ContentUnavailableView("No audit entries yet", systemImage: "list.bullet.rectangle",
-                                           description: Text("Each edit is recorded beside the book in \(model.auditLogURL?.lastPathComponent ?? "the audit log")."))
+                                           description: Text("Each edit is recorded beside the book in \(model.auditLogURL?.lastPathComponent ?? String(localized: "the audit log"))."))
                 } else {
                     List(entries.indices, id: \.self) { index in
                         let entry = entries[index]

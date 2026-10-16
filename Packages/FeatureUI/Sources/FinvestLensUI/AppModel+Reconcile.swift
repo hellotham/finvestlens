@@ -213,17 +213,15 @@ extension AppModel {
     public func describe(_ failure: AutoClear.Failure) -> String {
         switch failure {
         case .alreadyAtTarget:
-            "This account is already at the statement balance."
+            String(localized: "This account is already at the statement balance.")
         case .nothingUncleared:
-            "There are no uncleared transactions to choose from."
+            String(localized: "There are no uncleared transactions to choose from.")
         case .unreachable:
-            "No combination of the uncleared transactions adds up to the statement balance."
+            String(localized: "No combination of the uncleared transactions adds up to the statement balance.")
         case .ambiguous:
-            "More than one combination adds up to the statement balance, so there is no "
-            + "way to tell which transactions cleared. Tick them yourself."
+            String(localized: "More than one combination adds up to the statement balance, so there is no way to tell which transactions cleared. Tick them yourself.")
         case .tooComplex:
-            "There are too many uncleared transactions to work through. Reconcile some of "
-            + "them first, or tick them yourself."
+            String(localized: "There are too many uncleared transactions to work through. Reconcile some of them first, or tick them yourself.")
         }
     }
 }

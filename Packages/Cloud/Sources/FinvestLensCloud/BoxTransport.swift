@@ -58,3 +58,34 @@ public enum BoxError: Error, Equatable, Sendable {
         return false
     }
 }
+
+/// What went wrong, in words for the person. Without this an error reached
+/// the screen through string interpolation as its debug description —
+/// `api(status: 403, code: Optional("access_denied"), message: nil)`, in the
+/// middle of an alert, in every language.
+///
+/// What Box itself said is passed on as Box wrote it: it is Box's sentence,
+/// not this app's, and it says more than any paraphrase could. A response
+/// that could not be read says so; the detail after it is for a bug report.
+extension BoxError: LocalizedError {
+    public var errorDescription: String? {
+        switch self {
+        case .notConfigured:
+            String(localized: "Box isn’t set up. Add a Box client ID and secret in Settings.")
+        case .notAuthenticated:
+            String(localized: "You’re not signed in to Box, or the sign-in has expired. Connect again.")
+        case .signInCancelled:
+            String(localized: "The Box sign-in was cancelled.")
+        case .api(let status, _, let message?) where !message.isEmpty:
+            String(localized: "Box refused the request (\(status)): \(message)")
+        case .api(let status, let code?, _) where !code.isEmpty:
+            String(localized: "Box refused the request (\(status)): \(code)")
+        case .api(let status, _, _):
+            String(localized: "Box refused the request (\(status)).")
+        case .versionConflict:
+            String(localized: "The file on Box has changed since it was downloaded.")
+        case .malformedResponse(let detail):
+            String(localized: "Box sent an answer that couldn’t be read (\(detail)).")
+        }
+    }
+}

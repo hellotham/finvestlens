@@ -287,7 +287,7 @@ extension AppModel {
         let securities = fundamentalsCoveredSecurities
         guard !securities.isEmpty else {
             fundamentalsRun = nil
-            showToast(.failure, String(localized: "No configured provider supplies company data."))
+            showToast(.failure, "No configured provider supplies company data.")
             return
         }
         var run = FundamentalsRun(done: 0, total: securities.count, current: "",
@@ -329,9 +329,9 @@ extension AppModel {
         }
         fundamentalsRun = nil
         if run.failures.isEmpty {
-            showToast(.success, String(localized: "Company data updated for \(run.filled) securities."))
+            showToast(.success, "Company data updated for \(run.filled) securities.")
         } else {
-            showToast(.failure, String(localized: "\(run.filled) updated, \(run.failures.count) unavailable."))
+            showToast(.failure, "\(run.filled) updated, \(run.failures.count) unavailable.")
         }
     }
 }

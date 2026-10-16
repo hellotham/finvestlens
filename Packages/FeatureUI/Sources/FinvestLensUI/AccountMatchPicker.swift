@@ -98,9 +98,8 @@ struct AccountMatchPicker: View {
 
     private var summary: String {
         switch selection.count {
-        case 0: "No accounts selected"
-        case 1: "1 account selected"
-        default: "\(selection.count) accounts selected"
+        case 0: String(localized: "No accounts selected")
+        default: String(localized: "\(selection.count) accounts selected")
         }
     }
 

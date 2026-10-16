@@ -106,12 +106,12 @@ struct SecurityDetailView: View {
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
         guard let text = try? String(contentsOf: url, encoding: .utf8) else {
-            model.showToast(.failure, String(localized: "Couldn't read that file."))
+            model.showToast(.failure, "Couldn't read that file.")
             return
         }
         let outcome = model.importPrices(csv: text)
         if outcome.unrecognisedFormat {
-            model.showToast(.failure, String(localized: "That file's columns weren't recognised."))
+            model.showToast(.failure, "That file's columns weren't recognised.")
             return
         }
         var detail: [String] = []
@@ -124,8 +124,8 @@ struct SecurityDetailView: View {
         let skipped = detail.joined(separator: ", ")
         model.showToast(outcome.imported > 0 ? .success : .info,
                         skipped.isEmpty
-                            ? String(localized: "Imported \(outcome.imported) prices.")
-                            : String(localized: "Imported \(outcome.imported) prices — skipped \(skipped)."))
+                            ? "Imported \(outcome.imported) prices."
+                            : "Imported \(outcome.imported) prices — skipped \(skipped).")
     }
 
     // MARK: Toolbar

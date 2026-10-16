@@ -55,8 +55,8 @@ public actor YahooCrumbStore {
         // arrive as 200 with prose in the body ("Too Many Requests"), so the
         // shape is the test.
         guard !token.isEmpty, token.count <= 32, !token.contains(" ") else {
-            throw QuoteError.providerError(
-                "Yahoo would not issue a session token for company data (got \"\(token.prefix(24))\").")
+            throw QuoteError.providerError(String(localized:
+                "Yahoo would not issue a session token for company data (got “\(String(token.prefix(24)))”)."))
         }
         crumb = token
         fetchedAt = now

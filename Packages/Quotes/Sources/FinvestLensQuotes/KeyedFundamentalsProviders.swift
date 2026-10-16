@@ -461,7 +461,7 @@ public struct TwelveDataFundamentalsProvider: FundamentalsProvider {
     static func checkForServiceMessage(_ root: [String: Any]) throws {
         guard FundamentalsParsing.text(root["status"]) == "error" else { return }
         throw QuoteError.providerError(
-            FundamentalsParsing.text(root["message"]) ?? "Twelve Data refused the request.")
+            FundamentalsParsing.text(root["message"]) ?? String(localized: "Twelve Data refused the request."))
     }
 
     static func parseProfile(_ data: Data) throws -> SecurityProfile {

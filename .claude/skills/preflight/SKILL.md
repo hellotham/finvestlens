@@ -71,7 +71,11 @@ python3 scripts/check-localization.py --build
 It builds both platforms with the extractor on, then reports keys the compiler
 emits with no catalog entry, entries nothing emits, languages missing, and
 translations whose `%` specifiers do not match the key's. That last one is a
-crash, not a cosmetic defect. This is slow (two full builds) — skip it when no
+crash, not a cosmetic defect. It also reads the source for English the
+compiler cannot see — a `String` emits no key — and checks Siri's phrases
+(`finvestlens/AppShortcuts.xcstrings`). A literal no reader meets goes in
+`scripts/localization-exempt.tsv` with its reason; anything a person sees
+goes through `String(localized:)` or a localized type instead. This is slow (two full builds) — skip it when no
 user-facing string changed, and say so.
 
 ## 3c. No real financial data in published files

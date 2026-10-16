@@ -17,9 +17,9 @@ public enum CSVExportKind: String, Sendable, CaseIterable, Identifiable {
 
     public var menuTitle: String {
         switch self {
-        case .accounts: return "Accounts…"
-        case .transactions: return "Transactions…"
-        case .prices: return "Prices…"
+        case .accounts: return String(localized: "Accounts…")
+        case .transactions: return String(localized: "Transactions…")
+        case .prices: return String(localized: "Prices…")
         }
     }
 

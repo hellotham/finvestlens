@@ -23,7 +23,7 @@ public struct BillableEntry: Identifiable, Codable, Hashable, Sendable {
         case time, mileage
         public var id: String { rawValue }
         /// The noun for the quantity column.
-        public var quantityLabel: String { self == .time ? "Hours" : "Distance" }
+        public var quantityLabel: String { self == .time ? String(localized: "Hours") : String(localized: "Distance") }
     }
 
     public var id: GncGUID

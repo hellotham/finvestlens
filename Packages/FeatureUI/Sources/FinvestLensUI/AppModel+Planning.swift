@@ -113,11 +113,11 @@ public struct EmergencyRecord: Codable, Sendable, Equatable, Identifiable {
         public var id: String { rawValue }
         public var title: String {
             switch self {
-            case .insurance: "Insurance"
-            case .account: "Account"
-            case .contact: "Contact"
-            case .document: "Document"
-            case .other: "Other"
+            case .insurance: String(localized: "Insurance")
+            case .account: String(localized: "Account")
+            case .contact: String(localized: "Contact")
+            case .document: String(localized: "Document")
+            case .other: String(localized: "Other")
             }
         }
     }

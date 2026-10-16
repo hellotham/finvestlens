@@ -22,12 +22,12 @@ public enum StockActionKind: String, CaseIterable, Sendable, Identifiable {
 
     public var displayName: String {
         switch self {
-        case .buy: return "Buy"
-        case .sell: return "Sell"
-        case .dividend: return "Dividend"
-        case .reinvestDividend: return "Reinvest Dividend"
-        case .split: return "Split"
-        case .returnOfCapital: return "Return of Capital"
+        case .buy: return String(localized: "Buy")
+        case .sell: return String(localized: "Sell")
+        case .dividend: return String(localized: "Dividend")
+        case .reinvestDividend: return String(localized: "Reinvest Dividend")
+        case .split: return String(localized: "Split")
+        case .returnOfCapital: return String(localized: "Return of Capital")
         }
     }
 
@@ -59,7 +59,7 @@ public enum StockTransaction {
         txn.addSplit(account: security, value: expenseFee ? cost : cost + fee,
                      quantity: shares, memo: memo)
         if expenseFee, let commissionAccount {
-            txn.addSplit(account: commissionAccount, value: fee, memo: "Commission")
+            txn.addSplit(account: commissionAccount, value: fee, memo: String(localized: "Commission"))
         }
         txn.addSplit(account: cash, value: -(cost + fee))
         return txn
@@ -86,7 +86,7 @@ public enum StockTransaction {
         txn.addSplit(account: security, value: expenseFee ? -gross : -(gross - fee),
                      quantity: -shares, memo: memo)
         if expenseFee, let commissionAccount {
-            txn.addSplit(account: commissionAccount, value: fee, memo: "Commission")
+            txn.addSplit(account: commissionAccount, value: fee, memo: String(localized: "Commission"))
         }
         txn.addSplit(account: cash, value: gross - fee)
         return txn

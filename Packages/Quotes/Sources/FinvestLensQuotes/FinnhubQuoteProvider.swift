@@ -36,7 +36,7 @@ public struct FinnhubQuoteProvider: QuoteProvider {
     }
 
     public func history(symbol: String, from: Date, to: Date) async throws -> [Quote] {
-        throw QuoteError.unsupported("Finnhub does not provide daily history on the free tier")
+        throw QuoteError.unsupported(String(localized: "Finnhub does not provide daily history on the free tier"))
     }
 
     // MARK: Parsing

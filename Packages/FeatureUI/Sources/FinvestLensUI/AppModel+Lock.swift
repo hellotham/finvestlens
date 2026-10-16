@@ -77,7 +77,7 @@ extension AppModel {
     /// success (and always succeeds where LocalAuthentication is unavailable, so
     /// tests and headless builds aren't blocked).
     @discardableResult
-    public func unlock(reason: String = "Unlock your book") async -> Bool {
+    public func unlock(reason: String = String(localized: "Unlock your book")) async -> Bool {
         let ok = await authenticator.authenticate(reason: reason)
         if ok {
             isLocked = false

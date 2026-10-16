@@ -139,9 +139,9 @@ public struct LoanCalculator: Sendable, Equatable {
             name: name, currency: currency, description: name,
             recurrence: Recurrence(period: period, interval: interval, startDate: startDate),
             splits: [
-                ScheduledSplit(accountGUID: fromAccount, value: -pay, memo: "Payment"),
-                ScheduledSplit(accountGUID: interestAccount, value: 0, memo: "Interest", formula: "interest"),
-                ScheduledSplit(accountGUID: principalAccount, value: 0, memo: "Principal",
+                ScheduledSplit(accountGUID: fromAccount, value: -pay, memo: String(localized: "Payment")),
+                ScheduledSplit(accountGUID: interestAccount, value: 0, memo: String(localized: "Interest"), formula: "interest"),
+                ScheduledSplit(accountGUID: principalAccount, value: 0, memo: String(localized: "Principal"),
                                formula: "\(pay) - interest"),
             ])
     }

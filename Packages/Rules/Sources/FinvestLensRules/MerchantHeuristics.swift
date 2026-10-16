@@ -71,6 +71,32 @@ public enum MerchantHeuristics {
             .joined(separator: " ")
     }
 
+    /// What the reader's language calls a category — the name a book the
+    /// app started for them gives the account (`StarterChart` uses the same
+    /// phrases). A book started in English, or by GnuCash, still has the
+    /// English names, so a caller looks for this first and then for the
+    /// category as `category(for:)` returned it.
+    public static func localizedName(ofCategory category: String) -> String? {
+        localizedNames[category]
+    }
+
+    static let localizedNames: [String: String] = [
+        "Groceries": String(localized: "Groceries"),
+        "Dining": String(localized: "Dining"),
+        "Fuel": String(localized: "Fuel"),
+        "Transport": String(localized: "Transport"),
+        "Subscriptions": String(localized: "Subscriptions"),
+        "Phone & Internet": String(localized: "Phone & Internet"),
+        "Utilities": String(localized: "Utilities"),
+        "Health": String(localized: "Health"),
+        "Rent": String(localized: "Rent"),
+        "Salary": String(localized: "Salary"),
+        "Interest": String(localized: "Interest"),
+        "Shopping": String(localized: "Shopping"),
+        "Entertainment": String(localized: "Entertainment"),
+        "Insurance": String(localized: "Insurance"),
+    ]
+
     /// Keyword → default category. Ordered; first match wins.
     static let keywordCategories: [(keywords: [String], category: String)] = [
         (["woolworths", "coles", "aldi", "iga", "grocer", "supermarket"], "Groceries"),

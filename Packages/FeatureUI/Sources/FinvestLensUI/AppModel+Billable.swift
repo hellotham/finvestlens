@@ -63,7 +63,7 @@ extension AppModel {
             guard let accountID = entry.incomeAccountID ?? fallbackIncomeID,
                   book.account(with: accountID) != nil else { return nil }
             let label = entry.detail.isEmpty
-                ? (entry.kind == .time ? "Time" : "Mileage") : entry.detail
+                ? entry.kind.localizedName : entry.detail
             lines.append(InvoiceLineInput(accountID: accountID, description: label,
                                           quantity: entry.quantity, price: entry.rate))
         }

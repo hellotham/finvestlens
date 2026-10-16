@@ -48,7 +48,7 @@ struct GoalsView: View {
                     SidebarFocusScroll(model: model) {
                     List {
                         ForEach(groups, id: \.name) { group in
-                            Section(group.name.isEmpty ? "Goals" : group.name) {
+                            Section(group.name.isEmpty ? String(localized: "Goals") : group.name) {
                                 ForEach(group.goals) { goal in
                                     GoalRow(goal: goal, code: code,
                                             accountName: goal.accountGUID.flatMap { model.accountName($0) },
@@ -151,11 +151,11 @@ struct GoalsView: View {
 
     private func statusBadge(_ status: SavingsChallenge.Status) -> some View {
         let (text, tint): (String, Color) = switch status {
-        case .ahead: ("ahead", .green)
-        case .onTrack: ("on track", .blue)
-        case .behind: ("behind", .orange)
-        case .done: ("done", .green)
-        case .lapsed: ("lapsed", .secondary)
+        case .ahead: (String(localized: "ahead"), .green)
+        case .onTrack: (String(localized: "on track"), .blue)
+        case .behind: (String(localized: "behind"), .orange)
+        case .done: (String(localized: "done"), .green)
+        case .lapsed: (String(localized: "lapsed"), .secondary)
         }
         return Text(text).font(.caption2).padding(.horizontal, 6).padding(.vertical, 1)
             .background(tint.opacity(0.2), in: Capsule())

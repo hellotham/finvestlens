@@ -79,7 +79,7 @@ public struct KeychainAPIKeyStore: APIKeyStoring {
         case errSecItemNotFound:
             return nil
         default:
-            throw QuoteError.providerError("Keychain read failed (\(status))")
+            throw QuoteError.providerError(String(localized: "Keychain read failed (\(String(status)))"))
         }
     }
 
@@ -94,7 +94,7 @@ public struct KeychainAPIKeyStore: APIKeyStoring {
         insert[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
         let status = SecItemAdd(insert as CFDictionary, nil)
         guard status == errSecSuccess else {
-            throw QuoteError.providerError("Keychain write failed (\(status))")
+            throw QuoteError.providerError(String(localized: "Keychain write failed (\(String(status)))"))
         }
     }
 

@@ -594,7 +594,7 @@ struct ImportView: View {
             HStack {
                 AdaptiveDate(row.date)
                     .foregroundStyle(.secondary).frame(width: dateWidth, alignment: .leading)
-                Text(inv?.action.rawValue.capitalized ?? "—").fontWeight(.medium)
+                Text(inv?.action.localizedName ?? "—").fontWeight(.medium)
                 Text(inv?.security ?? "").foregroundStyle(.secondary)
                 Spacer()
                 if invAlreadyImported.contains(row.id) {
@@ -604,8 +604,11 @@ struct ImportView: View {
                 Text(AmountFormat.string(row.amount, code: targetCode)).monospacedDigit()
             }
             if let inv, inv.quantity != 0 {
-                Text("\(inv.quantity.formatted()) @ \(AmountFormat.string(inv.pricePerShare, code: targetCode))"
-                     + (inv.commission != 0 ? " · fee \(AmountFormat.string(inv.commission, code: targetCode))" : ""))
+                // Two phrases, not one and a tail: a `Text` of a `String` sum
+                // is drawn verbatim, and this one was English everywhere.
+                Text(inv.commission != 0
+                     ? "\(inv.quantity.formatted()) @ \(AmountFormat.string(inv.pricePerShare, code: targetCode)) · fee \(AmountFormat.string(inv.commission, code: targetCode))"
+                     : "\(inv.quantity.formatted()) @ \(AmountFormat.string(inv.pricePerShare, code: targetCode))")
                     .scaledFont(.caption).foregroundStyle(.secondary)
             }
             if inv?.action != .dividend {
@@ -632,7 +635,7 @@ struct ImportView: View {
             creatable.map { (row: $0, securityID: invSecurity[$0.id]) },
             settlementID: invSettlement, incomeID: invIncome)
         if let failure = outcome.failures.last {
-            invError = "Couldn't create “\(failure.row.investment?.security ?? "")”: \(failure.error.localizedDescription)"
+            invError = String(localized: "Couldn’t create “\(failure.row.investment?.security ?? "")”: \(failure.error.localizedDescription)")
         }
         invCreated = outcome.created.count
         // Drop the ones that were actually created (even if another row failed)

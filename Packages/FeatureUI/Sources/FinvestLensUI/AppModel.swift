@@ -586,9 +586,9 @@ public final class AppModel {
     /// GnuCash does throughout: derive once into memory, invalidate on edit.
     var unreconciledRegisterRows: [RegisterRow] {
         if unreconciledRowsRevision != derivedRevision {
-            unreconciledRowsCache = registerRows.filter {
-                ReconcileBadge.word($0.reconcile) == "Not reconciled"
-            }
+            // By the letter, not the word: the word is the reader's now, and
+            // "Not reconciled" is English in one language only.
+            unreconciledRowsCache = registerRows.filter { ReconcileBadge.isUnreconciled($0.reconcile) }
             unreconciledRowsRevision = derivedRevision
         }
         return unreconciledRowsCache
@@ -1416,7 +1416,15 @@ public final class AppModel {
 
     /// Shows `message` in the status overlay for a few seconds. Failures live
     /// a little longer — they carry the words worth reading.
-    public func showToast(_ kind: StatusToast.Kind, _ message: String) {
+    public func showToast(_ kind: StatusToast.Kind, _ message: LocalizedStringResource) {
+        showToast(kind, verbatim: String(localized: message))
+    }
+
+    /// A toast whose words are already the reader's — a name, an error's own
+    /// description. The other form takes what the app says itself, as a
+    /// literal the compiler can emit a key for: taking a `String` there, every
+    /// toast was English in every language and nothing could tell.
+    public func showToast(_ kind: StatusToast.Kind, verbatim message: String) {
         toastDismissTask?.cancel()
         toast = StatusToast(kind: kind, message: message)
         toastDismissTask = Task { [weak self] in
@@ -1885,7 +1893,14 @@ public final class AppModel {
     /// Persists the collections and refreshes derived UI state, as one undoable
     /// change. The collections live in the book's KVP slots rather than in any
     /// transaction, so undoing one means restoring the book.
-    func commitKvpCollections(named: String = "Change") {
+    ///
+    /// An edit's name — here and in every `editing…(named:)` below — is a
+    /// `LocalizedStringResource`, not a `String`: it is what the Edit menu
+    /// shows after "Undo" and what the audit trail records, and as a `String`
+    /// each of some hundred and fifty of them was English in every language,
+    /// where the catalog's gate could not see it. Written as a literal at the
+    /// call, a name is a key the compiler emits.
+    func commitKvpCollections(named: LocalizedStringResource = "Change") {
         editingBookKvp(named: named) {
             persistKvpCollections()
         }
@@ -1894,7 +1909,7 @@ public final class AppModel {
     /// Scoped undo for edits that touch only the **price database**. The
     /// whole-book variant snapshots via a full GnuCash-XML export — seconds on
     /// a large book — where copying the `prices` value array is milliseconds.
-    public func editingPrices(named: String, _ body: () -> Void) {
+    public func editingPrices(named: LocalizedStringResource, _ body: () -> Void) {
         if isReadOnly { return }
         auditLog(named)
         // The book records what the body adds and removes; the undo is the
@@ -1912,7 +1927,7 @@ public final class AppModel {
         undoManager?.registerUndo(withTarget: self) { model in
             model.editingPrices(named: named) { model.book?.revertPriceChanges(changes) }
         }
-        undoManager?.setActionName(named)
+        undoManager?.setActionName(String(localized: named))
     }
 
     /// Scoped undo for edits that touch only the **book's kvp frame**
@@ -1925,7 +1940,7 @@ public final class AppModel {
     /// nothing else (Performance Review 2, R6/R8).
     enum KvpEditScope { case book, preference }
 
-    func editingBookKvp(named: String, scope: KvpEditScope = .book, _ body: () -> Void) {
+    func editingBookKvp(named: LocalizedStringResource, scope: KvpEditScope = .book, _ body: () -> Void) {
         if isReadOnly { return }
         auditLog(named)
         let before = book?.kvp
@@ -1947,7 +1962,7 @@ public final class AppModel {
                 model.reloadKvpCollections()
             }
         }
-        undoManager?.setActionName(named)
+        undoManager?.setActionName(String(localized: named))
     }
 
     private static func decodeSlot<T: Decodable>(_ type: T.Type, _ value: KvpValue?) -> T? {
@@ -2012,7 +2027,7 @@ public final class AppModel {
         // Open-what-you-can (NFR-05): the load never refuses a book over
         // unreadable stored values, but it must not stay silent about them.
         if let summary = document?.loadWarnings?.summary {
-            showToast(.info, summary)
+            showToast(.info, verbatim: summary)
         }
         // The read is done; everything below is main-actor work — balances, the
         // account tree, the dashboard — and the window cannot repaint while it
@@ -2207,7 +2222,7 @@ public final class AppModel {
             externalChangePending = false
         } catch {
             documentError = DocumentError(
-                message: "Couldn’t keep your version: \(error.localizedDescription)")
+                message: String(localized: "Couldn’t keep your version: \(error.localizedDescription)"))
         }
         refreshAll()
     }
@@ -2338,7 +2353,7 @@ public final class AppModel {
             } else {
                 documentError = DocumentError(
                     message: Self.isLockedError(error)
-                        ? "“\(url.lastPathComponent)” is locked by another FinvestLens instance. If that instance crashed, you can break the lock and open anyway."
+                        ? String(localized: "“\(url.lastPathComponent)” is locked by another FinvestLens instance. If that instance crashed, you can break the lock and open anyway.")
                         : error.localizedDescription,
                     lockedURL: Self.isLockedError(error) ? url : nil)
             }
@@ -2353,14 +2368,14 @@ public final class AppModel {
         switch kind {
         case .gnuCashBook:
             return DocumentError(
-                message: "“\(url.lastPathComponent)” is a GnuCash book. FinvestLens keeps books in its own .finvestlens format — import it to create a native copy, and you can export back to GnuCash at any time.",
+                message: String(localized: "“\(url.lastPathComponent)” is a GnuCash book. FinvestLens keeps books in its own .finvestlens format — import it to create a native copy, and you can export back to GnuCash at any time."),
                 gnuCashImportURL: url)
         case .gnuCashSQLite:
             return DocumentError(
-                message: "“\(url.lastPathComponent)” was saved with GnuCash’s SQLite backend, which FinvestLens can’t read. In GnuCash, choose File ▸ Save As… with the XML format, then use File ▸ Import GnuCash… here.")
+                message: String(localized: "“\(url.lastPathComponent)” was saved with GnuCash’s SQLite backend, which FinvestLens can’t read. In GnuCash, choose File ▸ Save As… with the XML format, then use File ▸ Import GnuCash… here."))
         case .unrecognized:
             return DocumentError(
-                message: "“\(url.lastPathComponent)” isn’t a FinvestLens book.")
+                message: String(localized: "“\(url.lastPathComponent)” isn’t a FinvestLens book."))
         }
     }
 
@@ -2401,10 +2416,10 @@ public final class AppModel {
         } catch {
             if Self.isLockedError(error) {
                 documentError = DocumentError(
-                    message: "“\(destination.lastPathComponent)” is locked by another FinvestLens instance. If that instance crashed, you can break the lock and import anyway.",
+                    message: String(localized: "“\(destination.lastPathComponent)” is locked by another FinvestLens instance. If that instance crashed, you can break the lock and import anyway."),
                     lockedURL: destination, lockedImportSource: source)
             } else {
-                documentError = DocumentError(message: "Couldn’t import “\(source.lastPathComponent)”: \(error.localizedDescription)")
+                documentError = DocumentError(message: String(localized: "Couldn’t import “\(source.lastPathComponent)”: \(error.localizedDescription)"))
             }
         }
     }
@@ -2421,7 +2436,7 @@ public final class AppModel {
                 try save()
             } catch {
                 documentError = DocumentError(
-                    message: "Couldn’t save “\(documentURL?.lastPathComponent ?? "book")”: \(error.localizedDescription)")
+                    message: String(localized: "Couldn’t save “\(documentURL?.lastPathComponent ?? "")”: \(error.localizedDescription)"))
                 return false
             }
         }
@@ -2509,7 +2524,7 @@ public final class AppModel {
             }
         } catch {
             documentError = DocumentError(
-                message: "Couldn’t import “\(source.lastPathComponent)”: \(error.localizedDescription)")
+                message: String(localized: "Couldn’t import “\(source.lastPathComponent)”: \(error.localizedDescription)"))
         }
     }
 
@@ -2583,7 +2598,7 @@ public final class AppModel {
             } else if documentError == nil {
                 // Surface once; don't stack alerts every autosave interval.
                 documentError = DocumentError(
-                    message: "Autosave failed: \(error.localizedDescription)")
+                    message: String(localized: "Autosave failed: \(error.localizedDescription)"))
             }
         }
     }
@@ -2595,7 +2610,7 @@ public final class AppModel {
             try revert()
             showToast(.success, "Reverted to the saved book.")
         } catch {
-            documentError = DocumentError(message: "Couldn’t revert: \(error.localizedDescription)")
+            documentError = DocumentError(message: String(localized: "Couldn’t revert: \(error.localizedDescription)"))
         }
     }
 
@@ -2715,16 +2730,15 @@ public final class AppModel {
     public func describe(_ error: Error) -> String {
         switch error {
         case AccountDeletionError.transactionsNeedTarget:
-            "Choose an account to move the transactions to."
+            String(localized: "Choose an account to move the transactions to.")
         case AccountDeletionError.childrenNeedTarget:
-            "Choose an account to move the subaccounts to."
+            String(localized: "Choose an account to move the subaccounts to.")
         case AccountDeletionError.targetIsSelfOrDescendant:
-            "That account is inside the one being deleted, so it would go too."
+            String(localized: "That account is inside the one being deleted, so it would go too.")
         case AccountDeletionError.targetCommodityDiffers:
-            "That account holds a different commodity, which would change what "
-            + "every moved amount means."
+            String(localized: "That account holds a different commodity, which would change what every moved amount means.")
         case AccountDeletionError.targetNotFound, AccountDeletionError.notFound:
-            "That account no longer exists."
+            String(localized: "That account no longer exists.")
         default:
             (error as NSError).localizedDescription
         }
@@ -3027,7 +3041,7 @@ public final class AppModel {
     /// `ids` must name every transaction `body` touches, including any it
     /// creates — generate the guid up front and pass it in. Anything `body`
     /// changes outside those transactions will not be undone.
-    func editing(_ ids: [GncGUID], named: String, _ body: () -> Void) {
+    func editing(_ ids: [GncGUID], named: LocalizedStringResource, _ body: () -> Void) {
         if isReadOnly { return }   // read-only session: edits are refused (FR-DAT-06)
         auditLog(named)
         let before = ids.map {
@@ -3039,7 +3053,7 @@ public final class AppModel {
         undoManager?.registerUndo(withTarget: self) { model in
             model.editing(ids, named: named) { model.restore(before) }
         }
-        undoManager?.setActionName(named)
+        undoManager?.setActionName(String(localized: named))
     }
 
     /// An account's restorable state before an edit — its value fields plus
@@ -3089,7 +3103,7 @@ public final class AppModel {
     /// affected subtree). Only their value fields and tree placement are
     /// captured — transactions and other accounts are not — so an account edit
     /// no longer pays the whole-book serialisation ``editingWholeBook`` costs.
-    func editingAccounts(_ ids: [GncGUID], named: String, _ body: () -> Void) {
+    func editingAccounts(_ ids: [GncGUID], named: LocalizedStringResource, _ body: () -> Void) {
         editing(accounts: ids, named: named, body)
     }
 
@@ -3108,7 +3122,7 @@ public final class AppModel {
     /// snapshots the price database — a value array, free until mutated — for
     /// an edit that records a rate alongside.
     func editing(accounts accountIDs: [GncGUID], transactions transactionIDs: [GncGUID] = [],
-                 prices snapshotsPrices: Bool = false, named: String, _ body: () -> Void) {
+                 prices snapshotsPrices: Bool = false, named: LocalizedStringResource, _ body: () -> Void) {
         if isReadOnly { return }   // read-only session: edits are refused (FR-DAT-06)
         auditLog(named)
         let idsBefore = Set(book?.accounts.map(\.guid) ?? [])
@@ -3145,7 +3159,7 @@ public final class AppModel {
                 }
             }
         }
-        undoManager?.setActionName(named)
+        undoManager?.setActionName(String(localized: named))
     }
 
     /// Puts snapshotted accounts back as they were, including their tree slot;
@@ -3199,7 +3213,7 @@ public final class AppModel {
     /// commodity, and `Book.updateCommodityMetadata` is the one way to write
     /// it everywhere. The book's kvp frame rides along for the watch-list
     /// mirror that a rename updates.
-    func editingCommodity(_ commodity: Commodity, named: String, _ body: () -> Void) {
+    func editingCommodity(_ commodity: Commodity, named: LocalizedStringResource, _ body: () -> Void) {
         if isReadOnly { return }
         auditLog(named)
         let stored = book?.commodities.first { $0 == commodity }
@@ -3222,22 +3236,22 @@ public final class AppModel {
                 model.reloadKvpCollections()
             }
         }
-        undoManager?.setActionName(named)
+        undoManager?.setActionName(String(localized: named))
     }
 
     /// Runs `body` as one undo step. For a sheet whose Save makes several
     /// model calls, each undoable on its own, so one ⌘Z takes back the save.
-    public func groupingUndo(named: String, _ body: () -> Void) {
+    public func groupingUndo(named: LocalizedStringResource, _ body: () -> Void) {
         undoManager?.beginUndoGrouping()
         body()
         undoManager?.endUndoGrouping()
-        undoManager?.setActionName(named)
+        undoManager?.setActionName(String(localized: named))
     }
 
     /// Applies `body` as one undoable edit of the whole book, exporting it
     /// first. Costs a full serialisation — use ``editing(_:named:)`` (or
     /// ``editingAccounts(_:named:)``) whenever the touched objects can be named.
-    func editingWholeBook(named: String, _ body: () -> Void) {
+    func editingWholeBook(named: LocalizedStringResource, _ body: () -> Void) {
         if isReadOnly { return }   // read-only session: edits are refused (FR-DAT-06)
         auditLog(named)
         let before = Perf.measure("wholeBookSnapshot") { gnuCashExportData() }
@@ -3247,7 +3261,7 @@ public final class AppModel {
         undoManager?.registerUndo(withTarget: self) { model in
             model.editingWholeBook(named: named) { model.restoreBook(before) }
         }
-        undoManager?.setActionName(named)
+        undoManager?.setActionName(String(localized: named))
     }
 
     /// Puts snapshotted transactions back as they were.
@@ -3632,7 +3646,7 @@ public final class AppModel {
         guard let others = split.transaction?.splits.filter({ $0 !== split }) else { return "" }
         let names = others.compactMap { $0.account?.name }
         if names.count == 1 { return names[0] }
-        if names.count > 1 { return "— Split —" }
+        if names.count > 1 { return String(localized: "— Split —") }
         return ""
     }
 
@@ -3667,7 +3681,7 @@ private func performGnuCashImport(
     let result = try GnuCashXMLImporter.importBook(from: source) { parsed in
         progress(BookLoadProgress(stage: mapImportStage(parsed.stage),
                                   completed: parsed.completed, total: parsed.total,
-                                  fraction: parsed.fraction * 0.5, verb: "Parsing"))
+                                  fraction: parsed.fraction * 0.5, operation: .parsing))
     }
     let doc = try FinvestLensDocument.create(at: destination,
                                              baseCurrency: result.book.commodities.first ?? .aud,
@@ -3676,7 +3690,7 @@ private func performGnuCashImport(
     try doc.save { written in
         progress(BookLoadProgress(stage: written.stage, completed: written.completed,
                                   total: written.total,
-                                  fraction: 0.5 + written.fraction * 0.5, verb: written.verb))
+                                  fraction: 0.5 + written.fraction * 0.5, operation: written.operation))
     }
     return (doc, result.summary)
 }

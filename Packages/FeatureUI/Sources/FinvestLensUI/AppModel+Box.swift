@@ -198,7 +198,7 @@ extension AppModel {
     public func connectBox() async {
         guard !boxClientID.isEmpty, !boxClientSecret.isEmpty else {
             documentError = DocumentError(
-                message: "Set the Box client ID and secret in Settings first. Create a Box app at developer.box.com with redirect URI \(Self.boxRedirectURI).")
+                message: String(localized: "Set the Box client ID and secret in Settings first. Create a Box app at developer.box.com with redirect URI \(Self.boxRedirectURI)."))
             return
         }
         do {
@@ -207,7 +207,7 @@ extension AppModel {
         } catch BoxError.signInCancelled {
             // The user closed the sheet. Not an error worth an alert.
         } catch {
-            documentError = DocumentError(message: "Couldn’t connect to Box: \(error)")
+            documentError = DocumentError(message: String(localized: "Couldn’t connect to Box: \(error.localizedDescription)"))
         }
     }
 
@@ -223,7 +223,7 @@ extension AppModel {
     public func boxBooks(inFolder folderID: String = "0") async -> [BoxItem] {
         do { return try await makeClient().items(inFolder: folderID) }
         catch {
-            documentError = DocumentError(message: "Couldn’t list Box: \(error)")
+            documentError = DocumentError(message: String(localized: "Couldn’t list Box: \(error.localizedDescription)"))
             return []
         }
     }
@@ -250,7 +250,7 @@ extension AppModel {
             boxLink = BoxBookLink(fileID: item.id, fileName: item.name, etag: item.etag)
             await openBook(at: cache)
         } catch {
-            documentError = DocumentError(message: "Couldn’t open from Box: \(error)")
+            documentError = DocumentError(message: String(localized: "Couldn’t open from Box: \(error.localizedDescription)"))
         }
     }
 
@@ -270,9 +270,9 @@ extension AppModel {
             boxLink = link
         } catch BoxError.versionConflict {
             documentError = DocumentError(
-                message: "This book changed on Box since you opened it. Your changes are saved locally; open the Box copy to compare before uploading.")
+                message: String(localized: "This book changed on Box since you opened it. Your changes are saved locally; open the Box copy to compare before uploading."))
         } catch {
-            documentError = DocumentError(message: "Couldn’t upload to Box: \(error)")
+            documentError = DocumentError(message: String(localized: "Couldn’t upload to Box: \(error.localizedDescription)"))
         }
     }
     #else

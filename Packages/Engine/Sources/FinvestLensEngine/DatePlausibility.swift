@@ -55,9 +55,4 @@ public enum DatePlausibility {
         years.contains(year(of: date))
     }
 
-    /// How the year reads in a report — the bare number, since a date this
-    /// wrong is best shown as the thing that is wrong with it.
-    public static func describe(_ date: Date) -> String {
-        "in year \(year(of: date))"
-    }
 }

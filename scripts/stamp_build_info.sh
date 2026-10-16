@@ -12,7 +12,7 @@ cd "$(dirname "$0")/.."
 
 VERSION="1.2"
 COMMIT="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
-DATE="$(date '+%-d %B %Y')"
+DATE="$(date '+%Y-%m-%d')"
 OUT="finvestlens/BuildInfo.swift"
 
 cat > "$OUT" <<SWIFT
@@ -34,11 +34,20 @@ enum BuildInfo {
     static let version = "${VERSION}"
     /// Short git commit the build was cut from.
     static let commit = "${COMMIT}"
-    /// Human-readable build date.
-    static let buildDate = "${DATE}"
+    /// The day the build was cut, ISO 8601.
+    static let buildDay = "${DATE}"
+
+    /// The build day as the reader writes a date — "11 October 2026",
+    /// "11. Oktober 2026", "2026年10月11日". It was stamped as English text.
+    static var buildDate: String {
+        let parts = buildDay.split(separator: "-").compactMap { Int(\$0) }
+        guard parts.count == 3, let date = Calendar.current.date(
+            from: DateComponents(year: parts[0], month: parts[1], day: parts[2])) else { return buildDay }
+        return date.formatted(date: .long, time: .omitted)
+    }
 
     /// e.g. "Version 1.0 (${COMMIT})".
-    static var versionString: String { "Version \\(version) (\\(commit))" }
+    static var versionString: String { String(localized: "Version \\(version) (\\(commit))") }
 }
 SWIFT
 

@@ -228,8 +228,7 @@ struct DebtPlannerView: View {
                 }
                 if baseline.paysOff, baseline.totalInterest > plan.totalInterest {
                     LabeledContent("Saved vs minimums only") {
-                        Text("\(AmountFormat.string(baseline.totalInterest - plan.totalInterest, code: code))"
-                             + " and \(baseline.months - plan.months) months")
+                        Text("\(AmountFormat.string(baseline.totalInterest - plan.totalInterest, code: code)) and \(baseline.months - plan.months) months")
                             .foregroundStyle(.green)
                     }
                 }
@@ -376,8 +375,7 @@ struct LifetimePlannerView: View {
                     .foregroundStyle(.red)
                     .fontWeight(.semibold)
             } else if let last = result.points.last {
-                Label("Your money lasts to age \(last.age), ending near "
-                      + AmountFormat.string(display(last.netWorth, last), code: code) + ".",
+                Label("Your money lasts to age \(last.age), ending near \(AmountFormat.string(display(last.netWorth, last), code: code)).",
                       systemImage: "checkmark.seal.fill")
                     .foregroundStyle(.green)
                     .fontWeight(.semibold)
@@ -410,8 +408,9 @@ struct LifetimePlannerView: View {
 
     private func series(_ point: LifetimeProjection.YearPoint)
         -> [(name: String, value: Double)] {
-        [("Cash", point.cash), ("Investments", point.investments),
-         ("Retirement", point.retirement), ("Property", point.property)]
+        // Series names are values a chart draws as they are.
+        [(String(localized: "Cash"), point.cash), (String(localized: "Investments"), point.investments),
+         (String(localized: "Retirement"), point.retirement), (String(localized: "Property"), point.property)]
             .map { ($0.0, NSDecimalNumber(decimal: display($0.1, point)).doubleValue) }
     }
 
@@ -503,12 +502,12 @@ struct LifetimePlannerView: View {
         Text(AmountFormat.string(value, code: code)).monospacedDigit().foregroundStyle(.secondary)
     }
 
-    private func moneyField(_ label: String, value: Binding<Decimal>) -> some View {
+    private func moneyField(_ label: LocalizedStringKey, value: Binding<Decimal>) -> some View {
         DecimalTextField(label: label, value: value, scale: 1)
     }
 
     /// Percent fields edit "3" for 0.03.
-    private func percentField(_ label: String, value: Binding<Decimal>) -> some View {
+    private func percentField(_ label: LocalizedStringKey, value: Binding<Decimal>) -> some View {
         DecimalTextField(label: label, value: value, scale: 100)
     }
 
@@ -522,7 +521,9 @@ struct LifetimePlannerView: View {
 /// A labelled Decimal field over a string editor: `scale` maps the stored
 /// value to the edited one (100 for percents).
 private struct DecimalTextField: View {
-    let label: String
+    // A key, not a `String`: as a `String` every label in the planner was
+    // drawn as written, in English.
+    let label: LocalizedStringKey
     @Binding var value: Decimal
     let scale: Decimal
     @State private var text = ""
@@ -618,16 +619,16 @@ struct WellbeingSheet: View {
         let measure = component.measure
         switch component.component {
         case .savingsRate:
-            return "You kept \(SpendingInsights.wholePercent(measure * 100))% of income; 20% earns full marks."
+            return String(localized: "You kept \(SpendingInsights.wholePercent(measure * 100))% of income; 20% earns full marks.")
         case .cashBuffer:
-            return "Liquid funds cover \(SpendingInsights.wholePercent(measure)) months of spending; 6 months earns full marks."
+            return String(localized: "Liquid funds cover \(SpendingInsights.wholePercent(measure)) months of spending; 6 months earns full marks.")
         case .debtPressure:
-            return "Non-mortgage debt is \(SpendingInsights.wholePercent(measure * 100))% of annual income; zero earns full marks."
+            return String(localized: "Non-mortgage debt is \(SpendingInsights.wholePercent(measure * 100))% of annual income; zero earns full marks.")
         case .spendingTrend:
             let percent = SpendingInsights.wholePercent(abs(measure) * 100)
             return measure <= 0
-                ? "Spending is flat or falling (\(percent)% down) — full marks."
-                : "Spending is up \(percent)% on the prior three months; +25% scores zero."
+                ? String(localized: "Spending is flat or falling (\(percent)% down) — full marks.")
+                : String(localized: "Spending is up \(percent)% on the prior three months; +25% scores zero.")
         }
     }
 }

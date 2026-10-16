@@ -22,16 +22,6 @@ extension AppModel {
         AppDateFormat.current.long(date)
     }
 
-    /// A cost-basis method by the name a reader knows it by. The engine's
-    /// own `displayName` is English: two of the three are acronyms the world
-    /// shares, and the third is a phrase.
-    static func costBasisName(_ method: CostBasisMethod) -> String {
-        switch method {
-        case .fifo: "FIFO"
-        case .lifo: "LIFO"
-        case .average: String(localized: "Average cost")
-        }
-    }
 
     /// A period label "1 Jan 2026 – 31 Mar 2026".
     private func range(_ from: Date, _ to: Date) -> String {
@@ -191,7 +181,7 @@ extension AppModel {
             kpis: [ReportKPI(label: String(localized: "Open lots"), amount: Decimal(lots.count)),
                    ReportKPI(label: String(localized: "Cost basis"), amount: totalCost)],
             chart: nil,
-            sections: [ReportDocumentSection(title: String(localized: "Open Lots (\(Self.costBasisName(costBasisMethod)))"),
+            sections: [ReportDocumentSection(title: String(localized: "Open Lots (\(costBasisMethod.displayName))"),
                                              rows: rows, total: (String(localized: "Cost basis"), totalCost))],
             notes: [], facts: nil)
     }
@@ -215,7 +205,7 @@ extension AppModel {
         }
         return ReportDocument(
             title: String(localized: "Capital Gains"),
-            periodLabel: String(localized: "\(Self.costBasisName(report.method)) cost basis"),
+            periodLabel: String(localized: "\(report.method.displayName) cost basis"),
             currencyCode: code,
             kpis: [ReportKPI(label: String(localized: "Short-term"), amount: report.shortTermGain, signed: true),
                    ReportKPI(label: String(localized: "Long-term"), amount: report.longTermGain, signed: true),

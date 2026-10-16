@@ -48,19 +48,18 @@ public struct BookLoadProgress: Sendable, Equatable {
         /// last frame painted before it needs to say what is happening rather
         /// than leave a bar sitting under "Reading prices" for seconds.
         case finishing
+    }
 
-        /// Present tense: names what is happening now. Combined with
-        /// ``BookLoadProgress/verb`` rather than hard-coding a direction — a
-        /// GnuCash import writes a freshly-parsed book through this same bar,
-        /// and "Reading transactions" would be backwards while it does.
-        var noun: String {
-            switch self {
-            case .accounts: "accounts"
-            case .transactions: "transactions"
-            case .prices: "prices"
-            case .finishing: ""   // finishing has its own full caption below
-            }
-        }
+    /// What the operation reporting is doing. A GnuCash import writes a
+    /// freshly parsed book through this same bar, and "Reading transactions"
+    /// would be backwards while it does.
+    public enum Operation: Sendable, Equatable {
+        /// A store read — opening a book.
+        case reading
+        /// A write-back.
+        case writing
+        /// The GnuCash XML pass an import makes before it writes.
+        case parsing
     }
 
     public var stage: Stage
@@ -70,22 +69,33 @@ public struct BookLoadProgress: Sendable, Equatable {
     public var total: Int
     /// Overall progress, 0...1, across every stage — what the bar shows.
     public var fraction: Double
-    /// What this report's operation is doing — "Reading" for a store read,
-    /// "Writing" for a write-back, "Parsing" for the GnuCash XML pass an
-    /// import makes before it writes. Shown before ``Stage/noun``.
-    public var verb: String
+    public var operation: Operation
 
-    public init(stage: Stage, completed: Int, total: Int, fraction: Double, verb: String = "Reading") {
+    public init(stage: Stage, completed: Int, total: Int, fraction: Double,
+                operation: Operation = .reading) {
         self.stage = stage
         self.completed = completed
         self.total = total
         self.fraction = fraction
-        self.verb = verb
+        self.operation = operation
     }
 
-    /// Shown under the bar, e.g. "Writing transactions".
+    /// Shown under the bar, e.g. "Writing transactions" — each pair a phrase
+    /// of its own. It was a verb and a noun put side by side, which is a
+    /// sentence in English and nowhere else, and neither word was translated.
     public var label: String {
-        stage == .finishing ? "Preparing your accounts" : "\(verb) \(stage.noun)"
+        switch (operation, stage) {
+        case (_, .finishing): String(localized: "Preparing your accounts")
+        case (.reading, .accounts): String(localized: "Reading accounts")
+        case (.reading, .transactions): String(localized: "Reading transactions")
+        case (.reading, .prices): String(localized: "Reading prices")
+        case (.writing, .accounts): String(localized: "Writing accounts")
+        case (.writing, .transactions): String(localized: "Writing transactions")
+        case (.writing, .prices): String(localized: "Writing prices")
+        case (.parsing, .accounts): String(localized: "Parsing accounts")
+        case (.parsing, .transactions): String(localized: "Parsing transactions")
+        case (.parsing, .prices): String(localized: "Parsing prices")
+        }
     }
 }
 

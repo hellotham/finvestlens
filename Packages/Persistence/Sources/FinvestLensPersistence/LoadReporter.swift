@@ -144,7 +144,7 @@ struct WriteReporter {
     }
 
     mutating func startingAccounts() {
-        report(.init(stage: .accounts, completed: 0, total: 0, fraction: 0, verb: "Writing"), force: true)
+        report(.init(stage: .accounts, completed: 0, total: 0, fraction: 0, operation: .writing), force: true)
     }
 
     mutating func startTransactions() {
@@ -158,7 +158,7 @@ struct WriteReporter {
         let done = Double(splitsCompleted) * LoadWeight.perSplit
             + Double(completed) * LoadWeight.perTransaction
         report(.init(stage: .transactions, completed: completed, total: txnCount,
-                     fraction: done / totalWork, verb: "Writing"))
+                     fraction: done / totalWork, operation: .writing))
     }
 
     mutating func startPrices() {
@@ -169,12 +169,12 @@ struct WriteReporter {
     mutating func builtPrices(_ completed: Int) {
         let done = workBefore + Double(completed) * LoadWeight.perPrice
         report(.init(stage: .prices, completed: completed, total: priceCount,
-                     fraction: done / totalWork, verb: "Writing"))
+                     fraction: done / totalWork, operation: .writing))
     }
 
     mutating func finished() {
         report(.init(stage: .prices, completed: priceCount, total: priceCount,
-                     fraction: 1, verb: "Writing"), force: true)
+                     fraction: 1, operation: .writing), force: true)
     }
 
     private mutating func report(_ progress: BookLoadProgress, force: Bool = false) {

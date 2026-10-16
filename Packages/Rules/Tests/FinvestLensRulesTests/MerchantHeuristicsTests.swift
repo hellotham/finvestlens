@@ -26,4 +26,16 @@ struct MerchantHeuristicsTests {
         #expect(MerchantHeuristics.category(for: "Shell Petrol Station") == "Fuel")
         #expect(MerchantHeuristics.category(for: "ACME WIDGETS") == nil)
     }
+
+    /// A book the app starts is in the reader's language, so a category is
+    /// looked for by the reader's name and then by the English one. A
+    /// category added to the keywords without a name beside it would be found
+    /// in English books only.
+    @Test("Every category the heuristics name has the reader's name beside it")
+    func everyCategoryHasALocalizedName() {
+        for (_, category) in MerchantHeuristics.keywordCategories {
+            #expect(MerchantHeuristics.localizedName(ofCategory: category) != nil, "\(category)")
+        }
+        #expect(MerchantHeuristics.localizedName(ofCategory: "Not A Category") == nil)
+    }
 }

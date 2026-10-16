@@ -24,10 +24,10 @@ public enum WellbeingScore {
 
         public var title: String {
             switch self {
-            case .savingsRate: "Savings rate"
-            case .cashBuffer: "Cash buffer"
-            case .debtPressure: "Debt pressure"
-            case .spendingTrend: "Spending trend"
+            case .savingsRate: String(localized: "Savings rate")
+            case .cashBuffer: String(localized: "Cash buffer")
+            case .debtPressure: String(localized: "Debt pressure")
+            case .spendingTrend: String(localized: "Spending trend")
             }
         }
     }

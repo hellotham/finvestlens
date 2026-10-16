@@ -168,8 +168,8 @@ public struct QuoteService: Sendable {
         // the request cannot succeed and its failure is less informative than
         // this one.
         if !kind.matchesByIdentifier, symbolOverride == nil, Self.looksLikeISIN(key) {
-            throw QuoteError.malformedResponse(
-                "\(key) is an ISIN — \(kind.rawValue) is keyed by ticker. Choose an identifier-keyed provider for this security, or set its quote symbol.")
+            throw QuoteError.unsupported(String(localized:
+                "\(key) is an ISIN — \(kind.displayName) is keyed by ticker. Choose an identifier-keyed provider for this security, or set its quote symbol."))
         }
         let quote = try await provider.latestQuote(symbol: kind.providerSymbol(for: key))
         return try Self.price(from: quote, commodity: commodity, currency: currency, kind: kind)
@@ -274,7 +274,7 @@ public struct QuoteService: Sendable {
     /// The honest answer is to refuse. A mismatch means the identifier found
     /// the wrong instrument or the price needs converting, and neither is
     /// something a silent relabel can fix.
-    struct CurrencyMismatch: Error, CustomStringConvertible {
+    struct CurrencyMismatch: Error, CustomStringConvertible, LocalizedError {
         let symbol: String, reported: String, expected: String
         /// Whether `reported` came from the provider or was inferred from the
         /// security's exchange. Worth saying: an inference can be wrong in a
@@ -283,15 +283,32 @@ public struct QuoteService: Sendable {
         var inferred = false
         var description: String {
             inferred
-                ? "\(symbol) trades in \(reported), not \(expected) — \(reported) is what its exchange settles in; set the security's quote symbol or currency"
-                : "\(symbol) priced in \(reported), not \(expected) — check the ticker's exchange suffix"
+                ? String(localized: "\(symbol) trades in \(reported), not \(expected) — \(reported) is what its exchange settles in; set the security’s quote symbol or currency")
+                : String(localized: "\(symbol) priced in \(reported), not \(expected) — check the ticker’s exchange suffix")
         }
+        // Without this the app said "The operation couldn’t be completed"
+        // and the error's type name, and this sentence was never read.
+        var errorDescription: String? { description }
     }
 
     /// A provider answered, but with something that cannot be a price.
-    struct ImplausibleQuote: Error, CustomStringConvertible {
-        let symbol: String, reason: String
-        var description: String { "\(symbol) \(reason)" }
+    struct ImplausibleQuote: Error, CustomStringConvertible, LocalizedError {
+        /// What is wrong with the number, each said as a whole sentence with
+        /// the symbol in it — a symbol and a predicate side by side is how
+        /// English builds one, and not every language does.
+        enum Reason: Sendable { case notAPrice(Decimal), undated, datedAhead }
+        let symbol: String, reason: Reason
+        var description: String {
+            switch reason {
+            case .notAPrice(let price):
+                String(localized: "\(symbol) priced at \(price.formatted()) — check the ticker’s exchange suffix")
+            case .undated:
+                String(localized: "\(symbol) returned no observation date")
+            case .datedAhead:
+                String(localized: "\(symbol) is dated more than a year ahead")
+            }
+        }
+        var errorDescription: String? { description }
     }
 
     /// What an exchange settles in, keyed by the suffix a provider spells it
@@ -357,8 +374,7 @@ public struct QuoteService: Sendable {
         //    ticker that resolves to an index stub (measured 15 Aug 2026: bare
         //    `WMX` instead of `WMX.AX`); a negative close is malformed data.
         guard quote.price > 0 else {
-            throw ImplausibleQuote(symbol: quote.symbol,
-                                   reason: "priced at \(quote.price) — check the ticker's exchange suffix")
+            throw ImplausibleQuote(symbol: quote.symbol, reason: .notAPrice(quote.price))
         }
 
         // 2. A date that is not a date. Providers fall back to
@@ -367,10 +383,10 @@ public struct QuoteService: Sendable {
         //    every series it lands in. A year ahead is equally impossible and
         //    would win `latestPrice` forever.
         guard quote.date > Self.earliestPlausible else {
-            throw ImplausibleQuote(symbol: quote.symbol, reason: "returned no observation date")
+            throw ImplausibleQuote(symbol: quote.symbol, reason: .undated)
         }
         guard quote.date < Date(timeIntervalSinceNow: 366 * 24 * 3600) else {
-            throw ImplausibleQuote(symbol: quote.symbol, reason: "is dated more than a year ahead")
+            throw ImplausibleQuote(symbol: quote.symbol, reason: .datedAhead)
         }
 
         // 3. A price of something else. A quote whose currency is not the one

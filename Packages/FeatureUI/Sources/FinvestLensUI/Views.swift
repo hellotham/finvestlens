@@ -21,30 +21,32 @@ import AppKit
 /// iOS keeps `.fileImporter`.
 @MainActor
 enum MacFilePanel {
-    static func open(types: [UTType], title: String) -> URL? {
+    // A panel's title is a `LocalizedStringResource`: as a `String` each one
+    // was English in every language.
+    static func open(types: [UTType], title: LocalizedStringResource) -> URL? {
         let panel = NSOpenPanel()
-        panel.title = title
-        panel.message = title
+        panel.title = String(localized: title)
+        panel.message = panel.title
         panel.allowedContentTypes = types
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = false
         return panel.runModal() == .OK ? panel.url : nil
     }
 
-    static func openMultiple(types: [UTType], title: String) -> [URL] {
+    static func openMultiple(types: [UTType], title: LocalizedStringResource) -> [URL] {
         let panel = NSOpenPanel()
-        panel.title = title
-        panel.message = title
+        panel.title = String(localized: title)
+        panel.message = panel.title
         panel.allowedContentTypes = types
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = true
         return panel.runModal() == .OK ? panel.urls : []
     }
 
-    static func chooseDirectory(title: String) -> URL? {
+    static func chooseDirectory(title: LocalizedStringResource) -> URL? {
         let panel = NSOpenPanel()
-        panel.title = title
-        panel.message = title
+        panel.title = String(localized: title)
+        panel.message = panel.title
         panel.canChooseFiles = false
         panel.canChooseDirectories = true
         panel.canCreateDirectories = true
@@ -131,7 +133,7 @@ private struct FileExportModifiers: ViewModifier {
             }
             .fileExporter(isPresented: $showingExport, document: exportDocument,
                           contentType: GnuCashFileDocument.contentType,
-                          defaultFilename: "Book") { _ in
+                          defaultFilename: String(localized: "Book")) { _ in
                 exportDocument = nil
             }
             .onChange(of: model.ledgerExportRequested) {
@@ -326,8 +328,7 @@ private struct BookProgressView: View {
     /// Built as `Text` rather than `String` for the same reason: interpolating
     /// into a `LocalizedStringKey` literal emits a key with placeholders, while
     /// concatenating into a `String` emits nothing. (`progress.label` is the
-    /// stage name the store reports; the sentence around it is now
-    /// translatable even though that word is not.)
+    /// stage the store reports, already in the reader's language.)
     private var detail: Text {
         guard let progress else { return Text(indeterminateDetail) }
         guard progress.total > 0 else { return Text("\(progress.label)…") }
@@ -430,10 +431,10 @@ public struct FinvestLensRootView: View {
     @State private var exportDocument: GnuCashFileDocument?
     @State private var ledgerDocument: LedgerFileDocument?
     @State private var showingLedgerExport = false
-    @State private var ledgerFilename = "Book.ledger"
+    @State private var ledgerFilename = String(localized: "Book") + ".ledger"
     @State private var showingCSVExport = false
     @State private var csvDocument: CSVFileDocument?
-    @State private var csvFilename = "Export"
+    @State private var csvFilename = String(localized: "Export")
     @State private var importPayload: ImportPayload?
     @State private var offeredOnboarding = false
     @State private var smartPayload: SmartImportPayload?
@@ -788,7 +789,7 @@ public struct FinvestLensRootView: View {
                 }
                 statementProgress = nil
                 if staged.isEmpty {
-                    statementError = "No transactions were found in this PDF."
+                    statementError = String(localized: "No transactions were found in this PDF.")
                 } else {
                     importPayload = ImportPayload(data: data, format: .pdf, prestaged: staged,
                                                   fileName: fileName)
@@ -1255,7 +1256,7 @@ struct CascadeAccountSheet: View {
 
     @State private var options = AppModel.CascadeOptions()
 
-    private var name: String { model.accountName(accountID) ?? "this account" }
+    private var name: String { model.accountName(accountID) ?? String(localized: "this account") }
     private var count: Int { model.descendantCount(of: accountID) }
 
     var body: some View {
@@ -1302,7 +1303,7 @@ struct DeleteAccountSheet: View {
     @State private var failure: String?
 
     private var plan: AppModel.AccountDeletionPlan? { model.deletionPlan(for: accountID) }
-    private var name: String { model.accountName(accountID) ?? "this account" }
+    private var name: String { model.accountName(accountID) ?? String(localized: "this account") }
 
     private var isReady: Bool {
         guard let plan else { return false }
@@ -1511,12 +1512,17 @@ struct ReconcileBadge: View {
 
     static func word(_ glyph: String) -> String {
         switch glyph {
-        case "c": "Cleared"
-        case "y": "Reconciled"
-        case "f": "Frozen"
-        case "v": "Voided"
-        default: "Not reconciled"
+        case "c": String(localized: "Cleared")
+        case "y": String(localized: "Reconciled")
+        case "f": String(localized: "Frozen")
+        case "v": String(localized: "Voided")
+        default: String(localized: "Not reconciled")
         }
+    }
+
+    /// Whether a state letter is one ``word(_:)`` calls "Not reconciled".
+    static func isUnreconciled(_ glyph: String) -> Bool {
+        !["c", "y", "f", "v"].contains(glyph)
     }
 }
 
@@ -1792,7 +1798,7 @@ struct RegisterView: View {
             #endif
             Menu {
                 Picker("Sort By", selection: $model.registerSort) {
-                    ForEach(RegisterSort.allCases) { Text($0.rawValue).tag($0) }
+                    ForEach(RegisterSort.allCases) { Text($0.title).tag($0) }
                 }
                 .pickerStyle(.inline)
                 Divider()
@@ -1895,7 +1901,7 @@ struct RegisterView: View {
     private var selectedName: String {
         model.postableAccounts.first { $0.id == model.selectedAccountID }?.name
             ?? model.accountTree.first { $0.id == model.selectedAccountID }?.name
-            ?? "Register"
+            ?? String(localized: "Register")
     }
 
     /// GnuCash's register status strip: the balance under each reconcile lens.
@@ -2378,7 +2384,7 @@ struct ScheduleTransactionSheet: View {
                             Text($0.displayName).tag($0)
                         }
                     }
-                    Stepper("Every \(interval) \(unitName)", value: $interval, in: 1...52)
+                    Stepper(period.every(interval), value: $interval, in: 1...52)
                 }
                 Section("Name") {
                     TextField("Name", text: $name)
@@ -2421,11 +2427,6 @@ struct ScheduleTransactionSheet: View {
             .onAppear(perform: loadIfNeeded)
         }
         .windowFloor(minWidth: 420, minHeight: 300)
-    }
-
-    private var unitName: String {
-        let singular = period.unitNoun
-        return interval == 1 ? singular : singular + "s"
     }
 
     private func loadIfNeeded() {
@@ -2545,11 +2546,11 @@ struct RegisterFilterSheet: View {
 
     private static func name(_ state: ReconcileState) -> String {
         switch state {
-        case .notReconciled: "Unreconciled"
-        case .cleared: "Cleared"
-        case .reconciled: "Reconciled"
-        case .frozen: "Frozen"
-        case .voided: "Voided"
+        case .notReconciled: String(localized: "Unreconciled")
+        case .cleared: String(localized: "Cleared")
+        case .reconciled: String(localized: "Reconciled")
+        case .frozen: String(localized: "Frozen")
+        case .voided: String(localized: "Voided")
         }
     }
 
@@ -2708,8 +2709,8 @@ struct SearchResultsView: View {
 
     private var title: String {
         model.findQuery == nil
-            ? "Results for “\(model.searchQuery)”"
-            : "Find Results (\(model.searchResults.count))"
+            ? String(localized: "Results for “\(model.searchQuery)”")
+            : String(localized: "Find Results (\(model.searchResults.count))")
     }
 
     /// Finding nothing is a result. Saying nothing is not: without this the
@@ -2845,7 +2846,7 @@ struct NewAccountSheet: View {
                     .focused($nameFocused)
                 Picker("Type", selection: $type) {
                     ForEach(selectableTypes, id: \.self) { t in
-                        Text(t.rawValue.capitalized).tag(t)
+                        Text(t.localizedName).tag(t)
                     }
                 }
                 Picker("Parent", selection: $parentID) {
@@ -2884,7 +2885,7 @@ struct NewAccountSheet: View {
                 } else {
                     Picker("Currency", selection: $currencyCode) {
                         ForEach(availableCurrencies, id: \.mnemonic) { c in
-                            Text("\(c.mnemonic) — \(c.fullName)").tag(c.mnemonic)
+                            Text("\(c.mnemonic) — \(c.localizedName)").tag(c.mnemonic)
                         }
                     }
                 }
@@ -3439,8 +3440,9 @@ struct TransactionEditorSheet: View {
     }
 
     private var commitTitle: String {
-        if linkingToID != nil { return "Link & Save" }
-        return documentPrefill != nil ? "Add & Attach" : (isEditing ? "Save" : "Add")
+        if linkingToID != nil { return String(localized: "Link & Save") }
+        if documentPrefill != nil { return String(localized: "Add & Attach") }
+        return isEditing ? String(localized: "Save") : String(localized: "Add")
     }
 
     /// Adopts an existing transaction for the document. All the work — attach,
@@ -3585,7 +3587,7 @@ struct TransactionEditorSheet: View {
     /// against a statement: "10 BHP @ 40 AUD".
     private func rateDescription(of line: EditableSplit, unit: String) -> String {
         guard let quantity = line.quantity, quantity != 0, line.amount != 0 else {
-            return "Amount in \(unit)"
+            return String(localized: "Amount in \(unit)")
         }
         let rate = line.amount / quantity
         let rounded = NSDecimalNumber(decimal: displayCurrency.round(rate)).stringValue
@@ -3705,7 +3707,7 @@ struct TransactionEditorSheet: View {
                 fxRateText = NSDecimalNumber(decimal: rate).stringValue
                 recomputeLocal()
             } catch {
-                fxError = "Rate fetch failed: \(error.localizedDescription)"
+                fxError = String(localized: "Rate fetch failed: \(error.localizedDescription)")
             }
         }
     }

@@ -24,11 +24,11 @@ public enum ReconcileState: String, Codable, Sendable, CaseIterable {
     /// abbreviated to its letter.
     public var label: String {
         switch self {
-        case .notReconciled: "Not Reconciled"
-        case .cleared: "Cleared"
-        case .reconciled: "Reconciled"
-        case .frozen: "Frozen"
-        case .voided: "Voided"
+        case .notReconciled: String(localized: "Not Reconciled")
+        case .cleared: String(localized: "Cleared")
+        case .reconciled: String(localized: "Reconciled")
+        case .frozen: String(localized: "Frozen")
+        case .voided: String(localized: "Voided")
         }
     }
 

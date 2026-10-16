@@ -63,7 +63,7 @@ extension AppModel {
     /// rather than nothing when it has none.
     private func defaultScheduleName(for txn: Transaction) -> String {
         let description = txn.transactionDescription.trimmingCharacters(in: .whitespaces)
-        return description.isEmpty ? "Scheduled transaction" : description
+        return description.isEmpty ? String(localized: "Scheduled transaction") : description
     }
 
     public func deleteScheduledTransaction(_ id: GncGUID) {
@@ -139,8 +139,7 @@ extension AppModel {
         }
         if !blocked.isEmpty {
             let names = Set(blocked).sorted().joined(separator: ", ")
-            showToast(.failure, "Could not post \(names): the transaction does not balance. "
-                      + "Check its amounts or formulas — it will stay due until it is fixed.")
+            showToast(.failure, "Could not post \(names): the transaction does not balance. Check its amounts or formulas — it will stay due until it is fixed.")
         }
         return created
     }

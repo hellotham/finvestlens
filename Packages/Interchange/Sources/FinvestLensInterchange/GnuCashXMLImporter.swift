@@ -49,7 +49,7 @@ public enum GnuCashXMLImporter {
 
         guard parser.parse() else {
             let message = parser.parserError?.localizedDescription
-                ?? "line \(parser.lineNumber)"
+                ?? String(localized: "line \(parser.lineNumber)")
             throw ImportError.malformedXML(message)
         }
         delegate.reporter?.finished()

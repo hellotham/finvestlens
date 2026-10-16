@@ -120,7 +120,7 @@ extension AppModel {
         let kind = preferred.fxSymbol(from: code, to: reportCurrency.mnemonic) == nil
             ? .yahoo : preferred
         guard let symbol = kind.fxSymbol(from: code, to: reportCurrency.mnemonic) else {
-            throw QuoteError.unsupported("No exchange-rate source is configured.")
+            throw QuoteError.unsupported(String(localized: "No exchange-rate source is configured."))
         }
         let service = QuoteService(keys: apiKeys, http: quoteHTTP)
         // Every plausibility check a security price gets — a zero, a 1970 date,

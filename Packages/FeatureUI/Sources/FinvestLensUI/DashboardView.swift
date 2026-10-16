@@ -915,7 +915,7 @@ struct DashboardView: View {
         let anchorX: CGFloat
     }
 
-    private static let portfolioSeries = "Portfolio"
+    private static let portfolioSeries = String(localized: "Portfolio")
 
     /// Each currently-held security's price return relative to the start of the
     /// timescale (0% at the start), plus the value-weighted portfolio return in
@@ -1029,10 +1029,10 @@ struct DashboardView: View {
                     let leaders = Self.rankPerfLeaders(perfHoldingPoints)
                     if !leaders.top.isEmpty {
                         perfLeaderRow(icon: "arrowtriangle.up.fill", tint: .green,
-                                      title: "Top", entries: leaders.top)
+                                      top: true, entries: leaders.top)
                         if !leaders.bottom.isEmpty {
                             perfLeaderRow(icon: "arrowtriangle.down.fill", tint: .red,
-                                          title: "Bottom", entries: leaders.bottom)
+                                          top: false, entries: leaders.bottom)
                         }
                     }
                 }
@@ -1075,7 +1075,7 @@ struct DashboardView: View {
             Text(dateFormat.full(date))
                 .scaledFont(.caption2).foregroundStyle(.secondary)
             if let portfolio {
-                perfRow(name: "Portfolio", pct: portfolio.returnPct, bold: true)
+                perfRow(name: Self.portfolioSeries, pct: portfolio.returnPct, bold: true)
             }
             Divider()
             let columns = holdings.count > 12 ? 2 : 1
@@ -1096,14 +1096,19 @@ struct DashboardView: View {
     /// row length ("Bottom 2" on a five-holding book, "Top 2" on a two-holding
     /// one), and each value keeps the sign colour — a "top" performer can
     /// still be down in a falling market.
-    private func perfLeaderRow(icon: String, tint: Color, title: String,
+    private func perfLeaderRow(icon: String, tint: Color, top: Bool,
                                entries: [(series: String, pct: Double)]) -> some View {
-        HStack(spacing: 10) {
+        // "Top" and "Bottom" each with its count and each with its spoken
+        // sentence: four phrases, where one word was dropped into two.
+        let ranked = entries.map { entry in
+            "\(entry.series) \(entry.pct.formatted(.percent.precision(.fractionLength(1))))"
+        }.formatted(.list(type: .and, width: .narrow))
+        return HStack(spacing: 10) {
             HStack(spacing: 3) {
                 Image(systemName: icon).foregroundStyle(tint)
                     .font(.caption2)
                     .accessibilityHidden(true)
-                Text("\(title) \(entries.count)")
+                Text(top ? "Top \(entries.count)" : "Bottom \(entries.count)")
                     .fontWeight(.semibold)
                     .foregroundStyle(.secondary)
             }
@@ -1120,10 +1125,9 @@ struct DashboardView: View {
         .scaledFont(.caption2)
         .lineLimit(1)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(title) \(entries.count) performers since the start of the period: "
-            + entries.map { entry in
-                "\(entry.series) \(entry.pct.formatted(.percent.precision(.fractionLength(1))))"
-            }.joined(separator: ", "))
+        .accessibilityLabel(top
+            ? "Top \(entries.count) performers since the start of the period: \(ranked)"
+            : "Bottom \(entries.count) performers since the start of the period: \(ranked)")
     }
 
     private func perfRow(name: String, pct: Double, bold: Bool) -> some View {
@@ -1307,9 +1311,9 @@ struct DashboardView: View {
         return Card("Net Worth Composition", systemImage: "chart.bar.fill") {
             if let sheet {
                 let rows: [(String, Decimal, Color)] = [
-                    ("Assets", sheet.totalAssets, .green),
-                    ("Liabilities", sheet.totalLiabilities, .red),
-                    ("Equity", sheet.totalEquity, .blue),
+                    (String(localized: "Assets"), sheet.totalAssets, .green),
+                    (String(localized: "Liabilities"), sheet.totalLiabilities, .red),
+                    (String(localized: "Equity"), sheet.totalEquity, .blue),
                 ]
                 Chart(rows, id: \.0) { row in
                     BarMark(x: .value("Amount", asDouble(row.1)), y: .value("Kind", row.0))
@@ -1427,7 +1431,11 @@ struct DashboardView: View {
         switch s { case .critical: .red; case .warning: .orange; case .info: .blue }
     }
     private func severityWord(_ s: AlertSeverity) -> String {
-        switch s { case .critical: "Critical"; case .warning: "Warning"; case .info: "Information" }
+        switch s {
+        case .critical: String(localized: "Critical")
+        case .warning: String(localized: "Warning")
+        case .info: String(localized: "Information")
+        }
     }
 }
 

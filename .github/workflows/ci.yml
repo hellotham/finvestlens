@@ -174,3 +174,9 @@ jobs:
         run: python3 scripts/check-localization.py --self-test
       - name: Every emitted key has an entry, every entry is emitted
         run: python3 scripts/check-localization.py --strings-dir strings --no-discover
+      # A `String` emits no key, so the step above cannot see English held as
+      # one; this reads the source against the same extraction. What no
+      # reader meets is listed, with its reason, in
+      # scripts/localization-exempt.tsv.
+      - name: No English a reader meets is out of the compiler's sight
+        run: python3 scripts/check-localization.py --strings-dir strings --no-discover --only-literals

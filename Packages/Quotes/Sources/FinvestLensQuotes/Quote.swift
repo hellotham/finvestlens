@@ -60,3 +60,19 @@ public enum QuoteError: Error, Equatable, Sendable {
     /// No data was returned for the symbol/date range.
     case noData
 }
+
+/// What went wrong, as the app shows it after a security's symbol ("BHP: no
+/// data"). A provider's own words (`unsupported`, `providerError`) are passed
+/// on as they came; what is this package's is in the reader's language.
+extension QuoteError: LocalizedError {
+    public var errorDescription: String? {
+        switch self {
+        case .missingAPIKey(let kind): String(localized: "\(kind.displayName) API key not set")
+        case .unsupported(let message): message
+        case .httpStatus(let code): "HTTP \(code)"
+        case .malformedResponse(let detail): String(localized: "bad response (\(detail))")
+        case .providerError(let message): message
+        case .noData: String(localized: "no data")
+        }
+    }
+}

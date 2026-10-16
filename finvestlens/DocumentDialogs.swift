@@ -24,8 +24,8 @@ enum DocumentDialogs {
     /// File ▸ New Book…: choose where the new book lives, then create it.
     static func newBook(_ model: AppModel) {
         let panel = NSSavePanel()
-        panel.title = "New Book"
-        panel.nameFieldStringValue = "My Book"   // panel appends .finvestlens
+        panel.title = String(localized: "New Book")
+        panel.nameFieldStringValue = String(localized: "My Book")   // panel appends .finvestlens
         panel.allowedContentTypes = [documentType]
         panel.canCreateDirectories = true
         guard panel.runModal() == .OK, let url = panel.url else { return }
@@ -35,7 +35,7 @@ enum DocumentDialogs {
     /// File ▸ Open…: pick an existing .finvestlens book.
     static func openBook(_ model: AppModel) async {
         let panel = NSOpenPanel()
-        panel.title = "Open Book"
+        panel.title = String(localized: "Open Book")
         panel.allowedContentTypes = [documentType, .data]
         panel.allowsMultipleSelection = false
         guard panel.runModal() == .OK, let url = panel.url else { return }
@@ -46,8 +46,8 @@ enum DocumentDialogs {
     /// converted native book.
     static func importGnuCash(_ model: AppModel) async {
         let open = NSOpenPanel()
-        open.title = "Import GnuCash File"
-        open.message = "Choose a GnuCash file (XML, optionally gzip-compressed)."
+        open.title = String(localized: "Import GnuCash File")
+        open.message = String(localized: "Choose a GnuCash file (XML, optionally gzip-compressed).")
         open.allowedContentTypes = [.xml, .data]
         open.allowsOtherFileTypes = true
         open.allowsMultipleSelection = false
@@ -60,8 +60,8 @@ enum DocumentDialogs {
     /// and chose Import from the recovery alert).
     static func importGnuCash(_ model: AppModel, source: URL) async {
         let save = NSSavePanel()
-        save.title = "Save Imported Book"
-        save.message = "Choose where to save the converted FinvestLens book."
+        save.title = String(localized: "Save Imported Book")
+        save.message = String(localized: "Choose where to save the converted FinvestLens book.")
         save.nameFieldStringValue = source.deletingPathExtension()
             .lastPathComponent + ".finvestlens"
         save.allowedContentTypes = [documentType]
@@ -75,16 +75,16 @@ enum DocumentDialogs {
     /// the converted native book (`FR-XIO-09`).
     static func importLedger(_ model: AppModel) {
         let open = NSOpenPanel()
-        open.title = "Import Ledger Journal"
-        open.message = "Choose a Ledger journal (.ledger, .journal, .dat)."
+        open.title = String(localized: "Import Ledger Journal")
+        open.message = String(localized: "Choose a Ledger journal (.ledger, .journal, .dat).")
         open.allowedContentTypes = [.plainText, .data]
         open.allowsOtherFileTypes = true
         open.allowsMultipleSelection = false
         guard open.runModal() == .OK, let source = open.url else { return }
 
         let save = NSSavePanel()
-        save.title = "Save Imported Book"
-        save.message = "Choose where to save the converted FinvestLens book."
+        save.title = String(localized: "Save Imported Book")
+        save.message = String(localized: "Choose where to save the converted FinvestLens book.")
         save.nameFieldStringValue = source.deletingPathExtension()
             .lastPathComponent + ".finvestlens"
         save.allowedContentTypes = [documentType]

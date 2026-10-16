@@ -40,11 +40,11 @@ enum FindFieldChoice: String, CaseIterable, Identifiable, Hashable {
         case .value: FindNumberField.value.label
         case .shares: FindNumberField.shares.label
         case .sharePrice: FindNumberField.sharePrice.label
-        case .reconcile: "Reconcile"
-        case .account: "Account"
-        case .allAccounts: "All Accounts"
-        case .balanced: "Balanced"
-        case .closing: "Closing Entries"
+        case .reconcile: String(localized: "Reconcile")
+        case .account: String(localized: "Account")
+        case .allAccounts: String(localized: "All Accounts")
+        case .balanced: String(localized: "Balanced")
+        case .closing: String(localized: "Closing Entries")
         }
     }
 
@@ -406,9 +406,9 @@ struct FindCriterionRow: View {
 
     private func accountLabel(_ ids: Set<GncGUID>) -> String {
         switch ids.count {
-        case 0: "Choose…"
-        case 1: accounts.first { $0.id == ids.first }?.name ?? "1 account"
-        default: "\(ids.count) accounts"
+        case 0: String(localized: "Choose…")
+        case 1: accounts.first { $0.id == ids.first }?.name ?? String(localized: "\(ids.count) accounts")
+        default: String(localized: "\(ids.count) accounts")
         }
     }
 }
@@ -417,11 +417,11 @@ struct FindCriterionRow: View {
 enum ReconcileLabel {
     static func name(_ state: ReconcileState) -> String {
         switch state {
-        case .notReconciled: "Not Cleared"
-        case .cleared: "Cleared"
-        case .reconciled: "Reconciled"
-        case .frozen: "Frozen"
-        case .voided: "Voided"
+        case .notReconciled: String(localized: "Not Cleared")
+        case .cleared: String(localized: "Cleared")
+        case .reconciled: String(localized: "Reconciled")
+        case .frozen: String(localized: "Frozen")
+        case .voided: String(localized: "Voided")
         }
     }
 }

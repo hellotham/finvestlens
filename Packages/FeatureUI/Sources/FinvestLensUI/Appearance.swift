@@ -28,7 +28,11 @@ public enum ColorSchemePreference: String, CaseIterable, Identifiable, Sendable 
     case system, light, dark
     public var id: String { rawValue }
     public var label: String {
-        switch self { case .system: "Auto"; case .light: "Light"; case .dark: "Dark" }
+        switch self {
+        case .system: String(localized: "Auto")
+        case .light: String(localized: "Light")
+        case .dark: String(localized: "Dark")
+        }
     }
     public var colorScheme: ColorScheme? {
         switch self { case .system: nil; case .light: .light; case .dark: .dark }

@@ -282,9 +282,13 @@ extension AppModel {
                 }
             }
             // Heuristic fallback when history + rules didn't assign one.
+            // By the reader's name for the category, then the English one: a
+            // book the app started is in the reader's language, a book from
+            // GnuCash or from an English session is not.
             if results[index].suggestedAccountID == nil,
                let categoryName = MerchantHeuristics.category(for: name),
-               let account = self.account(named: categoryName) {
+               let account = [MerchantHeuristics.localizedName(ofCategory: categoryName), categoryName]
+                   .compactMap({ $0 }).lazy.compactMap({ self.account(named: $0) }).first {
                 results[index].suggestedAccountID = account
             }
         }
@@ -390,7 +394,7 @@ extension AppModel {
             shares: inv.quantity, pricePerShare: price,
             amount: abs(row.amount), commission: commission,
             date: row.date,
-            description: inv.security.isEmpty ? "Imported investment" : inv.security,
+            description: inv.security.isEmpty ? String(localized: "Imported investment") : inv.security,
             memo: row.memo,
             reference: row.reference,
             referenceIsBankUnique: row.referenceIsBankUnique)

@@ -204,9 +204,16 @@ struct BusinessHub: View {
     }
 
     private func kindLabel(_ invoice: Invoice) -> String {
-        let base = invoice.kind == .invoice ? "Invoice"
-            : invoice.kind == .bill ? "Bill" : "Voucher"
-        return invoice.isCreditNote ? "Credit Note (\(base.lowercased()))" : base
+        // Six names, each whole: "Credit Note (" + a lower-cased word + ")"
+        // is a sentence only English builds that way.
+        switch (invoice.kind, invoice.isCreditNote) {
+        case (.invoice, false): String(localized: "Invoice")
+        case (.bill, false): String(localized: "Bill")
+        case (_, false): String(localized: "Voucher")
+        case (.invoice, true): String(localized: "Credit Note (invoice)")
+        case (.bill, true): String(localized: "Credit Note (bill)")
+        case (_, true): String(localized: "Credit Note (voucher)")
+        }
     }
 
     private func invoiceRow(_ invoice: Invoice) -> some View {
@@ -464,7 +471,7 @@ struct InvoiceDetailSheet: View {
                     Section("Lines") {
                         ForEach(invoice.entries) { entry in
                             HStack {
-                                Text(entry.entryDescription.isEmpty ? (entry.account?.name ?? "Line")
+                                Text(entry.entryDescription.isEmpty ? (entry.account?.name ?? String(localized: "Line"))
                                      : entry.entryDescription)
                                 Spacer()
                                 Text(AmountFormat.string(entry.total, code: code)).monospacedDigit()
@@ -567,7 +574,8 @@ struct PrintableInvoice: View {
                     forEachLine([company.addressLine1, company.addressLine2,
                                  company.phone, company.email, company.website,
                                  company.taxID.isEmpty ? ""
-                                    : "\(isTax ? "ABN" : "Tax ID"): \(company.taxID)"])
+                                    : isTax ? "ABN: \(company.taxID)"
+                                            : String(localized: "Tax ID: \(company.taxID)")])
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: 2) {
@@ -613,7 +621,7 @@ struct PrintableInvoice: View {
                 Divider()
                 ForEach(invoice.entries) { entry in
                     HStack {
-                        Text(entry.entryDescription.isEmpty ? (entry.account?.name ?? "Line")
+                        Text(entry.entryDescription.isEmpty ? (entry.account?.name ?? String(localized: "Line"))
                              : entry.entryDescription)
                         Spacer()
                         Text(entry.quantity.formatted()).frame(width: 60, alignment: .trailing)
@@ -809,8 +817,8 @@ struct JobEditorSheet: View {
         var guid: GncGUID
     }
     private var owners: [(OwnerRef, String)] {
-        model.businessCustomers.map { (OwnerRef(type: .customer, guid: $0.guid), "\($0.name) (customer)") }
-        + model.businessVendors.map { (OwnerRef(type: .vendor, guid: $0.guid), "\($0.name) (vendor)") }
+        model.businessCustomers.map { (OwnerRef(type: .customer, guid: $0.guid), String(localized: "\($0.name) (customer)")) }
+        + model.businessVendors.map { (OwnerRef(type: .vendor, guid: $0.guid), String(localized: "\($0.name) (vendor)")) }
     }
 
     var body: some View {

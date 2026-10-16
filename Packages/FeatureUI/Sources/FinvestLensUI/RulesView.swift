@@ -172,24 +172,33 @@ struct RulesView: View {
 
     /// The rule in words. Every part the engine honours has to show up here, or
     /// the list would say two different rules are the same one.
+    ///
+    /// In the reader's words: the field and the comparison by their names,
+    /// the conditions joined the way their language says "and" and "or", and
+    /// the sentence whole either way it ends. It was the raw identifiers
+    /// ("description startsWith …") and English joins, in every language.
     static func summary(_ rule: Rule, accountName: (GncGUID) -> String,
-                        goalName: (GncGUID) -> String = { _ in "goal" },
-                        billName: (GncGUID) -> String = { _ in "bill" }) -> String {
-        let conditions = rule.triggers
-            .map { "\($0.field.rawValue) \($0.op.rawValue) “\($0.value)”" }
-            .joined(separator: rule.matchAll ? " and " : " or ")
+                        goalName: (GncGUID) -> String = { _ in String(localized: "goal") },
+                        billName: (GncGUID) -> String = { _ in String(localized: "bill") }) -> String {
+        let each = rule.triggers.map {
+            String(localized: "\($0.field.localizedName) \($0.op.localizedName) “\($0.value)”")
+        }
+        let conditions = rule.matchAll
+            ? each.formatted(.list(type: .and))
+            : each.formatted(.list(type: .or))
         let actions = rule.actions.map { action -> String in
             switch action {
             case .setAccount(let id): "→ \(accountName(id))"
-            case .setNotes(let notes): "notes “\(notes)”"
-            case .setTags(let tags): "tag \(tags.joined(separator: ", "))"
-            case .setDescription(let text): "rename “\(text)”"
-            case .allocateToGoal(let id): "→ goal “\(goalName(id))”"
-            case .linkToBill(let id): "→ bill “\(billName(id))”"
+            case .setNotes(let notes): String(localized: "notes “\(notes)”")
+            case .setTags(let tags): String(localized: "tag \(tags.formatted(.list(type: .and)))")
+            case .setDescription(let text): String(localized: "rename “\(text)”")
+            case .allocateToGoal(let id): String(localized: "→ goal “\(goalName(id))”")
+            case .linkToBill(let id): String(localized: "→ bill “\(billName(id))”")
             }
         }.joined(separator: ", ")
-        let tail = rule.stopProcessing ? ", then stop" : ""
-        return "If \(conditions) \(actions)\(tail)"
+        return rule.stopProcessing
+            ? String(localized: "If \(conditions) \(actions), then stop")
+            : String(localized: "If \(conditions) \(actions)")
     }
 
     private func accountName(_ id: GncGUID) -> String {
@@ -333,13 +342,13 @@ struct RuleEditorSheet: View {
                             HStack(spacing: 8) {
                                 Picker("Field", selection: $trigger.field) {
                                     ForEach(RuleField.allCases, id: \.self) {
-                                        Text($0.rawValue.capitalized).tag($0)
+                                        Text($0.localizedName).tag($0)
                                     }
                                 }
                                 .labelsHidden()
                                 Picker("Condition", selection: $trigger.op) {
                                     ForEach(RuleOperator.allCases, id: \.self) {
-                                        Text($0.rawValue).tag($0)
+                                        Text($0.localizedName).tag($0)
                                     }
                                 }
                                 .labelsHidden()

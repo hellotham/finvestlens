@@ -140,7 +140,7 @@ struct StockTransactionSheet: View {
         }
     }
 
-    private func numberField(_ label: String, text: Binding<String>) -> some View {
+    private func numberField(_ label: LocalizedStringKey, text: Binding<String>) -> some View {
         TextField(label, text: text)
             .multilineTextAlignment(.trailing)
         #if os(iOS)
@@ -157,9 +157,9 @@ struct StockTransactionSheet: View {
 
     private var previewLabel: String {
         switch action {
-        case .buy: return "Total cost"
-        case .sell: return "Net proceeds"
-        case .dividend, .reinvestDividend, .returnOfCapital: return "Amount"
+        case .buy: return String(localized: "Total cost")
+        case .sell: return String(localized: "Net proceeds")
+        case .dividend, .reinvestDividend, .returnOfCapital: return String(localized: "Amount")
         case .split: return ""
         }
     }
@@ -219,7 +219,7 @@ struct StockTransactionSheet: View {
                 date: date, description: name, memo: memo)
             dismiss()
         } catch {
-            errorText = "Couldn’t record: \(error)"
+            errorText = String(localized: "Couldn’t record: \(error.localizedDescription)")
         }
     }
 

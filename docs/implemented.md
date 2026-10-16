@@ -4508,4 +4508,113 @@ compiler emits for its file, on both platforms: the name of each undo action
 in the Edit menu, the toasts, most error and information messages, the names
 the engine gives a reconcile state, a recurrence, a find operator or a stock
 transaction, the open and save panels' titles, and more. `deferred.md` §3a
-has the list; it is the next thing done.
+has the list; it is the next thing done. *(Done since: "Everything a reader
+meets, in their language", below.)*
+
+## Everything a reader meets, in their language — and a gate for what the compiler cannot see (17 Oct 2026)
+
+The reports were the item recorded open. Finishing them showed the same
+fault everywhere: the catalog's gate compares the keys the compiler emits
+with the catalogs, a `String` emits none, and so a phrase held as one was
+neither missing nor orphaned — just English, in every language, under a gate
+that reported full coverage.
+
+**How it was found, and how it is kept found.** A fifth check in
+`scripts/check-localization.py` reads the source as well as the extraction.
+Every string literal that reads as English must be accounted for: by a key
+the compiler emitted for that file, by what the code just before it says it
+is (a defaults key, a log line, SQL, a date pattern, a prompt), or by a line
+in `scripts/localization-exempt.tsv` saying why no reader sees it — 187
+lines, grouped by reason, and an entry that stops exempting anything fails
+the check, so the list cannot outlive the code. The scanner follows
+interpolations (a literal inside one counts: `?? "the audit log"` inside a
+phrase was one that shipped), multi-line and raw strings, and comments.
+`--build` runs it; CI runs it on the artifacts both platforms' builds
+upload; `--self-test` holds the scanner's and the judgement's cases. It
+first counted 1,523 such literals in shipped source; after the work below,
+none that is not on the list.
+
+**What was English, by kind.**
+
+- *Every undo action's name* — the Edit menu's "Undo Delete Transaction" and
+  the audit trail's line — some 150, behind seven functions that took a
+  `String`. They take a `LocalizedStringResource`, so a literal at the call
+  is a key; the audit trail's "Undo" and "Redo" are phrases with the name in
+  them.
+- *Toasts* (26) — `showToast` takes a resource, and `showToast(verbatim:)`
+  says when the words are already the reader's (a book's own text).
+- *Error and information messages*: the book-file alerts, Box, the quote
+  guards, imports, reconciliation's auto-clear, account deletion, paste,
+  Check & Repair, search notes.
+- *Names the engine gives things* and the app showed as they were: find
+  operators and fields, reconcile states, recurrence periods, stock actions,
+  cost-basis and fee treatments, the wellbeing measures, alert titles and
+  messages, interval names. They are localized where they are written; the
+  CLI has no catalog and stays English. The two presentation mappings the
+  reports commit added for cost basis and intervals are gone — one name each.
+- *Names drawn from a raw value*: the account-type picker ("Mutual"), the
+  rule editor ("startsWith"), register sort orders, time-and-mileage kinds,
+  an import's investment action, a security search result's type ("Etf").
+  `LocalizedNames.swift` names each case.
+- *Sentences put together from parts*: a schedule's "Every 2 weeks" (an `s`
+  glued onto an English noun), a rule's summary, Check & Repair's result,
+  the load bar's caption (a verb beside a noun, neither in the catalog), a
+  credit note's kind ("Credit Note (" + a lower-cased word + ")"). Each is a
+  whole phrase now, with plurals where a count is in it, and lists are joined
+  by `ListFormatStyle`.
+- *Helpers that took a `String` label*: the planner's fields, the stock
+  sheet's, the currency transfer's, the open panels' titles.
+- *The app target*: the open and save panels, the menu items' help when
+  nothing is wrong (`reason ?? "literal"`), Siri's balance dialog, and the
+  build stamp — its date was English text; it is a day, written as the reader
+  writes dates.
+- *What the app writes into a new book*: the starter chart of accounts,
+  memos it adds (a commission, a loan's payment split, an invoice
+  adjustment), default names (a budget, a rule group, a schedule). In the
+  reader's language, as GnuCash's own templates are; the merchant heuristics
+  look for a category by the reader's name and then the English one, so a
+  book started either way is found.
+- *Siri and Shortcuts*: `finvestlens/AppShortcuts.xcstrings` gives every
+  phrase in every language (each names the app, as Siri requires), and the
+  gate checks it against the phrases the code declares.
+- *The widget gallery's placeholder*, built in a package whose strings
+  resolve against the app's catalog while it runs in the widget — the widget
+  builds its own now, from its own catalog.
+- *A currency's name* is the locale's ("Australischer Dollar"), not the
+  English one a book stores.
+
+**Faults found on the way, not only English.**
+
+- The quote guards' refusals — "MG priced in USD, not AUD — check the
+  ticker’s exchange suffix" — were plain errors, and the failures list
+  showed "The operation couldn’t be completed" and a type's name instead.
+  `QuoteError`, the two guards, `BoxError` and the GnuCash `ImportError` now
+  describe themselves. A Box error had reached its alert as a debug dump.
+- The rotor's list of unreconciled rows compared each row's display word
+  with "Not reconciled", and would have found nothing in another language.
+  It reads the letter.
+- An ISIN sent to a ticker-keyed provider said so with the provider's raw
+  identifier; it names the provider.
+
+**The catalog.** 482 entries added and 2 retired in the app's (2,942 now),
+one in the widget's, and a new App Shortcuts catalog of four shortcuts. A
+plural's "one" form may now leave the count out ("Every day") — the gate
+allows a form fewer specifiers only when none are read out of place: none at
+all, or every one named by position.
+
+Tests added: load-progress phrases; quote, Box and import errors in words;
+every merchant category named; every raw-valued type named; a security
+kind; a currency's name; unreconciled rows by letter; schedule sentences;
+the gate's scanner and plural rule in its self-test.
+
+Receipts, 17 Oct 2026, on the tree as committed, every package and DerivedData
+build cache cleared first: every package suite passes (2,024 tests;
+FeatureUI 793), both unsigned app builds succeed, and
+`check-localization.py --build` — both platforms built afresh with the
+extractor on — reports every emitted key present in eight languages, no
+orphan, Siri's phrases complete, and no English literal out of the
+compiler's sight.
+
+**Not observed.** Any of this on screen, or Siri, in a language other than
+English. The translations are in the bundle; nobody has looked.
+

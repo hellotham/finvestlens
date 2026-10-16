@@ -88,12 +88,12 @@ struct SmartImportSheet: View {
                 }
             }
             .task { await analyzeAll() }
-            .sheet(item: $importPayload, onDismiss: { markActiveDone("Reviewed") }) { payload in
+            .sheet(item: $importPayload, onDismiss: { markActiveDone(String(localized: "Reviewed")) }) { payload in
                 ImportView(model: model, payload: payload)
             }
             .background {
                 Color.clear
-                    .sheet(item: $dividendPayload, onDismiss: { markActiveDone("Reviewed") }) { payload in
+                    .sheet(item: $dividendPayload, onDismiss: { markActiveDone(String(localized: "Reviewed")) }) { payload in
                         DividendImportSheet(model: model, payload: payload)
                     }
             }
@@ -206,7 +206,7 @@ private struct SmartDocumentRow: View {
                     .foregroundStyle(.tint)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(document.name).fontWeight(.medium)
-                    Text(document.kind?.displayName ?? "Identifying…")
+                    Text(document.kind?.displayName ?? String(localized: "Identifying…"))
                         .scaledFont(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -221,7 +221,7 @@ private struct SmartDocumentRow: View {
         .padding(.vertical, 4)
         .sheet(item: $creatingInvoice) { wrapper in
             CreateFromInvoiceSheet(model: model, analysis: wrapper.analysis) { txnID in
-                document.phase = .done(linkNote("Transaction created", attachTo: txnID))
+                document.phase = .done(linkNote(String(localized: "Transaction created"), attachTo: txnID))
                 onRegisterChanged()
             }
         }
@@ -356,7 +356,7 @@ private struct SmartDocumentRow: View {
 
     private func categoryName(_ id: GncGUID?) -> String {
         guard let id, let node = model.postableAccounts.first(where: { $0.id == id }) else {
-            return "→ previous category"
+            return String(localized: "→ previous category")
         }
         return "→ \(node.fullName)"
     }
@@ -366,7 +366,7 @@ private struct SmartDocumentRow: View {
         guard let id = check.transactionID else { return }
         do {
             try model.applyDividendFix(details, to: id)
-            document.phase = .done(linkNote("Fixed", attachTo: id))
+            document.phase = .done(linkNote(String(localized: "Fixed"), attachTo: id))
             onRegisterChanged()
         } catch {
             actionError = error.localizedDescription
@@ -376,7 +376,7 @@ private struct SmartDocumentRow: View {
     private func applyInvoice(_ analysis: InvoiceAnalysis, _ match: AppModel.InvoiceMatch) {
         do {
             try model.applyInvoiceSplit(analysis, to: match.transactionID, adjustDate: adjustDate)
-            document.phase = .done(linkNote("Split applied", attachTo: match.transactionID))
+            document.phase = .done(linkNote(String(localized: "Split applied"), attachTo: match.transactionID))
             onRegisterChanged()
         } catch {
             actionError = error.localizedDescription
@@ -390,7 +390,7 @@ private struct SmartDocumentRow: View {
         do {
             _ = try model.attachDocument(named: document.name, data: document.data,
                                          to: transactionID)
-            return "\(note) · linked"
+            return String(localized: "\(note) · linked")
         } catch {
             actionError = error.localizedDescription
             return note
@@ -461,7 +461,7 @@ private struct CreateFromInvoiceSheet: View {
             dismiss()
             onCreated(txnID)
         } catch {
-            self.error = "Couldn't create the transaction — check that line items have categories."
+            self.error = String(localized: "Couldn’t create the transaction — check that line items have categories.")
         }
     }
 }

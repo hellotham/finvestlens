@@ -208,7 +208,7 @@ struct CheckPrintSheet: View {
             }
             .fileExporter(isPresented: $exporting, document: pdfDocument,
                           contentType: .pdf,
-                          defaultFilename: "Check \(check?.checkNumber ?? "")".trimmingCharacters(in: .whitespaces)) { _ in }
+                          defaultFilename: String(localized: "Check \(check?.checkNumber ?? "")").trimmingCharacters(in: .whitespaces)) { _ in }
         }
         .windowFloor(minWidth: 660, minHeight: 420)
     }

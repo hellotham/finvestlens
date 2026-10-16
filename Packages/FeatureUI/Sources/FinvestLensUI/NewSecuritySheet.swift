@@ -119,7 +119,7 @@ struct NewSecuritySheet: View {
                     // the choice between two listings of one company possible.
                     Text(result.symbol).monospaced()
                     if !result.exchange.isEmpty { Text(result.exchange) }
-                    if !result.kind.isEmpty { Text(result.kind.capitalized) }
+                    if !result.kind.isEmpty { Text(SecurityKindName.name(result.kind)) }
                 }
                 .scaledFont(.caption)
                 .foregroundStyle(.secondary)

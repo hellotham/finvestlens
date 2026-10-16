@@ -19,10 +19,10 @@ public enum FinancialDocumentKind: String, Sendable, CaseIterable {
 
     public var displayName: String {
         switch self {
-        case .bankStatement: return "Bank statement"
-        case .dividendStatement: return "Dividend statement"
-        case .invoice: return "Invoice / receipt"
-        case .unknown: return "Unrecognised"
+        case .bankStatement: return String(localized: "Bank statement")
+        case .dividendStatement: return String(localized: "Dividend statement")
+        case .invoice: return String(localized: "Invoice / receipt")
+        case .unknown: return String(localized: "Unrecognised")
         }
     }
 }

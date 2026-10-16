@@ -1,0 +1,211 @@
+# localization-exempt.tsv — English literals no reader of the app meets.
+#
+# Read by `scripts/check-localization.py --literals` (and `--build`). Each
+# line is a path, a literal as the scanner sees it (interpolations as §,
+# a newline as \n; a trailing … matches any literal it begins; * is the
+# whole file), and why no reader sees it — tab-separated. An entry that no
+# longer exempts anything fails the check, so this list cannot outlive the
+# code it describes.
+#
+# Add a line only for text that is genuinely not for the reader. Anything a
+# person sees goes through String(localized:) or a localized type instead.
+
+
+# Formats other programs read. Whole files: nothing in them is shown to a person.
+Packages/Interchange/Sources/FinvestLensInterchange/GnuCashXMLExporter.swift	*	GnuCash's XML element, slot and type names, which GnuCash reads back
+Packages/Interchange/Sources/FinvestLensInterchange/GnuCashXMLExporter+Business.swift	*	GnuCash's XML business vocabulary, which GnuCash reads back
+Packages/Interchange/Sources/FinvestLensInterchange/LedgerWriter.swift	*	Ledger journal syntax, which Ledger reads
+Packages/Interchange/Sources/FinvestLensInterchange/CSVExport.swift	*	GnuCash's CSV column names, which GnuCash's importer reads
+Packages/Interchange/Sources/FinvestLensInterchange/CSVFormatDetection.swift	*	column names and date patterns a bank's export uses, which the detector matches
+Packages/Interchange/Sources/FinvestLensInterchange/LedgerParser.swift	*	Ledger's own vocabulary; a parse error's detail is quoted inside a sentence that is localized
+Packages/Cloud/Sources/FinvestLensCloud/BoxClient.swift	*	HTTP and Box's API; BoxError says what went wrong in the reader's language
+Packages/Engine/Sources/FinvestLensEngine/AmountInWords.swift	*	a cheque's legal line is English by design; CheckPrinting.swift says why
+
+# Words matched against what a file or a model writes, never shown.
+Packages/Interchange/Sources/FinvestLensInterchange/CSVImport.swift	trade date	a price file's column name, matched
+Packages/Interchange/Sources/FinvestLensInterchange/CSVImport.swift	adj close	a price file's column name, matched
+Packages/Interchange/Sources/FinvestLensInterchange/CSVImport.swift	adjusted close	a price file's column name, matched
+Packages/Intelligence/Sources/FinvestLensIntelligence/DocumentClassifier.swift	record date	a word on a statement, or a model's answer, that the classifier matches
+Packages/Intelligence/Sources/FinvestLensIntelligence/DocumentClassifier.swift	ex date	a word on a statement, or a model's answer, that the classifier matches
+Packages/Intelligence/Sources/FinvestLensIntelligence/DocumentClassifier.swift	securities held	a word on a statement, or a model's answer, that the classifier matches
+Packages/Intelligence/Sources/FinvestLensIntelligence/DocumentClassifier.swift	units held	a word on a statement, or a model's answer, that the classifier matches
+Packages/Intelligence/Sources/FinvestLensIntelligence/DocumentClassifier.swift	holder identification	a word on a statement, or a model's answer, that the classifier matches
+Packages/Intelligence/Sources/FinvestLensIntelligence/DocumentClassifier.swift	reinvestment plan	a word on a statement, or a model's answer, that the classifier matches
+Packages/Intelligence/Sources/FinvestLensIntelligence/DocumentClassifier.swift	master card	a word on a statement, or a model's answer, that the classifier matches
+Packages/Intelligence/Sources/FinvestLensIntelligence/DocumentClassifier.swift	american express	a word on a statement, or a model's answer, that the classifier matches
+Packages/Intelligence/Sources/FinvestLensIntelligence/DocumentClassifier.swift	merchant copy	a word on a statement, or a model's answer, that the classifier matches
+Packages/Intelligence/Sources/FinvestLensIntelligence/DocumentClassifier.swift	account type	a word on a statement, or a model's answer, that the classifier matches
+Packages/Intelligence/Sources/FinvestLensIntelligence/DocumentClassifier.swift	savings a	a word on a statement, or a model's answer, that the classifier matches
+Packages/Intelligence/Sources/FinvestLensIntelligence/DocumentClassifier.swift	cheque a	a word on a statement, or a model's answer, that the classifier matches
+Packages/Intelligence/Sources/FinvestLensIntelligence/DocumentClassifier.swift	change due	a word on a statement, or a model's answer, that the classifier matches
+Packages/Intelligence/Sources/FinvestLensIntelligence/DocumentClassifier.swift	distribution statement	a word on a statement, or a model's answer, that the classifier matches
+Packages/Intelligence/Sources/FinvestLensIntelligence/DocumentClassifier.swift	receipt #	a word on a statement, or a model's answer, that the classifier matches
+Packages/Intelligence/Sources/FinvestLensIntelligence/DocumentClassifier.swift	receipt no	a word on a statement, or a model's answer, that the classifier matches
+Packages/Intelligence/Sources/FinvestLensIntelligence/DocumentClassifier.swift	closing balance	a word on a statement, or a model's answer, that the classifier matches
+Packages/Intelligence/Sources/FinvestLensIntelligence/DocumentClassifier.swift	amount due	a word on a statement, or a model's answer, that the classifier matches
+Packages/Intelligence/Sources/FinvestLensIntelligence/DocumentClassifier.swift	bank statement	a word on a statement, or a model's answer, that the classifier matches
+Packages/Intelligence/Sources/FinvestLensIntelligence/DocumentClassifier.swift	dividend statement	a word on a statement, or a model's answer, that the classifier matches
+Packages/Intelligence/Sources/FinvestLensIntelligence/DocumentClassifier.swift	invoice or receipt	a word on a statement, or a model's answer, that the classifier matches
+Packages/Intelligence/Sources/FinvestLensIntelligence/DocumentClassifier.swift	something else	a word on a statement, or a model's answer, that the classifier matches
+Packages/Intelligence/Sources/FinvestLensIntelligence/FigureGrounding.swift	per cent	how a narrator writes 'percent', matched when checking its figures
+Packages/Intelligence/Sources/FinvestLensIntelligence/FigureGrounding.swift	pour cent	how a narrator writes 'percent', matched when checking its figures
+Packages/Intelligence/Sources/FinvestLensIntelligence/FigureGrounding.swift	por ciento	how a narrator writes 'percent', matched when checking its figures
+Packages/Intelligence/Sources/FinvestLensIntelligence/FigureGrounding.swift	por cento	how a narrator writes 'percent', matched when checking its figures
+Packages/Intelligence/Sources/FinvestLensIntelligence/FigureGrounding.swift	per cento	how a narrator writes 'percent', matched when checking its figures
+Packages/Intelligence/Sources/FinvestLensIntelligence/ReviewNarrator.swift	no change	a narrator's way of saying 'unchanged', matched when checking a slide
+Packages/Intelligence/Sources/FinvestLensIntelligence/ReviewNarrator.swift	remained at	a narrator's way of saying 'unchanged', matched when checking a slide
+Packages/Intelligence/Sources/FinvestLensIntelligence/ReviewNarrator.swift	remains at	a narrator's way of saying 'unchanged', matched when checking a slide
+Packages/Intelligence/Sources/FinvestLensIntelligence/ReviewNarrator.swift	keine veränderung	a narrator's way of saying 'unchanged', matched when checking a slide
+Packages/Intelligence/Sources/FinvestLensIntelligence/ReviewNarrator.swift	gleich geblieben	a narrator's way of saying 'unchanged', matched when checking a slide
+Packages/Intelligence/Sources/FinvestLensIntelligence/ReviewNarrator.swift	sans changement	a narrator's way of saying 'unchanged', matched when checking a slide
+Packages/Intelligence/Sources/FinvestLensIntelligence/ReviewNarrator.swift	sin cambios	a narrator's way of saying 'unchanged', matched when checking a slide
+Packages/Intelligence/Sources/FinvestLensIntelligence/ReviewNarrator.swift	sin variaci	a narrator's way of saying 'unchanged', matched when checking a slide
+Packages/Intelligence/Sources/FinvestLensIntelligence/ReviewNarrator.swift	se mantuvo	a narrator's way of saying 'unchanged', matched when checking a slide
+Packages/Intelligence/Sources/FinvestLensIntelligence/ReviewNarrator.swift	se mantiene	a narrator's way of saying 'unchanged', matched when checking a slide
+Packages/Intelligence/Sources/FinvestLensIntelligence/ReviewNarrator.swift	nessuna variazione	a narrator's way of saying 'unchanged', matched when checking a slide
+Packages/Intelligence/Sources/FinvestLensIntelligence/ReviewNarrator.swift	sem varia	a narrator's way of saying 'unchanged', matched when checking a slide
+Packages/Intelligence/Sources/FinvestLensIntelligence/ReviewNarrator.swift	não há varia	a narrator's way of saying 'unchanged', matched when checking a slide
+Packages/Rules/Sources/FinvestLensRules/MerchantHeuristics.swift	uber eats	a merchant keyword matched in a bank line
+Packages/Rules/Sources/FinvestLensRules/MerchantHeuristics.swift	prime video	a merchant keyword matched in a bank line
+Packages/Rules/Sources/FinvestLensRules/MerchantHeuristics.swift	youtube premium	a merchant keyword matched in a bank line
+Packages/Rules/Sources/FinvestLensRules/MerchantHeuristics.swift	gas bill	a merchant keyword matched in a bank line
+Packages/Rules/Sources/FinvestLensRules/MerchantHeuristics.swift	real estate	a merchant keyword matched in a bank line
+Packages/Rules/Sources/FinvestLensRules/MerchantHeuristics.swift	big w	a merchant keyword matched in a bank line
+Packages/Quotes/Sources/FinvestLensQuotes/WilsonQuoteProvider.swift	Asset class	a label on Wilson's page, matched when reading it
+Packages/Quotes/Sources/FinvestLensQuotes/AlphaVantageQuoteProvider.swift	Information	a key in Alpha Vantage's JSON
+Packages/Quotes/Sources/FinvestLensQuotes/AlphaVantageQuoteProvider.swift	Error Message	a key in Alpha Vantage's JSON
+Packages/Quotes/Sources/FinvestLensQuotes/KeyedFundamentalsProviders.swift	Information	a key in Alpha Vantage's JSON
+Packages/Quotes/Sources/FinvestLensQuotes/KeyedFundamentalsProviders.swift	Error Message	a key in Alpha Vantage's JSON
+Packages/Quotes/Sources/FinvestLensQuotes/FIIGQuoteProvider.swift	Accept	an HTTP header name
+Packages/Quotes/Sources/FinvestLensQuotes/FIIGQuoteProvider.swift	Origin	an HTTP header name
+Packages/Quotes/Sources/FinvestLensQuotes/FIIGQuoteProvider.swift	Referer	an HTTP header name
+Packages/Quotes/Sources/FinvestLensQuotes/YahooFundamentalsProvider.swift	Accept	an HTTP header name
+
+# What a model is told. Prompts are English by design: docs/intelligence-prompts.md.
+Packages/Intelligence/Sources/FinvestLensIntelligence/AttachmentInsight.swift	You categorise a personal finance transaction…	a model's prompt
+Packages/Intelligence/Sources/FinvestLensIntelligence/AttachmentInsight.swift	Transaction: § (§)\nDocument text:\n§	a model's prompt
+Packages/Intelligence/Sources/FinvestLensIntelligence/BudgetAdvisor.swift	- §: average §/month (range §–§)	a model's prompt
+Packages/Intelligence/Sources/FinvestLensIntelligence/BudgetAdvisor.swift	- §: average §/month	a model's prompt
+Packages/Intelligence/Sources/FinvestLensIntelligence/BudgetAdvisor.swift	You fill in a budget planning table.…	a model's prompt
+Packages/Intelligence/Sources/FinvestLensIntelligence/BudgetAdvisor.swift	Total available per month: § §\n\nObserved spending:\n§	a model's prompt
+Packages/Intelligence/Sources/FinvestLensIntelligence/DividendExtractor.swift	You read dividend and distribution statements…	a model's prompt
+Packages/Intelligence/Sources/FinvestLensIntelligence/DividendExtractor.swift	Dividend statement:\n\n§	a model's prompt
+Packages/Intelligence/Sources/FinvestLensIntelligence/DocumentClassifier.swift	Which kind of financial document is this text…	a model's prompt
+Packages/Intelligence/Sources/FinvestLensIntelligence/ForecastNarrator.swift	 on §	a model's prompt
+Packages/Intelligence/Sources/FinvestLensIntelligence/ForecastNarrator.swift	You write short, factual cash-flow outlooks…	a model's prompt
+Packages/Intelligence/Sources/FinvestLensIntelligence/ForecastNarrator.swift	Account: § (§)\nForecast horizon:…	a model's prompt
+Packages/Intelligence/Sources/FinvestLensIntelligence/InvoiceAnalyzer.swift	You read invoices and receipts.…	a model's prompt
+Packages/Intelligence/Sources/FinvestLensIntelligence/InvoiceAnalyzer.swift	 The document is the image labelled §.…	a model's prompt
+Packages/Intelligence/Sources/FinvestLensIntelligence/InvoiceAnalyzer.swift	 The document carries a QR code or a barcode: read it with the barcode tool.	a model's prompt
+Packages/Intelligence/Sources/FinvestLensIntelligence/InvoiceAnalyzer.swift	Read this receipt or invoice.	a model's prompt
+Packages/Intelligence/Sources/FinvestLensIntelligence/InvoiceAnalyzer.swift	Invoice text:\n\n§	a model's prompt
+Packages/Intelligence/Sources/FinvestLensIntelligence/LanguageModels.swift	The person's locale is §.	a model's prompt
+Packages/Intelligence/Sources/FinvestLensIntelligence/LanguageModels.swift	You MUST respond in §.	a model's prompt
+Packages/Intelligence/Sources/FinvestLensIntelligence/LanguageModels.swift	Traditional Chinese	a model's prompt
+Packages/Intelligence/Sources/FinvestLensIntelligence/LanguageModels.swift	Simplified Chinese	a model's prompt
+Packages/Intelligence/Sources/FinvestLensIntelligence/LanguageModels.swift	European Portuguese	a model's prompt
+Packages/Intelligence/Sources/FinvestLensIntelligence/LanguageModels.swift	Brazilian Portuguese	a model's prompt
+Packages/Intelligence/Sources/FinvestLensIntelligence/ReportNarrator.swift	You write brief notes for the reports section…	a model's prompt
+Packages/Intelligence/Sources/FinvestLensIntelligence/ReportNarrator.swift	Report: §\nPeriod: §\nHeadline figures:…	a model's prompt
+Packages/Intelligence/Sources/FinvestLensIntelligence/ReviewNarrator.swift	You write one slide of a personal financial review…	a model's prompt
+Packages/Intelligence/Sources/FinvestLensIntelligence/ReviewNarrator.swift	Slide section: §\nPeriod: §\nFigures:…	a model's prompt
+Packages/Intelligence/Sources/FinvestLensIntelligence/ReviewNarrator.swift	Changes:\n§	a model's prompt
+Packages/Intelligence/Sources/FinvestLensIntelligence/ReviewNarrator.swift	unchanged on the prior period	a model's prompt
+Packages/Intelligence/Sources/FinvestLensIntelligence/ReviewNarrator.swift	§ §% on the prior period	a model's prompt
+Packages/Intelligence/Sources/FinvestLensIntelligence/SchemaGuide.swift	Answer with one JSON object that matches this JSON Schema.…	a model's prompt
+Packages/Intelligence/Sources/FinvestLensIntelligence/StatementExtractor.swift	You extract transaction rows from bank and credit card statement text.…	a model's prompt
+Packages/Intelligence/Sources/FinvestLensIntelligence/StatementExtractor.swift	Statement page:\n\n§	a model's prompt
+Packages/Intelligence/Sources/FinvestLensIntelligence/TransactionCategorizer.swift	You categorise personal finance transactions.…	a model's prompt
+Packages/Intelligence/Sources/FinvestLensIntelligence/TransactionCategorizer.swift	Categorise these transactions:\n§	a model's prompt
+
+# Written into a book as GnuCash writes it, and read back by code or by GnuCash.
+Packages/Engine/Sources/FinvestLensEngine/Book.swift	Root Account	GnuCash's name for the root account
+Packages/Persistence/Sources/FinvestLensPersistence/SQLiteDocumentStore.swift	Root Account	GnuCash's name for the root account
+Packages/Interchange/Sources/FinvestLensInterchange/GnuCashXMLImporter.swift	Root Account	GnuCash's name for the root account
+Packages/Interchange/Sources/FinvestLensInterchange/LedgerBookMapping.swift	Orphan	GnuCash's orphan account, found by its name
+Packages/FeatureUI/Sources/FinvestLensUI/AppModel+Currency.swift	Trading	GnuCash's trading account container, found by its name
+Packages/Reports/Sources/FinvestLensReports/FinancialReports.swift	Trading	a synthetic line's grouping key; its caption is localized
+Packages/Reports/Sources/FinvestLensReports/FinancialReports.swift	Rounding	a synthetic line's grouping key; its caption is localized
+Packages/Engine/Sources/FinvestLensEngine/BusinessPayment.swift	Payment	GnuCash's action and memo for a business payment; the reports are verified against GnuCash's on them
+Packages/Engine/Sources/FinvestLensEngine/BusinessPosting.swift	Generated from an invoice. Try unposting the invoice.	GnuCash's read-only reason, written into the transaction as GnuCash writes it
+Packages/Engine/Sources/FinvestLensEngine/BusinessPosting.swift	Credit Note	GnuCash's action on an invoice's posting split
+Packages/Engine/Sources/FinvestLensEngine/BusinessPosting.swift	Invoice	GnuCash's action on an invoice's posting split
+Packages/Engine/Sources/FinvestLensEngine/BusinessPosting.swift	Bill	GnuCash's action on an invoice's posting split
+Packages/Engine/Sources/FinvestLensEngine/Commodity.swift	Australian Dollar	ISO's English currency name as GnuCash stores it; shown, a currency takes the reader's name (Commodity.localizedName)
+Packages/Engine/Sources/FinvestLensEngine/Commodity.swift	US Dollar	ISO's English currency name as GnuCash stores it; shown, a currency takes the reader's name (Commodity.localizedName)
+Packages/Engine/Sources/FinvestLensEngine/Commodity.swift	Euro	ISO's English currency name as GnuCash stores it; shown, a currency takes the reader's name (Commodity.localizedName)
+Packages/FeatureUI/Sources/FinvestLensUI/Views.swift	Australian Dollar	ISO's English currency name, stored with a new currency; the picker shows the reader's
+Packages/FeatureUI/Sources/FinvestLensUI/Views.swift	US Dollar	ISO's English currency name, stored with a new currency; the picker shows the reader's
+Packages/FeatureUI/Sources/FinvestLensUI/Views.swift	Euro	ISO's English currency name, stored with a new currency; the picker shows the reader's
+Packages/FeatureUI/Sources/FinvestLensUI/Views.swift	Pound Sterling	ISO's English currency name, stored with a new currency; the picker shows the reader's
+Packages/FeatureUI/Sources/FinvestLensUI/Views.swift	New Zealand Dollar	ISO's English currency name, stored with a new currency; the picker shows the reader's
+Packages/FeatureUI/Sources/FinvestLensUI/Views.swift	Canadian Dollar	ISO's English currency name, stored with a new currency; the picker shows the reader's
+Packages/FeatureUI/Sources/FinvestLensUI/Views.swift	Japanese Yen	ISO's English currency name, stored with a new currency; the picker shows the reader's
+Packages/FeatureUI/Sources/FinvestLensUI/Views.swift	Swiss Franc	ISO's English currency name, stored with a new currency; the picker shows the reader's
+Packages/FeatureUI/Sources/FinvestLensUI/Views.swift	Chinese Yuan	ISO's English currency name, stored with a new currency; the picker shows the reader's
+Packages/FeatureUI/Sources/FinvestLensUI/Views.swift	Hong Kong Dollar	ISO's English currency name, stored with a new currency; the picker shows the reader's
+Packages/FeatureUI/Sources/FinvestLensUI/Views.swift	Singapore Dollar	ISO's English currency name, stored with a new currency; the picker shows the reader's
+Packages/FeatureUI/Sources/FinvestLensUI/Views.swift	Indian Rupee	ISO's English currency name, stored with a new currency; the picker shows the reader's
+Packages/FeatureUI/Sources/FinvestLensUI/AppModel+Intelligence.swift	Dividends	an Australian dividend account the financial-year pack classifies by its English name
+Packages/FeatureUI/Sources/FinvestLensUI/AppModel+Intelligence.swift	Franked Dividends	an Australian dividend account the financial-year pack classifies by its English name
+Packages/FeatureUI/Sources/FinvestLensUI/AppModel+Intelligence.swift	Unfranked Dividends	an Australian dividend account the financial-year pack classifies by its English name
+Packages/FeatureUI/Sources/FinvestLensUI/AppModel+Intelligence.swift	Franking Credits	an Australian dividend account the financial-year pack classifies by its English name
+Packages/FeatureUI/Sources/FinvestLensUI/AppModel+Intelligence.swift	Franking Credits Receivable	an Australian dividend account the financial-year pack classifies by its English name
+Packages/Engine/Sources/FinvestLensEngine/BookClosing.swift	Closing Entries	an API default; the app passes the reader's words
+Packages/Engine/Sources/FinvestLensEngine/LoanCalculator.swift	§ - interest	a scheduled-transaction formula
+Packages/Reports/Sources/FinvestLensReports/LifetimeProjection.swift	Salary	a line inside a tax estimate the projection reads only the total of
+Packages/Reports/Sources/FinvestLensReports/AccountSummary.swift	Assets	a section's identifier; ReportBuilders shows the reader's word (accountClassName)
+Packages/Reports/Sources/FinvestLensReports/AccountSummary.swift	Liabilities	a section's identifier; ReportBuilders shows the reader's word (accountClassName)
+Packages/Reports/Sources/FinvestLensReports/AccountSummary.swift	Equity	a section's identifier; ReportBuilders shows the reader's word (accountClassName)
+Packages/Reports/Sources/FinvestLensReports/AccountSummary.swift	Income	a section's identifier; ReportBuilders shows the reader's word (accountClassName)
+Packages/Reports/Sources/FinvestLensReports/AccountSummary.swift	Expenses	a section's identifier; ReportBuilders shows the reader's word (accountClassName)
+Packages/FeatureUI/Sources/FinvestLensUI/AppModel+Stock.swift	Cash	an account type's identifier (typeName)
+Packages/FeatureUI/Sources/FinvestLensUI/IntelligenceViews.swift	Cash	an account type's identifier (typeName)
+Packages/FeatureUI/Sources/FinvestLensUI/AppModel+Stock.swift	Asset	an account type's identifier (typeName)
+Packages/FeatureUI/Sources/FinvestLensUI/IntelligenceViews.swift	Asset	an account type's identifier (typeName)
+Packages/Interchange/Sources/FinvestLensInterchange/LedgerBookMapping.swift	guid: §	a Ledger metadata tag
+Packages/Interchange/Sources/FinvestLensInterchange/LedgerBookMapping.swift	action: §	a Ledger metadata tag
+Packages/Interchange/Sources/FinvestLensInterchange/LedgerBookMapping.swift	reconciled: §	a Ledger metadata tag
+Packages/Interchange/Sources/FinvestLensInterchange/LedgerBookMapping.swift	voided: true	a Ledger metadata tag
+Packages/Interchange/Sources/FinvestLensInterchange/LedgerBookMapping.swift	frozen: true	a Ledger metadata tag
+
+# For a developer, or for finlab's log: no reader of the app meets these.
+Packages/Interchange/Sources/FinvestLensInterchange/GnuCashXMLImporter.swift	Imported § scheduled transaction(s).	an import note finlab logs; the app does not show them
+Packages/Interchange/Sources/FinvestLensInterchange/GnuCashXMLImporter.swift	Imported § budget(s).	an import note finlab logs; the app does not show them
+Packages/Interchange/Sources/FinvestLensInterchange/GnuCashXMLImporter.swift	Skipped an account with no GUID	an import note finlab logs; the app does not show them
+Packages/Interchange/Sources/FinvestLensInterchange/GnuCashXMLImporter.swift	Unknown account type '§' for '§'	an import note finlab logs; the app does not show them
+Packages/Interchange/Sources/FinvestLensInterchange/GnuCashXMLImporter.swift	Skipped a transaction with no GUID	an import note finlab logs; the app does not show them
+Packages/Interchange/Sources/FinvestLensInterchange/GnuCashXMLImporter.swift	Missing commodity reference; defaulted to AUD	an import note finlab logs; the app does not show them
+Packages/Interchange/Sources/FinvestLensInterchange/GnuCashXMLImporter.swift	Synthesised undeclared commodity §:§	an import note finlab logs; the app does not show them
+Packages/Interchange/Sources/FinvestLensInterchange/GnuCashXMLImporter.swift	Skipped § template account(s) and 	an import note finlab logs; the app does not show them
+Packages/Interchange/Sources/FinvestLensInterchange/GnuCashXMLImporter.swift	§ template transaction(s) 	an import note finlab logs; the app does not show them
+Packages/Interchange/Sources/FinvestLensInterchange/GnuCashXMLImporter.swift	(scheduled-transaction internals)	an import note finlab logs; the app does not show them
+Packages/Interchange/Sources/FinvestLensInterchange/GnuCashXMLImporter.swift	Account '§' had an unresolved parent; attached to root	an import note finlab logs; the app does not show them
+Packages/Interchange/Sources/FinvestLensInterchange/LedgerBookMapping.swift	multi-commodity entry '§' imported as § transactions (one per commodity)	a warning in the Ledger import summary; the app shows only errors
+Packages/Engine/Sources/FinvestLensEngine/GncGUID.swift	Invalid GnuCash GUID hex string: §	a decoding error's debug description
+Packages/Engine/Sources/FinvestLensEngine/Money.swift	Cannot add § and §	a programming error, trapped before any figure is shown
+Packages/Engine/Sources/FinvestLensEngine/Money.swift	Cannot subtract § from §	a programming error, trapped before any figure is shown
+Packages/Engine/Sources/FinvestLensEngine/Money.swift	Cannot compare § and §	a programming error, trapped before any figure is shown
+Packages/Persistence/Sources/FinvestLensPersistence/FinvestLensDocument.swift	SQLite format 3	SQLite's file signature
+FinvestLensQuickLook/PreviewProvider.swift	SQLite format 3	SQLite's file signature
+FinvestLensQuickLook/PreviewProvider.swift	SELECT count(*) FROM "§"	SQL
+Packages/Persistence/Sources/FinvestLensPersistence/SQLiteDocumentStore.swift	WHERE rowid = (SELECT MIN(rowid) FROM split)	SQL
+Packages/FeatureUI/Sources/FinvestLensUI/RegisterSheet.swift	§ sheet §\n	a trace line written to /tmp for a developer
+finvestlens/MLXModelLoader.swift	A model of your own runs on a Mac, iPhone or iPad — not in the simulator.	said only in the simulator, to a developer
+Packages/Shared/Sources/FinvestLensShared/WidgetSnapshot.swift	No upcoming bills	the shared placeholder; the widget shows its own, in its catalog
+
+# Names: products, providers and licences, the same in every language.
+Packages/FeatureUI/Sources/FinvestLensUI/AcknowledgementsView.swift	MLX Swift	a product's or a licence's name
+Packages/FeatureUI/Sources/FinvestLensUI/AcknowledgementsView.swift	MLX, MLX C, {fmt}, JSON for Modern C++ (MIT); metal-cpp (Apache-2.0)	a product's or a licence's name
+Packages/FeatureUI/Sources/FinvestLensUI/AcknowledgementsView.swift	MLX Swift LM	a product's or a licence's name
+Packages/FeatureUI/Sources/FinvestLensUI/AcknowledgementsView.swift	XGrammar (Apache-2.0)	a product's or a licence's name
+Packages/Quotes/Sources/FinvestLensQuotes/QuoteProvider.swift	Yahoo Finance	a provider's name
+Packages/Quotes/Sources/FinvestLensQuotes/QuoteProvider.swift	Alpha Vantage	a provider's name
+Packages/Quotes/Sources/FinvestLensQuotes/QuoteProvider.swift	Finnhub	a provider's name
+Packages/Quotes/Sources/FinvestLensQuotes/QuoteProvider.swift	Twelve Data	a provider's name
+Packages/Quotes/Sources/FinvestLensQuotes/QuoteProvider.swift	Stooq	a provider's name
+Packages/Quotes/Sources/FinvestLensQuotes/QuoteProvider.swift	Wilson Asset Management	a provider's name
+Packages/Quotes/Sources/FinvestLensQuotes/KeyedFundamentalsProviders.swift	Alpha Vantage	a provider's name
+Packages/Quotes/Sources/FinvestLensQuotes/KeyedFundamentalsProviders.swift	Twelve Data	a provider's name
+Packages/Quotes/Sources/FinvestLensQuotes/WilsonQuoteProvider.swift	Wilson Asset Management	a provider's name
+Packages/Quotes/Sources/FinvestLensQuotes/YahooFundamentalsProvider.swift	Yahoo Finance	a provider's name

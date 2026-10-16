@@ -330,7 +330,7 @@ extension AppModel {
         for commodity in missing {
             let tried = effectiveProvider(for: commodity, in: kind)
             for alternate in fallbackProviders(after: tried) {
-                quoteStatus = .fetching("\(commodity.mnemonic) via \(alternate.displayName)")
+                quoteStatus = .fetching(String(localized: "\(commodity.mnemonic) via \(alternate.displayName)"))
                 guard let found = try? await fetch(commodity, alternate), !found.isEmpty else {
                     continue
                 }
@@ -358,13 +358,13 @@ extension AppModel {
     public func fetchLatestQuotes(using kind: QuoteProviderKind) async {
         let commodities = fetchableSecurities
         guard !commodities.isEmpty else {
-            quoteStatus = .failure("No securities to price.")
+            quoteStatus = .failure(String(localized: "No securities to price."))
             return
         }
         guard quoteProgress == nil else { return }   // one fetch run at a time
         quoteProgress = 0
         defer { quoteProgress = nil }
-        quoteStatus = .fetching("latest quotes")
+        quoteStatus = .fetching(String(localized: "latest quotes"))
         let service = service()
         var fetched: [Price] = []
         var failures: [String] = []
@@ -394,7 +394,7 @@ extension AppModel {
                     // absent from an index is the one thing a person can fix,
                     // by correcting the identifier.
                     for commodity in group where prices[commodity] == nil {
-                        failures.append("\(commodity.mnemonic): not in \(provider.displayName)")
+                        failures.append(String(localized: "\(commodity.mnemonic): not in \(provider.displayName)"))
                     }
                 } catch {
                     // One failed request is the whole group; say which.
@@ -440,10 +440,10 @@ extension AppModel {
             : .failure(String(localized: "Added \(added). Failed — \(failures.joined(separator: "; "))"))
         if failures.isEmpty {
             showToast(.success, added > 0
-                ? String(localized: "Quotes fetched — \(added) prices added.")
-                : String(localized: "Quotes are already current."))
+                ? "Quotes fetched — \(added) prices added."
+                : "Quotes are already current.")
         } else {
-            showToast(.failure, String(localized: "Quote fetch: \(failures.count) symbols failed — see Prices for details."))
+            showToast(.failure, "Quote fetch: \(failures.count) symbols failed — see Prices for details.")
         }
     }
 
@@ -519,9 +519,9 @@ extension AppModel {
     /// security into a staging buffer first; the single book edit at the end only
     /// touches securities whose fetch succeeded, so failures never mutate the book.
     private func fetchHistory(for commodities: [Commodity], using kind: QuoteProviderKind,
-                              replacing: Bool, label: String) async {
+                              replacing: Bool, label: LocalizedStringResource) async {
         guard !commodities.isEmpty else {
-            quoteStatus = .failure(replacing ? "No securities selected." : "No securities to price.")
+            quoteStatus = .failure(replacing ? String(localized: "No securities selected.") : String(localized: "No securities to price."))
             return
         }
         // One run at a time — the guard used to live only on the ⌘⇧U wrapper,
@@ -561,7 +561,7 @@ extension AppModel {
         }
 
         for (index, commodity) in commodities.enumerated() {
-            quoteStatus = .fetching("\(commodity.mnemonic) (\(index + 1) of \(commodities.count))")
+            quoteStatus = .fetching(String(localized: "\(commodity.mnemonic) (\(index + 1) of \(commodities.count))"))
             let start = startDate(for: commodity)
 
             // The security's own provider when it has one (`FR-INV-22`): a
@@ -639,12 +639,12 @@ extension AppModel {
         if failures.isEmpty {
             quoteStatus = .success(added)
             showToast(.success, added > 0
-                ? String(localized: "Prices updated — \(added) new prices.")
-                : String(localized: "Prices are already up to date."))
+                ? "Prices updated — \(added) new prices."
+                : "Prices are already up to date.")
         } else {
             let detail = failures.joined(separator: "; ")
             quoteStatus = .failure(String(localized: "Added \(added). Failed — \(detail)"))
-            showToast(.failure, String(localized: "Price update: added \(added), \(failures.count) failed — see Prices for details."))
+            showToast(.failure, "Price update: added \(added), \(failures.count) failed — see Prices for details.")
         }
     }
 
@@ -659,17 +659,10 @@ extension AppModel {
             .min()
     }
 
+    /// A quote error describes itself now (`QuoteError: LocalizedError`), as
+    /// do the guards' refusals, which until then reached this list as "The
+    /// operation couldn’t be completed" and a type name.
     private static func describe(_ error: Error) -> String {
-        if let quoteError = error as? QuoteError {
-            switch quoteError {
-            case .missingAPIKey(let kind): return "\(kind.displayName) API key not set"
-            case .unsupported(let message): return message
-            case .httpStatus(let code): return "HTTP \(code)"
-            case .malformedResponse(let detail): return "bad response (\(detail))"
-            case .providerError(let message): return message
-            case .noData: return "no data"
-            }
-        }
-        return error.localizedDescription
+        error.localizedDescription
     }
 }

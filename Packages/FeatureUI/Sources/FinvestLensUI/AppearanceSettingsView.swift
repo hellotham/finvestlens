@@ -141,8 +141,11 @@ public struct AppearanceSettingsView: View {
 
     private var textSizeLabel: String {
         switch textStep {
-        case 0: "Small"; case 1: "Medium small"; case 2: "Default"
-        case 3: "Large"; default: "Extra large"
+        case 0: String(localized: "Small")
+        case 1: String(localized: "Medium small")
+        case 2: String(localized: "Default")
+        case 3: String(localized: "Large")
+        default: String(localized: "Extra large")
         }
     }
 }

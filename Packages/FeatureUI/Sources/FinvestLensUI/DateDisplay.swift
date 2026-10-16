@@ -30,9 +30,9 @@ public enum DateOrder: String, CaseIterable, Identifiable, Sendable {
 
     public var displayName: String {
         switch self {
-        case .dmy: "D/M/Y — Australian"
-        case .mdy: "M.D.Y — United States"
-        case .ymd: "Y-M-D — Japanese"
+        case .dmy: String(localized: "D/M/Y — Australian")
+        case .mdy: String(localized: "M.D.Y — United States")
+        case .ymd: String(localized: "Y-M-D — Japanese")
         }
     }
 }

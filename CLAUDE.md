@@ -89,7 +89,7 @@ Live harnesses in the FeatureUI test target skip themselves unless env vars are 
 
 ## Localization
 
-The single string catalog lives in the **app target** (`finvestlens/Localizable.xcstrings`) — SwiftUI resolves package `Text()` against `Bundle.main`, so package code needs no bundle plumbing (the Quick Look extension has its own catalog). Eight languages. The authority for the key set is the compiler: `swift build -Xswiftc -emit-localized-strings` output, not grep. Two traps silently opt strings out of localization: string concatenation inside `Text(...)` (picks the verbatim `String` initializer, emits no key) and helper parameters typed `String` where `LocalizedStringKey` is meant.
+The single string catalog lives in the **app target** (`finvestlens/Localizable.xcstrings`) — SwiftUI resolves package `Text()` against `Bundle.main`, so package code needs no bundle plumbing (the Quick Look extension has its own catalog). Eight languages. The authority for the key set is the compiler: `swift build -Xswiftc -emit-localized-strings` output, not grep. Two traps silently opt strings out of localization: string concatenation inside `Text(...)` (picks the verbatim `String` initializer, emits no key) and helper parameters typed `String` where `LocalizedStringKey` is meant. The compiler's key set cannot show either — a `String` emits nothing — so `scripts/check-localization.py` also reads the source (`--build` runs it; `--only-literals` runs it alone): every literal that reads as English needs an emitted key, a context that says no reader sees it, or a line with its reason in `scripts/localization-exempt.tsv`. Siri's phrases are their own catalog, `finvestlens/AppShortcuts.xcstrings`.
 
 ## Working rules
 

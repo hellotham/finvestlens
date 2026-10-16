@@ -36,11 +36,19 @@ extension AppModel {
     /// Appends one operation line: ISO-8601 timestamp, tab, operation name.
     /// Undo/redo replays are labelled as such. Failures are ignored — the log
     /// is an aid, never a reason an edit can't proceed.
-    func auditLog(_ operation: String) {
+    func auditLog(_ operation: LocalizedStringResource) {
         guard let sidecar = auditSidecar else { return }
-        var label = operation
-        if undoManager?.isUndoing == true { label = "Undo " + label }
-        else if undoManager?.isRedoing == true { label = "Redo " + label }
+        // In the reader's language, as the Edit menu names the same step: the
+        // trail is theirs to read. "Undo" and the name are one phrase — the
+        // two do not sit in that order in every language.
+        let name = String(localized: operation)
+        let label = if undoManager?.isUndoing == true {
+            String(localized: "Undo \(name)")
+        } else if undoManager?.isRedoing == true {
+            String(localized: "Redo \(name)")
+        } else {
+            name
+        }
         let stamp = ISO8601DateFormatter().string(from: Date())
         let line = "\(stamp)\t\(label)\n"
         try? sidecar.append(Data(line.utf8))

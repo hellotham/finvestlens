@@ -73,7 +73,7 @@ extension AppModel {
     /// directory. A leftover sibling `.lock` also counts as a collision, so
     /// a new book can never adopt a stale lock.
     public static func newBookURL(in directory: URL,
-                                  baseName: String = "Untitled") -> URL {
+                                  baseName: String = String(localized: "Untitled")) -> URL {
         func candidate(_ index: Int) -> URL {
             let name = index == 1 ? baseName : "\(baseName) \(index)"
             return directory.appendingPathComponent(name)
@@ -398,7 +398,7 @@ extension AppModel {
         if FileManager.default.fileExists(atPath: url.path) {
             NSWorkspace.shared.open(url)
         } else {
-            infoMessage = "The linked document “\(url.lastPathComponent)” was not found in \(url.deletingLastPathComponent().path)."
+            infoMessage = String(localized: "The linked document “\(url.lastPathComponent)” was not found in \(url.deletingLastPathComponent().path).")
         }
         #else
         showToast(.info, "Use Quick Look to view attachments on this device.")
@@ -411,7 +411,7 @@ extension AppModel {
         public var errorDescription: String? {
             switch self {
             case .noFolder:
-                return "No document folder is available — open a book or choose a folder in Settings."
+                return String(localized: "No document folder is available — open a book or choose a folder in Settings.")
             }
         }
     }
@@ -421,7 +421,7 @@ extension AppModel {
 /// A user-facing book-file operation failure (rename/move).
 public struct BookFileError: LocalizedError {
     public let errorDescription: String?
-    init(_ message: String) { errorDescription = message }
+    init(_ message: LocalizedStringResource) { errorDescription = String(localized: message) }
 }
 
 @MainActor

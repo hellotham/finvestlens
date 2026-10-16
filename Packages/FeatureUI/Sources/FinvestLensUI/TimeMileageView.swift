@@ -59,8 +59,7 @@ struct TimeMileageView: View {
                                             let entries = model.unbilledEntries(forCustomer: customer.guid)
                                             let total = entries.reduce(Decimal(0)) { $0 + $1.amount }
                                             LabeledContent(customer.name,
-                                                value: "\(entries.count) entries · "
-                                                    + AmountFormat.string(total, code: code))
+                                                value: String(localized: "\(entries.count) entries · \(AmountFormat.string(total, code: code))"))
                                         }
                                     }
                                 }
@@ -106,7 +105,7 @@ struct TimeMileageView: View {
                 Image(systemName: entry.kind == .time ? "clock" : "car")
                     .foregroundStyle(.secondary)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(entry.detail.isEmpty ? entry.kind.rawValue.capitalized : entry.detail)
+                    Text(entry.detail.isEmpty ? entry.kind.localizedName : entry.detail)
                     Text("\(customer?.name ?? "—") · \(dateFormat.short(entry.date))")
                         .scaledFont(.caption).foregroundStyle(.secondary)
                 }
@@ -149,7 +148,7 @@ private struct BillableEntrySheet: View {
         NavigationStack {
             Form {
                 Picker("Kind", selection: $kind) {
-                    ForEach(BillableEntry.Kind.allCases) { Text($0.rawValue.capitalized).tag($0) }
+                    ForEach(BillableEntry.Kind.allCases) { Text($0.localizedName).tag($0) }
                 }
                 .pickerStyle(.segmented)
                 DatePicker("Date", selection: $date, displayedComponents: .date)
@@ -265,7 +264,7 @@ private struct BillCustomerSheet: View {
             customerID: customer.guid, invoiceNumber: invoiceNumber,
             fallbackIncomeID: fallbackIncomeID)
         if created == nil {
-            error = "Couldn't create the invoice — check the entries have an income account."
+            error = String(localized: "Couldn’t create the invoice — check the entries have an income account.")
         } else {
             dismiss()
         }

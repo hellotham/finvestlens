@@ -33,10 +33,10 @@ public enum TextComparator: String, CaseIterable, Sendable, Hashable, Codable {
 
     public var label: String {
         switch self {
-        case .contains: "contains"
-        case .doesNotContain: "does not contain"
-        case .matchesExactly: "matches exactly"
-        case .doesNotMatchExactly: "does not match exactly"
+        case .contains: String(localized: "contains")
+        case .doesNotContain: String(localized: "does not contain")
+        case .matchesExactly: String(localized: "matches exactly")
+        case .doesNotMatchExactly: String(localized: "does not match exactly")
         }
     }
 }
@@ -52,12 +52,12 @@ public enum DateComparator: String, CaseIterable, Sendable, Hashable, Codable {
 
     public var label: String {
         switch self {
-        case .isBefore: "is before"
-        case .isBeforeOrOn: "is before or on"
-        case .isOn: "is on"
-        case .isNotOn: "is not on"
-        case .isAfter: "is after"
-        case .isOnOrAfter: "is on or after"
+        case .isBefore: String(localized: "is before")
+        case .isBeforeOrOn: String(localized: "is before or on")
+        case .isOn: String(localized: "is on")
+        case .isNotOn: String(localized: "is not on")
+        case .isAfter: String(localized: "is after")
+        case .isOnOrAfter: String(localized: "is on or after")
         }
     }
 }
@@ -72,12 +72,12 @@ public enum NumberComparator: String, CaseIterable, Sendable, Hashable, Codable 
 
     public var label: String {
         switch self {
-        case .lessThan: "is less than"
-        case .lessThanOrEqual: "is less than or equal to"
-        case .equalTo: "equals"
-        case .notEqualTo: "does not equal"
-        case .greaterThanOrEqual: "is greater than or equal to"
-        case .greaterThan: "is greater than"
+        case .lessThan: String(localized: "is less than")
+        case .lessThanOrEqual: String(localized: "is less than or equal to")
+        case .equalTo: String(localized: "equals")
+        case .notEqualTo: String(localized: "does not equal")
+        case .greaterThanOrEqual: String(localized: "is greater than or equal to")
+        case .greaterThan: String(localized: "is greater than")
         }
     }
 }
@@ -90,8 +90,8 @@ public enum SetComparator: String, CaseIterable, Sendable, Hashable, Codable {
     /// Reads next to a row of checkboxes, as GnuCash words the reconcile row.
     public var label: String {
         switch self {
-        case .isOneOf: "is"
-        case .isNotOneOf: "is not"
+        case .isOneOf: String(localized: "is")
+        case .isNotOneOf: String(localized: "is not")
         }
     }
 
@@ -99,8 +99,8 @@ public enum SetComparator: String, CaseIterable, Sendable, Hashable, Codable {
     /// of accounts, so "is" would read as though only one could be chosen.
     public var accountLabel: String {
         switch self {
-        case .isOneOf: "matches any account"
-        case .isNotOneOf: "matches no accounts"
+        case .isOneOf: String(localized: "matches any account")
+        case .isNotOneOf: String(localized: "matches no accounts")
         }
     }
 }
@@ -119,12 +119,12 @@ public enum FindTextField: String, CaseIterable, Sendable, Hashable, Codable {
 
     public var label: String {
         switch self {
-        case .description: "Description"
-        case .notes: "Notes"
-        case .memo: "Memo"
-        case .descriptionNotesOrMemo: "Description, Notes, or Memo"
-        case .number: "Number"
-        case .action: "Action"
+        case .description: String(localized: "Description")
+        case .notes: String(localized: "Notes")
+        case .memo: String(localized: "Memo")
+        case .descriptionNotesOrMemo: String(localized: "Description, Notes, or Memo")
+        case .number: String(localized: "Number")
+        case .action: String(localized: "Action")
         }
     }
 }
@@ -135,8 +135,8 @@ public enum FindDateField: String, CaseIterable, Sendable, Hashable, Codable {
 
     public var label: String {
         switch self {
-        case .posted: "Date Posted"
-        case .reconciled: "Reconciled Date"
+        case .posted: String(localized: "Date Posted")
+        case .reconciled: String(localized: "Reconciled Date")
         }
     }
 }
@@ -150,9 +150,9 @@ public enum FindNumberField: String, CaseIterable, Sendable, Hashable, Codable {
 
     public var label: String {
         switch self {
-        case .value: "Value"
-        case .shares: "Shares"
-        case .sharePrice: "Share Price"
+        case .value: String(localized: "Value")
+        case .shares: String(localized: "Shares")
+        case .sharePrice: String(localized: "Share Price")
         }
     }
 }

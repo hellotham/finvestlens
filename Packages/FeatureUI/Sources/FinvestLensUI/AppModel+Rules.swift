@@ -19,7 +19,7 @@ extension AppModel {
         if let groupID, let index = ruleGroups.firstIndex(where: { $0.id == groupID }) {
             ruleGroups[index].rules.append(rule)
         } else if ruleGroups.isEmpty {
-            ruleGroups.append(RuleGroup(name: "Rules", rules: [rule]))
+            ruleGroups.append(RuleGroup(name: String(localized: "Rules"), rules: [rule]))
         } else {
             ruleGroups[0].rules.append(rule)
         }

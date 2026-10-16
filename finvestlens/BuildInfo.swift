@@ -16,9 +16,18 @@ enum BuildInfo {
     static let version = "1.2"
     /// Short git commit the build was cut from.
     static let commit = "41d1d26"
-    /// Human-readable build date.
-    static let buildDate = "11 October 2026"
+    /// The day the build was cut, ISO 8601.
+    static let buildDay = "2026-10-11"
+
+    /// The build day as the reader writes a date — "11 October 2026",
+    /// "11. Oktober 2026", "2026年10月11日". It was stamped as English text.
+    static var buildDate: String {
+        let parts = buildDay.split(separator: "-").compactMap { Int($0) }
+        guard parts.count == 3, let date = Calendar.current.date(
+            from: DateComponents(year: parts[0], month: parts[1], day: parts[2])) else { return buildDay }
+        return date.formatted(date: .long, time: .omitted)
+    }
 
     /// e.g. "Version 1.0 (41d1d26)".
-    static var versionString: String { "Version \(version) (\(commit))" }
+    static var versionString: String { String(localized: "Version \(version) (\(commit))") }
 }

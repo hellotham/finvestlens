@@ -54,7 +54,12 @@ struct CheckRepairScenarioTests {
         let imbalance = try #require(book.accounts.first { $0.name == "Imbalance-AUD" })
         let leg = try #require(broken.splits.first { $0.account === imbalance })
         #expect(leg.value == dec("12.66"))
-        #expect(model.infoMessage?.contains("balanced 1 transaction(s) via Imbalance") == true)
+        // A phrase with its own plural now, where it was "transaction(s)":
+        // the count and what was done, not the English plural (tests run
+        // without the catalog that chooses it).
+        let message = try #require(model.infoMessage)
+        #expect(message.hasPrefix("Clean-up complete: "))
+        #expect(message.contains("balanced 1 transaction") && message.contains("via Imbalance"))
         #expect(Scrub.check(book).isEmpty)
     }
 

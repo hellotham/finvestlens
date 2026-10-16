@@ -213,7 +213,7 @@ struct MatchAttachmentsSheet: View {
                             .foregroundStyle(.tertiary)
                     }
                 } else {
-                    Text(match.note ?? "No match.")
+                    Text(match.note ?? String(localized: "No match."))
                         .scaledFont(.caption)
                         .foregroundStyle(.orange)
                         .textSelection(.enabled)
@@ -233,7 +233,7 @@ struct MatchAttachmentsSheet: View {
         if let note = match.note { lines.append(note) }
         if let suggestion = match.suggestion {
             if let friendly = suggestion.friendlyDescription {
-                lines.append("Rename to “\(friendly)”")
+                lines.append(String(localized: "Rename to “\(friendly)”"))
             }
             if let split = suggestion.lines {
                 for line in split {

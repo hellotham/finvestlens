@@ -85,15 +85,14 @@ public enum SearchNotice: Identifiable, Hashable, Sendable {
     public var message: String {
         switch self {
         case .unknownKey(let key):
-            "“\(key):” isn’t a search key, so it was searched for as ordinary text."
+            String(localized: "“\(key):” isn’t a search key, so it was searched for as ordinary text.")
         }
     }
 
     public var recovery: String {
         switch self {
         case .unknownKey:
-            "Keys are tag:, account:, memo:, desc: and amount:. To search by date, "
-            + "amount range, reconcile state or notes, use Find (⌘F)."
+            String(localized: "Keys are tag:, account:, memo:, desc: and amount:. To search by date, amount range, reconcile state or notes, use Find (⌘F).")
         }
     }
 }
@@ -432,7 +431,7 @@ extension AppModel {
         do {
             result = try BookClosing.build(in: book, asOf: date, into: equity)
         } catch BookClosing.ClosingError.missingExchangeRate(let from, let to) {
-            return (0, [], "No \(from) → \(to) exchange rate — add a price before closing into this account.")
+            return (0, [], String(localized: "No \(from) → \(to) exchange rate — add a price before closing into this account."))
         } catch {
             return (0, [], error.localizedDescription)
         }
@@ -453,7 +452,7 @@ extension AppModel {
     /// of accounts closed, or `nil` if the book or account is missing.
     @discardableResult
     public func closeBook(asOf date: Date, equityID: GncGUID,
-                          description: String = "Closing Entries") -> Int? {
+                          description: String = String(localized: "Closing Entries")) -> Int? {
         guard let book, let equity = book.account(with: equityID) else { return nil }
         let result: BookClosing.Result
         do {
@@ -640,7 +639,7 @@ extension AppModel {
                     ?? book.accounts.first(where: { $0.fullName == leg.accountFullName })
             else {
                 throw PasteError.unknownAccount(leg.accountFullName.isEmpty
-                                                ? "an account" : leg.accountFullName)
+                                                ? String(localized: "an account") : leg.accountFullName)
             }
             resolved.append((account, leg))
         }
@@ -668,10 +667,9 @@ extension AppModel {
     public func describe(_ error: PasteError) -> String {
         switch error {
         case .nothingToPaste:
-            "There is no transaction on the clipboard."
+            String(localized: "There is no transaction on the clipboard.")
         case .unknownAccount(let name):
-            "This book has no account called “\(name)”, so there is nowhere for that part of "
-            + "the transaction to go. Create it first, or paste into the book it came from."
+            String(localized: "This book has no account called “\(name)”, so there is nowhere for that part of the transaction to go. Create it first, or paste into the book it came from.")
         }
     }
 
@@ -683,7 +681,7 @@ extension AppModel {
         let reversal = Transaction(
             currency: source.currency,
             datePosted: date ?? source.datePosted,
-            description: "Reversal of \(source.transactionDescription)"
+            description: String(localized: "Reversal of \(source.transactionDescription)")
         )
         for split in source.splits {
             reversal.addSplit(Split(account: split.account, value: -split.value,
@@ -905,10 +903,10 @@ extension AppModel {
         public var id: String { rawValue }
         public var label: String {
             switch self {
-            case .new: "New search"
-            case .refine: "Refine current results"
-            case .add: "Add to current results"
-            case .delete: "Delete from current results"
+            case .new: String(localized: "New search")
+            case .refine: String(localized: "Refine current results")
+            case .add: String(localized: "Add to current results")
+            case .delete: String(localized: "Delete from current results")
             }
         }
     }

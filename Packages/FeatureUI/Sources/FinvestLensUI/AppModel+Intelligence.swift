@@ -497,7 +497,7 @@ extension AppModel {
             func linkedNote(amount: Decimal, near date: Date?) -> String? {
                 guard let linked = linkedCandidate(amount: amount, spending: spending, near: date)
                 else { return nil }
-                return "Matches \(transactionSummary(linked)) — but that transaction already has an attachment."
+                return String(localized: "Matches \(transactionSummary(linked)) — but that transaction already has an attachment.")
             }
 
             var matched: Transaction?
@@ -527,10 +527,15 @@ extension AppModel {
                     match.note = String(localized: "Couldn’t read an amount from the document — the scan may be too faint to OCR.")
                 } else {
                     let tried = match.candidateAmounts.map { "\($0)" }.joined(separator: ", ")
+                    // With the document's date and without it: two sentences,
+                    // where one had "the document date" dropped into the place
+                    // a date goes.
+                    let nothingFits = match.documentDate.map {
+                        String(localized: "No unlinked transaction matches any amount read (\(tried)) near \(AppDateFormat.current.short($0)).")
+                    } ?? String(localized: "No unlinked transaction matches any amount read (\(tried)) near the document’s date.")
                     match.note = match.candidateAmounts.compactMap {
                         linkedNote(amount: $0, near: match.documentDate)
-                    }.first
-                        ?? "No unlinked transaction matches any amount read (\(tried)) near \(match.documentDate.map { AppDateFormat.current.short($0) } ?? "the document date")."
+                    }.first ?? nothingFits
                 }
             }
             guard let txn = matched else { continue }
@@ -1708,7 +1713,7 @@ extension AppModel {
         let name = details.securityName.isEmpty ? details.ticker : details.securityName
         return try addTransaction(
             date: details.paymentDate ?? Date(),
-            description: "Dividend — \(name)",
+            description: String(localized: "Dividend — \(name)"),
             currency: cash.commodity,
             splits: splits,
             tags: ["dividend"]
@@ -1803,7 +1808,7 @@ extension AppModel {
     /// "Monthly" budget when none exists).
     public func applyBudgetSuggestion(_ lines: [BudgetSuggestionLine]) {
         guard !lines.isEmpty else { return }
-        var budget = budgets.first ?? Budget(name: "Monthly")
+        var budget = budgets.first ?? Budget(name: String(localized: "Monthly"))
         for line in lines {
             budget.setAmount(line.monthlyAmount, for: line.categoryID)
         }

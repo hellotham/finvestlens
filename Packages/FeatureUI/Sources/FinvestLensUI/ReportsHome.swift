@@ -797,7 +797,7 @@ struct ReportScreen: View {
                     get: { configuration.step ?? .month },
                     set: { configuration.step = $0 })) {
                     ForEach(AverageBalanceStep.allCases) { step in
-                        Text(verbatim: AppModel.intervalName(step)).tag(step)
+                        Text(verbatim: step.displayName).tag(step)
                     }
                 }
                 .pickerStyle(.menu)

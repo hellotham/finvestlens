@@ -22,7 +22,7 @@ public struct DocumentSettingsView: View {
         Form {
             Section("Document folder") {
                 LabeledContent("Folder") {
-                    Text(folderPath.isEmpty ? "Same folder as the book" : folderPath)
+                    Text(folderPath.isEmpty ? String(localized: "Same folder as the book") : folderPath)
                         .foregroundStyle(folderPath.isEmpty ? .secondary : .primary)
                         .truncationMode(.middle)
                         .lineLimit(1)
@@ -45,7 +45,7 @@ public struct DocumentSettingsView: View {
             }
             Section("Fallback folder") {
                 LabeledContent("Folder") {
-                    Text(secondaryPath.isEmpty ? "None" : secondaryPath)
+                    Text(secondaryPath.isEmpty ? String(localized: "None") : secondaryPath)
                         .foregroundStyle(secondaryPath.isEmpty ? .secondary : .primary)
                         .truncationMode(.middle)
                         .lineLimit(1)

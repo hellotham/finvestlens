@@ -99,8 +99,12 @@ struct AccountBalanceIntent: AppIntent {
     }
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        let balance = IntentSupport.accountBalance(id: account.id) ?? "unavailable"
-        return .result(dialog: IntentDialog(stringLiteral: "\(account.name) balance is \(balance)."))
+        // A dialog is a `LocalizedStringResource`; `stringLiteral:` took a
+        // `String` and Siri read it out in English whatever the language.
+        guard let balance = IntentSupport.accountBalance(id: account.id) else {
+            return .result(dialog: IntentDialog("The balance of \(account.name) isn’t available."))
+        }
+        return .result(dialog: IntentDialog("\(account.name) balance is \(balance)."))
     }
 }
 

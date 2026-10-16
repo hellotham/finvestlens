@@ -150,27 +150,17 @@ struct ScheduledView: View {
     }
 
     private func recurrenceSummary(_ recurrence: Recurrence) -> String {
-        let from = dateFormat.long(recurrence.startDate)
-        if recurrence.period == .once { return "Once, on \(from)" }
-        let unit = recurrence.period.unitNoun
-        let every = recurrence.interval == 1 ? "Every \(unit)" : "Every \(recurrence.interval) \(unit)s"
-        let qualifier: String
-        switch recurrence.period {
-        case .endOfMonth: qualifier = " (last day)"
-        case .nthWeekday: qualifier = " (same weekday)"
-        case .lastWeekday: qualifier = " (last weekday)"
-        default: qualifier = ""
-        }
-        return "\(every)\(qualifier), from \(from)"
+        recurrence.period.summary(interval: recurrence.interval,
+                                  from: dateFormat.long(recurrence.startDate))
     }
 
     @ViewBuilder
     private func billBadge(_ status: BillStatus) -> some View {
         let (label, color): (String, Color) = switch status {
-        case .overdue: ("Overdue", .red)
-        case .dueSoon: ("Due soon", .orange)
-        case .upcoming: ("Upcoming", .secondary)
-        case .paid: ("Paid", .green)
+        case .overdue: (String(localized: "Overdue"), .red)
+        case .dueSoon: (String(localized: "Due soon"), .orange)
+        case .upcoming: (String(localized: "Upcoming"), .secondary)
+        case .paid: (String(localized: "Paid"), .green)
         }
         Text(label).scaledFont(.caption2)
             .padding(.horizontal, 5).padding(.vertical, 1)

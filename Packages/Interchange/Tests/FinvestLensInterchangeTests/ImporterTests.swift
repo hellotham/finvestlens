@@ -123,6 +123,16 @@ struct ImporterTests {
         })
     }
 
+    /// The "Couldn’t import" alert read "The operation couldn’t be completed"
+    /// and the error type's name.
+    @Test("An import error says what is wrong with the file")
+    func importErrorWords() {
+        #expect(ImportError.emptyData.localizedDescription == "The file is empty.")
+        #expect(ImportError.noBook.localizedDescription == "The file holds no GnuCash book.")
+        #expect(ImportError.malformedXML("line 3").localizedDescription
+            == "The file isn’t readable GnuCash XML (line 3).")
+    }
+
     @Test("Empty data throws")
     func emptyData() {
         #expect(throws: ImportError.emptyData) {

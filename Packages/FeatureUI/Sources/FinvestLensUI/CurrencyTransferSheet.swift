@@ -42,8 +42,10 @@ struct CurrencyTransferSheet: View {
                     }
                 }
                 Section("Amounts") {
-                    amountField("Amount out\(fromCode.isEmpty ? "" : " (\(fromCode))")", text: $sourceText)
-                    amountField("Amount in\(toCode.isEmpty ? "" : " (\(toCode))")", text: $destText)
+                    amountField(fromCode.isEmpty ? String(localized: "Amount out")
+                                : String(localized: "Amount out (\(fromCode))"), text: $sourceText)
+                    amountField(toCode.isEmpty ? String(localized: "Amount in")
+                                : String(localized: "Amount in (\(toCode))"), text: $destText)
                     if let rate = impliedRate {
                         LabeledContent("Implied rate") {
                             Text("1 \(fromCode) = \(rate.formatted(.number.precision(.fractionLength(0...6)))) \(toCode)")
@@ -101,7 +103,7 @@ struct CurrencyTransferSheet: View {
 
     private func record() {
         errorText = nil
-        let name = description.isEmpty ? "Currency transfer" : description
+        let name = description.isEmpty ? String(localized: "Currency transfer") : description
         do {
             try model.recordCurrencyTransfer(
                 fromID: fromID, toID: toID,
@@ -109,7 +111,7 @@ struct CurrencyTransferSheet: View {
                 date: date, description: name)
             dismiss()
         } catch {
-            errorText = "Couldn’t transfer: \(error)"
+            errorText = String(localized: "Couldn’t transfer: \(error.localizedDescription)")
         }
     }
 }

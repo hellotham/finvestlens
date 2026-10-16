@@ -40,15 +40,15 @@ public enum Scrub {
         public var description: String {
             switch self {
             case let .unbalancedTransaction(guid, imbalance):
-                return "Unbalanced transaction \(guid) (imbalance \(imbalance))"
+                return String(localized: "Unbalanced transaction \(guid.hexString) (imbalance \(imbalance.formatted()))")
             case let .orphanSplit(guid):
-                return "Orphan split \(guid) (no account)"
+                return String(localized: "Orphan split \(guid.hexString) (no account)")
             case let .degenerateTransaction(guid, count):
-                return "Transaction \(guid) has \(count) split(s)"
+                return String(localized: "Transaction \(guid.hexString) has \(count) splits")
             case let .emptyTransaction(guid):
-                return "Empty transaction \(guid) (moves no money)"
+                return String(localized: "Empty transaction \(guid.hexString) (moves no money)")
             case let .implausibleDate(guid, date):
-                return "Transaction \(guid) is posted \(DatePlausibility.describe(date))"
+                return String(localized: "Transaction \(guid.hexString) is posted in year \(String(DatePlausibility.year(of: date)))")
             }
         }
 

@@ -76,8 +76,8 @@ public extension FinancialReports {
             alerts.append(FinancialAlert(
                 id: "bill:\(bill.scheduledID.hexString):\(df.string(from: bill.dueDate))",
                 kind: .billDue, severity: severity,
-                title: severity == .critical ? "Bill overdue: \(bill.name)" : "Bill due soon: \(bill.name)",
-                message: "\(AmountFormat.money(bill.amount, currency)) due \(mediumDate(bill.dueDate))",
+                title: severity == .critical ? String(localized: "Bill overdue: \(bill.name)") : String(localized: "Bill due soon: \(bill.name)"),
+                message: String(localized: "\(AmountFormat.money(bill.amount, currency)) due \(mediumDate(bill.dueDate))"),
                 date: bill.dueDate))
         }
 
@@ -90,8 +90,8 @@ public extension FinancialReports {
                 alerts.append(FinancialAlert(
                     id: "budget:\(line.id.hexString)",
                     kind: .overBudget, severity: .warning,
-                    title: "Over budget: \(line.accountName)",
-                    message: "Spent \(AmountFormat.money(line.actual, currency)) of \(AmountFormat.money(line.effectiveBudget, currency))",
+                    title: String(localized: "Over budget: \(line.accountName)"),
+                    message: String(localized: "Spent \(AmountFormat.money(line.actual, currency)) of \(AmountFormat.money(line.effectiveBudget, currency))"),
                     date: nil))
             }
         }
@@ -109,8 +109,8 @@ public extension FinancialReports {
                 alerts.append(FinancialAlert(
                     id: "lowbalance:\(forecastAccountID.hexString)",
                     kind: .lowBalance, severity: negative ? .critical : .warning,
-                    title: negative ? "Projected negative balance" : "Projected low balance",
-                    message: "Reaches \(AmountFormat.money(worst.balance, currency)) around \(mediumDate(worst.date))",
+                    title: negative ? String(localized: "Projected negative balance") : String(localized: "Projected low balance"),
+                    message: String(localized: "Reaches \(AmountFormat.money(worst.balance, currency)) around \(mediumDate(worst.date))"),
                     date: worst.date))
             }
         }
@@ -124,7 +124,7 @@ public extension FinancialReports {
             alerts.append(FinancialAlert(
                 id: "price:\(target.commodity.mnemonic)",
                 kind: .priceTarget, severity: .info,
-                title: "Price target: \(target.commodity.mnemonic)",
+                title: String(localized: "Price target: \(target.commodity.mnemonic)"),
                 message: "\(AmountFormat.money(price, currency)) \(arrow) \(AmountFormat.money(target.target, currency))",
                 date: asOf))
         }
@@ -172,8 +172,8 @@ public extension FinancialReports {
             alerts.append(FinancialAlert(
                 id: "unusual:\(guid.hexString)",
                 kind: .unusualSpend, severity: .info,
-                title: "Unusual spend: \(names[guid] ?? "")",
-                message: "\(AmountFormat.money(spent, currency)) this month — usually about \(AmountFormat.money(average, currency))",
+                title: String(localized: "Unusual spend: \(names[guid] ?? "")"),
+                message: String(localized: "\(AmountFormat.money(spent, currency)) this month — usually about \(AmountFormat.money(average, currency))"),
                 date: nil))
         }
         return alerts.sorted { $0.id < $1.id }

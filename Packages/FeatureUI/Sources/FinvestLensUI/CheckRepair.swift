@@ -73,7 +73,7 @@ extension AppModel {
         if let proposal = cleanupProposal() {
             pendingCleanup = proposal
         } else {
-            infoMessage = "No inconsistencies found — the book is clean."
+            infoMessage = String(localized: "No inconsistencies found — the book is clean.")
         }
     }
 
@@ -90,13 +90,22 @@ extension AppModel {
         }
         guard let summary = cleaned else { return }
         pendingCleanup = nil
+        // Each thing done is a phrase with its own plural, and the list is
+        // joined the way the reader's language joins one — it was
+        // "transaction(s)" and a comma.
         var parts: [String] = []
-        if summary.emptiesRemoved > 0 { parts.append("removed \(summary.emptiesRemoved) empty transaction(s)") }
-        if summary.orphansAssigned > 0 { parts.append("filed \(summary.orphansAssigned) split(s) under Orphan") }
-        if summary.transactionsBalanced > 0 { parts.append("balanced \(summary.transactionsBalanced) transaction(s) via Imbalance") }
+        if summary.emptiesRemoved > 0 {
+            parts.append(String(localized: "removed \(summary.emptiesRemoved) empty transactions"))
+        }
+        if summary.orphansAssigned > 0 {
+            parts.append(String(localized: "filed \(summary.orphansAssigned) splits under Orphan"))
+        }
+        if summary.transactionsBalanced > 0 {
+            parts.append(String(localized: "balanced \(summary.transactionsBalanced) transactions via Imbalance"))
+        }
         infoMessage = parts.isEmpty
-            ? "Nothing needed fixing."
-            : "Clean-up complete: " + parts.joined(separator: ", ") + "."
+            ? String(localized: "Nothing needed fixing.")
+            : String(localized: "Clean-up complete: \(parts.formatted(.list(type: .and))).")
     }
 
     // MARK: Account colours

@@ -39,3 +39,15 @@ public enum ImportError: Error, Equatable {
     case malformedXML(String)
     case noBook
 }
+
+/// In words, for the "Couldn’t import" alert — which otherwise read "The
+/// operation couldn’t be completed" and the type's name.
+extension ImportError: LocalizedError {
+    public var errorDescription: String? {
+        switch self {
+        case .emptyData: String(localized: "The file is empty.")
+        case .malformedXML(let detail): String(localized: "The file isn’t readable GnuCash XML (\(detail)).")
+        case .noBook: String(localized: "The file holds no GnuCash book.")
+        }
+    }
+}
