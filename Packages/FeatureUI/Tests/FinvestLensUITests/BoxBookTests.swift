@@ -557,6 +557,27 @@ struct BoxBookTests {
         #expect(box.file(id)?.data != original)
     }
 
+    @Test("A failed upload waits for its retry, rather than trying again at once")
+    func failedUploadWaitsForItsRetry() async throws {
+        // On a connected machine the network monitor's first report is
+        // "satisfied"; taken for the network coming back, it cancelled the
+        // retry just scheduled and tried again straight away.
+        let box = FakeBox()
+        let id = box.add("Household.finvestlens", data: try bookBytes())
+        let (model, _, cleanup) = makeModel(box)
+        defer { cleanup() }
+
+        await model.openBoxBook(item(id), inFolder: "42")
+        box.offline = true
+        _ = model.addAccount(name: "Savings", type: .bank)
+        await model.saveWithStatus(interactive: true)
+        await model.finishBoxWork(within: .seconds(5))
+        try await Task.sleep(for: .milliseconds(500))
+        await model.finishBoxWork(within: .seconds(5))
+        #expect(model.boxRetryAttempts[id] == 1, "one failure, one retry waiting")
+        #expect(model.boxRetryTasks[id] != nil)
+    }
+
     @Test("A copy changed by something else — finlab, a crash — is noticed by its bytes")
     func outsideWriterIsNoticed() async throws {
         let box = FakeBox()
@@ -1022,6 +1043,19 @@ struct BoxLibraryTests {
         #expect(!BoxLibrary.isSafeFileID(".."))
         #expect(!BoxLibrary.isSafeFileID(""))
         #expect(!BoxLibrary.isSafeFileID("12/34"))
+    }
+
+    @Test("Uploads wake when the network comes back — not on the first report, or a change while connected")
+    func networkReturnIsATransition() {
+        let watch = BoxNetworkWatch()
+        #expect(!watch.returned(true), "the first report is how things are")
+        #expect(!watch.returned(true), "still connected: another Wi-Fi, a VPN")
+        #expect(!watch.returned(false))
+        #expect(watch.returned(true), "back")
+        #expect(!watch.returned(true))
+        let offlineAtStart = BoxNetworkWatch()
+        #expect(!offlineAtStart.returned(false))
+        #expect(offlineAtStart.returned(true))
     }
 
     @Test("A Box name becomes one safe file name")

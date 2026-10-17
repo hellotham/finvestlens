@@ -4742,3 +4742,15 @@ Cloud Compute off.
 fake written from Box's API reference, and no request has reached Box. A
 request to Private Cloud Compute, or any build that carries its entitlement.
 visionOS, which the app target lists and nothing builds.
+
+**What CI found after the push** (`ebf7fe7`, run 38993181921): the offline
+test failed on the runner and passed here — its retry had been cancelled by
+the time it looked. A network monitor reports the network as it is the moment
+it starts (a probe on this Mac: "satisfied" after 0.001 s, with nothing
+changing), and the watcher took that report, and any change while connected,
+for the network coming back: each cancelled the retry just scheduled and tried
+again at once, so a failed upload's back-off never held. It wakes uploads on a
+return now — connected after a report that it was not (`BoxNetworkWatch`). A
+test of the rule, and one that a failed upload leaves exactly one retry
+waiting, which fails with the old handler. FeatureUI 827 and Lab 18 pass, and
+both unsigned app builds succeed, on the tree as committed.

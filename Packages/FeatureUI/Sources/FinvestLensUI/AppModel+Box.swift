@@ -925,11 +925,20 @@ extension AppModel {
     }
 
     /// Wakes the waiting uploads the moment the network comes back.
+    ///
+    /// On a return only. A monitor reports the network as it is the moment
+    /// it starts — on a connected machine, "satisfied" — and the first
+    /// version took that, and any change while connected (another Wi-Fi, a
+    /// VPN), for the network coming back: each cancelled the retry just
+    /// scheduled and tried again at once, so the back-off never held. It
+    /// showed as a test that passed here and failed on CI, where the retry it
+    /// looked for had been cancelled by then.
     private func watchNetworkForBox() {
         guard boxPathMonitor == nil else { return }
         let monitor = NWPathMonitor()
+        let watch = BoxNetworkWatch()
         monitor.pathUpdateHandler = { [weak self] path in
-            guard path.status == .satisfied else { return }
+            guard watch.returned(path.status == .satisfied) else { return }
             Task { @MainActor in self?.resumeBoxUploads() }
         }
         monitor.start(queue: DispatchQueue(label: "com.hellotham.finvestlens.box-network"))
@@ -1158,6 +1167,23 @@ extension AppModel {
             }
         }
         throw lastError ?? BoxError.malformedResponse("no folder to upload to")
+    }
+}
+
+/// The network as the monitor last reported it, to tell its coming back
+/// from a report that it is there.
+final class BoxNetworkWatch: @unchecked Sendable {
+    private let lock = NSLock()
+    private var wasSatisfied: Bool?
+
+    /// Whether this report is the network returning: connected now, after a
+    /// report that it was not. The first report is how things are, not a
+    /// change.
+    func returned(_ satisfied: Bool) -> Bool {
+        lock.withLock {
+            defer { wasSatisfied = satisfied }
+            return satisfied && wasSatisfied == false
+        }
     }
 }
 
