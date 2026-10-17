@@ -40,6 +40,7 @@ FinvestLens is not a fork of GnuCash. It is a clean, idiomatic Swift reimplement
 - **Network-share (NAS) friendly**: application-level file locking (single-writer, with heartbeat and stale-lock detection) and safe atomic write-back.
 - SwiftUI-based UI across all three platforms with adaptive layouts.
 - **File-level sync** via iCloud Documents / Files / NAS, with external-change detection and version-conflict resolution (`NSFilePresenter`/`NSFileVersion`).
+- **Books on Box**: open and save a book in your own Box account over Box's API, through a Box app you register yourself — each explicit save a new version guarded by the one it was opened from (in resumable parts for a large book), a newer version from another device kept side by side rather than overwritten, and work saved offline uploaded when the connection returns.
 
 **Interoperability**
 - **Import** of GnuCash XML files (uncompressed and gzip-compressed).
@@ -133,7 +134,7 @@ Phased delivery (full detail in [docs/plan.md](docs/plan.md)):
 - ✅ **P11 Investments hub (Aug 2026)** — the *Prices & Securities* editor replaced by a portfolio instrument panel: a tab per portfolio, security detail pages, holdings and reconciliation, bond and fund price providers beside the equity ones, a fundamentals sidecar, and one gate deciding what may become a price ([investments-design.md](docs/investments-design.md)).
 - ✅ **P12 Modes, sidebar and tabs (Aug 2026)** — an always-visible mode selector, one sidebar per mode, and a tabbed detail pane, replacing one sidebar that held thirteen destinations above the account tree ([navigation-design.md](docs/navigation-design.md)).
 - ✅ **P13 Remediation (Aug 2026)** — a five-angle read-only scan of the finished tree (reachability, surface parity, spec against build, docs against code, price-data consistency) that returned 47 issues, fixed in five ordered phases.
-- 🚧 **1.2 (Oct 2026, not yet released)** — macOS 27 / iPadOS 27 / iOS 27 targets on Xcode 27, App Sandbox, a compact shell for iPhone, the second performance review, the Foundation Models 27 rework (one seam between a feature and a model, documents cut by the model's own token count, prose whose every figure is checked in eight languages), a model of the person's own in place of Apple's (a folder of MLX models they point the app at — nothing is bundled or downloaded), and App Store preparation.
+- 🚧 **1.2 (Oct 2026, not yet released)** — macOS 27 / iPadOS 27 / iOS 27 targets on Xcode 27, App Sandbox, a compact shell for iPhone, the second performance review, the Foundation Models 27 rework (one seam between a feature and a model, documents cut by the model's own token count, prose whose every figure is checked in eight languages), a model of the person's own in place of Apple's (a folder of MLX models they point the app at — nothing is bundled or downloaded), books kept in the person's own Box account (Open from Box…), and App Store preparation.
 
 ## Command line
 

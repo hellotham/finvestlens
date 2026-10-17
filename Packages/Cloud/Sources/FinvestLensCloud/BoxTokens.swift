@@ -58,6 +58,27 @@ public final class InMemoryBoxTokenStore: BoxTokenStoring, @unchecked Sendable {
     }
 }
 
+/// Where the Box app's client secret is kept — a protocol so the app's tests
+/// never touch the real Keychain item.
+public protocol BoxClientSecretStoring: Sendable {
+    func secret() -> String?
+    func setSecret(_ secret: String?) throws
+}
+
+/// A secret held in memory — tests and previews.
+public final class InMemoryBoxClientSecretStore: BoxClientSecretStoring, @unchecked Sendable {
+    private let lock = NSLock()
+    private var stored: String?
+
+    public init(_ initial: String? = nil) { stored = initial }
+
+    public func secret() -> String? { lock.withLock { stored } }
+
+    public func setSecret(_ secret: String?) throws {
+        lock.withLock { stored = (secret?.isEmpty ?? true) ? nil : secret }
+    }
+}
+
 #if canImport(Security)
 /// The Box application's client secret.
 ///
@@ -65,7 +86,7 @@ public final class InMemoryBoxTokenStore: BoxTokenStoring, @unchecked Sendable {
 /// It is the *user's own* app secret rather than one shipped in the binary,
 /// but it is still a credential: it belongs in the Keychain, never in
 /// `UserDefaults` beside the client id.
-public struct BoxClientSecretStore {
+public struct BoxClientSecretStore: BoxClientSecretStoring {
     private let service: String
     private let account: String
 

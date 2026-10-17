@@ -349,7 +349,14 @@ struct IntelligenceRunsNote: View {
 
     var body: some View {
         let _ = stored
-        IntelligenceRanNote(offDevice: commands.contains(where: \.leavesDevice), onDevice: onDevice)
+        let offDevice = commands.contains(where: \.leavesDevice)
+        // The one time a command waits on the person: asked here, where the
+        // command is, rather than in an alert a sheet would hide.
+        if offDevice, OffDeviceQuestion.shared.isAsking {
+            OffDeviceQuestionCard()
+        } else {
+            IntelligenceRanNote(offDevice: offDevice, onDevice: onDevice)
+        }
     }
 }
 

@@ -73,6 +73,11 @@ struct OwnModelWordingTests {
         "The model you chose isn’t in the models folder any more. Choose another in Settings ▸ Apple Intelligence.",
         #"\(name) isn’t in the models folder any more. Choose another in Settings ▸ Apple Intelligence."#,
         "Settings ▸ Apple Intelligence can use an open model you already have in \\",
+        "Your answer is kept in Settings ▸ Apple Intelligence, under Where it runs, and you can change it there at any time.",
+        // Where a command runs is what the pane says — this device, Private
+        // Cloud Compute or the person's own model.
+        "are read where Settings ▸ Apple Intelligence says.",
+        "where Settings ▸ Apple Intelligence says. **Investment Review** does the \\",
         // Why Apple's own model cannot answer.
         "This device does not support Apple Intelligence.",
         #"Turn on Apple Intelligence in \(Self.settingsName) to use this feature."#,
@@ -83,9 +88,11 @@ struct OwnModelWordingTests {
         // Shown only while requests go to Private Cloud Compute, which is Apple's.
         "Read statements with Apple Intelligence",
         "The period as a results deck — one message per slide, charts, callouts, insights from Apple Intelligence",
+        // The question asked before the first request to it.
+        "This can be done with Apple’s Private Cloud Compute, where larger models run on Apple’s servers: what it reads is sent to Apple to process, and Apple says it isn’t stored or made accessible to Apple. Or everything can stay on this device. You can change this at any time in Settings ▸ Apple Intelligence.",
         // Says what a supplied model stands in for, and names both.
         "Runs on this device, on the model you chose, for everything Apple Intelligence does here. Your books and documents never leave it. FinvestLens doesn’t provide the model or download it: it is yours, in a folder you pointed to.",
-        "**Suggest Budget** proposes monthly figures from six months of spending, using Apple Intelligence — or a model of your own — on this device.",
+        "**Suggest Budget** proposes monthly figures from six months of spending — with Apple Intelligence, on this device or on Private Cloud Compute as Settings ▸ Apple Intelligence says, or with a model of your own.",
         "under Where it runs. It does everything here that Apple Intelligence \\",
         // The help topic's title: the name of the feature, as the menu has it.
         "Reading PDFs with Apple Intelligence",

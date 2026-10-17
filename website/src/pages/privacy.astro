@@ -2,12 +2,12 @@
 import Base from '../layouts/Base.astro';
 import PageHeader from '../components/PageHeader.astro';
 import { site, url } from '../data/site';
-const updated = '25 July 2026';
+const updated = '17 October 2026';
 ---
 
 <Base
   title="Privacy"
-  description="FinvestLens privacy policy. There is no account, no analytics and no server — your book stays on your device."
+  description="FinvestLens privacy policy. There is no account, no analytics and no server of ours — your book is a file you keep."
 >
   <PageHeader eyebrow="Legal" title="Privacy policy" lead={`Last updated ${updated}`} />
 
@@ -18,7 +18,8 @@ const updated = '25 July 2026';
       <p class="text-lg leading-relaxed text-ink-800 dark:text-ink-100">
         <strong>The short version.</strong> FinvestLens has no account to sign up for,
         no analytics, and no server of ours for your data to reach. Your book is a
-        file on your device. We never see it, and neither does anyone else.
+        file you keep — on your device, or in your own iCloud Drive or Box account.
+        We never see it.
       </p>
     </div>
 
@@ -41,53 +42,79 @@ const updated = '25 July 2026';
       <h2>Where your financial data lives</h2>
       <p>
         Your book is a single file you choose the location of — local disk, iCloud
-        Drive, or a network share. It is read and written by the app on your device
-        and nowhere else. Attachments you link are likewise files on your storage.
+        Drive, a network share, or your own Box account. It is read and written by
+        the app on your device, and goes only where you chose to keep it. Attachments
+        you link are likewise files on your storage.
       </p>
       <p>
         If you keep your book in iCloud Drive, it syncs between <em>your own</em>
         devices through your Apple Account, under Apple’s terms and encryption. That
         is a transfer between you and Apple; it does not involve us.
       </p>
+      <p>
+        If you keep your book in your own Box account, the app keeps a copy on your
+        device while you work on it and sends it back to Box when you save with ⌘S,
+        close the book, switch books or quit (on iPhone and iPad, also when you leave
+        the app). A version saved by another of your devices is never replaced: you are
+        asked what to keep. That is a transfer between you and Box, under Box’s terms;
+        it does not involve us.
+      </p>
 
       <h2>Apple Intelligence and document reading</h2>
       <p>
         Smart Import, categorisation suggestions, budget proposals and report
-        commentary are produced by Apple’s on-device foundation models. The
-        statements, invoices and dividend notices you point the app at are processed
-        <strong>on your device</strong>. Their contents are not sent to us or to any
-        third party by FinvestLens.
+        commentary are produced by Apple Intelligence — on your device, or, where
+        Apple offers it and you allow it, on Apple’s Private Cloud Compute (below).
+        You can use a model of your own instead, which runs on your device; we
+        provide no model and download none. The contents of the documents you point
+        the app at are never sent to us.
       </p>
 
       <h2>Network requests the app can make</h2>
       <p>
-        FinvestLens makes network requests in exactly one situation: when you ask it
-        to fetch security prices or exchange rates. Those requests go to the quote
-        provider you choose:
-      </p>
-      <ul>
-        <li>Yahoo Finance and Stooq — no account or key required</li>
-        <li>EODHD (<code>eodhd.com</code>)</li>
-        <li>Alpha Vantage (<code>alphavantage.co</code>)</li>
-        <li>Finnhub (<code>finnhub.io</code>)</li>
-        <li>Twelve Data (<code>twelvedata.com</code>)</li>
-      </ul>
-      <p>
-        Such a request contains the ticker symbols and date ranges being priced. It
-        does not contain your balances, transactions, account names or any personal
-        detail. Each provider is an independent company with its own privacy policy,
-        which governs what it does with the request.
+        FinvestLens contacts a network service in three situations, all started by you.
       </p>
       <p>
-        If you never fetch prices, the app makes no network requests at all. It works
+        <strong>Prices and company data.</strong> When you update prices, look up a
+        security or fetch a company’s details, the app asks the provider you chose:
+        Yahoo Finance, Stooq, EODHD (<code>eodhd.com</code>), Alpha Vantage
+        (<code>alphavantage.co</code>), Finnhub (<code>finnhub.io</code>), Twelve Data
+        (<code>twelvedata.com</code>), FIIG (bond prices) or Wilson Asset Management (its
+        own funds’ unit prices). The request carries the ticker, ISIN or fund name —
+        never an amount, a balance or anything else from your book — and goes from your
+        device straight to that provider, under its own privacy policy.
+      </p>
+      <p>
+        <strong>Your own Box account.</strong> If you connect a Box account, the app
+        signs you in on Box’s own page and then reads and writes the book files you
+        choose there — with Open from Box…, and when you save as described above —
+        directly between your device and Box. We never see your Box credentials or your
+        files.
+      </p>
+      <p>
+        <strong>Apple’s Private Cloud Compute.</strong> Where it is available,
+        FinvestLens can use Apple’s Private Cloud Compute. Match Attachments, Categorise
+        from Attachment and Split from Invoice send the documents they read; Smart Import
+        sends the invoices and dividend statements it finds; and commentary on reports
+        and reviews, budget suggestions and the forecast outlook send the figures they
+        are written from. Apple states that data processed by Private Cloud Compute is
+        not stored or made accessible to Apple. The first time a command would use it,
+        the app asks you; you can keep everything on your device instead, and change
+        your answer at any time in Settings ▸ Apple Intelligence. A PDF imported as a
+        bank statement is always read on your device, and Auto-Categorise and an
+        import’s category suggestions always run on it.
+      </p>
+      <p>
+        If you do none of these, the app makes no network requests at all. It works
         entirely offline.
       </p>
 
       <h2>API keys and credentials</h2>
       <p>
-        Keys for the keyed price providers are stored in the macOS Keychain on the
-        device you enter them on. They are never written into your book file and are
-        never transmitted anywhere except to the provider they belong to.
+        Keys for the keyed price providers, and the client secret and sign-in tokens
+        of your Box app, are stored in the Keychain on the device you enter them on.
+        They are never written into your book file and are never transmitted anywhere
+        except to the service they belong to.
       </p>
 
       <h2>Local authentication</h2>

@@ -187,6 +187,8 @@ Packages/Engine/Sources/FinvestLensEngine/Money.swift	Cannot add § and §	a pro
 Packages/Engine/Sources/FinvestLensEngine/Money.swift	Cannot subtract § from §	a programming error, trapped before any figure is shown
 Packages/Engine/Sources/FinvestLensEngine/Money.swift	Cannot compare § and §	a programming error, trapped before any figure is shown
 Packages/Persistence/Sources/FinvestLensPersistence/FinvestLensDocument.swift	SQLite format 3	SQLite's file signature
+Packages/FeatureUI/Sources/FinvestLensUI/BoxLibrary.swift	SQLite format 3	SQLite's file signature, which a download from Box must begin with
+Packages/FeatureUI/Sources/FinvestLensUI/AppModel+Lifecycle.swift	Save book	the name iOS gives a background task in its own diagnostics; no one using the app reads it
 FinvestLensQuickLook/PreviewProvider.swift	SQLite format 3	SQLite's file signature
 FinvestLensQuickLook/PreviewProvider.swift	SELECT count(*) FROM "§"	SQL
 Packages/Persistence/Sources/FinvestLensPersistence/SQLiteDocumentStore.swift	WHERE rowid = (SELECT MIN(rowid) FROM split)	SQL

@@ -4618,3 +4618,127 @@ compiler's sight.
 **Not observed.** Any of this on screen, or Siri, in a language other than
 English. The translations are in the bundle; nobody has looked.
 
+
+## A book on Box, opened from the app and kept safe; Private Cloud Compute, switched on and asked once (17 Oct 2026)
+
+**Open from Box.** The Box client could sign in and upload, but nothing in the
+app opened a book from Box. Now **File ▸ Open from Box…** and a button on the
+welcome screen (once a Box app is set up) open a browser of the person's Box
+folders (`BoxBrowserSheet.swift`): folders, books with what this device holds
+of each (not here, here, changes to send, waiting on a decision), how many
+other files a folder has, pull-to-refresh, and **Remove Copy from This
+Device** for a copy Box already has. Box books in Recents show a cloud and
+offer neither Rename nor Move, which would cut the link. The design is
+architecture §6.4 and ADR-8a; what follows is what it took.
+
+- *A record per book, and work owed judged by bytes.* `BoxLibrary` keeps each
+  copy in a folder named for its Box file id, with `box-record.json` beside
+  it: the etag, the SHA-256 and SHA-1 of what Box has, the account, whether
+  an explicit save is waiting, a conflict, a chunked upload under way. It is
+  read fresh at every decision, and one `flock` per book keeps one operation
+  on a copy at a time, across processes.
+- *Before every open*, the copy is brought up to date unless it holds work Box
+  has not got, a conflict, or another process has it open; the newest version
+  comes down to a file, is checked to be a FinvestLens book, and is put in
+  place off the main actor. The opening screen says which step it is on, with
+  a bar for the download and **Cancel**, which leaves the open book as it was.
+- *Uploads on explicit saves only*, the owner's decision of 17 Oct 2026: ⌘S,
+  closing, switching books, quitting, and leaving the app on iPhone and iPad.
+  Under 20 MB in one request, above in parts recorded as Box acknowledges
+  them, so a cut-off upload goes on from its last part.
+- *Box is asked before each upload*, by the SHA-1 it gives for a file: an
+  upload whose answer was lost is recorded as sent, a rename or move on Box
+  is carried, and another device's save is a conflict found before anything
+  is sent.
+- *A book stays in its account.* The record keeps the Box user id; nothing is
+  sent while another account is signed in.
+- *Failures*: retried by themselves when a retry may cure them (30 s, 2, 5,
+  then 15 minutes, and the moment the network returns), said in Box's words
+  when it will not, and asked about when they are conflicts — **Keep Both**
+  puts this version beside the other under a name the folder does not have,
+  adopting bytes an interrupted earlier attempt left there.
+- *Quitting and suspension* wait up to 30 s (Mac, with a window saying so and
+  **Quit Now**) or the background allowance (iOS), for uploads and Keep Both.
+- *Sign-in* is observed through the token store, so a grant Box refuses shows
+  as signed out everywhere; one authenticator per configuration shares one
+  token refresh; each sign-in attempt has its own state; a token exchange has
+  a limit of its own (20 s).
+
+**What the reviews found.** A `/code-review` at maximum effort on the first
+version found fifteen defects, all fixed in the rewrite that became the design
+above — among them a Keep Both that moved a file out from under a book opened
+during its upload, a second sign-in in a run that never returned, a quit wait
+whose 30-second limit a task group could not enforce, any SQLite file
+accepted as a download, every 409 taken for a taken name and the book sent
+again up to eight times, and the device's audit log deleted with a copy. A
+sweep of the rewrite found eight more, also fixed: a book could be sent to
+another Box account; a lost upload answer came back as a false conflict; a
+rename on Box was undone by the next save; the opening screen hid the open
+book with no way back; the check's time limit did not cover the token refresh
+in front of it; ⌘S during a running upload heard nothing when it worked; the
+welcome screen's third button pushed its row past an iPhone's width; and
+visionOS, which the app target lists, skipped the save on leaving the app.
+Re-reading the rewrite found three of my own: a Keep Both that could not move
+the copy left no book open (the copy it reopened was still marked as being
+resolved); a resumed upload session with no part sent yet that Box had
+dropped was taken for a deleted book, while one with parts sent was restarted
+under a status code Box never sent; and the opening screen's VoiceOver value
+was English in every language, held as a `String` — which the string gate
+cannot see when the same words elsewhere in the file are a key.
+
+**Private Cloud Compute, switched on** (`FR-AI-13`). Apple granted the managed
+capability "Access to models on Private Cloud Compute" to this App ID on
+17 Oct 2026. The entitlement is in `finvestlens.entitlements` and the
+`PRIVATE_CLOUD_COMPUTE` condition in the app target's Debug and Release
+settings, together, as `PrivateCloudComputeBuildTests` requires. Apple
+provisions the capability for Development, Ad hoc and App Store Connect but
+not Developer ID, so the DMG is signed with `finvestlens-DeveloperID.entitlements`
+— the same file without that key — chosen by `FINVESTLENS_ENTITLEMENTS_VARIANT`
+in `scripts/release-dmg.sh`; the Mac reads the entitlement back from its own
+signature, so a DMG build keeps everything on the device. The first time a
+command would send something off the device, it waits beside the command and
+asks (`OffDeviceQuestion.swift`, the owner's decision: announce it once);
+the answer is the setting under Settings ▸ Apple Intelligence ▸ Where it
+runs, and a command whose sheet closes stops waiting. The help, the privacy
+policy (`website/src/pages/privacy.astro`) and the App Store listing text
+(`docs/app-store-listing.md`) say where requests go.
+
+**The catalog.** 83 entries added and 12 retired for the above (2,942 → 3,013),
+in eight languages.
+
+**The UI review** (accessibility and security gates) found four, all fixed:
+Remove Copy from This Device was in the context menu only — Delete does it on
+the Mac now, and VoiceOver has it as an action; a sign-in failure was red
+caption text, short of the contrast small text needs (the symbol carries the
+red now); and the window shown while quitting waits for Box ignored the
+app's text size and said nothing to VoiceOver. The security gate found
+nothing: no `imports/` reference, no logging added, a copy's path built only
+from a Box id of letters and digits and a sanitised name, and messages that
+name only the person's own book and Box login, on their own screen.
+
+Receipts, 17 Oct 2026, on the tree as committed (Lab's build cache cleared
+first; the others built incrementally): every package suite passes — 2,067
+tests, FeatureUI 825, Shared with its App Group round trip skipped as
+CLAUDE.md says. FeatureUI's first run failed one test, `OwnModelWordingTests`:
+five new sentences name Settings ▸ Apple Intelligence (the pane, true
+whichever model answers) and one listed sentence had gone; the lists were
+updated and the suite run again. Both unsigned app builds succeed, and
+`check-localization.py --build`, both platforms built afresh with the
+extractor on, reports the catalogs matching. `manual.json` is in sync, no
+real-looking figure is in the published files, and every changed Swift file
+carries its SPDX line. Each new Box test was run with its fix undone and
+failed: the account guards, the SHA-1 adoption, the present name and etag,
+Cancel, the ⌘S answer, the resumed-session rule and the Keep Both reopen.
+
+A signed macOS build with the Private Cloud Compute entitlement **fails**:
+"No Accounts: Add a new account in Accounts settings" and "Entitlement
+com.apple.developer.private-cloud-compute not found and could not be included
+in profile" — Xcode has no account on this Mac, and the app's development
+profile dates from 9 Oct (`docs/provisioning.md`). With
+`FINVESTLENS_ENTITLEMENTS_VARIANT=-DeveloperID` it builds signed, with Private
+Cloud Compute off.
+
+**Not observed.** Any of this on screen. Box itself: the tests run against a
+fake written from Box's API reference, and no request has reached Box. A
+request to Private Cloud Compute, or any build that carries its entitlement.
+visionOS, which the app target lists and nothing builds.

@@ -15,6 +15,8 @@ import FinvestLensRules
 import FinvestLensQuotes
 import FinvestLensReports
 import FinvestLensIntelligence
+import FinvestLensCloud
+import Network
 
 /// A row in the chart-of-accounts tree.
 public struct AccountNode: Identifiable, Hashable, Sendable {
@@ -1627,6 +1629,68 @@ public final class AppModel {
     /// which the system presents.
     public var showingSettings = false
 
+    // MARK: Box (see AppModel+Box.swift)
+
+    /// Where Box books are kept here, and each one's record. A property so a
+    /// test can point it at a folder of its own; changing it reads that
+    /// folder's records.
+    @ObservationIgnored var boxLibrary = BoxLibrary.standard {
+        didSet { reloadBoxLinks() }
+    }
+    /// What the records on disk said when last read, for views to show. Any
+    /// decision that matters reads the record from disk again.
+    public internal(set) var boxLinks: [String: BoxBookLink] = [:]
+    /// Work going to or from Box now, by book: uploads, and Keep Both. The
+    /// status chip shows it, and quitting waits for it.
+    public internal(set) var boxWorkTasks: [String: Task<Void, Never>] = [:]
+    /// Books whose conflict is being resolved: not opened meanwhile.
+    public internal(set) var boxResolving: Set<String> = []
+    /// A Box book whose changes wait on the person's decision (the alert).
+    public var boxConflict: BoxConflict?
+    /// File ▸ Open from Box… — the root view presents the browser.
+    public var boxBrowserRequested = false
+    /// Where opening a Box book has got to, for the opening screen.
+    public internal(set) var boxOpenPhase: BoxOpenPhase?
+    /// Bumped when the Box sign-in or the Box app's settings change, so
+    /// views that show them look again (the Keychain is not observable).
+    public internal(set) var boxSessionRevision = 0
+    /// True while quitting waits for Box work to finish (the Mac).
+    public internal(set) var isFinishingBoxWorkBeforeQuit = false
+    @ObservationIgnored var boxRetryTasks: [String: Task<Void, Never>] = [:]
+    @ObservationIgnored var boxRetryAttempts: [String: Int] = [:]
+    /// Books whose failed upload has been reported since the last one that
+    /// worked — a retry that fails again says nothing new; ⌘S says it again.
+    @ObservationIgnored var boxUploadFailuresReported: Set<String> = []
+    /// Books an explicit save asked to hear about while an upload of them was
+    /// already running — told when that one finishes, rather than not at all.
+    @ObservationIgnored var boxAnnounceRequested: Set<String> = []
+    /// Who is signed in to Box, asked once per sign-in (``boxAccount()``).
+    @ObservationIgnored var boxAccountCache: BoxUser?
+    /// Stopping the wait while a book from Box opens: set by Cancel on the
+    /// opening screen, and the work it stops.
+    @ObservationIgnored var boxOpenCancelled = false
+    @ObservationIgnored var boxOpenCancel: (() -> Void)?
+    @ObservationIgnored var boxPathMonitor: NWPathMonitor?
+    @ObservationIgnored var boxQuitGate: BoxWaitGate?
+    /// Above this size a book goes up in parts (Box's chunked upload API
+    /// takes files from 20 MB; its direct upload, files up to 50 MB).
+    @ObservationIgnored var boxChunkThreshold: Int64 = 20 * 1024 * 1024
+    @ObservationIgnored var boxTransport: BoxTransport = URLSessionBoxTransport()
+    @ObservationIgnored var boxTokenStore: BoxTokenStoring = KeychainBoxTokenStore() {
+        didSet { boxSignedInCache = nil; boxAuthenticatorCache = nil; boxAccountCache = nil }
+    }
+    @ObservationIgnored var boxSecretStore: BoxClientSecretStoring = BoxClientSecretStore() {
+        didSet { boxSecretCache = nil; boxAuthenticatorCache = nil }
+    }
+    @ObservationIgnored var boxDefaults: UserDefaults = .standard
+    @ObservationIgnored var boxSecretCache: String?
+    @ObservationIgnored var boxSignedInCache: Bool?
+    @ObservationIgnored var boxAuthenticatorCache: (configuration: BoxAppConfiguration,
+                                                    authenticator: BoxAuthenticator)?
+    /// Callers waiting for a save in progress to finish — leaving the app on
+    /// iOS waits for one before it saves again.
+    @ObservationIgnored var saveWaiters: [CheckedContinuation<Void, Never>] = []
+
     /// A user-facing document error (open/new/import failed). When
     /// ``DocumentError/lockedURL`` is set the UI offers "Break Lock" recovery;
     /// when ``DocumentError/gnuCashImportURL`` is set it offers "Import…" —
@@ -2332,18 +2396,32 @@ public final class AppModel {
         // the main actor with no suspension between them, so two clicks cannot
         // both get past it.
         if isOpening { return }
-        guard saveAndCloseIfOpen() else { return }
+        let boxFileID = boxLibrary.fileID(ofCopyAt: url)
+        // A book whose Keep Both is under way is about to move; it opens when
+        // that is done, from where it went.
+        if let boxFileID, boxResolving.contains(boxFileID) {
+            showToast(.info, "This book is still being put on Box. Try again in a moment.")
+            return
+        }
         openingURL = url
         loadProgress = nil
         // Cleared on the way out as well as the way in: a late report can land
         // after the load returns (the hop is a `Task`), and the next open must
         // start from an empty bar rather than the last one's 100%.
         defer { openingURL = nil; loadProgress = nil }
+        // A book from Box is brought up to date *before* the open book is
+        // closed: when Box cannot be reached and there is no copy here, the
+        // book the person was working in stays open.
+        if let boxFileID, boxLibrary.record(boxFileID) != nil {
+            guard await prepareBoxCopy(boxFileID) else { return }
+        }
+        guard saveAndCloseIfOpen() else { return }
         do {
             try await open(at: url, breakStaleLock: breakStaleLock)
             publishWidgetData()
             restoreSessionSelection()
             restoreWindowPeriod()
+            boxBookDidOpen()
         } catch {
             // A recent whose file has gone is dead weight: drop it now rather
             // than leave the user to hit the same error on every launch.
@@ -2440,8 +2518,18 @@ public final class AppModel {
                 return false
             }
         }
+        // Closing a book from Box — and switching books, and quitting, which
+        // close it — sends what Box has not got, autosaved work included: it
+        // is often the last save before the book is picked up elsewhere.
+        requestUploadOfOpenBoxBook(announce: false)
         close()
         return true
+    }
+
+    /// Waits for a save in progress, if there is one, to finish.
+    func waitForSaveToFinish() async {
+        guard isSaving else { return }
+        await withCheckedContinuation { saveWaiters.append($0) }
     }
 
     /// Imports a GnuCash file and saves it as a new native document.
@@ -2568,7 +2656,12 @@ public final class AppModel {
         // is not a race worth having.
         guard !isSaving, let document else { return }
         isSaving = true
-        defer { isSaving = false }
+        defer {
+            isSaving = false
+            let waiting = saveWaiters
+            saveWaiters = []
+            waiting.forEach { $0.resume() }
+        }
         await Task.yield()   // commit the chip before the staging walk
         do {
             // Phase 1 on the main actor, because it reads the book — but only
@@ -2587,11 +2680,13 @@ public final class AppModel {
             document.finishSave(fingerprint: fingerprint, stagedAt: staged.token)
             documentStateRevision &+= 1
             publishWidgetData()
-            // A book opened from Box is pushed back as a new version. After
-            // the local write-back, so the bytes uploaded are the ones on
-            // disk, and awaited so a failure is reported rather than lost.
-            await uploadToBoxIfLinked()
             if interactive { showToast(.success, "Saved.") }
+            // ⌘S sends a book from Box up as a new version — after the
+            // write-back, so the bytes sent are the ones on disk, and in a task
+            // of its own, so a slow upload neither holds "Saving…" up nor
+            // blocks the next save. Autosave keeps its work on this device
+            // until an explicit save (the owner's decision, 17 Oct 2026).
+            if interactive { requestUploadOfOpenBoxBook(announce: true) }
         } catch {
             if interactive {
                 documentError = DocumentError(message: error.localizedDescription)

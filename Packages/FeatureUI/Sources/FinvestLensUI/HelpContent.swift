@@ -110,7 +110,8 @@ public enum HelpBook {
         blocks: [
             .text("""
                 A **book** is your whole set of accounts and transactions, kept in one \
-                file you own. FinvestLens never uploads it anywhere.
+                file you own. FinvestLens never uploads it anywhere, unless you choose \
+                to keep it in your own Box account.
                 """),
             .heading("Start a book"),
             .steps([
@@ -257,9 +258,9 @@ public enum HelpBook {
     static let keepingSafe = HelpTopic(
         id: "safety",
         title: "Saving and keeping the book safe",
-        summary: "Saving, autosave, locking, network drives, and the audit log.",
+        summary: "Saving, autosave, locking, network drives, Box, and the audit log.",
         symbol: "lock.shield",
-        keywords: "save autosave lock nas smb network shared backup audit undo repair",
+        keywords: "save autosave lock nas smb network shared backup audit undo repair box cloud upload conflict",
         blocks: [
             .heading("Saving"),
             .text("""
@@ -273,6 +274,21 @@ public enum HelpBook {
                 it is open so a second machine cannot overwrite your work; if the app \
                 behind a lock has gone away, you can break the lock and open anyway.
                 """),
+            .heading("Books on Box"),
+            .text("""
+                A book can live in your own Box account. Set up a Box app of your own in \
+                Settings ▸ General ▸ Box, then choose **Open from Box…**, in the File menu \
+                or on the welcome screen.
+                """),
+            .bullets([
+                "The book is kept on this device while you work on it. It goes up to Box as a new version when you save with ⌘S, close the book, switch books or quit — and on iPhone and iPad when you leave the app. Autosave keeps your work on this device until then.",
+                "Opening it again fetches the latest version first, so a book saved on another device opens the way that device left it.",
+                "Without a connection, your work stays on this device and goes up by itself when the connection is back. Box's version is never fetched over changes Box hasn't got yet.",
+                "If another device saved a newer version first, nothing is replaced: **Keep Both** puts your version on Box beside it, as a separate book.",
+                "A book goes only to the Box account it came from. While you're connected to another one, its changes wait on this device.",
+                "A large book goes up in parts, so an upload that is cut off carries on where it stopped.",
+                "The audit log stays on each device; it isn't uploaded with the book, and removing a copy from this device keeps it.",
+            ]),
             .heading("Locking the screen"),
             .text("""
                 Security ▸ Lock Now (⇧⌘L) hides the book until you authenticate. Turn on \
@@ -324,12 +340,13 @@ public enum HelpBook {
         title: "Reading PDFs with Apple Intelligence",
         summary: "Turn statements, invoices and dividend notices into transactions.",
         symbol: "wand.and.stars",
-        keywords: "pdf smart import apple intelligence ocr scan statement invoice dividend attachment",
+        keywords: "pdf smart import apple intelligence ocr scan statement invoice dividend attachment private cloud compute pcc",
         blocks: [
             .text("""
                 Book ▸ Smart Import PDFs… (⇧⌘I) reads bank statements, dividend statements \
-                and invoices **on this device** and turns them into transactions for you to \
-                review. Nothing is sent anywhere.
+                and invoices and turns them into transactions for you to review. Bank \
+                statements are always read on this device; invoices and dividend statements \
+                are read where Settings ▸ Apple Intelligence says.
                 """),
             .heading("What it does"),
             .bullets([
@@ -359,6 +376,21 @@ public enum HelpBook {
                 statements with unsigned debit and credit columns and no running balance are \
                 the case most worth checking.
                 """),
+            .heading("Private Cloud Compute"),
+            .text("""
+                Where Apple offers it, the commands that read one document or write about \
+                your figures can use Apple’s Private Cloud Compute, where larger models run \
+                on Apple’s servers: Smart Import’s invoices and dividend statements, Match \
+                Attachments, Categorise from Attachment, Split from Invoice, Suggest Budget, \
+                the forecast’s outlook, report commentary and the review decks. What they \
+                read is sent to Apple to process; Apple says it isn’t stored or made \
+                accessible to Apple.
+                """),
+            .bullets([
+                "The first time a command would use it, FinvestLens asks — beside the command — whether to use it or keep everything on this device.",
+                "Your answer is kept in Settings ▸ Apple Intelligence, under Where it runs, and you can change it there at any time.",
+                "Bank statements, Auto-Categorise and an import's category suggestions always stay on this device.",
+            ]),
             .heading("A model of your own"),
             .text("""
                 Settings ▸ Apple Intelligence can use an open model you already have in \
@@ -472,7 +504,7 @@ public enum HelpBook {
                 """),
             .bullets([
                 "**Auto-budget** fills in amounts from what you actually spent.",
-                "**Suggest Budget** proposes monthly figures from six months of spending, using Apple Intelligence — or a model of your own — on this device.",
+                "**Suggest Budget** proposes monthly figures from six months of spending — with Apple Intelligence, on this device or on Private Cloud Compute as Settings ▸ Apple Intelligence says, or with a model of your own.",
                 "The dashboard's Cashflow vs Budget card shows how the current period is tracking.",
             ]),
             .text("""
@@ -673,8 +705,9 @@ public enum HelpBook {
             .heading("Presentation decks"),
             .text("""
                 **Financial Review** presents a period as a slide deck — one message per \
-                slide, with charts and commentary written on this device from the figures \
-                on the slide. **Investment Review** does the same for the portfolio.
+                slide, with charts and commentary written from the figures on the slide, \
+                where Settings ▸ Apple Intelligence says. **Investment Review** does the \
+                same for the portfolio.
                 """),
             .heading("End of year"),
             .text("""

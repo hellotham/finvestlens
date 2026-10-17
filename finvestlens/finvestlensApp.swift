@@ -36,9 +36,24 @@ import AppKit
 /// cancelled so the error alert is seen instead of the data being lost.
 final class AppDelegate: NSObject, NSApplicationDelegate {
     var terminationHandler: (() -> Bool)?
+    /// Work that should finish before the app goes — an upload to Box — and
+    /// whether there is any. Waited for briefly, never indefinitely: what
+    /// does not finish is recorded as not uploaded and goes at next launch.
+    var pendingWorkBeforeQuit: (() -> Bool)?
+    var finishWorkBeforeQuit: (() async -> Void)?
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        (terminationHandler?() ?? true) ? .terminateNow : .terminateCancel
+        guard terminationHandler?() ?? true else { return .terminateCancel }
+        guard pendingWorkBeforeQuit?() == true, let finish = finishWorkBeforeQuit else {
+            return .terminateNow
+        }
+        Task { @MainActor in
+            await finish()
+            // Anything opened during the wait is saved and closed too.
+            _ = self.terminationHandler?()
+            NSApp.reply(toApplicationShouldTerminate: true)
+        }
+        return .terminateLater
     }
 }
 #endif
@@ -137,6 +152,10 @@ struct finvestlensApp: App {
                     appDelegate.terminationHandler = {
                         model.saveAndCloseIfOpen()
                     }
+                    // The save on quitting starts a Box book's upload; give it
+                    // half a minute to land, so the next device has it.
+                    appDelegate.pendingWorkBeforeQuit = { model.hasBoxWorkInFlight }
+                    appDelegate.finishWorkBeforeQuit = { await model.finishBoxWorkBeforeQuit() }
                 }
             #endif
         }
@@ -178,15 +197,24 @@ struct finvestlensApp: App {
                         Text("No recent books")
                     }
                 }
+                Button("Open from Box…") { model.boxBrowserRequested = true }
             }
             #endif
             // Anchored after .newItem, NOT .saveItem: a plain WindowGroup scene
             // has no standard Save item, and a CommandGroup anchored to a
             // missing item is silently dropped from the menu bar.
             CommandGroup(after: .newItem) {
+                #if os(iOS)
+                // iPadOS keeps its own New and Open; this is the one way into
+                // Box there besides the welcome screen.
+                Button("Open from Box…") { model.boxBrowserRequested = true }
+                Divider()
+                #endif
                 Button("Save") { Task { await model.saveWithStatus(interactive: true) } }
                     .keyboardShortcut("s", modifiers: .command)
-                    .disabled(!model.hasUnsavedChanges)
+                    // A book from Box can have nothing unsaved and still owe
+                    // Box its autosaved work, or a decision: ⌘S sends it.
+                    .disabled(!model.hasUnsavedChanges && !model.openBoxBookNeedsUpload)
                 Button("Revert to Saved") { model.revertWithStatus() }
                     .disabled(!model.isOpen || !model.hasUnsavedChanges)
                 Divider()

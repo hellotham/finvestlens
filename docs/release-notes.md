@@ -7,6 +7,65 @@ uses FinvestLens would notice.
 
 ---
 
+## 1.2 (not yet released)
+
+FinvestLens on the 27 releases, on a phone, in the reader's language, and with
+your own choice of where the Apple Intelligence features run.
+
+### New
+
+- **A phone layout.** On an iPhone — and in an iPad window narrowed to a
+  phone's width — FinvestLens is a tab bar: Dashboard, Accounts,
+  Investments, Reports and More. It used to be the iPad's layout, centred
+  and cut off on both sides. The register is a list of postings with the
+  row actions on a long press; the editor changes the date, description,
+  notes and each split's account and amount.
+- **Books on Box.** Keep a book in your own Box account and open it with
+  **Open from Box…**, in the File menu or on the welcome screen. It goes
+  through a Box app you set up yourself, so no one else's app is ever
+  between you and your files. Saving with ⌘S, closing the book or quitting
+  uploads a new version — a large book in parts, so a cut-off upload carries
+  on where it stopped; opening it again fetches the latest first; work saved
+  without a connection goes up when it returns; and a version another device
+  saved is never replaced — **Keep Both** puts yours beside it.
+- **A model of your own.** Point Settings ▸ Apple Intelligence at a folder
+  of MLX models and choose one: it serves every Apple Intelligence feature,
+  on your Mac, iPhone or iPad. Nothing is bundled, recommended or
+  downloaded.
+- **Invoices read from their picture.** Split from Invoice, Smart Import's
+  invoices and Categorise from Attachment read a photographed or scanned
+  invoice as a picture, with Vision's text reader to hand — it got every
+  field right on every test page, where reading the text alone missed two
+  totals in fifteen. A photo is turned the right way up first.
+- **Where each request runs, said where you start it.** Every command that
+  could leave the device says where it runs, beside its button. Private
+  Cloud Compute is built in and stays off until Apple grants the
+  entitlement it needs.
+- **Everything in your language.** Reports, the review decks, error
+  messages, undo names, toasts, Siri's phrases and the starter chart of
+  accounts are now translated too, in all eight languages.
+
+### Better
+
+- **Saving doesn't freeze the window.** The write to the book's file — seconds
+  on a network or cloud folder — runs in the background; on the reference
+  book the window's share of a save fell from 9.6 s to 0.24 s.
+- **Apple Intelligence on Foundation Models 27.** A document is cut to fit
+  by the model's own count of it, and a written summary has every figure
+  in it checked against the book before you see it.
+- **A crashed copy no longer locks you out.** A lock left behind by a
+  FinvestLens on this Mac that is no longer running is cleared when the
+  book opens, rather than the app opening with no window.
+- **iPhone and iPad save when you leave the app.** iOS can end an app in
+  the background without warning; the book is saved as you switch away.
+
+### Requirements
+
+macOS 27, iPadOS 27 or iOS 27. The Mac app is sandboxed, as the Mac App
+Store requires.
+
+---
+
 ## 1.1
 
 The first release after 1.0, and a large one: 392 commits. 1.0 was a working

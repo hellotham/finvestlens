@@ -190,18 +190,13 @@ struct WelcomeView: View {
 
     private var actions: some View {
         VStack(spacing: 12) {
-            HStack(spacing: 14) {
-                Button(action: onNew) {
-                    Label("New Book", systemImage: "plus")
-                        .fontWeight(.semibold).frame(minWidth: 120)
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(Brand.mauve)
-
-                Button(action: onOpen) {
-                    Label("Open…", systemImage: "folder").frame(minWidth: 96)
-                }
-                .buttonStyle(.bordered)
+            // Side by side where they fit, one above another where they do
+            // not: two fit across a phone, but the third — Open from Box… —
+            // needs some 340 points before the buttons' own padding, and the
+            // phone leaves about 305 inside the margins.
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 14) { actionButtons }
+                VStack(spacing: 10) { actionButtons }
             }
             .controlSize(.large)
             #if os(macOS)
@@ -211,6 +206,30 @@ struct WelcomeView: View {
             .buttonStyle(.link)
             .font(.system(size: 12.5 * appFontScale, design: .rounded))
             #endif
+        }
+    }
+
+    @ViewBuilder
+    private var actionButtons: some View {
+        Button(action: onNew) {
+            Label("New Book", systemImage: "plus")
+                .fontWeight(.semibold).frame(minWidth: 120)
+        }
+        .buttonStyle(.borderedProminent)
+        .tint(Brand.mauve)
+
+        Button(action: onOpen) {
+            Label("Open…", systemImage: "folder").frame(minWidth: 96)
+        }
+        .buttonStyle(.bordered)
+
+        // Only once a Box app has been set up: most people never will, and
+        // the menu item is there for those who look.
+        if model.isBoxConfigured {
+            Button { model.boxBrowserRequested = true } label: {
+                Label("Open from Box…", systemImage: "cloud").frame(minWidth: 96)
+            }
+            .buttonStyle(.bordered)
         }
     }
 
@@ -234,19 +253,27 @@ struct WelcomeView: View {
                     .foregroundStyle(.tertiary)
                     .textCase(.uppercase)
                 ForEach(model.recentBooks.prefix(3), id: \.self) { url in
+                    let onBox = model.isBoxCopy(url)
                     Button {
                         Task { await model.openBook(at: url) }
                     } label: {
                         Label(url.deletingPathExtension().lastPathComponent,
-                              systemImage: "clock.arrow.circlepath")
+                              systemImage: onBox ? "cloud" : "clock.arrow.circlepath")
                             .font(.system(size: 12.5 * appFontScale, design: .rounded))
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(Brand.mauve)
-                    .help(url.path)
+                    // A Box book's path is its copy in Application Support —
+                    // true, and no help to anyone.
+                    .help(onBox ? Text("On Box") : Text(verbatim: url.path))
+                    .accessibilityHint(onBox ? Text("On Box") : Text(verbatim: ""))
                     .contextMenu {
-                        Button("Rename…") { renaming = RecentTarget(url: url) }
-                        Button("Move…") { moving = RecentTarget(url: url) }
+                        // Renaming or moving the copy of a Box book would cut
+                        // it off from its Box file: the folder is the link.
+                        if !onBox {
+                            Button("Rename…") { renaming = RecentTarget(url: url) }
+                            Button("Move…") { moving = RecentTarget(url: url) }
+                        }
                         Button("Remove from Recents") { model.removeRecent(url) }
                     }
                 }

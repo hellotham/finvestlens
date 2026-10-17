@@ -142,14 +142,37 @@ public actor BoxAuthenticator {
     public func accessToken() async throws -> String {
         guard let tokens = store.tokens() else { throw BoxError.notAuthenticated }
         guard tokens.isExpired(asOf: now()) else { return tokens.accessToken }
-        try await exchange(form: [
-            "grant_type": "refresh_token",
-            "refresh_token": tokens.refreshToken,
-            "client_id": configuration.clientID,
-            "client_secret": configuration.clientSecret,
-        ])
+        try await refresh(using: tokens.refreshToken)
         guard let refreshed = store.tokens() else { throw BoxError.notAuthenticated }
         return refreshed.accessToken
+    }
+
+    /// The refresh in flight, which every caller that finds the token expired
+    /// while it runs waits on instead of starting its own.
+    ///
+    /// A refresh token is spent by the exchange that uses it, which hands back
+    /// its successor. Two requests that each found the token expired — a
+    /// save's upload and a folder listing, a minute past the hour — would both
+    /// send the same one; the second is refused, and a refused refresh is what
+    /// clears the grant (``exchange(form:)``), so the person would be signed
+    /// out for asking two things at once. Being an actor does not prevent it:
+    /// ``accessToken()`` suspends at the network call, and the second caller
+    /// comes in while the first is waiting there.
+    private var refreshing: Task<Void, Error>?
+
+    private func refresh(using refreshToken: String) async throws {
+        if let refreshing { return try await refreshing.value }
+        let exchange = Task {
+            try await self.exchange(form: [
+                "grant_type": "refresh_token",
+                "refresh_token": refreshToken,
+                "client_id": configuration.clientID,
+                "client_secret": configuration.clientSecret,
+            ])
+        }
+        refreshing = exchange
+        defer { refreshing = nil }
+        try await exchange.value
     }
 
     /// Drops the stored access token's validity so the next call refreshes.
@@ -160,8 +183,17 @@ public actor BoxAuthenticator {
         try store.setTokens(tokens)
     }
 
+    /// How long a token exchange may take. Every Box request waits on the
+    /// refresh in front of it — the check before a book opens included, whose
+    /// own limit covers only its own request — so without one a network that
+    /// does not answer held that check for URLSession's full minute first. An
+    /// exchange is a few hundred bytes each way. A timeout is not a refusal:
+    /// it leaves the grant as it is, for the next request to try.
+    static let exchangeTimeout: TimeInterval = 20
+
     private func exchange(form: [String: String]) async throws {
         var request = URLRequest(url: Self.tokenEndpoint)
+        request.timeoutInterval = Self.exchangeTimeout
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
         request.httpBody = Data(form.map { key, value in

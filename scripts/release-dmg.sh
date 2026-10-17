@@ -100,7 +100,13 @@ xcodebuild archive \
     -allowProvisioningUpdates \
     DEVELOPMENT_TEAM="$TEAM_ID" \
     CODE_SIGN_STYLE=Automatic \
+    FINVESTLENS_ENTITLEMENTS_VARIANT=-DeveloperID \
     | grep -E "error:|warning: .*sign|ARCHIVE" || true
+# FINVESTLENS_ENTITLEMENTS_VARIANT: the app is signed with
+# finvestlens-DeveloperID.entitlements — its entitlements without Private Cloud
+# Compute, which Apple provisions for the App Store, Development and Ad hoc but
+# not for Developer ID. The app reads its own signature on the Mac and offers
+# Private Cloud Compute only when the entitlement is there.
 [[ -d "$ARCHIVE" ]] || fail "archive failed"
 
 # ------------------------------------------------------------------- export

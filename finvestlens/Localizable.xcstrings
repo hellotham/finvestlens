@@ -534,6 +534,54 @@
         }
       }
     },
+    "%@ (conflicted copy %@)": {
+      "comment": "The name of a book uploaded beside a version it conflicts with. The second value is a date and time.",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ (Konfliktkopie %2$@)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ (copia en conflicto %2$@)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ (copie en conflit %2$@)"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ (copia in conflitto %2$@)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@（競合コピー %2$@）"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ (cópia em conflito %2$@)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@（冲突副本 %2$@）"
+          }
+        }
+      }
+    },
     "%@ (customer)": {
       "extractionState": "manual",
       "localizations": {
@@ -3368,6 +3416,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@，借方"
+          }
+        }
+      }
+    },
+    "%@, folder": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@, Ordner"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@, carpeta"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@, dossier"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@, cartella"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@、フォルダ"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@, pasta"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@，文件夹"
           }
         }
       }
@@ -10664,49 +10759,49 @@
         }
       }
     },
-    "**Financial Review** presents a period as a slide deck — one message per slide, with charts and commentary written on this device from the figures on the slide. **Investment Review** does the same for the portfolio.": {
+    "**Financial Review** presents a period as a slide deck — one message per slide, with charts and commentary written from the figures on the slide, where Settings ▸ Apple Intelligence says. **Investment Review** does the same for the portfolio.": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "**Finanzbericht** stellt einen Zeitraum als Foliensatz dar — eine Aussage je Folie, mit Diagrammen und einem Kommentar, der auf diesem Gerät aus den Zahlen der Folie geschrieben wird. **Anlagebericht** tut dasselbe für das Portfolio."
+            "value": "**Finanzbericht** stellt einen Zeitraum als Foliensatz dar — eine Aussage je Folie, mit Diagrammen und einem Kommentar, der aus den Zahlen der Folie geschrieben wird, dort, wo es unter Einstellungen ▸ Apple Intelligence festgelegt ist. **Anlagebericht** tut dasselbe für das Portfolio."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "**Revisión financiera** presenta un período como una serie de diapositivas: un mensaje por diapositiva, con gráficos y comentarios redactados en este dispositivo a partir de las cifras de la propia diapositiva. **Revisión de inversiones** hace lo mismo con la cartera."
+            "value": "**Revisión financiera** presenta un período como una serie de diapositivas: un mensaje por diapositiva, con gráficos y comentarios redactados a partir de las cifras de la propia diapositiva, donde indique Ajustes ▸ Apple Intelligence. **Revisión de inversiones** hace lo mismo con la cartera."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "**Revue financière** présente une période sous forme de diapositives — un message par diapositive, avec graphiques et commentaire rédigé sur cet appareil à partir des chiffres de la diapositive. **Revue des placements** fait de même pour le portefeuille."
+            "value": "**Revue financière** présente une période sous forme de diapositives — un message par diapositive, avec graphiques et commentaire rédigé à partir des chiffres de la diapositive, là où l’indique Réglages ▸ Apple Intelligence. **Revue des placements** fait de même pour le portefeuille."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "**Analisi finanziaria** presenta un periodo come una serie di diapositive: un messaggio per diapositiva, con grafici e un commento scritto su questo dispositivo a partire dai dati della diapositiva. **Analisi degli investimenti** fa lo stesso per il portafoglio."
+            "value": "**Analisi finanziaria** presenta un periodo come una serie di diapositive: un messaggio per diapositiva, con grafici e un commento scritto a partire dai dati della diapositiva, dove indicato in Impostazioni ▸ Apple Intelligence. **Analisi degli investimenti** fa lo stesso per il portafoglio."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "**財務レビュー** は、ある期間をスライド形式で提示します。1 スライドにつき 1 つのメッセージ、グラフ、そしてそのスライドの数値からデバイス上で書かれた解説が付きます。**投資レビュー** はポートフォリオについて同じことを行います。"
+            "value": "**財務レビュー** は、ある期間をスライド形式で提示します。1 スライドにつき 1 つのメッセージ、グラフ、そしてそのスライドの数値から書かれた解説が付きます。解説を書く場所は「設定 ▸ Apple Intelligence」の指定に従います。**投資レビュー** はポートフォリオについて同じことを行います。"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "**Análise financeira** apresenta um período como uma sequência de slides — uma mensagem por slide, com gráficos e comentários escritos neste dispositivo a partir dos números do próprio slide. **Análise de investimentos** faz o mesmo para a carteira."
+            "value": "**Análise financeira** apresenta um período como uma sequência de slides — uma mensagem por slide, com gráficos e comentários escritos a partir dos números do próprio slide, onde Ajustes ▸ Apple Intelligence indicar. **Análise de investimentos** faz o mesmo para a carteira."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "**财务综述** 以幻灯片形式呈现一个期间 — 每页一个要点，配图表，以及由设备端依据该页数据撰写的评述。**投资综述** 对投资组合做同样的事。"
+            "value": "**财务综述** 以幻灯片形式呈现一个期间 — 每页一个要点，配图表，以及依据该页数据撰写的评述，撰写位置按「设置 ▸ Apple 智能」中的设定。**投资综述** 对投资组合做同样的事。"
           }
         }
       }
@@ -11534,49 +11629,49 @@
         }
       }
     },
-    "**Suggest Budget** proposes monthly figures from six months of spending, using Apple Intelligence — or a model of your own — on this device.": {
+    "**Suggest Budget** proposes monthly figures from six months of spending — with Apple Intelligence, on this device or on Private Cloud Compute as Settings ▸ Apple Intelligence says, or with a model of your own.": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "**Budget vorschlagen** schlägt Monatsbeträge aus sechs Monaten Ausgaben vor, mit Apple Intelligence — oder einem eigenen Modell — auf diesem Gerät."
+            "value": "**Budget vorschlagen** schlägt Monatsbeträge aus sechs Monaten Ausgaben vor — mit Apple Intelligence, auf diesem Gerät oder mit Private Cloud Compute, wie unter Einstellungen ▸ Apple Intelligence festgelegt, oder mit einem eigenen Modell."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "**Sugerir presupuesto** propone cifras mensuales a partir de seis meses de gastos, usando Apple Intelligence —o un modelo propio— en este dispositivo."
+            "value": "**Sugerir presupuesto** propone cifras mensuales a partir de seis meses de gastos, con Apple Intelligence (en este dispositivo o en Private Cloud Compute, según indique Ajustes ▸ Apple Intelligence) o con un modelo propio."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "**Proposer un budget** suggère des montants mensuels d’après six mois de dépenses, avec Apple Intelligence — ou un modèle à vous — sur cet appareil."
+            "value": "**Proposer un budget** suggère des montants mensuels d’après six mois de dépenses — avec Apple Intelligence, sur cet appareil ou sur Private Cloud Compute selon Réglages ▸ Apple Intelligence, ou avec un modèle à vous."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "**Suggerisci budget** propone importi mensili da sei mesi di spese, con Apple Intelligence — o un tuo modello — su questo dispositivo."
+            "value": "**Suggerisci budget** propone importi mensili da sei mesi di spese, con Apple Intelligence (su questo dispositivo o su Private Cloud Compute, come indicato in Impostazioni ▸ Apple Intelligence) o con un tuo modello."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "**予算を提案** は、6 か月分の支出から月次の金額を、このデバイス上の Apple Intelligence（または自分のモデル）で提案します。"
+            "value": "**予算を提案** は、6 か月分の支出から月次の金額を提案します。使うのは Apple Intelligence（「設定 ▸ Apple Intelligence」の指定に従い、このデバイス上または Private Cloud Compute 上）か、自分のモデルです。"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "**Sugerir orçamento** propõe valores mensais a partir de seis meses de gastos, usando a Apple Intelligence — ou um modelo seu — neste dispositivo."
+            "value": "**Sugerir orçamento** propõe valores mensais a partir de seis meses de gastos — com a Apple Intelligence, neste dispositivo ou no Private Cloud Compute, conforme Ajustes ▸ Apple Intelligence, ou com um modelo seu."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "**建议预算** 会借助设备端的 Apple 智能（或你自己的模型），依据六个月的支出提出月度金额建议。"
+            "value": "**建议预算** 会依据六个月的支出提出月度金额建议 — 借助 Apple 智能（按「设置 ▸ Apple 智能」中的设定，在此设备上或在 Private Cloud Compute 上运行），或借助你自己的模型。"
           }
         }
       }
@@ -12342,49 +12437,49 @@
         }
       }
     },
-    "A **book** is your whole set of accounts and transactions, kept in one file you own. FinvestLens never uploads it anywhere.": {
+    "A **book** is your whole set of accounts and transactions, kept in one file you own. FinvestLens never uploads it anywhere, unless you choose to keep it in your own Box account.": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ein **Buch** ist Ihr gesamter Bestand an Konten und Buchungen, in einer Datei, die Ihnen gehört. FinvestLens lädt sie nirgendwohin hoch."
+            "value": "Ein **Buch** ist Ihr gesamter Bestand an Konten und Buchungen, in einer Datei, die Ihnen gehört. FinvestLens lädt sie nirgendwohin hoch – es sei denn, Sie bewahren sie in Ihrem eigenen Box-Konto auf."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Un **libro** es todo tu conjunto de cuentas y transacciones, guardado en un archivo que es tuyo. FinvestLens no lo sube a ningún sitio."
+            "value": "Un **libro** es todo tu conjunto de cuentas y transacciones, guardado en un archivo que es tuyo. FinvestLens no lo sube a ningún sitio, salvo que decidas guardarlo en tu propia cuenta de Box."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Un **livre** rassemble tous vos comptes et opérations dans un fichier qui vous appartient. FinvestLens ne l’envoie nulle part."
+            "value": "Un **livre** rassemble tous vos comptes et opérations dans un fichier qui vous appartient. FinvestLens ne l’envoie nulle part, sauf si vous choisissez de le conserver dans votre propre compte Box."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Un **libro** è l’insieme di tutti i tuoi conti e transazioni, in un file che ti appartiene. FinvestLens non lo carica da nessuna parte."
+            "value": "Un **libro** è l’insieme di tutti i tuoi conti e transazioni, in un file che ti appartiene. FinvestLens non lo carica da nessuna parte, a meno che tu non scelga di tenerlo nel tuo account Box."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "**帳簿** は、あなたの勘定科目と取引のすべてを収めた、あなた自身のファイルです。FinvestLens がどこかへアップロードすることはありません。"
+            "value": "**帳簿** は、あなたの勘定科目と取引のすべてを収めた、あなた自身のファイルです。あなたが自分の Box アカウントに置くことを選ばない限り、FinvestLens がどこかへアップロードすることはありません。"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Um **livro** é todo o seu conjunto de contas e transações, guardado em um arquivo que é seu. O FinvestLens nunca o envia para lugar algum."
+            "value": "Um **livro** é todo o seu conjunto de contas e transações, guardado em um arquivo que é seu. O FinvestLens nunca o envia para lugar algum, a menos que você escolha mantê-lo na sua própria conta do Box."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "**账簿** 是你全部科目与交易的集合，保存在一个属于你的文件中。FinvestLens 不会将其上传到任何地方。"
+            "value": "**账簿** 是你全部科目与交易的集合，保存在一个属于你的文件中。除非你选择将其保存在自己的 Box 账户中，否则 FinvestLens 不会将其上传到任何地方。"
           }
         }
       }
@@ -12577,6 +12672,53 @@
         }
       }
     },
+    "A book can live in your own Box account. Set up a Box app of your own in Settings ▸ General ▸ Box, then choose **Open from Box…**, in the File menu or on the welcome screen.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein Buch kann in Ihrem eigenen Box-Konto liegen. Richten Sie unter Einstellungen ▸ Allgemein ▸ Box eine eigene Box-App ein und wählen Sie dann **Aus Box öffnen …** im Menü „Ablage“ oder auf dem Willkommensbildschirm."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un libro puede estar en tu propia cuenta de Box. Configura una app de Box propia en Ajustes ▸ General ▸ Box y elige **Abrir desde Box…**, en el menú Archivo o en la pantalla de bienvenida."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un livre peut se trouver dans votre propre compte Box. Configurez une app Box à vous dans Réglages ▸ Général ▸ Box, puis choisissez **Ouvrir depuis Box…**, dans le menu Fichier ou sur l’écran d’accueil."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un libro può stare nel tuo account Box. Configura un’app Box tua in Impostazioni ▸ Generali ▸ Box, poi scegli **Apri da Box…**, nel menu File o nella schermata di benvenuto."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "帳簿はあなた自身の Box アカウントに置くこともできます。設定 ▸ 一般 ▸ Box で自分の Box アプリを設定してから、「ファイル」メニューまたはようこそ画面で **Box から開く…** を選びます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Um livro pode ficar na sua própria conta do Box. Configure um app do Box seu em Ajustes ▸ Geral ▸ Box e escolha **Abrir do Box…**, no menu Arquivo ou na tela de boas-vindas."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "账簿可以存放在你自己的 Box 账户中。在「设置 ▸ 通用 ▸ Box」中设置你自己的 Box 应用，然后在「文件」菜单或欢迎屏幕中选择 **从 Box 打开…**。"
+          }
+        }
+      }
+    },
     "A book can live on a NAS or shared folder. FinvestLens takes a lock while it is open so a second machine cannot overwrite your work; if the app behind a lock has gone away, you can break the lock and open anyway.": {
       "extractionState": "manual",
       "localizations": {
@@ -12620,6 +12762,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "账簿可以存放在 NAS 或共享文件夹中。打开期间 FinvestLens 会加锁，以免其他机器覆盖你的工作；若持锁的 App 已不存在，你可以强制解锁并照常打开。"
+          }
+        }
+      }
+    },
+    "A book goes only to the Box account it came from. While you're connected to another one, its changes wait on this device.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein Buch wird nur in den Box-Account hochgeladen, aus dem es stammt. Solange Sie mit einem anderen verbunden sind, warten seine Änderungen auf diesem Gerät."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un libro solo se sube a la cuenta de Box de la que vino. Mientras estés conectado a otra, sus cambios esperan en este dispositivo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un livre ne part que vers le compte Box d’où il vient. Tant que vous êtes connecté à un autre, ses modifications attendent sur cet appareil."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un libro va solo nell’account Box da cui proviene. Finché sei connesso a un altro, le sue modifiche aspettano su questo dispositivo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "帳簿は、取得元の Box アカウントにだけアップロードされます。別のアカウントに接続している間、変更はこのデバイスで待機します。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Um livro só vai para a conta do Box de onde veio. Enquanto você estiver conectado a outra, as alterações dele esperam neste dispositivo."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "账簿只会上传到它所来自的 Box 账户。在你连接其他账户期间，其更改会在此设备上等待。"
           }
         }
       }
@@ -13290,6 +13479,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "某一类交易。"
+          }
+        }
+      }
+    },
+    "A large book goes up in parts, so an upload that is cut off carries on where it stopped.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein großes Buch wird in Teilen hochgeladen, sodass ein unterbrochener Upload dort weitergeht, wo er aufgehört hat."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un libro grande se sube por partes, así que una subida interrumpida continúa donde se quedó."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un livre volumineux est envoyé par parties : un envoi interrompu reprend là où il s’était arrêté."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un libro grande viene caricato a parti, così un caricamento interrotto riprende da dove si era fermato."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "大きな帳簿は分割してアップロードされるため、途中で切れたアップロードは止まったところから再開されます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Um livro grande é enviado em partes, então um envio interrompido continua de onde parou."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "较大的账簿会分段上传，因此中断的上传会从停止的地方继续。"
           }
         }
       }
@@ -16343,6 +16579,53 @@
         }
       }
     },
+    "All Files": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Dateien"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todos los archivos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tous les fichiers"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tutti i file"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてのファイル"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todos os arquivos"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "所有文件"
+          }
+        }
+      }
+    },
     "All recorded security prices": {
       "extractionState": "manual",
       "localizations": {
@@ -16997,6 +17280,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "年度生活开支"
+          }
+        }
+      }
+    },
+    "Another device saved a newer version to Box after this device last had it, so your changes weren’t uploaded over it. Keep Both puts your version on Box beside it as a separate book, and you carry on with yours; the other version is left as it is. Your changes stay on this device either way.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein anderes Gerät hat eine neuere Version in Box gesichert, nachdem dieses Gerät sie zuletzt hatte, daher wurden Ihre Änderungen nicht darüber hochgeladen. „Beide behalten“ legt Ihre Version als eigenes Buch daneben in Box ab, und Sie arbeiten mit Ihrer weiter; die andere Version bleibt, wie sie ist. Ihre Änderungen bleiben in jedem Fall auf diesem Gerät."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Otro dispositivo guardó una versión más reciente en Box después de la última vez que este dispositivo la tuvo, así que tus cambios no se subieron encima. «Conservar ambos» pone tu versión en Box junto a ella como un libro aparte, y sigues trabajando con la tuya; la otra versión se queda como está. Tus cambios se quedan en este dispositivo en cualquier caso."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un autre appareil a enregistré une version plus récente sur Box depuis la dernière fois que cet appareil l’a eue ; vos modifications n’ont donc pas été envoyées par-dessus. « Garder les deux » place votre version sur Box à côté de l’autre, comme un livre distinct, et vous continuez avec la vôtre ; l’autre version reste telle quelle. Vos modifications restent sur cet appareil dans tous les cas."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un altro dispositivo ha registrato su Box una versione più recente dopo l’ultima volta che questo dispositivo l’ha avuta, quindi le tue modifiche non sono state caricate sopra. «Mantieni entrambi» mette la tua versione su Box accanto all’altra come libro separato, e continui a lavorare sulla tua; l’altra versione resta com’è. In ogni caso le tue modifiche restano su questo dispositivo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このデバイスが最後に取得した後で、別のデバイスが新しいバージョンを Box に保存したため、変更はその上にはアップロードされませんでした。「両方とも残す」を選ぶと、あなたのバージョンが別の帳簿として Box 上の隣に置かれ、以後はそちらで作業を続けます。もう一方のバージョンはそのまま残ります。どちらの場合も、変更はこのデバイスに残ります。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Outro dispositivo salvou uma versão mais recente no Box depois da última vez que este dispositivo a teve, por isso suas alterações não foram enviadas por cima dela. «Manter ambos» coloca sua versão no Box ao lado dela como um livro separado, e você continua com a sua; a outra versão fica como está. Suas alterações continuam neste dispositivo em qualquer caso."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在此设备上次获取之后，另一台设备向 Box 存储了更新的版本，因此你的更改没有覆盖上传。「保留两者」会把你的版本作为单独的账簿放在 Box 上它的旁边，你继续使用自己的版本；另一个版本保持不变。无论如何，你的更改都会保留在此设备上。"
           }
         }
       }
@@ -26540,6 +26870,53 @@
         }
       }
     },
+    "Bank statements, Auto-Categorise and an import's category suggestions always stay on this device.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kontoauszüge, „Automatisch kategorisieren“ und die Kategorievorschläge eines Imports bleiben immer auf diesem Gerät."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los extractos bancarios, «Categorizar automáticamente» y las sugerencias de categoría de una importación siempre se quedan en este dispositivo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les relevés bancaires, « Catégoriser automatiquement » et les suggestions de catégorie d’un import restent toujours sur cet appareil."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gli estratti conto, «Categorizza automaticamente» e i suggerimenti di categoria di un’importazione restano sempre su questo dispositivo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "銀行明細、「自動分類」、読み込み時のカテゴリ候補は、常にこのデバイス上で処理されます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Os extratos bancários, «Categorizar automaticamente» e as sugestões de categoria de uma importação sempre ficam neste dispositivo."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "银行对账单、「自动分类」以及导入时的类别建议始终在此设备上处理。"
+          }
+        }
+      }
+    },
     "Bank statements, dividend statements and invoices are read on this device by your own model and turned into transactions to review — nothing leaves this device.": {
       "extractionState": "manual",
       "localizations": {
@@ -27809,49 +28186,49 @@
         }
       }
     },
-    "Book ▸ Smart Import PDFs… (⇧⌘I) reads bank statements, dividend statements and invoices **on this device** and turns them into transactions for you to review. Nothing is sent anywhere.": {
+    "Book ▸ Smart Import PDFs… (⇧⌘I) reads bank statements, dividend statements and invoices and turns them into transactions for you to review. Bank statements are always read on this device; invoices and dividend statements are read where Settings ▸ Apple Intelligence says.": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Buch ▸ PDFs intelligent importieren… (⇧⌘I) liest Kontoauszüge, Dividendenabrechnungen und Rechnungen **auf diesem Gerät** und macht daraus Buchungen, die Sie prüfen. Nichts wird irgendwohin gesendet."
+            "value": "Buch ▸ PDFs intelligent importieren … (⇧⌘I) liest Kontoauszüge, Dividendenabrechnungen und Rechnungen und macht daraus Buchungen, die Sie prüfen. Kontoauszüge werden immer auf diesem Gerät gelesen, Rechnungen und Dividendenabrechnungen dort, wo es unter Einstellungen ▸ Apple Intelligence festgelegt ist."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Libro ▸ Importación inteligente de PDF… (⇧⌘I) lee extractos bancarios, liquidaciones de dividendos y facturas **en este dispositivo** y los convierte en transacciones para que las revise. No se envía nada a ninguna parte."
+            "value": "Libro ▸ Importación inteligente de PDF… (⇧⌘I) lee extractos bancarios, liquidaciones de dividendos y facturas y los convierte en transacciones para que las revises. Los extractos bancarios siempre se leen en este dispositivo; las facturas y las liquidaciones de dividendos, donde indique Ajustes ▸ Apple Intelligence."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Livre ▸ Import intelligent de PDF… (⇧⌘I) lit relevés bancaires, avis de dividende et factures **sur cet appareil** et les transforme en opérations à vérifier. Rien n’est envoyé nulle part."
+            "value": "Livre ▸ Import intelligent de PDF… (⇧⌘I) lit relevés bancaires, avis de dividende et factures et les transforme en opérations à vérifier. Les relevés bancaires sont toujours lus sur cet appareil ; les factures et les avis de dividende, là où l’indique Réglages ▸ Apple Intelligence."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Libro ▸ Importazione intelligente di PDF… (⇧⌘I) legge estratti conto, avvisi di dividendo e fatture **su questo dispositivo** e li trasforma in transazioni da verificare. Nulla viene inviato da nessuna parte."
+            "value": "Libro ▸ Importazione intelligente di PDF… (⇧⌘I) legge estratti conto, avvisi di dividendo e fatture e li trasforma in transazioni da verificare. Gli estratti conto vengono sempre letti su questo dispositivo; le fatture e gli avvisi di dividendo dove indicato in Impostazioni ▸ Apple Intelligence."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "帳簿 ▸ PDF をスマート読み込み… (⇧⌘I) は、銀行の明細書、配当通知書、請求書を**この端末上で**読み取り、確認用の取引に変換します。どこにも送信されません。"
+            "value": "帳簿 ▸ PDF をスマート読み込み… (⇧⌘I) は、銀行の明細書、配当通知書、請求書を読み取り、確認用の取引に変換します。銀行の明細書は常にこのデバイス上で読み取られます。請求書と配当通知書を読み取る場所は「設定 ▸ Apple Intelligence」の指定に従います。"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Livro ▸ Importação inteligente de PDFs… (⇧⌘I) lê extratos bancários, avisos de dividendos e faturas **neste dispositivo** e os transforma em transações para você revisar. Nada é enviado a lugar nenhum."
+            "value": "Livro ▸ Importação inteligente de PDFs… (⇧⌘I) lê extratos bancários, avisos de dividendos e faturas e os transforma em transações para você revisar. Os extratos bancários são sempre lidos neste dispositivo; as faturas e os avisos de dividendos, onde Ajustes ▸ Apple Intelligence indicar."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "“账簿 ▸ 智能导入 PDF…”(⇧⌘I) 会**在本机上**读取银行对账单、股息通知与发票，并转换成交易供你复核。不会向任何地方发送数据。"
+            "value": "“账簿 ▸ 智能导入 PDF…”(⇧⌘I) 会读取银行对账单、股息通知与发票，并转换成交易供你复核。银行对账单始终在此设备上读取；发票和股息通知的读取位置按「设置 ▸ Apple 智能」中的设定。"
           }
         }
       }
@@ -27903,6 +28280,53 @@
         }
       }
     },
+    "Books": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bücher"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Libros"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Livres"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Libri"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "帳簿"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Livros"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "账簿"
+          }
+        }
+      }
+    },
     "Books and files": {
       "extractionState": "manual",
       "localizations": {
@@ -27946,6 +28370,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "账簿与文件"
+          }
+        }
+      }
+    },
+    "Books on Box": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bücher in Box"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Libros en Box"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Livres sur Box"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Libri su Box"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box 上の帳簿"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Livros no Box"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box 上的账簿"
           }
         }
       }
@@ -28322,6 +28793,100 @@
         }
       }
     },
+    "Box is still busy with this book. Try again in a moment.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box ist noch mit diesem Buch beschäftigt. Versuchen Sie es gleich noch einmal."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box todavía está ocupado con este libro. Vuelve a intentarlo en un momento."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box est encore occupé avec ce livre. Réessayez dans un instant."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box è ancora occupato con questo libro. Riprova tra un momento."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box はまだこの帳簿を処理中です。しばらくしてからもう一度お試しください。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Box ainda está ocupado com este livro. Tente de novo em instantes."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box 仍在处理此账簿。请稍后再试。"
+          }
+        }
+      }
+    },
+    "Box isn’t ready to send this file yet — it was probably saved moments ago. Try again in a minute.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box kann diese Datei noch nicht senden – sie wurde wahrscheinlich gerade erst gesichert. Versuchen Sie es in einer Minute erneut."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box todavía no puede enviar este archivo; probablemente se guardó hace un momento. Inténtalo de nuevo en un minuto."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box n’est pas encore prêt à envoyer ce fichier — il vient sans doute d’être enregistré. Réessayez dans une minute."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box non è ancora pronto a inviare questo file: probabilmente è stato registrato pochi istanti fa. Riprova tra un minuto."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box はまだこのファイルを送信できません。保存された直後の可能性があります。1 分後にもう一度お試しください。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Box ainda não está pronto para enviar este arquivo — provavelmente ele acabou de ser salvo. Tente de novo em um minuto."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box 暂时还无法发送此文件——它可能刚刚存储。请一分钟后再试。"
+          }
+        }
+      }
+    },
     "Box isn’t set up. Add a Box client ID and secret in Settings.": {
       "extractionState": "manual",
       "localizations": {
@@ -28463,6 +29028,53 @@
         }
       }
     },
+    "Box refused “%@”: %@ It is saved on this device; press ⌘S to try again.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box hat „%1$@“ abgelehnt: %2$@ Es ist auf diesem Gerät gesichert; drücken Sie ⌘S, um es erneut zu versuchen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box rechazó «%1$@»: %2$@ Está guardado en este dispositivo; pulsa ⌘S para volver a intentarlo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box a refusé « %1$@ » : %2$@ Il est enregistré sur cet appareil ; appuyez sur ⌘S pour réessayer."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box ha rifiutato «%1$@»: %2$@ È registrato su questo dispositivo; premi ⌘S per riprovare."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box が「%1$@」を拒否しました: %2$@ このデバイスには保存されています。もう一度試すには ⌘S を押してください。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Box recusou «%1$@»: %2$@ Ele está salvo neste dispositivo; pressione ⌘S para tentar de novo."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box 拒绝了「%1$@」：%2$@ 它已存储在此设备上；按 ⌘S 重试。"
+          }
+        }
+      }
+    },
     "Box sent an answer that couldn’t be read (%@).": {
       "extractionState": "manual",
       "localizations": {
@@ -28506,6 +29118,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "Box 返回了无法读取的应答（%@）。"
+          }
+        }
+      }
+    },
+    "Box sent something that isn’t a FinvestLens book.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box hat etwas gesendet, das kein FinvestLens-Buch ist."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box envió algo que no es un libro de FinvestLens."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box a envoyé quelque chose qui n’est pas un livre FinvestLens."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box ha inviato qualcosa che non è un libro di FinvestLens."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box から送られてきたものは FinvestLens の帳簿ではありません。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Box enviou algo que não é um livro do FinvestLens."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box 发送的内容不是 FinvestLens 账簿。"
           }
         }
       }
@@ -31072,7 +31731,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cambia impostazioni del report"
+            "value": "Cambia impostazioni del resoconto"
           }
         },
         "ja": {
@@ -31283,6 +31942,53 @@
         }
       }
     },
+    "Changed on Box and on this device": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In Box und auf diesem Gerät geändert"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cambiado en Box y en este dispositivo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modifié sur Box et sur cet appareil"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modificato su Box e su questo dispositivo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box とこのデバイスの両方で変更あり"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alterado no Box e neste dispositivo"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 Box 和此设备上均有更改"
+          }
+        }
+      }
+    },
     "Changes in net worth": {
       "extractionState": "manual",
       "localizations": {
@@ -31326,6 +32032,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "净资产变动"
+          }
+        }
+      }
+    },
+    "Changes on this device not yet on Box": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Änderungen auf diesem Gerät, noch nicht in Box"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cambios en este dispositivo que aún no están en Box"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modifications sur cet appareil, pas encore sur Box"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modifiche su questo dispositivo non ancora su Box"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box にまだない、このデバイス上の変更"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alterações neste dispositivo ainda não enviadas ao Box"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此设备上的更改尚未上传到 Box"
           }
         }
       }
@@ -31467,6 +32220,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "支票 %@"
+          }
+        }
+      }
+    },
+    "Checking Box": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box wird geprüft"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comprobando Box"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vérification auprès de Box"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verifica su Box in corso"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box を確認中"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verificando o Box"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在检查 Box"
+          }
+        }
+      }
+    },
+    "Checking Box for a newer version.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Es wird geprüft, ob Box eine neuere Version hat."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comprobando si Box tiene una versión más reciente."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recherche d’une version plus récente sur Box."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verifica di una versione più recente su Box."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box に新しいバージョンがあるか確認しています。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verificando se o Box tem uma versão mais recente."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在检查 Box 上是否有更新的版本。"
           }
         }
       }
@@ -32077,7 +32924,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "选取对账单、股息通知书或发票（PDF）"
+            "value": "选取对账单、股息通知或发票（PDF）"
           }
         }
       }
@@ -32595,6 +33442,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "已结清 — 尚未核对"
+          }
+        }
+      }
+    },
+    "Close the book before removing it from this device.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schließen Sie das Buch, bevor Sie es von diesem Gerät entfernen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cierra el libro antes de quitarlo de este dispositivo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fermez le livre avant de le retirer de cet appareil."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chiudi il libro prima di rimuoverlo da questo dispositivo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このデバイスから削除する前に帳簿を閉じてください。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Feche o livro antes de removê-lo deste dispositivo."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请先关闭账簿，再将其从此设备移除。"
           }
         }
       }
@@ -33163,6 +34057,53 @@
         }
       }
     },
+    "Connect to Box in Settings to open “%@”.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verbinden Sie sich in den Einstellungen mit Box, um „%@“ zu öffnen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conéctate a Box en Ajustes para abrir «%@»."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connectez-vous à Box dans les Réglages pour ouvrir « %@ »."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connettiti a Box nelle Impostazioni per aprire «%@»."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」を開くには、設定で Box に接続してください。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conecte-se ao Box em Ajustes para abrir «%@»."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请在设置中连接到 Box，以打开「%@」。"
+          }
+        }
+      }
+    },
     "Connected to Box.": {
       "extractionState": "manual",
       "localizations": {
@@ -33492,53 +34433,6 @@
         }
       }
     },
-    "Couldn’t connect to Box: %@": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Verbindung mit Box nicht möglich: %@"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se pudo conectar con Box: %@"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Connexion à Box impossible : %@"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Impossibile connettersi a Box: %@"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Box に接続できませんでした: %@"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Não foi possível conectar ao Box: %@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "无法连接到 Box：%@"
-          }
-        }
-      }
-    },
     "Couldn’t create the invoice — check the entries have an income account.": {
       "extractionState": "manual",
       "localizations": {
@@ -33680,6 +34574,53 @@
         }
       }
     },
+    "Couldn’t download “%@” from Box: %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„%1$@“ konnte nicht von Box heruntergeladen werden: %2$@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo descargar «%1$@» de Box: %2$@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible de télécharger « %1$@ » depuis Box : %2$@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile scaricare «%1$@» da Box: %2$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%1$@」を Box からダウンロードできませんでした: %2$@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível baixar «%1$@» do Box: %2$@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法从 Box 下载「%1$@」：%2$@"
+          }
+        }
+      }
+    },
     "Couldn’t import “%@”: %@": {
       "extractionState": "manual",
       "localizations": {
@@ -33774,96 +34715,96 @@
         }
       }
     },
-    "Couldn’t list Box: %@": {
+    "Couldn’t put your version of “%@” on Box: %@ It is still saved on this device.": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Box konnte nicht aufgelistet werden: %@"
+            "value": "Ihre Version von „%1$@“ konnte nicht in Box abgelegt werden: %2$@ Sie ist weiterhin auf diesem Gerät gesichert."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "No se pudo listar Box: %@"
+            "value": "No se pudo poner tu versión de «%1$@» en Box: %2$@ Sigue guardada en este dispositivo."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Impossible de lister Box : %@"
+            "value": "Impossible de placer votre version de « %1$@ » sur Box : %2$@ Elle reste enregistrée sur cet appareil."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Impossibile elencare Box: %@"
+            "value": "Impossibile mettere su Box la tua versione di «%1$@»: %2$@ È ancora registrata su questo dispositivo."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Box の一覧を取得できませんでした: %@"
+            "value": "「%1$@」のあなたのバージョンを Box に置けませんでした: %2$@ このデバイスには保存されたままです。"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Não foi possível listar o Box: %@"
+            "value": "Não foi possível colocar sua versão de «%1$@» no Box: %2$@ Ela continua salva neste dispositivo."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "无法列出 Box：%@"
+            "value": "无法将你的「%1$@」版本放到 Box 上：%2$@ 它仍存储在此设备上。"
           }
         }
       }
     },
-    "Couldn’t open from Box: %@": {
+    "Couldn’t reach Box (%@) — opened the copy on this device.": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Öffnen aus Box nicht möglich: %@"
+            "value": "Box war nicht erreichbar (%@) – die Kopie auf diesem Gerät wurde geöffnet."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "No se pudo abrir desde Box: %@"
+            "value": "No se pudo contactar con Box (%@); se abrió la copia de este dispositivo."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ouverture depuis Box impossible : %@"
+            "value": "Box est injoignable (%@) — la copie de cet appareil a été ouverte."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Impossibile aprire da Box: %@"
+            "value": "Impossibile raggiungere Box (%@): è stata aperta la copia su questo dispositivo."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Box から開けませんでした: %@"
+            "value": "Box に接続できませんでした（%@）。このデバイス上のコピーを開きました。"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Não foi possível abrir do Box: %@"
+            "value": "Não foi possível acessar o Box (%@) — a cópia deste dispositivo foi aberta."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "无法从 Box 打开：%@"
+            "value": "无法连接 Box（%@）——已打开此设备上的副本。"
           }
         }
       }
@@ -34009,6 +34950,53 @@
         }
       }
     },
+    "Couldn’t Read This Folder": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ordner konnte nicht gelesen werden"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo leer esta carpeta"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible de lire ce dossier"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile leggere questa cartella"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このフォルダを読み込めませんでした"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível ler esta pasta"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法读取此文件夹"
+          }
+        }
+      }
+    },
     "Couldn’t record: %@": {
       "extractionState": "manual",
       "localizations": {
@@ -34052,6 +35040,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "无法记录：%@"
+          }
+        }
+      }
+    },
+    "Couldn’t Remove the Copy": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kopie konnte nicht entfernt werden"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo quitar la copia"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible de retirer la copie"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile rimuovere la copia"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コピーを削除できませんでした"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível remover a cópia"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法移除副本"
           }
         }
       }
@@ -34197,49 +35232,96 @@
         }
       }
     },
-    "Couldn’t upload to Box: %@": {
+    "Couldn’t upload “%@” to Box: %@ It’s saved on this device and will be uploaded later.": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Hochladen zu Box nicht möglich: %@"
+            "value": "„%1$@“ konnte nicht in Box hochgeladen werden: %2$@ Es ist auf diesem Gerät gesichert und wird später hochgeladen."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "No se pudo subir a Box: %@"
+            "value": "No se pudo subir «%1$@» a Box: %2$@ Está guardado en este dispositivo y se subirá más tarde."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Envoi vers Box impossible : %@"
+            "value": "Impossible d’envoyer « %1$@ » sur Box : %2$@ Il est enregistré sur cet appareil et sera envoyé plus tard."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Impossibile caricare su Box: %@"
+            "value": "Impossibile caricare «%1$@» su Box: %2$@ È registrato su questo dispositivo e verrà caricato più tardi."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Box にアップロードできませんでした: %@"
+            "value": "「%1$@」を Box にアップロードできませんでした: %2$@ このデバイスに保存されており、後でアップロードされます。"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Não foi possível enviar ao Box: %@"
+            "value": "Não foi possível enviar «%1$@» ao Box: %2$@ Ele está salvo neste dispositivo e será enviado mais tarde."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "无法上传到 Box：%@"
+            "value": "无法将「%1$@」上传到 Box：%2$@ 它已存储在此设备上，稍后会上传。"
+          }
+        }
+      }
+    },
+    "Create an app at developer.box.com (User Authentication, OAuth 2.0) with redirect URI %@, then paste its client ID and secret here. Box does not support PKCE, so the secret is required; it is kept in the Keychain, not in preferences. Sign-in happens on Box’s own page — this app never sees your Box password, and the tokens are kept in the Keychain too.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erstellen Sie unter developer.box.com eine App (User Authentication, OAuth 2.0) mit der Weiterleitungs-URI %@ und fügen Sie deren Client-ID und Geheimnis hier ein. Box unterstützt kein PKCE, daher ist das Geheimnis erforderlich; es liegt im Schlüsselbund, nicht in den Einstellungen. Die Anmeldung erfolgt auf der Box-eigenen Seite – diese App sieht Ihr Box-Passwort nie, und die Token liegen ebenfalls im Schlüsselbund."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crea una app en developer.box.com (User Authentication, OAuth 2.0) con la URI de redirección %@ y pega aquí su ID de cliente y su secreto. Box no admite PKCE, por lo que el secreto es obligatorio; se guarda en el Llavero, no en las preferencias. El inicio de sesión ocurre en la propia página de Box: esta app nunca ve tu contraseña de Box, y los tokens también se guardan en el Llavero."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Créez une app sur developer.box.com (User Authentication, OAuth 2.0) avec l’URI de redirection %@, puis collez ici son ID client et son secret. Box ne prend pas en charge PKCE, le secret est donc requis ; il est conservé dans le trousseau, pas dans les préférences. La connexion se fait sur la page de Box — cette app ne voit jamais votre mot de passe Box, et les jetons sont également dans le trousseau."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crea un’app su developer.box.com (User Authentication, OAuth 2.0) con URI di reindirizzamento %@, poi incolla qui il suo ID client e il segreto. Box non supporta PKCE, quindi il segreto è necessario; resta nel portachiavi, non nelle preferenze. L’accesso avviene sulla pagina di Box: questa app non vede mai la tua password Box e anche i token restano nel portachiavi."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "developer.box.com で User Authentication（OAuth 2.0）のアプリをリダイレクト URI %@ で作成し、そのクライアント ID とシークレットをここに貼り付けてください。Box は PKCE に対応していないためシークレットが必要です。シークレットは環境設定ではなくキーチェーンに保管されます。サインインは Box 自身のページで行われ、このアプリが Box のパスワードを見ることはなく、トークンもキーチェーンに保管されます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crie um app em developer.box.com (User Authentication, OAuth 2.0) com URI de redirecionamento %@ e cole aqui o ID do cliente e o segredo. O Box não oferece suporte a PKCE, então o segredo é obrigatório; ele fica nas Chaves, não nas preferências. O login acontece na própria página do Box — este app nunca vê sua senha do Box, e os tokens também ficam nas Chaves."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请在 developer.box.com 创建一个 User Authentication（OAuth 2.0）应用，重定向 URI 设为 %@，然后将其客户端 ID 和密钥粘贴到此处。Box 不支持 PKCE，因此必须提供密钥；密钥保存在钥匙串中，而非偏好设置中。登录在 Box 自己的页面完成——本应用绝不会看到你的 Box 密码，令牌同样保存在钥匙串中。"
           }
         }
       }
@@ -42149,53 +43231,6 @@
         }
       }
     },
-    "Create an app at developer.box.com (User Authentication, OAuth 2.0) with redirect URI %@, then paste its client ID and secret here. Box does not support PKCE, so the secret is required; it is kept in the Keychain, not in preferences. Sign-in happens on Box's own page — this app never sees your Box password, and the tokens are kept in the Keychain too. A book opened from Box is cached locally while you work on it (SQLite cannot run over a web API) and uploaded back as a new version on each save.": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Erstellen Sie unter developer.box.com eine App (User Authentication, OAuth 2.0) mit der Weiterleitungs-URI %@ und fügen Sie deren Client-ID und Geheimnis hier ein. Box unterstützt kein PKCE, daher ist das Geheimnis erforderlich; es liegt im Schlüsselbund, nicht in den Einstellungen. Die Anmeldung erfolgt auf der Box-eigenen Seite – diese App sieht Ihr Box-Passwort nie, und die Token liegen ebenfalls im Schlüsselbund. Ein aus Box geöffnetes Buch wird zum Bearbeiten lokal zwischengespeichert (SQLite kann nicht über eine Web-API laufen) und bei jedem Sichern als neue Version zurückgeladen."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cree una app en developer.box.com (User Authentication, OAuth 2.0) con la URI de redirección %@ y pegue aquí su ID de cliente y su secreto. Box no admite PKCE, por lo que el secreto es obligatorio; se guarda en el Llavero, no en las preferencias. El inicio de sesión ocurre en la propia página de Box: esta app nunca ve su contraseña de Box, y los tokens también se guardan en el Llavero. Un libro abierto desde Box se almacena en caché localmente mientras trabaja (SQLite no puede funcionar sobre una API web) y se sube como una versión nueva en cada guardado."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Créez une app sur developer.box.com (User Authentication, OAuth 2.0) avec l’URI de redirection %@, puis collez ici son ID client et son secret. Box ne prend pas en charge PKCE, le secret est donc requis ; il est conservé dans le trousseau, pas dans les préférences. La connexion se fait sur la page de Box — cette app ne voit jamais votre mot de passe Box, et les jetons sont également dans le trousseau. Un livre ouvert depuis Box est mis en cache localement pendant que vous travaillez (SQLite ne peut pas fonctionner via une API web) et renvoyé comme nouvelle version à chaque enregistrement."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Crea un’app su developer.box.com (User Authentication, OAuth 2.0) con URI di reindirizzamento %@, poi incolla qui il suo ID client e il segreto. Box non supporta PKCE, quindi il segreto è necessario; resta nel portachiavi, non nelle preferenze. L’accesso avviene sulla pagina di Box: questa app non vede mai la tua password Box e anche i token restano nel portachiavi. Un libro aperto da Box viene memorizzato localmente mentre ci lavori (SQLite non può funzionare su un’API web) e ricaricato come nuova versione a ogni salvataggio."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "developer.box.com で User Authentication（OAuth 2.0）のアプリをリダイレクト URI %@ で作成し、そのクライアント ID とシークレットをここに貼り付けてください。Box は PKCE に対応していないためシークレットが必要です。シークレットは環境設定ではなくキーチェーンに保管されます。サインインは Box 自身のページで行われ、このアプリが Box のパスワードを見ることはなく、トークンもキーチェーンに保管されます。Box から開いた帳簿は作業中ローカルにキャッシュされ（SQLite は Web API 上では動作できません）、保存のたびに新しいバージョンとしてアップロードされます。"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Crie um app em developer.box.com (User Authentication, OAuth 2.0) com URI de redirecionamento %@ e cole aqui o ID do cliente e o segredo. O Box não oferece suporte a PKCE, então o segredo é obrigatório; ele fica nas Chaves, não nas preferências. O login acontece na própria página do Box — este app nunca vê sua senha do Box, e os tokens também ficam nas Chaves. Um livro aberto do Box é armazenado em cache localmente enquanto você trabalha (o SQLite não pode rodar sobre uma API web) e enviado de volta como uma nova versão a cada gravação."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "请在 developer.box.com 创建一个 User Authentication（OAuth 2.0）应用，重定向 URI 设为 %@，然后将其客户端 ID 和密钥粘贴到此处。Box 不支持 PKCE，因此必须提供密钥；密钥保存在钥匙串中，而非偏好设置中。登录在 Box 自己的页面完成——本应用绝不会看到你的 Box 密码，令牌同样保存在钥匙串中。从 Box 打开的账簿在你工作期间会缓存在本地（SQLite 无法通过 Web API 运行），并在每次保存时作为新版本上传。"
-          }
-        }
-      }
-    },
     "Create an asset account first.": {
       "extractionState": "manual",
       "localizations": {
@@ -46069,7 +47104,7 @@
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Elimina report"
+            "value": "Elimina resoconto"
           }
         },
         "ja": {
@@ -47826,7 +48861,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "股息通知书"
+            "value": "股息通知"
           }
         }
       }
@@ -48767,6 +49802,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "不关联"
+          }
+        }
+      }
+    },
+    "Downloading from Box, %lld percent": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download von Box, %lld Prozent"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descargando de Box, %lld por ciento"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Téléchargement depuis Box, %lld pour cent"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download da Box, %lld per cento"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box からダウンロード中、%lld パーセント"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Baixando do Box, %lld por cento"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在从 Box 下载，百分之 %lld"
+          }
+        }
+      }
+    },
+    "Downloading the latest version from Box.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die neueste Version wird von Box heruntergeladen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descargando la versión más reciente de Box."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Téléchargement de la dernière version depuis Box."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download dell’ultima versione da Box."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最新のバージョンを Box からダウンロードしています。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Baixando a versão mais recente do Box."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在从 Box 下载最新版本。"
           }
         }
       }
@@ -59427,6 +60556,53 @@
         }
       }
     },
+    "Finishing the upload to Box…": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Upload in Box wird abgeschlossen …"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Terminando la subida a Box…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fin de l’envoi sur Box…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Completamento del caricamento su Box…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box へのアップロードを完了しています…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Concluindo o envio ao Box…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在完成上传到 Box…"
+          }
+        }
+      }
+    },
     "Finnhub does not provide daily history on the free tier": {
       "extractionState": "manual",
       "localizations": {
@@ -59756,6 +60932,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "FinvestLens 会从你已完成的工作中学习：若某收款人此前已分类，它会沿用相同处理 — 包括工资或股息这类的分录构成。当收款人确实存在歧义时，它会选择不判断，而非猜测。"
+          }
+        }
+      }
+    },
+    "FinvestLens quits as soon as Box has your book, or in half a minute. What isn’t uploaded by then is kept on this Mac and goes the next time FinvestLens opens.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FinvestLens wird beendet, sobald Box Ihr Buch hat, spätestens nach einer halben Minute. Was bis dahin nicht hochgeladen ist, bleibt auf diesem Mac und wird beim nächsten Öffnen von FinvestLens hochgeladen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FinvestLens se cierra en cuanto Box tenga tu libro, o al cabo de medio minuto. Lo que no se haya subido para entonces se guarda en este Mac y se sube la próxima vez que se abra FinvestLens."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FinvestLens se ferme dès que Box a votre livre, ou au bout d’une demi-minute. Ce qui n’est pas envoyé d’ici là est conservé sur ce Mac et part à la prochaine ouverture de FinvestLens."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FinvestLens si chiude appena Box ha il tuo libro, o dopo mezzo minuto. Ciò che non è stato caricato entro allora resta su questo Mac e viene caricato alla prossima apertura di FinvestLens."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FinvestLens は、Box が帳簿を受け取りしだい、または 30 秒後に終了します。それまでにアップロードされなかった分はこの Mac に残り、次に FinvestLens を開いたときにアップロードされます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O FinvestLens fecha assim que o Box tiver seu livro, ou em meio minuto. O que não tiver sido enviado até lá fica neste Mac e é enviado na próxima vez que o FinvestLens abrir."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box 收到你的账簿后 FinvestLens 就会退出，最多等待半分钟。届时尚未上传的内容会保留在这台 Mac 上，并在下次打开 FinvestLens 时上传。"
+          }
+        }
+      }
+    },
+    "FinvestLens reaches Box through a Box app of your own, so no one else’s app ever stands between you and your files. Create one at developer.box.com, then enter its client ID and secret here — they are the same ones Settings ▸ General ▸ Box keeps.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FinvestLens greift über eine eigene Box-App von Ihnen auf Box zu, sodass nie die App eines anderen zwischen Ihnen und Ihren Dateien steht. Erstellen Sie eine unter developer.box.com und geben Sie hier deren Client-ID und Geheimnis ein – es sind dieselben, die unter Einstellungen ▸ Allgemein ▸ Box gespeichert sind."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FinvestLens llega a Box a través de una app de Box propia, así que ninguna app ajena se interpone entre tú y tus archivos. Crea una en developer.box.com y escribe aquí su ID de cliente y su secreto; son los mismos que guarda Ajustes ▸ General ▸ Box."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FinvestLens accède à Box par une app Box qui vous appartient : aucune app d’un tiers ne se place jamais entre vous et vos fichiers. Créez-en une sur developer.box.com, puis saisissez ici son ID client et son secret — ce sont ceux que conservent Réglages ▸ Général ▸ Box."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FinvestLens raggiunge Box tramite un’app Box tua, così nessuna app altrui si mette mai tra te e i tuoi file. Creane una su developer.box.com, poi inserisci qui il suo ID client e il segreto: sono gli stessi conservati in Impostazioni ▸ Generali ▸ Box."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FinvestLens はあなた自身の Box アプリを通して Box にアクセスするため、他人のアプリがあなたとファイルの間に入ることはありません。developer.box.com でアプリを作成し、そのクライアント ID とシークレットをここに入力してください。設定 ▸ 一般 ▸ Box に保管されるものと同じです。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O FinvestLens acessa o Box por um app do Box seu, então nenhum app de outra pessoa fica entre você e seus arquivos. Crie um em developer.box.com e digite aqui o ID do cliente e o segredo — são os mesmos guardados em Ajustes ▸ Geral ▸ Box."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FinvestLens 通过你自己的 Box 应用访问 Box，因此不会有他人的应用介于你和你的文件之间。请在 developer.box.com 创建一个应用，然后在此输入其客户端 ID 和密钥——与「设置 ▸ 通用 ▸ Box」中保存的相同。"
           }
         }
       }
@@ -60169,6 +61439,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "Pasta"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文件夹"
+          }
+        }
+      }
+    },
+    "Folders": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ordner"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carpetas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dossiers"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cartelle"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フォルダ"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pastas"
           }
         },
         "zh-Hans": {
@@ -64768,6 +66085,53 @@
         }
       }
     },
+    "If another device saved a newer version first, nothing is replaced: **Keep Both** puts your version on Box beside it, as a separate book.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hat ein anderes Gerät zuvor eine neuere Version gesichert, wird nichts ersetzt: **Beide behalten** legt Ihre Version daneben in Box ab, als eigenes Buch."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Si otro dispositivo guardó antes una versión más reciente, no se reemplaza nada: **Conservar ambos** pone tu versión en Box junto a ella, como un libro aparte."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Si un autre appareil a enregistré une version plus récente avant vous, rien n’est remplacé : **Garder les deux** place votre version sur Box à côté, comme un livre distinct."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se un altro dispositivo ha registrato prima una versione più recente, non viene sostituito nulla: **Mantieni entrambi** mette la tua versione su Box accanto all’altra, come libro separato."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "別のデバイスが先に新しいバージョンを保存していた場合も、何も置き換えられません。**両方とも残す** を選ぶと、あなたのバージョンが別の帳簿として Box 上の隣に置かれます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se outro dispositivo salvou uma versão mais recente antes, nada é substituído: **Manter ambos** coloca sua versão no Box ao lado dela, como um livro separado."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "如果另一台设备先存储了更新的版本，不会替换任何内容：**保留两者** 会把你的版本作为单独的账簿放在 Box 上它的旁边。"
+          }
+        }
+      }
+    },
     "Ignore fees": {
       "extractionState": "manual",
       "localizations": {
@@ -67024,6 +68388,100 @@
         }
       }
     },
+    "It is in another Box account, not the one connected now — connect to that account in Settings.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Es liegt in einem anderen Box-Account, nicht in dem, der gerade verbunden ist – verbinden Sie diesen Account in den Einstellungen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Está en otra cuenta de Box, no en la que está conectada ahora: conecta esa cuenta en Ajustes."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il se trouve dans un autre compte Box, et non dans celui qui est connecté — connectez ce compte dans Réglages."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Si trova in un altro account Box, non in quello connesso ora: connetti quell’account in Impostazioni."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "これは別の Box アカウントにあり、現在接続しているアカウントではありません。「設定」でそのアカウントに接続してください。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ele está em outra conta do Box, não na que está conectada agora — conecte essa conta em Ajustes."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "它位于另一个 Box 账户中，而不是当前连接的账户——请在“设置”中连接该账户。"
+          }
+        }
+      }
+    },
+    "It is in the Box account %@, not the one connected now — connect to that account in Settings.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Es liegt im Box-Account %@, nicht in dem, der gerade verbunden ist – verbinden Sie diesen Account in den Einstellungen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Está en la cuenta de Box %@, no en la que está conectada ahora: conecta esa cuenta en Ajustes."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il se trouve dans le compte Box %@, et non dans celui qui est connecté — connectez ce compte dans Réglages."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Si trova nell’account Box %@, non in quello connesso ora: connetti quell’account in Impostazioni."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "これは Box アカウント %@ にあり、現在接続しているアカウントではありません。「設定」でそのアカウントに接続してください。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ele está na conta do Box %@, não na que está conectada agora — conecte essa conta em Ajustes."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "它位于 Box 账户 %@ 中，而不是当前连接的账户——请在“设置”中连接该账户。"
+          }
+        }
+      }
+    },
     "Job Summary": {
       "extractionState": "manual",
       "localizations": {
@@ -67067,6 +68525,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "项目汇总"
+          }
+        }
+      }
+    },
+    "Keep Both": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beide behalten"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conservar ambos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Garder les deux"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mantieni entrambi"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "両方とも残す"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manter ambos"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保留两者"
+          }
+        }
+      }
+    },
+    "Keep on This Device": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf diesem Gerät behalten"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mantener en este dispositivo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Garder sur cet appareil"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tieni su questo dispositivo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このデバイスだけで処理"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manter neste dispositivo"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保留在此设备上"
           }
         }
       }
@@ -76637,6 +78189,53 @@
         }
       }
     },
+    "Modified %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geändert am %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modificado el %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modifié le %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modificato il %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "変更日: %@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modificado em %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "修改于 %@"
+          }
+        }
+      }
+    },
     "Money": {
       "extractionState": "manual",
       "localizations": {
@@ -82542,6 +84141,53 @@
         }
       }
     },
+    "No Books Here": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Bücher hier"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No hay libros aquí"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun livre ici"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessun libro qui"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "帳簿はありません"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nenhum livro aqui"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这里没有账簿"
+          }
+        }
+      }
+    },
     "No business activity to report for this period.": {
       "extractionState": "manual",
       "localizations": {
@@ -86608,6 +88254,100 @@
         }
       }
     },
+    "Not Connected to Box": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht mit Box verbunden"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sin conexión con Box"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non connecté à Box"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non connesso a Box"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box に接続されていません"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não conectado ao Box"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未连接到 Box"
+          }
+        }
+      }
+    },
+    "Not connected to Box — opened the copy on this device.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht mit Box verbunden – die Kopie auf diesem Gerät wurde geöffnet."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sin conexión con Box; se abrió la copia de este dispositivo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non connecté à Box — la copie de cet appareil a été ouverte."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non connesso a Box: è stata aperta la copia su questo dispositivo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box に接続されていないため、このデバイス上のコピーを開きました。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sem conexão com o Box — a cópia deste dispositivo foi aberta."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未连接到 Box——已打开此设备上的副本。"
+          }
+        }
+      }
+    },
     "Not enough data to trend.": {
       "extractionState": "manual",
       "localizations": {
@@ -86792,6 +88532,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "尚未获取。"
+          }
+        }
+      }
+    },
+    "Not Now": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht jetzt"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ahora no"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plus tard"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non ora"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "今はしない"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Agora não"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "以后再说"
           }
         }
       }
@@ -88493,6 +90280,53 @@
         }
       }
     },
+    "On Box": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In Box"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En Box"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sur Box"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Su Box"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box 上"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No Box"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 Box 上"
+          }
+        }
+      }
+    },
     "On launch": {
       "extractionState": "manual",
       "localizations": {
@@ -88665,6 +90499,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "このデバイス上"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neste dispositivo"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在此设备上"
+          }
+        }
+      }
+    },
+    "On this device": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf diesem Gerät"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En este dispositivo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sur cet appareil"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Su questo dispositivo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このデバイス上にあり"
           }
         },
         "pt-BR": {
@@ -89204,6 +91085,53 @@
         }
       }
     },
+    "Open a book with Open from Box…, in the File menu or on the welcome screen. It is kept on this device while you work on it — a book is a database, which can’t run over a web connection — and goes up to Box as a new version when you save with ⌘S, close the book, switch books or quit; autosave keeps your work on this device until then. A version another device saved is never replaced: you’re asked what to keep.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Öffnen Sie ein Buch mit „Aus Box öffnen …“ im Menü „Ablage“ oder auf dem Willkommensbildschirm. Während Sie damit arbeiten, liegt es auf diesem Gerät – ein Buch ist eine Datenbank, die nicht über eine Webverbindung laufen kann – und wird als neue Version in Box hochgeladen, wenn Sie mit ⌘S sichern, das Buch schließen, zu einem anderen Buch wechseln oder die App beenden; bis dahin behält das automatische Sichern Ihre Arbeit auf diesem Gerät. Eine Version, die ein anderes Gerät gesichert hat, wird nie ersetzt: Sie werden gefragt, was Sie behalten möchten."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abre un libro con «Abrir desde Box…», en el menú Archivo o en la pantalla de bienvenida. Se guarda en este dispositivo mientras trabajas en él (un libro es una base de datos, que no puede funcionar a través de una conexión web) y se sube a Box como una versión nueva cuando guardas con ⌘S, cierras el libro, cambias de libro o sales; hasta entonces, el autoguardado mantiene tu trabajo en este dispositivo. Una versión guardada por otro dispositivo nunca se reemplaza: se te pregunta qué conservar."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouvrez un livre avec « Ouvrir depuis Box… », dans le menu Fichier ou sur l’écran d’accueil. Il reste sur cet appareil pendant que vous y travaillez — un livre est une base de données, qui ne peut pas fonctionner via une connexion web — et part sur Box comme nouvelle version quand vous enregistrez avec ⌘S, fermez le livre, changez de livre ou quittez FinvestLens ; d’ici là, l’enregistrement automatique garde votre travail sur cet appareil. Une version enregistrée par un autre appareil n’est jamais remplacée : on vous demande quoi garder."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apri un libro con «Apri da Box…», nel menu File o nella schermata di benvenuto. Resta su questo dispositivo mentre ci lavori (un libro è un database, che non può funzionare su una connessione web) e viene caricato su Box come nuova versione quando registri con ⌘S, chiudi il libro, passi a un altro libro o esci da FinvestLens; fino ad allora la registrazione automatica tiene il tuo lavoro su questo dispositivo. Una versione registrata da un altro dispositivo non viene mai sostituita: ti viene chiesto cosa tenere."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "帳簿は「ファイル」メニューまたはようこそ画面の「Box から開く…」で開きます。作業中はこのデバイス上に置かれ（帳簿はデータベースのため、Web 接続越しには動作できません）、⌘S で保存したとき、帳簿を閉じたとき、別の帳簿に切り替えたとき、終了したときに、新しいバージョンとして Box にアップロードされます。それまでは、自動保存した内容はこのデバイスに残ります。別のデバイスが保存したバージョンが置き換えられることはありません。どちらを残すか尋ねられます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abra um livro com «Abrir do Box…», no menu Arquivo ou na tela de boas-vindas. Ele fica neste dispositivo enquanto você trabalha nele — um livro é um banco de dados, que não pode funcionar por uma conexão web — e é enviado ao Box como uma nova versão quando você salva com ⌘S, fecha o livro, troca de livro ou sai do FinvestLens; até lá, o salvamento automático mantém seu trabalho neste dispositivo. Uma versão salva por outro dispositivo nunca é substituída: perguntamos o que você quer manter."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可通过「文件」菜单或欢迎屏幕中的「从 Box 打开…」打开账簿。你工作期间它保存在此设备上（账簿是数据库，无法通过 Web 连接运行）；当你按 ⌘S 存储、关闭账簿、切换账簿或退出时，它会作为新版本上传到 Box。在此之前，自动存储会把你的工作保留在此设备上。另一台设备存储的版本绝不会被替换——系统会询问你要保留哪个。"
+          }
+        }
+      }
+    },
     "Open Book": {
       "extractionState": "manual",
       "localizations": {
@@ -89247,6 +91175,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "打开账簿"
+          }
+        }
+      }
+    },
+    "Open from Box…": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aus Box öffnen …"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abrir desde Box…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouvrir depuis Box…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apri da Box…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box から開く…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abrir do Box…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从 Box 打开…"
           }
         }
       }
@@ -90469,6 +92444,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "期初资本"
+          }
+        }
+      }
+    },
+    "Opening it again fetches the latest version first, so a book saved on another device opens the way that device left it.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beim erneuten Öffnen wird zuerst die neueste Version geholt, sodass ein auf einem anderen Gerät gesichertes Buch so geöffnet wird, wie jenes Gerät es hinterlassen hat."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Al volver a abrirlo, primero se descarga la versión más reciente, así que un libro guardado en otro dispositivo se abre tal como lo dejó ese dispositivo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le rouvrir récupère d’abord la dernière version : un livre enregistré sur un autre appareil s’ouvre tel que cet appareil l’a laissé."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riaprendolo, viene prima scaricata l’ultima versione, così un libro registrato su un altro dispositivo si apre come quel dispositivo l’ha lasciato."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "もう一度開くと、まず最新のバージョンが取得されるため、別のデバイスで保存した帳簿はそのデバイスで保存したとおりに開きます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ao abri-lo de novo, a versão mais recente é baixada primeiro, então um livro salvo em outro dispositivo abre do jeito que aquele dispositivo o deixou."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再次打开时会先获取最新版本，因此在另一台设备上存储的账簿会以该设备留下的状态打开。"
           }
         }
       }
@@ -99187,6 +101209,53 @@
         }
       }
     },
+    "Quit Now": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jetzt beenden"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salir ahora"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quitter maintenant"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esci ora"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "今すぐ終了"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sair agora"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "立即退出"
+          }
+        }
+      }
+    },
     "Quote Settings…": {
       "extractionState": "manual",
       "localizations": {
@@ -100543,6 +102612,53 @@
         }
       }
     },
+    "Read this folder from Box again": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diesen Ordner erneut aus Box lesen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Volver a leer esta carpeta desde Box"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Relire ce dossier depuis Box"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rileggi questa cartella da Box"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このフォルダを Box からもう一度読み込む"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ler esta pasta do Box novamente"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从 Box 重新读取此文件夹"
+          }
+        }
+      }
+    },
     "Reading %lld of %lld…": {
       "extractionState": "manual",
       "localizations": {
@@ -101150,6 +103266,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在读取交易"
+          }
+        }
+      }
+    },
+    "Reading “%@”…": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„%@“ wird gelesen …"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leyendo «%@»…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lecture de « %@ »…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lettura di «%@»…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」を読み込んでいます…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lendo «%@»…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在读取「%@」…"
           }
         }
       }
@@ -105082,6 +107245,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "移除 %@"
+          }
+        }
+      }
+    },
+    "Remove Copy from This Device": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kopie von diesem Gerät entfernen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quitar la copia de este dispositivo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retirer la copie de cet appareil"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rimuovi la copia da questo dispositivo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このデバイスからコピーを削除"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remover cópia deste dispositivo"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从此设备移除副本"
           }
         }
       }
@@ -110681,6 +112891,53 @@
         }
       }
     },
+    "Saving, autosave, locking, network drives, Box, and the audit log.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sichern, automatisches Sichern, Sperren, Netzlaufwerke, Box und das Prüfprotokoll."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guardado, autoguardado, bloqueo, unidades de red, Box y registro de auditoría."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enregistrement, enregistrement automatique, verrouillage, volumes réseau, Box et journal d’audit."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registrazione, registrazione automatica, blocco, unità di rete, Box e registro di controllo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存、自動保存、ロック、ネットワークドライブ、Box、監査ログ。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salvamento, salvamento automático, bloqueio, unidades de rede, Box e registro de auditoria."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "存储、自动存储、锁定、网络驱动器、Box 与审计日志。"
+          }
+        }
+      }
+    },
     "Savings": {
       "extractionState": "manual",
       "localizations": {
@@ -112040,53 +114297,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "使用已有名称存储会替换该查询。"
-          }
-        }
-      }
-    },
-    "Saving, autosave, locking, network drives, and the audit log.": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sichern, automatisches Sichern, Sperren, Netzlaufwerke und das Prüfprotokoll."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Guardado, autoguardado, bloqueo, unidades de red y registro de auditoría."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Enregistrement, enregistrement automatique, verrouillage, volumes réseau et journal d’audit."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Registrazione, registrazione automatica, blocco, unità di rete e registro di controllo."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "保存、自動保存、ロック、ネットワークドライブ、監査ログ。"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Salvamento, salvamento automático, bloqueio, unidades de rede e registro de auditoria."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "存储、自动存储、锁定、网络驱动器与审计日志。"
           }
         }
       }
@@ -115205,53 +117415,6 @@
         }
       }
     },
-    "Set the Box client ID and secret in Settings first. Create a Box app at developer.box.com with redirect URI %@.": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Legen Sie zuerst in den Einstellungen die Box-Client-ID und das Secret fest. Erstellen Sie unter developer.box.com eine Box-App mit der Weiterleitungs-URI %@."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Primero define el ID de cliente y el secreto de Box en Ajustes. Crea una app de Box en developer.box.com con el URI de redirección %@."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Définissez d’abord l’identifiant client et le secret Box dans les Réglages. Créez une app Box sur developer.box.com avec l’URI de redirection %@."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Imposta prima l’ID client e il secret di Box in Impostazioni. Crea un’app Box su developer.box.com con l’URI di reindirizzamento %@."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "まず設定で Box のクライアント ID とシークレットを設定してください。developer.box.com でリダイレクト URI %@ の Box アプリを作成します。"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Primeiro defina o ID de cliente e o segredo do Box em Ajustes. Crie um app do Box em developer.box.com com o URI de redirecionamento %@."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "请先在「设置」中设置 Box 客户端 ID 和密钥。在 developer.box.com 创建一个重定向 URI 为 %@ 的 Box 应用。"
-          }
-        }
-      }
-    },
     "Set the closing date and pick the equity account to close into — Retained Earnings, typically.": {
       "extractionState": "manual",
       "localizations": {
@@ -115295,6 +117458,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "设定结账日期，并选择结转到的权益科目——通常是留存收益。"
+          }
+        }
+      }
+    },
+    "Set Up Box": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box einrichten"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configurar Box"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configurer Box"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configura Box"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box を設定"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configurar o Box"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "设置 Box"
           }
         }
       }
@@ -116898,6 +119108,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在显示最新的 400 条 — 可通过搜索进一步缩小范围。"
+          }
+        }
+      }
+    },
+    "Sign in on Box’s own page to see your books there. FinvestLens never sees your Box password.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Melden Sie sich auf der Box-eigenen Seite an, um Ihre Bücher dort zu sehen. FinvestLens sieht Ihr Box-Passwort nie."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inicia sesión en la propia página de Box para ver allí tus libros. FinvestLens nunca ve tu contraseña de Box."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connectez-vous sur la page de Box pour y voir vos livres. FinvestLens ne voit jamais votre mot de passe Box."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accedi sulla pagina di Box per vedere i tuoi libri. FinvestLens non vede mai la tua password Box."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box 自身のページでサインインすると、Box 上の帳簿が表示されます。FinvestLens が Box のパスワードを見ることはありません。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Faça login na própria página do Box para ver seus livros lá. O FinvestLens nunca vê sua senha do Box."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 Box 自己的页面登录即可查看你在那里的账簿。FinvestLens 绝不会看到你的 Box 密码。"
           }
         }
       }
@@ -120404,6 +122661,53 @@
         }
       }
     },
+    "Stops waiting for Box, without opening the book.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beendet das Warten auf Box, ohne das Buch zu öffnen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deja de esperar a Box sin abrir el libro."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arrête d’attendre Box, sans ouvrir le livre."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Smette di attendere Box, senza aprire il libro."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "帳簿を開かずに、Box の待機をやめます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Para de esperar pelo Box, sem abrir o livro."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "停止等待 Box，不打开账簿。"
+          }
+        }
+      }
+    },
     "Stored in the cloud — downloading…": {
       "extractionState": "manual",
       "localizations": {
@@ -123036,6 +125340,53 @@
         }
       }
     },
+    "The audit log stays on each device; it isn't uploaded with the book, and removing a copy from this device keeps it.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Prüfprotokoll bleibt auf jedem Gerät; es wird nicht mit dem Buch hochgeladen und bleibt erhalten, wenn Sie eine Kopie von diesem Gerät entfernen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El registro de auditoría se queda en cada dispositivo; no se sube con el libro, y se conserva aunque quites una copia de este dispositivo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le journal d’audit reste sur chaque appareil ; il n’est pas envoyé avec le livre, et il est conservé quand vous retirez une copie de cet appareil."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il registro di controllo resta su ciascun dispositivo; non viene caricato con il libro e rimane anche quando rimuovi una copia da questo dispositivo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "監査ログは各デバイスに残り、帳簿と一緒にアップロードされることはありません。このデバイスからコピーを削除しても、監査ログは残ります。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O registro de auditoria fica em cada dispositivo; ele não é enviado com o livro e é mantido quando você remove uma cópia deste dispositivo."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "审计日志保留在每台设备上，不会随账簿一起上传；从此设备移除副本时，审计日志也会保留。"
+          }
+        }
+      }
+    },
     "The balance of %@ isn’t available.": {
       "extractionState": "manual",
       "localizations": {
@@ -123079,6 +125430,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "无法获取 %@ 的余额。"
+          }
+        }
+      }
+    },
+    "The book is kept on this device while you work on it. It goes up to Box as a new version when you save with ⌘S, close the book, switch books or quit — and on iPhone and iPad when you leave the app. Autosave keeps your work on this device until then.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Während Sie damit arbeiten, liegt das Buch auf diesem Gerät. Es wird als neue Version in Box hochgeladen, wenn Sie mit ⌘S sichern, das Buch schließen, zu einem anderen Buch wechseln oder die App beenden – und auf dem iPhone und iPad, wenn Sie die App verlassen. Bis dahin behält das automatische Sichern Ihre Arbeit auf diesem Gerät."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El libro se guarda en este dispositivo mientras trabajas en él. Se sube a Box como una versión nueva cuando guardas con ⌘S, cierras el libro, cambias de libro o sales de FinvestLens (y, en el iPhone y el iPad, cuando dejas la app). Hasta entonces, el autoguardado mantiene tu trabajo en este dispositivo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le livre reste sur cet appareil pendant que vous y travaillez. Il part sur Box comme nouvelle version quand vous enregistrez avec ⌘S, fermez le livre, changez de livre ou quittez FinvestLens — et, sur iPhone et iPad, quand vous sortez de l’app. D’ici là, l’enregistrement automatique garde votre travail sur cet appareil."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il libro resta su questo dispositivo mentre ci lavori. Viene caricato su Box come nuova versione quando registri con ⌘S, chiudi il libro, passi a un altro libro o esci da FinvestLens (e, su iPhone e iPad, quando lasci l’app). Fino ad allora la registrazione automatica tiene il tuo lavoro su questo dispositivo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "作業中、帳簿はこのデバイス上に置かれます。⌘S で保存したとき、帳簿を閉じたとき、別の帳簿に切り替えたとき、終了したとき（iPhone と iPad では App から離れたときも）に、新しいバージョンとして Box にアップロードされます。それまでは、自動保存した内容はこのデバイスに残ります。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O livro fica neste dispositivo enquanto você trabalha nele. Ele é enviado ao Box como uma nova versão quando você salva com ⌘S, fecha o livro, troca de livro ou sai do FinvestLens — e, no iPhone e no iPad, quando você deixa o app. Até lá, o salvamento automático mantém seu trabalho neste dispositivo."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你工作期间，账簿保存在此设备上。当你按 ⌘S 存储、关闭账簿、切换账簿或退出时——在 iPhone 和 iPad 上还包括离开 App 时——它会作为新版本上传到 Box。在此之前，自动存储会把你的工作保留在此设备上。"
+          }
+        }
+      }
+    },
+    "The book was deleted on Box, or moved somewhere you can’t reach, so your changes can’t be uploaded to it. Upload as New Book puts your version on Box again, in the folder it was in. Your changes stay on this device either way.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Buch wurde in Box gelöscht oder an einen Ort verschoben, auf den Sie keinen Zugriff haben, daher können Ihre Änderungen nicht dorthin hochgeladen werden. „Als neues Buch hochladen“ legt Ihre Version wieder in Box ab, in dem Ordner, in dem es lag. Ihre Änderungen bleiben in jedem Fall auf diesem Gerät."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El libro se eliminó en Box o se movió a un lugar al que no tienes acceso, así que tus cambios no se pueden subir a él. «Subir como libro nuevo» vuelve a poner tu versión en Box, en la carpeta donde estaba. Tus cambios se quedan en este dispositivo en cualquier caso."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le livre a été supprimé sur Box, ou déplacé là où vous n’y avez pas accès ; vos modifications ne peuvent donc pas y être envoyées. « Envoyer comme nouveau livre » remet votre version sur Box, dans le dossier où il se trouvait. Vos modifications restent sur cet appareil dans tous les cas."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il libro è stato eliminato su Box, o spostato dove non puoi raggiungerlo, quindi le tue modifiche non possono esservi caricate. «Carica come nuovo libro» rimette la tua versione su Box, nella cartella in cui si trovava. In ogni caso le tue modifiche restano su questo dispositivo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この帳簿は Box で削除されたか、アクセスできない場所に移動されたため、変更をアップロードできません。「新しい帳簿としてアップロード」を選ぶと、あなたのバージョンが元のフォルダに再び置かれます。どちらの場合も、変更はこのデバイスに残ります。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O livro foi apagado no Box, ou movido para um lugar que você não acessa, então suas alterações não podem ser enviadas a ele. «Enviar como novo livro» coloca sua versão no Box de novo, na pasta onde ele estava. Suas alterações continuam neste dispositivo em qualquer caso."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "该账簿已在 Box 上被删除，或被移到你无法访问的位置，因此你的更改无法上传到它。「作为新账簿上传」会把你的版本重新放到 Box 上原来的文件夹中。无论如何，你的更改都会保留在此设备上。"
           }
         }
       }
@@ -123455,6 +125900,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "Box 上的文件在下载后已更改。"
+          }
+        }
+      }
+    },
+    "The first time a command would use it, FinvestLens asks — beside the command — whether to use it or keep everything on this device.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wenn ein Befehl es zum ersten Mal nutzen würde, fragt FinvestLens – direkt beim Befehl –, ob es genutzt werden soll oder ob alles auf diesem Gerät bleibt."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La primera vez que un comando lo usaría, FinvestLens pregunta (junto al comando) si usarlo o mantenerlo todo en este dispositivo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La première fois qu’une commande devrait l’utiliser, FinvestLens demande — à côté de la commande — s’il faut l’utiliser ou tout garder sur cet appareil."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La prima volta che un comando lo userebbe, FinvestLens chiede (accanto al comando) se usarlo o tenere tutto su questo dispositivo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コマンドが初めてこれを使おうとするとき、FinvestLens はそのコマンドのそばで、使うか、すべてをこのデバイス上で処理するかを尋ねます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Na primeira vez que um comando o usaria, o FinvestLens pergunta — ao lado do comando — se deve usá-lo ou manter tudo neste dispositivo."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "某个命令第一次要用到它时，FinvestLens 会在该命令旁询问：是使用它，还是让一切都留在此设备上。"
           }
         }
       }
@@ -126754,53 +129246,6 @@
         }
       }
     },
-    "This book changed on Box since you opened it. Your changes are saved locally; open the Box copy to compare before uploading.": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dieses Buch wurde bei Box geändert, seit Sie es geöffnet haben. Ihre Änderungen sind lokal gesichert; öffnen Sie die Box-Kopie zum Vergleichen, bevor Sie hochladen."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Este libro cambió en Box desde que lo abriste. Tus cambios están guardados localmente; abre la copia de Box para compararla antes de subirlo."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ce livre a changé sur Box depuis son ouverture. Vos modifications sont enregistrées localement ; ouvrez la copie Box pour comparer avant l’envoi."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Questo libro è cambiato su Box da quando l’hai aperto. Le tue modifiche sono registrate in locale; apri la copia su Box per confrontare prima di caricarlo."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "この帳簿は開いた後に Box 上で変更されました。変更はローカルに保存されています。アップロードする前に Box のコピーを開いて比較してください。"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Este livro mudou no Box desde que você o abriu. Suas alterações estão salvas localmente; abra a cópia do Box para comparar antes de enviar."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "自你打开后，此账簿已在 Box 上更改。你的更改已存储在本地；上传前请打开 Box 副本进行比较。"
-          }
-        }
-      }
-    },
     "This book has no account called “%@”, so there is nowhere for that part of the transaction to go. Create it first, or paste into the book it came from.": {
       "extractionState": "manual",
       "localizations": {
@@ -126942,6 +129387,53 @@
         }
       }
     },
+    "This book is still being put on Box. Try again in a moment.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieses Buch wird noch in Box abgelegt. Versuchen Sie es gleich noch einmal."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este libro todavía se está guardando en Box. Vuelve a intentarlo en un momento."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce livre est encore en cours d’envoi sur Box. Réessayez dans un instant."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questo libro è ancora in fase di caricamento su Box. Riprova tra un momento."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この帳簿はまだ Box に保存している途中です。しばらくしてからもう一度お試しください。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este livro ainda está sendo colocado no Box. Tente de novo em instantes."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此账簿仍在存放到 Box 上。请稍后再试。"
+          }
+        }
+      }
+    },
     "This book was edited in two places at once.": {
       "extractionState": "manual",
       "localizations": {
@@ -127032,6 +129524,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "按此预算，100 年内也无法还清这些债务。"
+          }
+        }
+      }
+    },
+    "This can be done with Apple’s Private Cloud Compute, where larger models run on Apple’s servers: what it reads is sent to Apple to process, and Apple says it isn’t stored or made accessible to Apple. Or everything can stay on this device. You can change this at any time in Settings ▸ Apple Intelligence.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das kann mit Apples Private Cloud Compute geschehen, wo größere Modelle auf Apples Servern laufen: Das Gelesene wird zur Verarbeitung an Apple gesendet; laut Apple wird es weder gespeichert noch Apple zugänglich gemacht. Oder alles bleibt auf diesem Gerät. Sie können das jederzeit unter Einstellungen ▸ Apple Intelligence ändern."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esto puede hacerse con Private Cloud Compute de Apple, donde modelos más grandes se ejecutan en los servidores de Apple: lo que lee se envía a Apple para su procesamiento, y Apple afirma que no se almacena ni queda accesible para Apple. O todo puede quedarse en este dispositivo. Puedes cambiarlo cuando quieras en Ajustes ▸ Apple Intelligence."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cela peut se faire avec Private Cloud Compute d’Apple, où des modèles plus grands s’exécutent sur les serveurs d’Apple : ce qui est lu est envoyé à Apple pour être traité, et Apple indique que cela n’est ni stocké ni rendu accessible à Apple. Ou tout peut rester sur cet appareil. Vous pouvez changer cela à tout moment dans Réglages ▸ Apple Intelligence."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Si può fare con Private Cloud Compute di Apple, dove modelli più grandi vengono eseguiti sui server di Apple: ciò che viene letto è inviato ad Apple per l’elaborazione, e Apple dichiara che non viene conservato né reso accessibile ad Apple. Oppure tutto può restare su questo dispositivo. Puoi cambiarlo in qualsiasi momento in Impostazioni ▸ Apple Intelligence."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "これは Apple の Private Cloud Compute で行えます。Private Cloud Compute では、より大きなモデルが Apple のサーバ上で動作します。読み取った内容は処理のため Apple に送信されます。Apple によると、保存されず、Apple がアクセスすることもできません。または、すべてをこのデバイス上で処理することもできます。これは「設定 ▸ Apple Intelligence」でいつでも変更できます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Isso pode ser feito com o Private Cloud Compute da Apple, onde modelos maiores rodam nos servidores da Apple: o que é lido é enviado à Apple para processamento, e a Apple afirma que não é armazenado nem fica acessível à Apple. Ou tudo pode ficar neste dispositivo. Você pode mudar isso a qualquer momento em Ajustes ▸ Apple Intelligence."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这可以借助 Apple 的 Private Cloud Compute 完成，更大的模型在 Apple 的服务器上运行：读取的内容会发送给 Apple 进行处理；Apple 表示这些内容不会被存储，Apple 也无法访问。也可以让一切都留在此设备上。你可以随时在「设置 ▸ Apple 智能」中更改。"
+          }
+        }
+      }
+    },
+    "This copy has changes Box hasn’t got yet, so it stays.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Kopie enthält Änderungen, die Box noch nicht hat, und bleibt deshalb erhalten."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esta copia tiene cambios que Box aún no tiene, así que se queda."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cette copie contient des modifications que Box n’a pas encore ; elle est donc conservée."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questa copia ha modifiche che Box non ha ancora, quindi resta."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このコピーには Box にまだない変更があるため、残しておきます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esta cópia tem alterações que o Box ainda não tem, então ela fica."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此副本含有 Box 尚未获得的更改，因此会保留。"
           }
         }
       }
@@ -127408,6 +129994,100 @@
           "stringUnit": {
             "state": "translated",
             "value": "本财政年度"
+          }
+        }
+      }
+    },
+    "This folder has no FinvestLens books or folders — only other files.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieser Ordner enthält keine FinvestLens-Bücher oder Ordner – nur andere Dateien."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esta carpeta no tiene libros de FinvestLens ni carpetas; solo otros archivos."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce dossier ne contient ni livres FinvestLens ni dossiers — seulement d’autres fichiers."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questa cartella non contiene libri FinvestLens né cartelle: solo altri file."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このフォルダには FinvestLens の帳簿もフォルダもなく、ほかのファイルだけがあります。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esta pasta não tem livros do FinvestLens nem pastas — só outros arquivos."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此文件夹中没有 FinvestLens 账簿或文件夹——只有其他文件。"
+          }
+        }
+      }
+    },
+    "This folder is empty.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieser Ordner ist leer."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esta carpeta está vacía."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce dossier est vide."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questa cartella è vuota."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このフォルダは空です。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esta pasta está vazia."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此文件夹为空。"
           }
         }
       }
@@ -132110,6 +134790,53 @@
         }
       }
     },
+    "Try Again": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erneut versuchen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reintentar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réessayer"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riprova"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再試行"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tentar novamente"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重试"
+          }
+        }
+      }
+    },
     "Turn on **Use trading accounts** in the sheet and the transfer also posts to a pair of trading accounts, so the books balance in *each* currency rather than only by value. This is GnuCash's approach, and it is what captures unrealised gains when a rate moves. Leave it off and the transfer is a plain two-sided entry. The choice is remembered in the book.": {
       "extractionState": "manual",
       "localizations": {
@@ -134813,6 +137540,147 @@
         }
       }
     },
+    "Upload as New Book": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Als neues Buch hochladen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Subir como libro nuevo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envoyer comme nouveau livre"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carica come nuovo libro"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新しい帳簿としてアップロード"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enviar como novo livro"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "作为新账簿上传"
+          }
+        }
+      }
+    },
+    "Uploaded to Box.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In Box hochgeladen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Subido a Box."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envoyé sur Box."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Caricato su Box."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box にアップロードしました。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enviado ao Box."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已上传到 Box。"
+          }
+        }
+      }
+    },
+    "Uploading to Box…": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wird in Box hochgeladen …"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Subiendo a Box…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envoi sur Box…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Caricamento su Box…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box にアップロード中…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enviando ao Box…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在上传到 Box…"
+          }
+        }
+      }
+    },
     "Use Book Folder": {
       "extractionState": "manual",
       "localizations": {
@@ -134997,6 +137865,147 @@
           "stringUnit": {
             "state": "translated",
             "value": "使用另一版本"
+          }
+        }
+      }
+    },
+    "Use Private Cloud Compute": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private Cloud Compute verwenden"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usar Private Cloud Compute"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Utiliser Private Cloud Compute"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usa Private Cloud Compute"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private Cloud Compute を使用"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usar o Private Cloud Compute"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用 Private Cloud Compute"
+          }
+        }
+      }
+    },
+    "Use Private Cloud Compute?": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private Cloud Compute verwenden?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Usar Private Cloud Compute?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Utiliser Private Cloud Compute ?"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usare Private Cloud Compute?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private Cloud Compute を使用しますか?"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usar o Private Cloud Compute?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要使用 Private Cloud Compute 吗？"
+          }
+        }
+      }
+    },
+    "Use Private Cloud Compute? The command is waiting for your answer.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private Cloud Compute verwenden? Der Befehl wartet auf Ihre Antwort."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Usar Private Cloud Compute? El comando está esperando tu respuesta."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Utiliser Private Cloud Compute ? La commande attend votre réponse."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usare Private Cloud Compute? Il comando è in attesa della tua risposta."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private Cloud Compute を使用しますか? コマンドはあなたの回答を待っています。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usar o Private Cloud Compute? O comando está aguardando sua resposta."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要使用 Private Cloud Compute 吗？该命令正在等待你的回答。"
           }
         }
       }
@@ -138127,6 +141136,53 @@
         }
       }
     },
+    "Where Apple offers it, the commands that read one document or write about your figures can use Apple’s Private Cloud Compute, where larger models run on Apple’s servers: Smart Import’s invoices and dividend statements, Match Attachments, Categorise from Attachment, Split from Invoice, Suggest Budget, the forecast’s outlook, report commentary and the review decks. What they read is sent to Apple to process; Apple says it isn’t stored or made accessible to Apple.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wo Apple es anbietet, können die Befehle, die ein einzelnes Dokument lesen oder über Ihre Zahlen schreiben, Apples Private Cloud Compute nutzen, wo größere Modelle auf Apples Servern laufen: die Rechnungen und Dividendenabrechnungen von „Intelligenter Import“, „Anhänge zuordnen“, „Aus Anhang kategorisieren“, „Aus Rechnung aufteilen“, „Budget vorschlagen“, der Ausblick der Prognose, Berichtskommentare und die Berichtsfoliensätze. Was sie lesen, wird zur Verarbeitung an Apple gesendet; laut Apple wird es weder gespeichert noch Apple zugänglich gemacht."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Donde Apple lo ofrece, los comandos que leen un documento o escriben sobre tus cifras pueden usar Private Cloud Compute de Apple, donde modelos más grandes se ejecutan en los servidores de Apple: las facturas y liquidaciones de dividendos de «Importación inteligente», «Emparejar adjuntos», «Categorizar desde el adjunto», «Desglosar desde la factura», «Sugerir presupuesto», la perspectiva de la previsión, los comentarios de los informes y las revisiones en diapositivas. Lo que leen se envía a Apple para su procesamiento; Apple afirma que no se almacena ni queda accesible para Apple."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Là où Apple le propose, les commandes qui lisent un document ou écrivent à propos de vos chiffres peuvent utiliser Private Cloud Compute d’Apple, où des modèles plus grands s’exécutent sur les serveurs d’Apple : les factures et avis de dividende d’« Import intelligent », « Associer les pièces jointes », « Catégoriser depuis la pièce jointe », « Ventiler depuis la facture », « Proposer un budget », les perspectives de la prévision, le commentaire des rapports et les revues en diapositives. Ce qu’elles lisent est envoyé à Apple pour être traité ; Apple indique que cela n’est ni stocké ni rendu accessible à Apple."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dove Apple lo offre, i comandi che leggono un documento o scrivono dei tuoi dati possono usare Private Cloud Compute di Apple, dove modelli più grandi vengono eseguiti sui server di Apple: le fatture e gli avvisi di dividendo di «Importazione intelligente», «Abbina allegati», «Categorizza dall’allegato», «Suddividi dalla fattura», «Suggerisci budget», le prospettive della previsione, il commento dei report e le analisi in diapositive. Ciò che leggono è inviato ad Apple per l’elaborazione; Apple dichiara che non viene conservato né reso accessibile ad Apple."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple が提供している地域では、1 つの書類を読み取るコマンドや数値について文章を書くコマンドで、Apple の Private Cloud Compute を使用できます。Private Cloud Compute では、より大きなモデルが Apple のサーバ上で動作します。対象は、「スマート読み込み」の請求書と配当通知書、「添付ファイルを照合」「添付ファイルから分類」「請求書から分割」「予算を提案」、予測の見通し、レポートの解説、レビューのスライドです。読み取った内容は処理のため Apple に送信されます。Apple によると、保存されず、Apple がアクセスすることもできません。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Onde a Apple oferece, os comandos que leem um documento ou escrevem sobre seus números podem usar o Private Cloud Compute da Apple, onde modelos maiores rodam nos servidores da Apple: as faturas e os avisos de dividendos da «Importação inteligente», «Associar anexos», «Categorizar pelo anexo», «Dividir a partir da fatura», «Sugerir orçamento», a perspectiva da previsão, os comentários dos relatórios e as análises em slides. O que eles leem é enviado à Apple para processamento; a Apple afirma que não é armazenado nem fica acessível à Apple."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 Apple 提供该服务的地区，读取单个文稿或撰写关于你的数字的命令可以使用 Apple 的 Private Cloud Compute，更大的模型在 Apple 的服务器上运行：「智能导入」中的发票和股息通知、「匹配附件」「根据附件分类」「按发票拆分」「建议预算」、预测展望、报表评述和综述幻灯片。它们读取的内容会发送给 Apple 进行处理；Apple 表示这些内容不会被存储，Apple 也无法访问。"
+          }
+        }
+      }
+    },
     "Where files live": {
       "extractionState": "manual",
       "localizations": {
@@ -138734,6 +141790,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "提取"
+          }
+        }
+      }
+    },
+    "Without a connection, your work stays on this device and goes up by itself when the connection is back. Box's version is never fetched over changes Box hasn't got yet.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ohne Verbindung bleibt Ihre Arbeit auf diesem Gerät und wird von selbst hochgeladen, sobald die Verbindung wieder da ist. Die Version aus Box wird nie über Änderungen geladen, die Box noch nicht hat."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sin conexión, tu trabajo se queda en este dispositivo y se sube solo cuando vuelve la conexión. La versión de Box nunca se descarga encima de cambios que Box aún no tiene."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sans connexion, votre travail reste sur cet appareil et part tout seul quand la connexion revient. La version de Box n’est jamais récupérée par-dessus des modifications que Box n’a pas encore."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Senza connessione, il tuo lavoro resta su questo dispositivo e viene caricato da solo quando la connessione torna. La versione di Box non viene mai scaricata sopra modifiche che Box non ha ancora."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "接続がないときは作業内容がこのデバイスに残り、接続が戻ると自動的にアップロードされます。Box がまだ持っていない変更の上に、Box のバージョンが取得されることはありません。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sem conexão, seu trabalho fica neste dispositivo e é enviado sozinho quando a conexão voltar. A versão do Box nunca é baixada por cima de alterações que o Box ainda não tem."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无连接时，你的工作会保留在此设备上，并在连接恢复后自动上传。Box 的版本绝不会覆盖 Box 尚未获得的更改。"
           }
         }
       }
@@ -139821,6 +142924,53 @@
         }
       }
     },
+    "Your answer is kept in Settings ▸ Apple Intelligence, under Where it runs, and you can change it there at any time.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ihre Antwort wird unter Einstellungen ▸ Apple Intelligence im Abschnitt „Wo es läuft“ gespeichert, und Sie können sie dort jederzeit ändern."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu respuesta se guarda en Ajustes ▸ Apple Intelligence, en «Dónde se ejecuta», y puedes cambiarla allí cuando quieras."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Votre réponse est conservée dans Réglages ▸ Apple Intelligence, sous « Où elle s’exécute », et vous pouvez la modifier là à tout moment."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La tua risposta viene conservata in Impostazioni ▸ Apple Intelligence, sotto «Dove viene eseguita», e puoi cambiarla lì in qualsiasi momento."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "回答は「設定 ▸ Apple Intelligence」の「実行場所」に保存され、そこでいつでも変更できます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sua resposta fica guardada em Ajustes ▸ Apple Intelligence, em «Onde é executada», e você pode mudá-la lá a qualquer momento."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的回答会保存在「设置 ▸ Apple 智能」的「运行位置」中，你可以随时在那里更改。"
+          }
+        }
+      }
+    },
     "Your changes are held in a working copy and written back to the file when you press ⌘S, when autosave runs, or when you close the book. Autosave and its interval live in Settings ▸ General.": {
       "extractionState": "manual",
       "localizations": {
@@ -140521,6 +143671,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "你的交易"
+          }
+        }
+      }
+    },
+    "Your version is on Box as “%@”.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ihre Version liegt in Box als „%@“."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu versión está en Box como «%@»."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Votre version est sur Box sous le nom « %@ »."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La tua versione è su Box come «%@»."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "あなたのバージョンは「%@」として Box にあります。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sua versão está no Box como «%@»."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的版本已以「%@」存放在 Box 上。"
           }
         }
       }
@@ -142798,6 +145995,53 @@
         }
       }
     },
+    "“%@” Changed on Box": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„%@“ wurde in Box geändert"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "«%@» cambió en Box"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "« %@ » a été modifié sur Box"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "«%@» è stato modificato su Box"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」が Box で変更されました"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "«%@» foi alterado no Box"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」已在 Box 上更改"
+          }
+        }
+      }
+    },
     "“%@” in %@ hasn’t downloaded to this device yet.": {
       "extractionState": "manual",
       "localizations": {
@@ -142939,6 +146183,53 @@
         }
       }
     },
+    "“%@” is in another Box account, so the copy on this device opened. Its changes go to Box when you connect that account.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„%@“ liegt in einem anderen Box-Account, daher wurde die Kopie auf diesem Gerät geöffnet. Ihre Änderungen werden in Box hochgeladen, sobald Sie diesen Account verbinden."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "«%@» está en otra cuenta de Box, así que se abrió la copia de este dispositivo. Sus cambios se suben a Box cuando conectes esa cuenta."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "« %@ » se trouve dans un autre compte Box : la copie de cet appareil a donc été ouverte. Ses modifications partiront sur Box quand vous connecterez ce compte."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "«%@» si trova in un altro account Box, quindi è stata aperta la copia su questo dispositivo. Le sue modifiche vanno su Box quando connetti quell’account."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」は別の Box アカウントにあるため、このデバイス上のコピーを開きました。そのアカウントに接続すると、変更が Box にアップロードされます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "«%@» está em outra conta do Box, então a cópia deste dispositivo foi aberta. As alterações vão para o Box quando você conectar essa conta."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」位于另一个 Box 账户中，因此已打开此设备上的副本。连接该账户后，其更改会上传到 Box。"
+          }
+        }
+      }
+    },
     "“%@” is locked by another FinvestLens instance. If that instance crashed, you can break the lock and import anyway.": {
       "extractionState": "manual",
       "localizations": {
@@ -143029,6 +146320,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "「%@」已被另一个 FinvestLens 实例锁定。如果该实例已崩溃，你可以解除锁定并继续打开。"
+          }
+        }
+      }
+    },
+    "“%@” Is No Longer on Box": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„%@“ ist nicht mehr in Box"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "«%@» ya no está en Box"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "« %@ » n’est plus sur Box"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "«%@» non è più su Box"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」は Box にありません"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "«%@» não está mais no Box"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」已不在 Box 上"
           }
         }
       }

@@ -81,29 +81,23 @@ them are in [intelligence-prompts.md](intelligence-prompts.md).
 | `Guardrails.permissiveContentTransformations` | Does not apply: Apple's safety article (re-read 12 Oct) says "This mode only works for generating a string value", and every request here is guided generation. |
 | Foundation Models instrument | Recorded on 12 Oct with the owner's consent to its unencrypted capture; see intelligence-prompts.md for what it showed. |
 
-**Open — the owner's decision: the first request off the device.** Three
-commands start reading when their sheet opens: Smart Import (once the files
-are picked), Suggest Budget, and a review deck (a story is asked for as each
-slide is shown). With Private Cloud Compute as the default, the first of
-those requests would leave the device before anything on screen had said so:
-the note is in the sheet and is drawn as the request is made, and the
-sentence in Settings is read only by someone who opens Settings. Three ways
-to settle it:
-
-- *Announce it once.* Before the first request of any kind that would leave
-  the device, say what Private Cloud Compute is and ask — Private Cloud
-  Compute as the default answer, "keep on this device" as the other. One
-  extra press, once, and every later request is an informed one.
-- *Wait for a press.* Those three commands do not start by themselves while
-  they would leave the device: the sheet shows the note and a button. One
-  extra press every time.
-- *Leave it.* The note beside each command and the sentence in Settings are
-  the disclosure.
-
-It is the owner's because making Private Cloud Compute the default was. No
-build can reach Private Cloud Compute until Apple assigns the entitlement, so
-nothing waits on the answer today, and `PrivateCloudComputeBuildTests` fails
-if the build condition is set while this paragraph is still headed "Open".
+**Decided by the owner, 17 Oct 2026: the first request off the device is
+announced once.** Three commands start reading when their sheet opens — Smart
+Import (once the files are picked), Suggest Budget, and a review deck (a story
+is asked for as each slide is shown) — so with Private Cloud Compute as the
+default, the first of those requests would have left the device before
+anything on screen said so. Of the three ways offered (announce it once, wait
+for a press every time, leave the note beside each command as the disclosure),
+the owner chose the first. `AppModel.running(_:_:)` waits, the first time a
+command would leave the device and while no choice is stored, for the answer
+to `OffDeviceQuestion`; the command's own `IntelligenceRunsNote` — in its view
+or its sheet, beside its button — turns into the question while it waits, so
+it cannot be hidden behind a sheet. "Use Private Cloud Compute" and "Keep on
+This Device" each store the person's choice in Settings ▸ Apple Intelligence,
+which answers it for every later request; a choice made in Settings first
+answers it too. A command whose wait ends unanswered — its sheet was closed —
+runs everything on the device. The entitlement was granted to the App ID the
+same day, and the build condition landed with it.
 
 **Decided by the owner, 12 Oct 2026** — all three since adopted, in this
 order, each with what was deliberately left out:
@@ -224,6 +218,9 @@ review — this pass found and fixed the ten such sites it could find.
 |---|---|
 | App Sandbox | **Enabled 11 Oct 2026** for the Mac App Store and TestFlight. The earlier refusal of the sibling `.lock` had a plain cause: the related item was declared with `CFBundleTypeRole = None`, which the sandbox honours as a *read-only* grant — the coordinator ran the accessor and the write itself was denied (`NSCocoaErrorDomain 513`). With `Editor` (and `LSHandlerRank = None`) the same presenter and coordinated I/O write the lock and the `.audit` sidecar beside a book, verified on a local folder and on the Box Drive folder. See `docs/app-store.md`. |
 | The phone keeps less than the iPad | Still open in the compact shell (`CompactShell.swift`, shipped 12 Oct 2026): no account editing, deleting, cascading, favouriting or reordering from the account list — those live in the sidebar's context menu and drag, which the phone's list does not carry (a posting's row actions do work, on a long press); no filter over the account tree; no saved-searches menu (the search field remains); the Import menu and the board's "Import…" row are not shown (`FR-PLT-06` leaves import off the phone; an iPad window narrowed to the compact shell loses them with the rest of the regular toolbar), while a report's PDF export and Share remain; the loan calculator's schedule is a `Table` and shows one column; the phone editor edits date, description, notes and each split's account, amount and (where its account is held in another commodity) quantity — tags, the transaction number, a split's memo and action, and the currency the transaction was recorded in are kept as they were but are edited on the Mac or iPad. |
+| Box: replacing the other device's version | On a conflict the only resolution offered is Keep Both. Box keeps a file's earlier versions only on premium accounts (its API reference, *List all file versions*, read 17 Oct 2026), so "use mine" could delete the other device's work outright; two books side by side is a state the person can sort out, a lost version is not. |
+| Box: the audit log | The `.audit` sidecar stays beside each device's copy and is not uploaded — Box holds the book, so a Box book's audit log records what was done on that device. Removing a copy from the device keeps it. |
+| Box: autosave does not upload | The owner's decision, 17 Oct 2026: a book goes to Box on ⌘S, closing, switching books, quitting and (iPhone, iPad) leaving the app — not on each autosave, which for a 70 MB book was about 800 MB an hour of editing, cellular included. Autosaved work stays on the device until the next of those, and ⌘S stays enabled while Box is owed anything. |
 | Esc inside a focused text field | AppKit's field editor consumes the raw Escape (completion); ⌘. always cancels, Esc works otherwise. SwiftUI offers no clean override (accepted). *The Jul 2026 F19 sweep put `onEscapeCommand` on every sheet — this field-editor caveat is the one remaining Esc limit.* |
 
 ## 5 — Skipped from the phase plan (revisit only on demand)

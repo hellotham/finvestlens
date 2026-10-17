@@ -129,10 +129,18 @@ extension AppModel {
     /// where the person chose, and nothing else it reaches leaves this
     /// device. Every request that can leave the device starts in one of
     /// these — see ``IntelligenceCommand``.
+    ///
+    /// The first time a command would leave the device, it waits here for the
+    /// person's answer to ``OffDeviceQuestion`` — asked in the command's own
+    /// note — and a wait that ends unanswered (the sheet was closed) runs
+    /// everything on this device rather than assume a yes.
     func running<Result>(
         _ command: IntelligenceCommand, _ body: nonisolated(nonsending) () async throws -> Result
     ) async rethrows -> Result {
-        try await LanguageModels.permittingOffDevice(command.features, operation: body)
+        let question = OffDeviceQuestion.shared
+        await question.waitForAnswer(before: command)
+        if question.needsAnswer { return try await body() }
+        return try await LanguageModels.permittingOffDevice(command.features, operation: body)
     }
 
     // MARK: Category candidates

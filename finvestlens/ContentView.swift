@@ -32,6 +32,7 @@ import FinvestLensUI
 struct RootHost: View {
     @Bindable var model: AppModel
     @Environment(\.undoManager) private var undoManager
+    @Environment(\.scenePhase) private var scenePhase
     @State private var importing = false
     #if os(macOS)
     /// Whether this window has been on screen yet. A book that fails to open
@@ -60,7 +61,9 @@ struct RootHost: View {
     var body: some View {
         Group {
             if let openingURL = model.openingURL {
-                OpeningBookView(url: openingURL, progress: model.loadProgress)
+                OpeningBookView(url: openingURL, progress: model.loadProgress,
+                                boxPhase: model.boxOpenPhase,
+                                onCancel: { model.cancelBoxOpen() })
             } else if let importingURL = model.importingURL {
                 ImportingBookView(url: importingURL, progress: model.loadProgress)
             } else if model.isOpen && model.isLocked {
@@ -74,7 +77,40 @@ struct RootHost: View {
                 WelcomeView(model: model, onNew: newBook, onOpen: openBook)
             }
         }
+        // The status chip and toasts where no book view carries them: while a
+        // book opens or imports — "opened the copy on this device" is said
+        // then — and over the welcome screen, where an upload to Box carries
+        // on after its book closes. Never over the lock screen.
+        .overlay(alignment: .bottom) {
+            if model.openingURL != nil || model.importingURL != nil || !model.isOpen {
+                StatusOverlay(model: model)
+            }
+        }
+        #if os(macOS)
+        // Quitting while Box work finishes: said, with a way to stop waiting,
+        // and nothing else can be started meanwhile.
+        .overlay {
+            if model.isFinishingBoxWorkBeforeQuit {
+                FinishingBoxWorkView(model: model)
+            }
+        }
+        #endif
         .onAppear { model.undoManager = undoManager }
+        // Box books saved while there was no connection, or before the last
+        // quit finished uploading, go up now.
+        .task { if !TestHost.isActive { model.resumeBoxUploads() } }
+        #if os(iOS) || os(visionOS)
+        // iOS — and visionOS, which the app target also lists — can end a
+        // suspended app without asking, so leaving the screen is the last
+        // moment to keep changes, and to send them to Box.
+        .onChange(of: scenePhase) { _, phase in
+            switch phase {
+            case .background: model.saveBeforeSuspension()
+            case .active: model.resumeBoxUploads()
+            default: break
+            }
+        }
+        #endif
         #if os(macOS)
         .background { WindowOnScreen(hasAppeared: $windowHasAppeared) }
         #endif
@@ -89,6 +125,24 @@ struct RootHost: View {
             Color.clear.sheet(item: $model.pendingCleanup) { proposal in
                 CheckRepairSheet(model: model, proposal: proposal)
             }
+        }
+        // File ▸ Open from Box…, on its own anchor for the same reason.
+        .background {
+            Color.clear.sheet(isPresented: $model.boxBrowserRequested) {
+                BoxBrowserSheet(model: model)
+                    .finvestLensAppearance()
+            }
+        }
+        // A Box book whose changes Box refused: the person decides, and
+        // nothing is lost while they don't.
+        .alert(model.boxConflict?.title ?? "",
+               isPresented: Binding(get: { model.boxConflict != nil && canPresentDocumentError },
+                                    set: { if !$0 { model.boxConflict = nil } }),
+               presenting: model.boxConflict) { conflict in
+            Button(conflict.actionTitle) { Task { await model.resolveBoxConflict(conflict) } }
+            Button("Not Now", role: .cancel) {}
+        } message: { conflict in
+            Text(verbatim: conflict.message)
         }
         .alert(model.documentError?.lockedImportSource != nil ? "Couldn’t import" : "Couldn’t open book",
                isPresented: Binding(get: { model.documentError != nil && canPresentDocumentError },
@@ -188,6 +242,41 @@ private struct WindowOnScreen: NSViewRepresentable {
         private func report() {
             guard window?.isVisible == true else { return }
             DispatchQueue.main.async { [weak self] in self?.onVisible?() }
+        }
+    }
+}
+#endif
+
+#if os(macOS)
+/// Covers the window while quitting waits for Box: a book opened now would be
+/// lost when the app goes.
+private struct FinishingBoxWorkView: View {
+    @Bindable var model: AppModel
+
+    var body: some View {
+        ZStack {
+            Rectangle().fill(.regularMaterial).ignoresSafeArea()
+            VStack(spacing: 14) {
+                ProgressView().controlSize(.large)
+                Text("Finishing the upload to Box…")
+                    .scaledFont(.title3, weight: .semibold)
+                Text("FinvestLens quits as soon as Box has your book, or in half a minute. What isn’t uploaded by then is kept on this Mac and goes the next time FinvestLens opens.")
+                    .scaledFont(.callout)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: 420)
+                Button("Quit Now") { model.stopWaitingForBox() }
+                    .keyboardShortcut(.defaultAction)
+            }
+            .padding(32)
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityAddTraits(.isModal)
+        // It covers the window at a moment nobody asked for anything on
+        // screen: VoiceOver says why, rather than leave its user on an
+        // element now hidden beneath it.
+        .onAppear {
+            AccessibilityNotification.Announcement(String(localized: "Finishing the upload to Box…")).post()
         }
     }
 }

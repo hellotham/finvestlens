@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  THE DEVELOPER ID VARIANT, used only by scripts/release-dmg.sh: the app's
+	  entitlements (finvestlens.entitlements) without Private Cloud Compute,
+	  which Apple does not provision for Developer ID. Everything else must
+	  match that file; PrivateCloudComputeBuildTests checks that it does.
+
+	  FinvestLens app entitlements. App Sandbox is ON (11 Oct 2026, for the
+	  Mac App Store and TestFlight, which require it): the book and anything
+	  the person picks come in through the open/save panels and app-scoped
+	  bookmarks, the sibling `.lock` and `.audit` files beside a book are
+	  reached as *related items* of the document (declared in Info.plist and
+	  accessed through a file coordinator carrying the document as the
+	  primary item), and the price providers and Box need outgoing network.
+	  The bundle ID is com.hellotham.finvestlens; the App Group and iCloud
+	  container below deliberately keep the older …finvestlensapp base. They
+	  are separately registered identifiers that already hold this team's
+	  data, so renaming them is a portal change in its own right (see
+	  docs/provisioning.md), not part of the bundle-ID rename.
+	-->
+	<key>com.apple.security.app-sandbox</key>
+	<true/>
+	<key>com.apple.security.files.user-selected.read-write</key>
+	<true/>
+	<key>com.apple.security.files.bookmarks.app-scope</key>
+	<true/>
+	<key>com.apple.security.network.client</key>
+	<true/>
+
+	<!-- App Group: shared container the app writes widget/Quick Look snapshots
+	     into (the extensions read from it). -->
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.com.hellotham.finvestlensapp</string>
+	</array>
+
+	<!-- iCloud Documents (FR-PLT-02): the app's Documents surface in iCloud
+	     Drive so a .finvestlens book syncs file-level across devices. -->
+	<key>com.apple.developer.icloud-container-identifiers</key>
+	<array>
+		<string>iCloud.com.hellotham.finvestlensapp</string>
+	</array>
+	<key>com.apple.developer.ubiquity-container-identifiers</key>
+	<array>
+		<string>iCloud.com.hellotham.finvestlensapp</string>
+	</array>
+	<key>com.apple.developer.icloud-services</key>
+	<array>
+		<string>CloudDocuments</string>
+	</array>
+</dict>
+</plist>

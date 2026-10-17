@@ -375,21 +375,99 @@ private struct BookProgressView: View {
 public struct OpeningBookView: View {
     let url: URL
     let progress: BookLoadProgress?
+    /// Where a book from Box has got to before it can be read — asking Box
+    /// for its newest version, then downloading it.
+    let boxPhase: BoxOpenPhase?
+    /// Stops waiting for Box — offered while Box is being asked or a book is
+    /// coming down from it, which on a slow line can be minutes, with the
+    /// book that was open hidden behind this screen.
+    let onCancel: (() -> Void)?
 
-    public init(url: URL, progress: BookLoadProgress? = nil) {
+    public init(url: URL, progress: BookLoadProgress? = nil, boxPhase: BoxOpenPhase? = nil,
+                onCancel: (() -> Void)? = nil) {
         self.url = url
         self.progress = progress
+        self.boxPhase = boxPhase
+        self.onCancel = onCancel
     }
 
     private var bookName: String { url.deletingPathExtension().lastPathComponent }
 
     public var body: some View {
-        BookProgressView(title: "Opening \(bookName)…",
-                         indeterminateDetail: "Reading accounts, transactions and prices.",
-                         progress: progress)
+        switch boxPhase {
+        case .checking:
+            BoxPhaseView(title: "Opening \(bookName)…", detail: "Checking Box for a newer version.",
+                         fraction: nil, label: label, value: accessibilityValue, onCancel: onCancel)
+        case .downloading(let fraction):
+            BoxPhaseView(title: "Opening \(bookName)…", detail: "Downloading the latest version from Box.",
+                         fraction: fraction, label: label, value: accessibilityValue, onCancel: onCancel)
+        case nil:
+            BookProgressView(title: "Opening \(bookName)…",
+                             indeterminateDetail: "Reading accounts, transactions and prices.",
+                             progress: progress)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel(label)
+                .accessibilityValue(accessibilityValue)
+        }
+    }
+
+    private var label: Text { Text("Opening \(bookName)") }
+
+    private var accessibilityValue: String {
+        if case .downloading(let fraction?) = boxPhase {
+            return String(localized: "Downloading from Box, \(Int(fraction * 100)) percent")
+        }
+        if case .checking = boxPhase { return String(localized: "Checking Box") }
+        // A `String` here, so localized by hand: as a bare literal it would be
+        // read out in English — and the catalog gate cannot tell, because the
+        // same words elsewhere in this file are a `LocalizedStringKey`.
+        return progress.map { String(localized: "\(Int($0.fraction * 100)) percent") } ?? ""
+    }
+}
+
+/// The wait before a book from Box can be read: a bar once Box has said how
+/// big the download is, a spinner before, and a way to stop waiting.
+private struct BoxPhaseView: View {
+    let title: LocalizedStringKey
+    let detail: LocalizedStringKey
+    let fraction: Double?
+    let label: Text
+    let value: String
+    let onCancel: (() -> Void)?
+
+    var body: some View {
+        VStack(spacing: 16) {
+            // One element for VoiceOver — what is happening and how far — and
+            // Cancel beside it as an element of its own, which a combined
+            // element would swallow.
+            VStack(spacing: 16) {
+                if let fraction {
+                    ProgressView(value: min(max(fraction, 0), 1), total: 1)
+                        .progressViewStyle(.linear)
+                        .frame(maxWidth: 320)
+                        .animation(nil, value: fraction)
+                } else {
+                    ProgressView()
+                        .controlSize(.large)
+                        .frame(maxWidth: 320)
+                }
+                Text(title)
+                    .scaledFont(.title3, weight: .semibold)
+                Text(detail)
+                    .scaledFont(.callout)
+                    .foregroundStyle(.secondary)
+            }
             .accessibilityElement(children: .combine)
-            .accessibilityLabel("Opening \(bookName)")
-            .accessibilityValue(progress.map { "\(Int($0.fraction * 100)) percent" } ?? "")
+            .accessibilityLabel(label)
+            .accessibilityValue(value)
+            if let onCancel {
+                Button("Cancel", action: onCancel)
+                    .keyboardShortcut(.cancelAction)
+                    .accessibilityHint("Stops waiting for Box, without opening the book.")
+            }
+        }
+        .padding(48)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 

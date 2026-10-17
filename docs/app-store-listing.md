@@ -60,7 +60,7 @@ Double-entry accounting
 
 **Promotional text** (≤170 chars, editable any time without review):
 ```
-Rigorous double-entry accounting for a household or a small business, with investments, budgets and reports. Your book is one file you own. No account, no subscription.
+Double-entry accounting for a household or a small business, with Apple Intelligence on your device or Private Cloud Compute. Your book is one file you own. No account.
 ```
 
 **Keywords** (≤100 chars, comma-separated):
@@ -135,11 +135,11 @@ SMALL BUSINESS
 • Invoices, bills and credit notes, with payments and aging
 • Tax tables, billing terms and jobs
 
-APPLE INTELLIGENCE, ON YOUR DEVICE
+APPLE INTELLIGENCE
 • Suggested categories for transactions
 • A proposed budget from your own spending
 • Plain-language notes on a report or a forecast, in your language, with every figure checked against your numbers
-These run on your device with Apple Intelligence, where it is available and turned on. Your figures are not sent to us or to anyone else.
+These use Apple Intelligence, where it is available and turned on — on your device, or on Apple's Private Cloud Compute, which Apple says keeps nothing. The app asks before it first sends anything there, and you can change your answer in Settings. Nothing is ever sent to us.
 
 YOURS TO KEEP
 • Keep your book on your device, in iCloud Drive or on a network share, and open it on your Mac as well
@@ -192,12 +192,12 @@ SMALL BUSINESS
 • Invoices, bills and credit notes, with payments and aging
 • Tax tables, billing terms, jobs and printable invoices
 
-APPLE INTELLIGENCE, ON YOUR MAC
+APPLE INTELLIGENCE
 • Read a PDF bank statement, an invoice or a dividend statement into transactions you review before anything is posted
 • Suggested categories, and a proposed budget from your own spending
 • Plain-language notes on a report or a forecast, in your language, with every figure checked against your numbers
 • Or bring your own model: point FinvestLens at a folder of MLX models and one of them does this work instead
-These run on your Mac — with Apple Intelligence, where it is available and turned on, or with a model you supply. FinvestLens provides no model and downloads none. Your figures are not sent to us or to anyone else.
+These use Apple Intelligence, where it is available and turned on — on your Mac, or on Apple's Private Cloud Compute, which Apple says keeps nothing — or a model you supply, which runs on your Mac. The app asks before it first sends anything to Private Cloud Compute, and bank statements are always read on your Mac. FinvestLens provides no model and downloads none. Nothing is ever sent to us.
 
 YOURS TO KEEP
 • Keep your book on your Mac, in iCloud Drive or on a network share, and open it on iPhone and iPad as well
@@ -217,9 +217,9 @@ FinvestLens is a double-entry accounting app. Nothing needs to be set up and the
 
 All data stays in the book file the person creates. The app has no server and collects nothing.
 
-NETWORK. The app contacts a network service in two situations, both started by the person: fetching security prices and exchange rates from the price provider they choose (Yahoo Finance, Stooq, FIIG and Wilson Asset Management need no key; EODHD, Alpha Vantage, Finnhub and Twelve Data use a key the person enters, which is stored in the Keychain), and, optionally, signing in to their own Box account to open a book stored there. Box sign-in uses Box's own page in a system web authentication session and requires the person's own Box developer app credentials, entered in Settings; it is not needed for any other feature and can be ignored for review.
+NETWORK. The app contacts a network service in three situations, all started by the person: fetching security prices and exchange rates from the price provider they choose (Yahoo Finance, Stooq, FIIG and Wilson Asset Management need no key; EODHD, Alpha Vantage, Finnhub and Twelve Data use a key the person enters, which is stored in the Keychain); optionally, signing in to their own Box account to open a book stored there (File ▸ Open from Box…); and Apple's Private Cloud Compute, below. Box sign-in uses Box's own page in a system web authentication session and requires the person's own Box developer app credentials, entered in Settings; it is not needed for any other feature and can be ignored for review.
 
-APPLE INTELLIGENCE. Category suggestions, budget proposals, document reading and report notes run on Apple Foundation Models on the device, where Apple Intelligence is available and turned on. Where it is not, those commands are disabled and say why; every other feature works without it. The app contains no third-party AI services and no API keys for any.
+APPLE INTELLIGENCE. Category suggestions, budget proposals, document reading and report notes run on Apple Foundation Models, where Apple Intelligence is available and turned on: on the device, or on Private Cloud Compute (com.apple.developer.private-cloud-compute, granted to this App ID). Private Cloud Compute is the default where it is offered; the first command that would use it asks the person, beside the command, whether to use it or keep everything on the device, and the answer is kept in Settings ▸ Apple Intelligence, where it can be changed. Bank statements, Auto-Categorise and an import's category suggestions always run on the device. Where Apple Intelligence is not available, those commands are disabled and say why; every other feature works without it. The app contains no third-party AI services and no API keys for any.
 
 A MODEL OF THE PERSON'S OWN. In Settings ▸ Apple Intelligence a person can choose a folder of open-weight models in MLX format that they already have, and one of the models in it. That model then does the same work on the device, in place of Apple's, through MLX (open source under the MIT licence, copyright Apple Inc.). The app contains no model, recommends none and downloads none; it only reads the folder the person grants. To review without one, leave the setting on "On This Device".
 
@@ -243,33 +243,30 @@ Acknowledgements.
 
 ## Private Cloud Compute
 
-**Not in this copy, deliberately.** The owner wants Private Cloud Compute to
-be the default wherever a build can offer it (12 Oct 2026), and the code is
-ready for it (`FR-AI-13`). Offering it needs Apple's managed entitlement, and
-Apple's request form currently answers that the account is not enrolled in the
-Small Business Program although the approval has arrived; the owner has a
-support request open. Until the entitlement is assigned the build does not
-offer the model at all — `LanguageModels.privateCloudComputeEnabled` — so the
-listing must not mention it, and `StoreListingTests` fails if it does.
-
-When it arrives, in the same change as the entitlement and the
-`PRIVATE_CLOUD_COMPUTE` condition: add it to the promotional text and both
-Apple Intelligence sections; replace "These run on your device…" and "Your
-figures are not sent to us or to anyone else", which stop being true of
-receipts, invoices, dividend statements, attachments and summaries; add the paragraph below to the
-privacy policy; and rewrite the three help passages
-`PrivateCloudComputeBuildTests` names. That test fails until the help and the
-policy are done, so the entitlement cannot land alone.
+**In this copy since 17 Oct 2026**, when Apple's approval reached the App
+ID ("Access to models on Private Cloud Compute", enabled in Certificates,
+Identifiers & Profiles that day). The owner wants it to be the default wherever
+a build can offer it (12 Oct 2026), and chose on 17 Oct to ask once before the
+first request that would use it (`OffDeviceQuestion`). It landed in one change
+with the entitlement and the `PRIVATE_CLOUD_COMPUTE` condition: the promotional
+text and both Apple Intelligence sections name it, "These run on your device…"
+and "Your figures are not sent to us or to anyone else" are gone, the privacy
+policy carries the paragraph below, and the three help passages
+`PrivateCloudComputeBuildTests` names are rewritten. Apple provisions the
+capability for Development, Ad hoc and App Store Connect, not Developer ID, so
+the DMG is signed without it (`finvestlens-DeveloperID.entitlements`) and
+offers only the device and a model of the person's own.
 
 ## Before 1.2 is submitted
 
-- **The privacy policy needs additions**, and it is published under the
-  company's name, so the wording is the owner's to approve — nothing below
-  has been published. As published (25 July 2026, `website/src/pages/privacy.astro`)
-  it says the app makes network requests "in exactly one situation", price
-  fetching, and names six providers. Two more shipped in 1.1 and are not on
-  the list (FIIG, Wilson Asset Management), and 1.2 can also connect to the
-  person's own Box account. Proposed wording:
+- **The privacy policy additions below were approved by the owner on
+  17 Oct 2026 and published that day** (`website/src/pages/privacy.astro`,
+  "Last updated 17 October 2026"), with what had changed since they were
+  drafted: Box books open with Open from Box… and go up when saved with ⌘S,
+  closed, switched or quit, never over another device's version; company data
+  and security lookup are named beside prices; and the three situations
+  replace "two". The policy as published on 25 July 2026 had said the app
+  makes network requests "in exactly one situation". The wording as drafted:
 
   > **Network requests.** FinvestLens contacts a network service in two
   > situations, both started by you.

@@ -25,7 +25,8 @@ struct BoxErrorWordsTests {
         #expect(BoxError.api(status: 500, code: nil, message: nil).localizedDescription
             == "Box refused the request (500).")
         let all: [BoxError] = [.notConfigured, .notAuthenticated, .signInCancelled,
-                               .versionConflict(currentEtag: "3"), .malformedResponse("no entries")]
+                               .versionConflict(currentEtag: "3"), .notReadyYet,
+                               .malformedResponse("no entries")]
         for error in all {
             let words = error.localizedDescription
             #expect(!words.contains("BoxError") && !words.contains("operation couldn"), "\(error)")

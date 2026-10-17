@@ -66,6 +66,32 @@ Store and TestFlight require. The app's `finvestlens.entitlements` adds
   (`~/Library/Containers/com.hellotham.finvestlens/Data/Library/Preferences`),
   not the plist `defaults read` shows by default.
 
+### Private Cloud Compute (since 17 Oct 2026)
+
+"Access to models on Private Cloud Compute"
+(`com.apple.developer.private-cloud-compute`) is a *managed* capability:
+requested from Apple, granted to the App ID `com.hellotham.finvestlens` on
+17 Oct 2026, and then enabled on that App ID in the portal. The app target
+carries it in `finvestlens.entitlements`, together with the
+`PRIVATE_CLOUD_COMPUTE` build condition (`PrivateCloudComputeBuildTests`).
+
+- **Every profile that signs the app must be issued after that.** One made
+  before has no such entitlement, and a signed build stops at "Entitlement
+  com.apple.developer.private-cloud-compute not found and could not be
+  included in profile". With automatic signing Xcode issues new ones — but
+  only with an account under **Settings ▸ Accounts** (§A, step 1). With none,
+  the same build says "No Accounts: Add a new account in Accounts settings",
+  as it did on 17 Oct 2026, when this Mac's development profile for the app
+  dated from 9 Oct.
+- **Developer ID is not among the kinds Apple provisions it for**
+  (Development, Ad hoc and App Store Connect are). The DMG is therefore signed
+  with `finvestlens-DeveloperID.entitlements` — the same file without the key —
+  which `scripts/release-dmg.sh` selects with
+  `FINVESTLENS_ENTITLEMENTS_VARIANT=-DeveloperID`. The same setting gives a
+  signed development build that a profile without the capability still
+  matches; Private Cloud Compute is off in it, because the Mac reads the
+  entitlement back from the app's own signature.
+
 ### Two bases, on purpose
 
 The bundle IDs and the shared identifiers do not share a base, and that is

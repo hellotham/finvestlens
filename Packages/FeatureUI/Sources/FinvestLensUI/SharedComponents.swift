@@ -21,16 +21,29 @@ import UIKit
 /// operation runs, a transient toast when one completes. Sits at the bottom
 /// of the main window; every long operation routes here, so feedback has one
 /// home instead of per-sheet spinners.
-struct StatusOverlay: View {
+public struct StatusOverlay: View {
     @Bindable var model: AppModel
 
-    var body: some View {
+    public init(model: AppModel) { self.model = model }
+
+    public var body: some View {
         VStack(spacing: 8) {
             if model.isSaving {
                 chip {
                     HStack(spacing: 8) {
                         ProgressView().controlSize(.small)
                         Text("Saving…").scaledFont(.callout).foregroundStyle(.secondary)
+                    }
+                }
+            }
+            // An upload outlives the book it belongs to — it goes on after
+            // the book is closed, and a quit waits for it — so this chip is
+            // shown over the welcome screen too.
+            if model.hasBoxWorkInFlight {
+                chip {
+                    HStack(spacing: 8) {
+                        ProgressView().controlSize(.small)
+                        Text("Uploading to Box…").scaledFont(.callout).foregroundStyle(.secondary)
                     }
                 }
             }
@@ -61,18 +74,28 @@ struct StatusOverlay: View {
         .padding(.bottom, 14)
         .animation(.snappy, value: model.toast)
         .animation(.snappy, value: model.quoteProgress == nil)
+        .animation(.snappy, value: model.hasBoxWorkInFlight)
         .allowsHitTesting(false)
         // A toast is feedback that vanishes on its own — VoiceOver users get
         // it spoken, or they get nothing: the chip is gone before it can be
         // reached. Failures interrupt (they are the answer to "did it work?");
         // successes queue behind whatever is being read.
         .onChange(of: model.toast) { _, toast in
-            guard let toast else { return }
-            var announcement = AttributedString(toast.message)
-            announcement.accessibilitySpeechAnnouncementPriority =
-                toast.kind == .failure ? .high : .default
-            AccessibilityNotification.Announcement(announcement).post()
+            if let toast { Self.announce(toast) }
         }
+        // A toast raised before this overlay was on screen — while a book was
+        // opening, say — is spoken when the overlay arrives; `onChange` only
+        // hears changes made after.
+        .onAppear {
+            if let toast = model.toast { Self.announce(toast) }
+        }
+    }
+
+    private static func announce(_ toast: AppModel.StatusToast) {
+        var announcement = AttributedString(toast.message)
+        announcement.accessibilitySpeechAnnouncementPriority =
+            toast.kind == .failure ? .high : .default
+        AccessibilityNotification.Announcement(announcement).post()
     }
 
     private func chip<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {

@@ -46,5 +46,15 @@
 	<array>
 		<string>CloudDocuments</string>
 	</array>
+
+	<!-- Private Cloud Compute (FR-AI-13): Apple's managed capability "Access to
+	     models on Private Cloud Compute", granted to this App ID on 17 Oct 2026.
+	     Lands only with the PRIVATE_CLOUD_COMPUTE build condition, the help and
+	     the privacy policy (PrivateCloudComputeBuildTests). Apple provisions it
+	     for Development, Ad hoc and App Store Connect, not Developer ID, so the
+	     DMG is signed with finvestlens-DeveloperID.entitlements, which is this
+	     file without this key. -->
+	<key>com.apple.developer.private-cloud-compute</key>
+	<true/>
 </dict>
 </plist>
