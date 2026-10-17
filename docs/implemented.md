@@ -4754,3 +4754,11 @@ return now — connected after a report that it was not (`BoxNetworkWatch`). A
 test of the rule, and one that a failed upload leaves exactly one retry
 waiting, which fails with the old handler. FeatureUI 827 and Lab 18 pass, and
 both unsigned app builds succeed, on the tree as committed.
+
+**Later the same day**, with the owner's Apple ID added to Xcode, the signed
+macOS build carries the entitlement: Xcode issued a new development profile
+that includes it, and `codesign -d --entitlements` on the built app shows
+`com.apple.developer.private-cloud-compute => true` beside the sandbox and
+the App Group. That build was relaunched and opened its book with no sheet
+on screen. Still not observed: a request to Private Cloud Compute, and the
+window itself, which was behind another app.
