@@ -100,8 +100,11 @@ struct AttachmentsPanel: View {
 
     @State private var webLinkText = ""
     @State private var webFieldShown = false
-    /// Bumped when a cloud download completes, so the panel re-checks the file.
-    @State private var cloudRefresh = 0
+    /// Bumped when the app comes to the front, or a cloud download lands, so
+    /// the panel looks for the file again at once — it may have been put in
+    /// place, or taken away, in the Finder.
+    @State private var lookAgain = 0
+    @Environment(\.scenePhase) private var scenePhase
     /// Full-window Quick Look (the expand button) — non-nil presents it.
     @State private var previewURL: URL?
     @Environment(\.openURL) private var openURL
@@ -110,6 +113,63 @@ struct AttachmentsPanel: View {
     @State private var categorising = false
     @State private var categorySuggestion: AppModel.AttachmentCategorySuggestion?
     @State private var categoriseError: String?
+    /// Where the selected transaction's file is, and whether it is there —
+    /// looked for off the main actor by ``watch(_:)``
+    /// (``AppModel/locateLinkedDocument(_:)``). The panel used to stat the
+    /// candidate paths four times in every body pass, and a pass comes with
+    /// every selection, every drag of the divider and every resize of the
+    /// window (Performance Review P8a).
+    @State private var resolved: (key: LinkKey, location: AppModel.LinkedDocumentLocation)?
+
+    /// What a link is looked for as: the transaction, and the paths its link
+    /// could name — the pure half of the resolution, so a change of document
+    /// folder is a new key.
+    struct LinkKey: Hashable {
+        var transactionID: GncGUID
+        var link: String
+        var candidates: [URL]
+    }
+
+    /// What the one task that looks for the file restarts on: a new link, or
+    /// a reason to look again now.
+    private struct LookFor: Hashable {
+        var key: LinkKey?
+        var lookAgain: Int
+    }
+
+    /// The selected transaction's file link, as it is looked for; `nil` with
+    /// no single selection, no link, or a web link — which is not looked for.
+    private var linkKey: LinkKey? {
+        guard let transactionID, let link = model.documentLink(for: transactionID),
+              !AppModel.isWebLink(link) else { return nil }
+        return LinkKey(transactionID: transactionID, link: link, candidates: model.linkedDocumentCandidates(for: link))
+    }
+
+    /// Where the file for `key` is, once it has been looked for — `nil` while
+    /// it is still being looked for, which draws neither a preview nor a
+    /// "not found".
+    private func found(for key: LinkKey?) -> AppModel.LinkedDocumentLocation? {
+        guard let key, resolved?.key == key else { return nil }
+        return resolved?.location
+    }
+
+    /// Looks for the file for as long as it is selected: now, then again
+    /// every few seconds while it is missing — a sync may bring it, or
+    /// someone may copy it into the folder — and now and then once it is
+    /// there, in case it goes. It used to be looked for once per selection,
+    /// so a file put in place stayed "not found" until another transaction
+    /// was selected and this one again (17 October review). The state is
+    /// written only when what was found changes.
+    private func watch(_ key: LinkKey?) async {
+        guard let key else { return }
+        while !Task.isCancelled {
+            let location = await model.locateLinkedDocument(key.candidates)
+            guard !Task.isCancelled else { return }
+            if resolved?.key != key || resolved?.location != location { resolved = (key, location) }
+            try? await Task.sleep(for: .seconds(location.exists ? 30 : 5))
+        }
+    }
+
 
     /// The single selected transaction, if the selection is exactly one.
     private var transactionID: GncGUID? {
@@ -123,8 +183,9 @@ struct AttachmentsPanel: View {
                 .scaledFont(.headline)
             if let transactionID {
                 if let link = model.documentLink(for: transactionID) {
-                    linkContent(transactionID: transactionID, link: link)
-                    categoriseControls(transactionID: transactionID, link: link)
+                    let location = found(for: linkKey)
+                    linkContent(transactionID: transactionID, link: link, location: location)
+                    categoriseControls(transactionID: transactionID, link: link, location: location)
                 } else {
                     Text("No attachment on this transaction.")
                         .scaledFont(.callout)
@@ -160,6 +221,12 @@ struct AttachmentsPanel: View {
         // the panel read as three different UIs.
         .controlSize(.small)
         .quickLookPreview($previewURL)
+        // One look for the file, for the panel — on the panel's own stack.
+        // On the `Group` that held its rows, it ran once for each of them,
+        // four to six stat passes per selection (17 October review).
+        .task(id: LookFor(key: linkKey, lookAgain: lookAgain)) { [key = linkKey] in await watch(key) }
+        // Back from the Finder, where the file may have been moved: look now.
+        .onChange(of: scenePhase) { _, phase in if phase == .active { lookAgain += 1 } }
         .onChange(of: transactionID) {
             categorySuggestion = nil
             categoriseError = nil
@@ -171,10 +238,9 @@ struct AttachmentsPanel: View {
     // MARK: Categorise from attachment (OCR + on-device model)
 
     @ViewBuilder
-    private func categoriseControls(transactionID: GncGUID, link: String) -> some View {
-        let isWeb = link.hasPrefix("http://") || link.hasPrefix("https://")
-        let readable = !isWeb && (model.linkedDocumentURL(for: transactionID)
-            .map { FileManager.default.fileExists(atPath: $0.path) } ?? false)
+    private func categoriseControls(transactionID: GncGUID, link: String,
+                                    location: AppModel.LinkedDocumentLocation?) -> some View {
+        let readable = !AppModel.isWebLink(link) && (location?.exists ?? false)
 
         VStack(alignment: .leading, spacing: 6) {
             Button {
@@ -266,14 +332,14 @@ struct AttachmentsPanel: View {
     // MARK: Link display
 
     @ViewBuilder
-    private func linkContent(transactionID: GncGUID, link: String) -> some View {
-        let _ = cloudRefresh   // re-evaluate after a cloud download lands
-        let isWeb = link.hasPrefix("http://") || link.hasPrefix("https://")
-        let url = isWeb ? nil : model.linkedDocumentURL(for: transactionID)
-        let exists = isWeb ? true
-            : (url.map { FileManager.default.fileExists(atPath: $0.path) } ?? false)
-        let inCloud = !isWeb && !exists
-            && (url.map { AppModel.cloudPlaceholderExists($0) } ?? false)
+    private func linkContent(transactionID: GncGUID, link: String,
+                             location: AppModel.LinkedDocumentLocation?) -> some View {
+        let isWeb = AppModel.isWebLink(link)
+        let url = isWeb ? nil : location?.url
+        let exists = isWeb ? true : (location?.exists ?? false)
+        let inCloud = !isWeb && (location?.inCloud ?? false)
+        // Still looking: neither a preview nor a "not found" yet.
+        let settled = isWeb || location != nil
 
         // The preview fills the panel; details and actions sit under it.
         if !isWeb, exists, let url {
@@ -296,7 +362,10 @@ struct AttachmentsPanel: View {
             HStack(spacing: 6) {
                 Image(systemName: isWeb ? "link" : "doc")
                     .foregroundStyle(.secondary)
-                Text(isWeb ? link : (url?.lastPathComponent ?? link))
+                // While the file is still being looked for, the name its first
+                // candidate path gives — decoded, and the same name in the
+                // common case — so nothing changes when the look lands.
+                Text(model.linkedDocumentName(for: link, at: url))
                     .scaledFont(.callout)
                     .lineLimit(2)
                     .truncationMode(.middle)
@@ -326,11 +395,14 @@ struct AttachmentsPanel: View {
                     .scaledFont(.caption)
                     .foregroundStyle(.secondary)
                     .task(id: url) {
-                        // Ask the cloud for it, wait, then re-render.
-                        _ = await model.ensureLocalFile(url)
-                        cloudRefresh += 1
+                        // Ask the cloud for it once, and look again when it
+                        // lands. Looking again whatever happened replaced
+                        // this label, which started another download and
+                        // another wait, for as long as the file stayed in the
+                        // cloud (17 October review).
+                        if await model.ensureLocalFile(url) { lookAgain += 1 }
                     }
-            } else if !isWeb, !exists {
+            } else if settled, !isWeb, !exists {
                 Label("File not found under the document folder.",
                       systemImage: "exclamationmark.triangle")
                     .scaledFont(.caption)
@@ -413,8 +485,7 @@ struct AttachmentsPanel: View {
                         .scaledFont(.callout)
                         .onSubmit { setWebLink(transactionID: transactionID) }
                     Button("Set") { setWebLink(transactionID: transactionID) }
-                        .disabled(!(webLinkText.hasPrefix("http://")
-                                    || webLinkText.hasPrefix("https://")))
+                        .disabled(!AppModel.isWebLink(webLinkText))
                     Button {
                         webFieldShown = false
                         webLinkText = ""
@@ -444,7 +515,7 @@ struct AttachmentsPanel: View {
 
     private func setWebLink(transactionID: GncGUID) {
         let trimmed = webLinkText.trimmingCharacters(in: .whitespaces)
-        guard trimmed.hasPrefix("http://") || trimmed.hasPrefix("https://") else { return }
+        guard AppModel.isWebLink(trimmed) else { return }
         model.setDocumentLink(trimmed, for: transactionID)
         webLinkText = ""
         webFieldShown = false

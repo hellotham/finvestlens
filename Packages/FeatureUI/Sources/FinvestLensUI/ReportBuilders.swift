@@ -15,6 +15,7 @@
 import Foundation
 import FinvestLensEngine
 import FinvestLensReports
+import FinvestLensIntelligence
 
 @MainActor
 extension AppModel {
@@ -97,11 +98,9 @@ extension AppModel {
                 ],
                 notes: [valuationNote(to),
                         String(localized: "Retained earnings fold lifetime income less expenses into equity, so the sheet balances.")],
-                facts: ReportFactsSource(
-                    headline: [(String(localized: "Assets"), sheet.totalAssets),
-                               (String(localized: "Liabilities"), sheet.totalLiabilities),
-                               (String(localized: "Equity"), sheet.totalEquity)],
-                    lines: ranked(sheet.assets + sheet.liabilities)))
+                facts: balanceSheetFacts(assets: sheet.totalAssets, liabilities: sheet.totalLiabilities,
+                                         equity: sheet.totalEquity,
+                                         lines: ranked((sheet.assets, .balance), (sheet.liabilities, .balance))))
 
         case .incomeStatement:
             if let columns = comparisonColumns(configuration.period,
@@ -126,11 +125,9 @@ extension AppModel {
                             total: (String(localized: "Total Expenses"), statement.totalExpenses)),
                 ],
                 notes: [valuationNote(to)],
-                facts: ReportFactsSource(
-                    headline: [(String(localized: "Income"), statement.totalIncome),
-                               (String(localized: "Expenses"), statement.totalExpenses),
-                               (String(localized: "Net income"), statement.netIncome)],
-                    lines: ranked(statement.income + statement.expenses)))
+                facts: incomeStatementFacts(income: statement.totalIncome, expenses: statement.totalExpenses,
+                                            net: statement.netIncome,
+                                            lines: ranked((statement.income, .inflow), (statement.expenses, .outflow))))
 
         case .equityStatement:
             guard let statement = equityStatement(from: from, to: to) else { return nil }
@@ -160,12 +157,20 @@ extension AppModel {
                     total: (String(localized: "Closing capital"), statement.closingCapital))],
                 notes: [String(localized: "The unrealised line is the valuation change the period’s postings cannot account for: market moves and FX revaluation."),
                         valuationNote(to)],
-                facts: ReportFactsSource(
-                    headline: [(String(localized: "Opening capital"), statement.openingCapital),
-                               (String(localized: "Closing capital"), statement.closingCapital),
-                               (String(localized: "Net income"), statement.netIncome),
-                               (String(localized: "Unrealised change"), statement.unrealisedChange)],
-                    lines: []))
+                facts: {
+                    let opening = String(localized: "Opening capital")
+                    let closing = String(localized: "Closing capital")
+                    let net = String(localized: "Net income")
+                    let unrealised = String(localized: "Unrealised change")
+                    var roles: [String: FigureRole] = [opening: .openingBalance, closing: .balance, net: .change]
+                    if statement.unrealisedChange != 0 {
+                        roles[unrealised] = statement.unrealisedChange > 0 ? .gain : .loss
+                    }
+                    return ReportFactsSource(
+                        headline: [(opening, statement.openingCapital), (closing, statement.closingCapital),
+                                   (net, statement.netIncome), (unrealised, statement.unrealisedChange)],
+                        lines: [], roles: roles)
+                }())
 
         case .trialBalance:
             guard let report = trialBalance(asOf: to) else { return nil }
@@ -238,10 +243,16 @@ extension AppModel {
                 sections: [],
                 notes: [String(localized: "Month-end net worth: assets less liabilities, converted at each date’s rates."),
                         valuationNote(to)],
-                facts: ReportFactsSource(
-                    headline: [(String(localized: "Start"), first.netWorth), (String(localized: "End"), last.netWorth),
-                               (String(localized: "Change"), last.netWorth - first.netWorth)],
-                    lines: []))
+                facts: {
+                    let start = String(localized: "Start"), end = String(localized: "End")
+                    let change = String(localized: "Change")
+                    return ReportFactsSource(
+                        headline: [(start, first.netWorth), (end, last.netWorth),
+                                   (change, last.netWorth - first.netWorth)],
+                        lines: [],
+                        roles: [start: .openingBalance, end: .balance, change: .change],
+                        relations: [change: FigureRelation(end, less: start)])
+                }())
 
         case .cashFlow:
             let scope = configuration.accountIDs ?? defaultCashFlowAccountIDs
@@ -264,10 +275,19 @@ extension AppModel {
                 ],
                 notes: [String(localized: "Flows through \(report.accountNames.count) account(s): \(Self.listed(report.accountNames))."),
                         String(localized: "Transfers wholly inside the selected accounts are internal and excluded; by double entry, in minus out equals their net change.")],
-                facts: ReportFactsSource(
-                    headline: [(Self.moneyIn, report.totalIn), (Self.moneyOut, report.totalOut),
-                               (String(localized: "Net change"), report.netChange)],
-                    lines: ranked(report.inflows + report.outflows)))
+                facts: {
+                    // The sources and destinations are unsigned; their side
+                    // goes with them, or a card paid off reads as money out.
+                    let net = String(localized: "Net change")
+                    let top = ranked((report.inflows, .inflow), (report.outflows, .outflow))
+                    return ReportFactsSource(
+                        headline: [(Self.moneyIn, report.totalIn), (Self.moneyOut, report.totalOut),
+                                   (net, report.netChange)],
+                        lines: top.lines,
+                        roles: [Self.moneyIn: .inflow, Self.moneyOut: .outflow, net: .change],
+                        relations: [net: FigureRelation(Self.moneyIn, less: Self.moneyOut)],
+                        lineRoles: top.roles)
+                }())
 
         case .incomeExpense:
             guard let breakdown = categoryBreakdown(from: from, to: to) else { return nil }
@@ -290,10 +310,14 @@ extension AppModel {
                             total: (String(localized: "Total Income"), breakdown.totalIncome)),
                 ],
                 notes: [String(localized: "Categories are top-level accounts with their subtrees rolled up; the slices sum to the income statement for the same period.")],
-                facts: ReportFactsSource(
-                    headline: [(String(localized: "Income"), breakdown.totalIncome),
-                               (String(localized: "Expenses"), breakdown.totalExpenses)],
-                    lines: ranked(breakdown.expenseSlices + breakdown.incomeSlices)))
+                facts: {
+                    let income = String(localized: "Income"), expenses = String(localized: "Expenses")
+                    let top = ranked((breakdown.expenseSlices, .outflow), (breakdown.incomeSlices, .inflow))
+                    return ReportFactsSource(
+                        headline: [(income, breakdown.totalIncome), (expenses, breakdown.totalExpenses)],
+                        lines: top.lines, roles: [income: .inflow, expenses: .outflow],
+                        lineRoles: top.roles)
+                }())
 
         case .averageBalance:
             let scope = configuration.accountIDs ?? defaultCashFlowAccountIDs
@@ -327,10 +351,14 @@ extension AppModel {
                 notes: [String(localized: "Balances are sampled at each day’s end; an interval’s average is the mean of its daily balances."),
                         String(localized: "Across \(report.accountNames.count) account(s): \(Self.listed(report.accountNames))."),
                         String(localized: "Foreign-currency accounts convert at each day’s rate; an account with no rate contributes nothing that day.")],
-                facts: ReportFactsSource(
-                    headline: [(String(localized: "Average balance"), average), (String(localized: "Total in"), report.totalGain),
-                               (String(localized: "Total out"), report.totalLoss)],
-                    lines: report.intervals.map { (intervalLabel($0), $0.average) }))
+                facts: {
+                    let totalIn = String(localized: "Total in"), totalOut = String(localized: "Total out")
+                    return ReportFactsSource(
+                        headline: [(String(localized: "Average balance"), average), (totalIn, report.totalGain),
+                                   (totalOut, report.totalLoss)],
+                        lines: report.intervals.map { (intervalLabel($0), $0.average) },
+                        roles: [totalIn: .inflow, totalOut: .outflow])
+                }())
 
         case .receivableAging, .payableAging:
             let receivable = kind == .receivableAging
@@ -363,10 +391,17 @@ extension AppModel {
                     columns: columns,
                     columnTotals: (String(localized: "Total"), amounts(totals)))],
                 notes: [String(localized: "Open invoices are aged by their due date as of \(AppDateFormat.current.long(to)) into 0–30 (current), 31–60, 61–90 and 91+ day buckets.")],
-                facts: ReportFactsSource(
-                    headline: [(String(localized: "Total"), totals.total), (String(localized: "Current"), totals.current),
-                               (String(localized: "Over 90 days"), totals.over90)],
-                    lines: rows.map { ($0.name, $0.buckets.total) }))
+                facts: {
+                    // What is owed as at the report's date, in total, by age
+                    // and by party: balances, not amounts that moved.
+                    let total = String(localized: "Total"), current = String(localized: "Current")
+                    let over90 = String(localized: "Over 90 days")
+                    return ReportFactsSource(
+                        headline: [(total, totals.total), (current, totals.current), (over90, totals.over90)],
+                        lines: rows.map { ($0.name, $0.buckets.total) },
+                        roles: [total: .balance, current: .balance, over90: .balance],
+                        lineRoles: rows.map { _ in .balance })
+                }())
 
         case .customerSummary:
             guard let book else { return nil }
@@ -456,10 +491,15 @@ extension AppModel {
                                [totalCharged, totalCharged - totalOutstanding, totalOutstanding]))],
             notes: [String(localized: "Totals cover posted documents only, as of \(AppDateFormat.current.long(to))."),
                     parties.paidNote],
-            facts: ReportFactsSource(
-                headline: [(chargedNoun, totalCharged), (String(localized: "Paid"), totalCharged - totalOutstanding),
-                           (String(localized: "Outstanding"), totalOutstanding)],
-                lines: rows.map { ($0.name, $0.charged) }))
+            facts: {
+                let paid = String(localized: "Paid"), outstanding = String(localized: "Outstanding")
+                return ReportFactsSource(
+                    headline: [(chargedNoun, totalCharged), (paid, totalCharged - totalOutstanding),
+                               (outstanding, totalOutstanding)],
+                    lines: rows.map { ($0.name, $0.charged) },
+                    roles: [outstanding: .balance],
+                    relations: [paid: FigureRelation(chargedNoun, less: outstanding)])
+            }())
     }
 
     /// A short label for one average-balance interval — the start date, since
@@ -576,11 +616,9 @@ extension AppModel {
             ],
             notes: [valuationNote(columns[0].to),
                     String(localized: "Columns compare the selected period with earlier periods of the same length; the leftmost is the most recent.")],
-            facts: ReportFactsSource(
-                headline: [(String(localized: "Assets"), current.totalAssets),
-                           (String(localized: "Liabilities"), current.totalLiabilities),
-                           (String(localized: "Equity"), current.totalEquity)],
-                lines: ranked(current.assets + current.liabilities)))
+            facts: balanceSheetFacts(assets: current.totalAssets, liabilities: current.totalLiabilities,
+                                     equity: current.totalEquity,
+                                     lines: ranked((current.assets, .balance), (current.liabilities, .balance))))
     }
 
     private func comparativeIncomeStatement(
@@ -615,11 +653,9 @@ extension AppModel {
             ],
             notes: [valuationNote(columns[0].to),
                     String(localized: "Columns compare the selected period with earlier periods of the same length; the leftmost is the most recent.")],
-            facts: ReportFactsSource(
-                headline: [(String(localized: "Income"), current.totalIncome),
-                           (String(localized: "Expenses"), current.totalExpenses),
-                           (String(localized: "Net income"), current.netIncome)],
-                lines: ranked(current.income + current.expenses)))
+            facts: incomeStatementFacts(income: current.totalIncome, expenses: current.totalExpenses,
+                                        net: current.netIncome,
+                                        lines: ranked((current.income, .inflow), (current.expenses, .outflow))))
     }
 
     // MARK: Helpers
@@ -632,10 +668,43 @@ extension AppModel {
             total: total)
     }
 
-    private func ranked(_ lines: [ReportLine]) -> [(String, Decimal)] {
-        lines.sorted { abs($0.amount) > abs($1.amount) }
+    /// The largest lines of several sections, ranked together by size, each
+    /// with what its section is — the side a cash flow's unsigned lines are
+    /// on, or that a balance sheet's are balances.
+    private func ranked(_ sections: (lines: [ReportLine], role: FigureRole)...)
+        -> (lines: [(String, Decimal)], roles: [FigureRole?]) {
+        let ranked = sections.flatMap { section in section.lines.map { ($0, section.role) } }
+            .sorted { abs($0.0.amount) > abs($1.0.amount) }
             .prefix(12)
-            .map { ($0.fullName, $0.amount) }
+        return (ranked.map { ($0.0.fullName, $0.0.amount) }, ranked.map { Optional($0.1) })
+    }
+
+    /// A balance sheet's commentary facts: three balances, equity being
+    /// assets less liabilities.
+    private func balanceSheetFacts(assets: Decimal, liabilities: Decimal, equity: Decimal,
+                                   lines: (lines: [(String, Decimal)], roles: [FigureRole?])) -> ReportFactsSource {
+        let assetsLabel = String(localized: "Assets"), liabilitiesLabel = String(localized: "Liabilities")
+        let equityLabel = String(localized: "Equity")
+        return ReportFactsSource(
+            headline: [(assetsLabel, assets), (liabilitiesLabel, liabilities), (equityLabel, equity)],
+            lines: lines.lines,
+            roles: [assetsLabel: .balance, liabilitiesLabel: .balance, equityLabel: .balance],
+            relations: [equityLabel: FigureRelation(assetsLabel, less: liabilitiesLabel)],
+            lineRoles: lines.roles)
+    }
+
+    /// An income statement's commentary facts: money in, money out, and the
+    /// net income that is one less the other.
+    private func incomeStatementFacts(income: Decimal, expenses: Decimal, net: Decimal,
+                                      lines: (lines: [(String, Decimal)], roles: [FigureRole?])) -> ReportFactsSource {
+        let incomeLabel = String(localized: "Income"), expensesLabel = String(localized: "Expenses")
+        let netLabel = String(localized: "Net income")
+        return ReportFactsSource(
+            headline: [(incomeLabel, income), (expensesLabel, expenses), (netLabel, net)],
+            lines: lines.lines,
+            roles: [incomeLabel: .inflow, expensesLabel: .outflow],
+            relations: [netLabel: FigureRelation(incomeLabel, less: expensesLabel)],
+            lineRoles: lines.roles)
     }
 
     private func valuationNote(_ date: Date) -> String {

@@ -38,18 +38,24 @@ struct GroundingSurvey {
         print("SURVEY \(kind) \(identifier) \(grounded ? "ok    " : "REJECT") \(inLanguage ? "lang-ok " : "LANG-NO ") \(text)")
     }
 
+    /// Said once in every log, so its replay reads it with the same labels
+    /// (``SurveyReplay``): the app's own, in each person's language.
+    private func labelsLine() { print("SURVEY-LABELS catalog") }
+
     @Test("Report notes", arguments: locales)
     func report(identifier: String) async {
         let locale = Locale(identifier: identifier)
+        let facts = Fixtures.localized(Fixtures.income, in: identifier)
+        labelsLine()
         await LanguageModels.$localeOverride.withValue(locale) {
             for _ in 0..<surveyDrafts {
-                guard let notes = try? await ReportNarrator.draft(facts: Fixtures.income) else {
+                guard let notes = try? await ReportNarrator.draft(facts: facts) else {
                     print("SURVEY report \(identifier) FAILED"); continue
                 }
                 let inLanguage = LanguageModels.isInPersonLanguage(
-                    notes.joined(separator: " "), quoting: ReportNarrator.labels(of: Fixtures.income))
+                    notes.joined(separator: " "), quoting: ReportNarrator.labels(of: facts))
                 for note in notes {
-                    line("report", identifier, ReportNarrator.isGrounded(note, facts: Fixtures.income), inLanguage, note)
+                    line("report", identifier, ReportNarrator.isGrounded(note, facts: facts), inLanguage, note)
                 }
             }
         }
@@ -86,8 +92,10 @@ struct GroundingSurvey {
     @Test("Review slides", arguments: locales)
     func review(identifier: String) async {
         let locale = Locale(identifier: identifier)
+        labelsLine()
         await LanguageModels.$localeOverride.withValue(locale) {
-            for (name, facts) in Fixtures.slides {
+            for (name, english) in Fixtures.slides {
+                let facts = Fixtures.localized(english, in: identifier)
                 for _ in 0..<surveyDrafts {
                     guard let story = try? await ReviewNarrator.draft(facts: facts) else {
                         print("SURVEY review-\(name) \(identifier) FAILED"); continue
@@ -121,55 +129,133 @@ private let replayPath = ProcessInfo.processInfo.environment["FL_SURVEY_REPLAY"]
 @Suite("A saved survey, through today's checks", .enabled(if: !replayPath.isEmpty))
 struct SurveyReplay {
 
-    @Test("Review drafts")
-    func review() throws {
+    /// One draft as the survey logged it: what it was for, in which
+    /// language, the number check's verdict then, and the text.
+    struct Logged {
+        var kind: String
+        var locale: Locale
+        var wasGrounded: Bool
+        var text: String
+    }
+
+    /// The drafts whose lines begin `prefix`, parsed as ``GroundingSurvey``
+    /// writes them — one parser for every narrator, so a change to the line
+    /// cannot be read three ways. Later review lines carry two more verdicts
+    /// before the text.
+    static func drafts(_ prefix: String) throws -> (labelsLocalized: Bool, drafts: [Logged]) {
         let log = try String(contentsOfFile: replayPath, encoding: .utf8)
-        var counts: [String: [String: Int]] = [:]
-        func count(_ slide: String, _ column: String) { counts[slide, default: [:]][column, default: 0] += 1 }
-        for line in log.split(separator: "\n") where line.hasPrefix("SURVEY review") {
+        let lines = log.split(separator: "\n")
+        var drafts: [Logged] = []
+        for line in lines where line.hasPrefix(prefix) {
             var fields = line.split(separator: " ", omittingEmptySubsequences: true).map(String.init)
             guard fields.count > 4, fields[3] != "FAILED" else { continue }
-            let slide = fields[1].hasPrefix("review-") ? String(fields[1].dropFirst("review-".count)) : "spending"
-            guard let facts = Fixtures.slides.first(where: { $0.name == slide })?.facts else { continue }
-            let locale = Locale(identifier: fields[2])
-            let wasGrounded = fields[3] == "ok"
+            let kind = fields[1], locale = Locale(identifier: fields[2]), wasGrounded = fields[3] == "ok"
             fields.removeFirst(5)
-            // Later logs carry two more verdicts before the text.
             if ["clean", "DEBRIS"].contains(fields.first ?? "") { fields.removeFirst(2) }
-            let parts = fields.joined(separator: " ").components(separatedBy: " ‖ ")
+            drafts.append(Logged(kind: kind, locale: locale, wasGrounded: wasGrounded,
+                                 text: fields.joined(separator: " ")))
+        }
+        return (lines.contains("SURVEY-LABELS catalog"), drafts)
+    }
+
+    /// The counts, one line per kind.
+    static func printTotals(_ name: String, _ counts: [String: Int], _ columns: [String]) {
+        print("REPLAY TOTAL \(name): " + columns.map { "\($0) \(counts[$0] ?? 0)" }.joined(separator: " | "))
+    }
+
+    @Test("Review drafts")
+    func review() throws {
+        let (localized, drafts) = try Self.drafts("SURVEY review")
+        var counts: [String: [String: Int]] = [:]
+        func count(_ slide: String, _ column: String) { counts[slide, default: [:]][column, default: 0] += 1 }
+        for draft in drafts {
+            // A log from before the survey named its slides is the spending slide.
+            let slide = draft.kind.hasPrefix("review-") ? String(draft.kind.dropFirst("review-".count)) : "spending"
+            guard let english = Fixtures.slides.first(where: { $0.name == slide })?.facts else { continue }
+            let facts = localized ? Fixtures.localized(english, in: draft.locale.identifier) : english
+            let locale = draft.locale
+            let parts = draft.text.components(separatedBy: " ‖ ")
             let story = ReviewSlideStory(headline: parts[0], insight: parts.dropFirst().joined(separator: " ‖ "))
             let grounded = ReviewStoryValidator.isGrounded(story, facts: facts, locale: locale)
             let clean = LanguageModels.isCleanProse(story.headline + story.insight)
             let states = ReviewStoryValidator.statesAListedChange(story, facts: facts, locale: locale)
             let contradicts = ReviewStoryValidator.contradictsAListedChange(story, facts: facts, locale: locale)
+            let misattributes = ReviewStoryValidator.misattributes(story, facts: facts, locale: locale)
             count(slide, "drafts")
             if !grounded { count(slide, "number check") }
             if !clean { count(slide, "debris") }
             if grounded, clean {
                 count(slide, "sound before the word check")
                 if states { count(slide, "… quoting the change") }
-                if contradicts { count(slide, "… calling it unchanged") } else { count(slide, "shown") }
+                if contradicts { count(slide, "… calling it unchanged") }
+                if misattributes {
+                    count(slide, "… misattributing")
+                    print("REPLAY MISATTRIBUTED \(slide) \(locale.identifier) \(draft.text)")
+                }
+                if contradicts { print("REPLAY UNCHANGED \(slide) \(locale.identifier) \(draft.text)") }
+                // Shown without the change in it: where to read for a way of
+                // saying "nothing changed" that the word check does not know.
+                if !states, !contradicts { print("REPLAY SILENT \(slide) \(locale.identifier) \(draft.text)") }
+                if ReviewStoryValidator.isSound(story, facts: facts, locale: locale) { count(slide, "shown") }
             }
-            if grounded != wasGrounded {
-                count(slide, wasGrounded ? "number check: now declined" : "number check: now accepted")
-                print("REPLAY \(wasGrounded ? "NOW-DECLINED" : "NOW-ACCEPTED") \(slide) \(fields.isEmpty ? "" : locale.identifier) \(story.headline) ‖ \(story.insight)")
-            }
-            if grounded, clean, contradicts {
-                print("REPLAY UNCHANGED \(slide) \(locale.identifier) \(story.headline) ‖ \(story.insight)")
-            }
-            // Shown without the change in it: where to read for a way of
-            // saying "nothing changed" that the word check does not know.
-            if grounded, clean, !states, !contradicts {
-                print("REPLAY SILENT \(slide) \(locale.identifier) \(story.headline) ‖ \(story.insight)")
+            if grounded != draft.wasGrounded {
+                count(slide, draft.wasGrounded ? "number check: now declined" : "number check: now accepted")
+                print("REPLAY \(draft.wasGrounded ? "NOW-DECLINED" : "NOW-ACCEPTED") \(slide) \(locale.identifier) \(draft.text)")
             }
         }
         let columns = ["drafts", "number check", "debris", "sound before the word check",
-                       "… quoting the change", "… calling it unchanged", "shown",
+                       "… quoting the change", "… calling it unchanged", "… misattributing", "shown",
                        "number check: now accepted", "number check: now declined"]
-        for slide in counts.keys.sorted() {
-            let row = columns.map { "\($0) \(counts[slide]?[$0] ?? 0)" }.joined(separator: " | ")
-            print("REPLAY TOTAL \(slide): \(row)")
+        for slide in counts.keys.sorted() { Self.printTotals(slide, counts[slide] ?? [:], columns) }
+    }
+
+    /// The forecast outlooks in a saved log — headlines and insights, on the
+    /// rising balance and the falling one — through the number check and
+    /// then the attribution checks. A log from before the survey named its
+    /// forecasts is the rising one.
+    @Test("Forecast drafts")
+    func forecast() throws {
+        var counts: [String: Int] = [:]
+        for draft in try Self.drafts("SURVEY forecast").drafts {
+            let facts = draft.kind.contains("falling") ? Fixtures.fallingForecast : Fixtures.forecast
+            let text = draft.text, locale = draft.locale
+            counts["drafts", default: 0] += 1
+            if !ForecastNarrator.isGrounded(text, facts: facts, locale: locale) {
+                counts["number check", default: 0] += 1
+                print("REPLAY NUMBER-CHECK \(draft.kind) \(locale.identifier) \(text)")
+            } else if !LanguageModels.isCleanProse(text) {
+                counts["debris", default: 0] += 1
+            } else if ForecastNarrator.misattributes(text, facts: facts, locale: locale) {
+                counts["misattributed", default: 0] += 1
+                print("REPLAY MISATTRIBUTED \(draft.kind) \(locale.identifier) \(text)")
+            }
+            if ForecastNarrator.isSound(text, facts: facts, locale: locale) { counts["shown", default: 0] += 1 }
         }
+        Self.printTotals("forecast", counts, ["drafts", "number check", "debris", "misattributed", "shown"])
+    }
+
+    /// The report notes in a saved log, through the same three gates as
+    /// ``ReportNarrator/isSound(_:facts:locale:)`` — the number check, prose,
+    /// and the attribution checks — so the columns add up to the notes.
+    @Test("Report notes")
+    func report() throws {
+        let (localized, drafts) = try Self.drafts("SURVEY report ")
+        var counts: [String: Int] = [:]
+        for draft in drafts {
+            let facts = localized ? Fixtures.localized(Fixtures.income, in: draft.locale.identifier) : Fixtures.income
+            let text = draft.text, locale = draft.locale
+            counts["notes", default: 0] += 1
+            if !ReportNarrator.isGrounded(text, facts: facts, locale: locale) {
+                counts["number check", default: 0] += 1
+            } else if !LanguageModels.isCleanProse(text) {
+                counts["debris", default: 0] += 1
+            } else if ReportNarrator.misattributes(text, facts: facts, locale: locale) {
+                counts["misattributed", default: 0] += 1
+                print("REPLAY MISATTRIBUTED report \(locale.identifier) \(text)")
+            }
+            if ReportNarrator.isSound(text, facts: facts, locale: locale) { counts["shown", default: 0] += 1 }
+        }
+        Self.printTotals("report", counts, ["notes", "number check", "debris", "misattributed", "shown"])
     }
 }
 

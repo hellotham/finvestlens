@@ -3257,12 +3257,41 @@ struct TransactionEditorSheet: View {
     private var isBalanced: Bool { rowDraft.wrappedValue?.isBalanced ?? false }
     private var isEditing: Bool { editingID != nil }
 
-    /// The document to show beside the editor: the prefill's, or the edited
-    /// transaction's own linked file.
+    /// What the document beside the editor is looked for as: the prefill's
+    /// file, or the edited transaction's own linked one.
+    private struct DocumentPaneKey: Hashable {
+        var prefill: URL?
+        var editingID: GncGUID?
+    }
+
+    /// The document to show beside the editor, once looked for — off the
+    /// main actor (``AppModel/locateLinkedDocument(_:)``), as the
+    /// attachments panel looks. It was looked for in `body`: a stat of every
+    /// path the link could name, several times a pass, and a pass came with
+    /// every keystroke in the form (17 October review).
+    @State private var documentPane: (key: DocumentPaneKey, url: URL?)?
+
+    private var documentPaneKey: DocumentPaneKey {
+        DocumentPaneKey(prefill: documentPrefill?.url, editingID: editingID)
+    }
+
+    /// The file to show, where it is there.
     private var documentURL: URL? {
-        if let documentPrefill { return documentPrefill.url }
-        if let editingID { return model.linkedDocumentURL(for: editingID) }
-        return nil
+        documentPane?.key == documentPaneKey ? documentPane?.url : nil
+    }
+
+    /// Looks for the document: the prefill's file as it is, or the edited
+    /// transaction's link as every candidate path it could name.
+    private func lookForDocument(_ key: DocumentPaneKey) async {
+        var candidates: [URL] = []
+        if let prefill = key.prefill {
+            candidates = [prefill]
+        } else if let id = key.editingID, let link = model.documentLink(for: id), !AppModel.isWebLink(link) {
+            candidates = model.linkedDocumentCandidates(for: link)
+        }
+        let location = await model.locateLinkedDocument(candidates)
+        guard !Task.isCancelled else { return }
+        documentPane = (key, location.exists ? location.url : nil)
     }
 
     /// Never in the inspector: the preview wants 320pt of its own beside a form
@@ -3272,8 +3301,7 @@ struct TransactionEditorSheet: View {
     /// sheet, where a document being recorded has to be readable as it is keyed.
     private var showsDocumentPane: Bool {
         #if os(macOS)
-        guard let documentURL else { return false }
-        return FileManager.default.fileExists(atPath: documentURL.path)
+        return documentURL != nil
         #else
         return false
         #endif
@@ -3298,6 +3326,7 @@ struct TransactionEditorSheet: View {
             }
         }
         .windowFloor(minWidth: showsDocumentPane ? 1020 : 700, minHeight: 540)
+        .task(id: documentPaneKey) { [key = documentPaneKey] in await lookForDocument(key) }
     }
 
     private var editorForm: some View {

@@ -123,33 +123,17 @@ enum DocumentsCommand {
         var claimedThisRun: Set<GncGUID> = []
         let started = Stopwatch()
 
-        /// Links the file **where it already lives** — it is not copied, and in
-        /// particular not copied beside the book. Shared because a rate-derived
-        /// match is attached exactly like an exact one; the difference is only
-        /// in how the transaction was found, and that belongs in the log, not
-        /// in what gets written.
-        ///
-        /// This used `attachDocument(named:data:to:)`, whose contract is to
-        /// copy into the document folder — which defaults to the book's own
-        /// folder. One ingest of the real book duplicated 189 receipts onto the
-        /// NAS beside it and pointed every link at the duplicate instead of at
-        /// the file the user filed. The scanned folders *are* the archive; the
-        /// book records where a document is, not a second copy of it.
-        @MainActor func attach(_ match: AppModel.AttachmentMatch, to transactionID: GncGUID) async {
-            model.linkDocument(at: match.url, to: transactionID)
-            linked += 1
-            if let suggestion = match.suggestion,
-               model.applyAttachmentSuggestion(suggestion, to: transactionID) {
-                categorised += 1
-            }
-        }
-
         // 3 — match, apply, save, one batch at a time.
         for (index, batch) in pending.chunked(into: batchSize).enumerated() {
             let urls = batch.map(\.url)
             let (matches, matchSeconds) = await Stopwatch.measure {
                 await model.matchAttachments(urls: urls)
             }
+            /// What this batch attaches, each to the transaction it was found
+            /// for — a rate-derived match exactly like an exact one; the
+            /// difference is only in how the transaction was found, and that
+            /// belongs in the log, not in what gets written.
+            var accepted: [AppModel.AttachmentMatch] = []
 
             for match in matches {
                 guard let transactionID = match.transactionID else {
@@ -174,7 +158,9 @@ enum DocumentsCommand {
                         claimedThisRun.insert(converted.transactionID)
                         log("  ~ \(match.fileName): \(code) at \(rate) → \(converted.summary) "
                             + "(implied \(converted.impliedRate))")
-                        if apply { await attach(match, to: converted.transactionID) }
+                        var found = match
+                        found.transactionID = converted.transactionID
+                        accepted.append(found)
                         continue
                     }
                     // A receipt paid in cash has no transaction to match and
@@ -203,11 +189,29 @@ enum DocumentsCommand {
                 }
                 matched += 1
                 claimedThisRun.insert(transactionID)
-                guard apply else { continue }
-                await attach(match, to: transactionID)
+                accepted.append(match)
             }
 
             if apply {
+                // Applied as the app's Match Attachments applies them — one
+                // edit for the batch (`applyAttachmentMatches`), each file
+                // linked **where it already lives**. This applied them one at
+                // a time, a link and a categorisation each its own edit and
+                // its own refresh of the whole book, two per receipt; and so
+                // the app's own path went untried by every ingest (17 October
+                // review).
+                //
+                // Not copied, and in particular not beside the book: this used
+                // `attachDocument(named:data:to:)`, whose contract is to copy
+                // into the document folder — which defaults to the book's own
+                // folder. One ingest of the real book duplicated 189 receipts
+                // onto the NAS beside it and pointed every link at the
+                // duplicate instead of at the file the user filed. The scanned
+                // folders *are* the archive; the book records where a document
+                // is, not a second copy of it.
+                let applied = model.applyAttachmentMatches(accepted)
+                linked += applied.linked
+                categorised += applied.categorised
                 try model.save()
             }
             let done = min((index + 1) * batchSize, pending.count)

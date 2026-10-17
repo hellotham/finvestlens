@@ -95,7 +95,9 @@ struct ReportCatalogueSyntheticTests {
         // The interactive tools' printable forms: prices exist, so the price
         // history prints; no scheduled activity, so the forecast prints nothing.
         #expect(model.priceHistoryDocument() != nil)
-        #expect(model.forecastDocument() == nil)
+        #expect(model.defaultForecastAccountID.flatMap {
+            model.forecastDocument(accountID: $0, points: model.cashFlowForecast(accountID: $0))
+        } == nil)
 
         // Non-scaffold kinds never come back as documents.
         #expect(model.reportDocument(for: ReportKind.forecast.defaultConfiguration(for: model)) == nil)
@@ -153,7 +155,10 @@ struct ReportCatalogueSyntheticTests {
                 ScheduledSplit(accountGUID: bank, value: dec("-800")),
             ]))
 
-        let document = try #require(model.forecastDocument())
+        // As the Forecast view prints it: from the projection it shows.
+        let accountID = try #require(model.defaultForecastAccountID)
+        let document = try #require(model.forecastDocument(accountID: accountID,
+                                                           points: model.cashFlowForecast(accountID: accountID)))
         #expect(document.title == "Cash-Flow Forecast — Bank")
         #expect(!document.isEmpty)
         let section = try #require(document.sections.first)

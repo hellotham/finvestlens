@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import Synchronization
 #if canImport(AppKit)
 import AppKit
 #endif
@@ -21,6 +22,57 @@ public enum AppearanceKey {
     public static let accent = "appearance.accent"
     public static let textStep = "appearance.textStep"
     public static let registerRowHeight = "appearance.registerRowHeight"
+}
+
+/// ``Color/appAccent`` as last read from the defaults.
+///
+/// A defaults read and a `Color` cost about two microseconds, and the
+/// reconcile badge asked for the accent once per register row (Performance
+/// Review 2, R9f). The review left it uncached because nothing told a cache
+/// the picker had changed it. In this process the defaults do —
+/// `UserDefaults.didChangeNotification` is posted on every write, the
+/// picker's `@AppStorage` included — and the cache is dropped then. For a
+/// write from another process, which posts nothing here — `defaults write`,
+/// or the other build that shares the defaults — the cache compares itself
+/// with the stored value at most every half second; until the 17 October
+/// review it never did, and kept the old accent while the tint moved. (Not
+/// key-value observing: the key has a dot in it, which KVO reads as a path.)
+private final class AccentCache: Sendable {
+    static let shared = AccentCache()
+
+    /// The accent, the stored value it was made from, and when that was last
+    /// compared with the defaults.
+    private struct Entry {
+        var raw: String?
+        var color: Color
+        var checked: ContinuousClock.Instant
+    }
+    private let entry = Mutex<Entry?>(nil)
+
+    private init() {
+        NotificationCenter.default.addObserver(forName: UserDefaults.didChangeNotification,
+                                               object: nil, queue: nil) { [weak self] _ in
+            self?.invalidate()
+        }
+    }
+
+    func invalidate() { entry.withLock { $0 = nil } }
+
+    var color: Color {
+        entry.withLock { entry in
+            let now = ContinuousClock.now
+            if let known = entry, known.checked.duration(to: now) < .milliseconds(500) { return known.color }
+            let raw = UserDefaults.standard.string(forKey: AppearanceKey.accent)
+            if var known = entry, known.raw == raw {
+                known.checked = now
+                entry = known
+                return known.color
+            }
+            let color = (AppAccent(rawValue: raw ?? "") ?? .lavender).color
+            entry = Entry(raw: raw, color: color, checked: now)
+            return color
+        }
+    }
 }
 
 /// Theme mode: follow the system, or force light/dark.
@@ -48,13 +100,15 @@ public extension Color {
     /// `.tint(…)` the app sets in `AppearanceRoot`. This exists only for the
     /// handful of APIs that demand a real `Color` and cannot accept a style,
     /// such as `chartForegroundStyleScale`. **Never `Color.accentColor`**: that
-    /// resolves the AccentColor asset, which is deliberately empty, so it
-    /// silently falls back to the *system* accent and paints macOS blue into a
-    /// lavender app.
-    static var appAccent: Color {
-        let raw = UserDefaults.standard.string(forKey: AppearanceKey.accent)
-        return (AppAccent(rawValue: raw ?? "") ?? .lavender).color
-    }
+    /// resolves the AccentColor asset — filled with lavender only so that what
+    /// the *system* draws (selection, focus rings) is not macOS blue — which
+    /// a person's own accent never reaches.
+    static var appAccent: Color { AccentCache.shared.color }
+
+    /// Drops the cached accent, for a caller that has seen the stored value
+    /// change before the cache could: the register, which redraws its glyphs
+    /// in the accent the moment it sees one.
+    internal static func invalidateAppAccent() { AccentCache.shared.invalidate() }
 
     // MARK: Money that is coloured by its sign
     //

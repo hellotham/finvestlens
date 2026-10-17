@@ -1,5 +1,16 @@
 # Performance Review 2 (9 Oct 2026)
 
+> **Status (17 Oct 2026):** the items this review closed only in part, or
+> declined, are being finished — the owner's rule is that a finding is not
+> declined on my say. Closed on 17 Oct: **R7e** (the recency list keys on
+> the transaction revision, so a price edit no longer costs the next
+> QuickFill keystroke a sort of every transaction) and **R9f** (`Color.appAccent`
+> cached, dropped on every write to the defaults in this process — the
+> invalidation the accent picker was said to lack is the defaults' own
+> notification — and compared with the stored value at most every half
+> second, for a write from another process, which posts nothing here). Still
+> open, in this order: R2e, R8i, R5b, R10b.
+>
 > **Status (10 Oct 2026):** every finding R1–R10 is closed, the §3 items are
 > done, and the §4 acceptance figures are measured (§4, below). The 10 Oct
 > session closed the items 9 Oct left open — R7's lazy legs and resize memo,

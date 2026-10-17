@@ -280,19 +280,9 @@ struct MatchAttachmentsSheet: View {
         applying = true
         Task {
             defer { applying = false }
-            var linked = 0
-            var categorised = 0
-            for match in matches where accepted.contains(match.id) {
-                guard let transactionID = match.transactionID else { continue }
-                // Linked in place — see `attach(_:to:summary:)`.
-                model.linkDocument(at: match.url, to: transactionID)
-                linked += 1
-                if let suggestion = match.suggestion,
-                   model.applyAttachmentSuggestion(suggestion, to: transactionID) {
-                    categorised += 1
-                }
-            }
-            appliedSummary = String(localized: "Linked \(linked) attachments, categorised \(categorised).")
+            // One edit for the whole batch: one refresh, one step to undo.
+            let applied = model.applyAttachmentMatches(matches.filter { accepted.contains($0.id) })
+            appliedSummary = String(localized: "Linked \(applied.linked) attachments, categorised \(applied.categorised).")
             matches.removeAll { accepted.contains($0.id) && $0.transactionID != nil }
             accepted.removeAll()
         }

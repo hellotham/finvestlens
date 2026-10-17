@@ -4151,9 +4151,10 @@ short:
   asking the model anything, so a change to a check is scored on every
   draft already collected.
 
-What the surveys also showed, and nothing here fixes: a true number said of
-the wrong thing — a balance "higher by 9,420" when 9,420 is where it ends.
-Five forecast headlines of ninety-six, and three review drafts.
+What the surveys also showed, and nothing here fixed at the time: a true
+number said of the wrong thing — a balance "higher by 9,420" when 9,420 is
+where it ends. Five forecast headlines of ninety-six, and three review
+drafts. (Fixed 17 Oct 2026 — see "A true number said of the wrong thing".)
 
 Receipts, 12 Oct 2026, macOS 27.0.1 with Xcode 27.0, on the tree as
 committed. Every package suite passes — Engine 300, Persistence 50,
@@ -4847,3 +4848,188 @@ line and Close Book under them; Close Book returned to the welcome screen with
 the book in Recents. The welcome screen showed New Book and Open… only, which is
 right — Open from Box… waits for a Box app to be set up. Not seen: VoiceOver, or
 the footer's wide layout, which needs a wider sidebar than the simulator gave.
+
+## A true number said of the wrong thing (17 Oct 2026)
+
+The 12 October surveys found narrations whose every number was one of the
+facts and which were wrong all the same: four forecast headlines had the
+balance end higher *by* its closing balance, a German one gave a balance
+that never goes below 2,480 "einen negativen Saldo", and three Portuguese
+review drafts put expenses of 66.6k "above" an opening net worth of 381.2k.
+
+The first version of the fix was four checks, measured by what they declined
+on the surveys — and the code review's reviewers then read the drafts the
+checks had let through and found about a dozen more of the same kind on the
+review slides, among them all four Japanese drafts of the opening slide
+saying expenses exceeded income. The checks did not share the number
+check's reading of numbers either, so a date after a figure, or a figure in
+万, slipped past them. The fix as committed:
+
+- **The prompts say what each figure is.** The forecast gives direction in
+  words beside its figures and no minus signs, the balance each movement
+  leaves and the horizon's money in and out; the review slides carry a role
+  per figure from the deck (`FigureRole`, worded by when the figure was — "as
+  at the end of the period" — and never as a noun the model could take for a
+  name) and the relations the deck computed (`FigureRelation`); the reports
+  carry their own roles, relations and each line's side. The guides no
+  longer ask the model for "the relationship between the numbers" without
+  giving it.
+- **One reading of the numbers.** `FigureGrounding.resolve` decides what each
+  number in a sentence is — split at a separator, joined across 万 — and both
+  the number check and the attribution checks read its answer; the unit and
+  currency words after a number come from one vocabulary.
+- **Four checks** (`FigureAttribution.swift`): a balance as the size of a
+  change, a change said the other way, a negative balance in a forecast that
+  has none, and a comparison its own figures contradict (Japanese "AにたいしB
+  が上回った" included). Each narrator's figures, roles and directions come
+  from one `figureFacts(of:)`, and one `isSound` decides what is shown — the
+  survey replay counts with the same function.
+- The message when nothing sound is left says the narration *misstated* the
+  figures, which is true of every reason one is declined.
+
+Measured on three surveys and read draft by draft (the table is in
+`docs/intelligence-prompts.md`): the checks decline 16 drafts in all and
+every one is a real misattribution; on the review slides the new prompts took
+misstatements from 13 in 64 to 5; on forecasts and report notes no change
+shows at four drafts a language. About three drafts in a hundred still give a
+figure the wrong name or cause, which nothing here reads.
+`FigureAttributionTests` holds each language's constructions, the model's own
+sentences among them, and the prompts' wording; each check's tests were run
+with that check disabled and failed.
+
+A ten-angle review of this work the same day broke each check with built
+sentences and found it reading too much or too little — negations matched as
+characters and across languages, "by X to Y" taken for a range, English base
+forms, units after a number, Chinese and bracketed comparisons, Japanese
+より少ない, signed figures, superlatives, a monthly net said "negative" — and
+the relations worked out from the numbers naming the wrong pair, the first
+role words read as names, the reports given no roles at all, and the number
+check exponential on a long failing run. Each is fixed, each with a test
+built from the sentence (`docs/intelligence-prompts.md` lists them). A
+fourth survey after the changes, with the app's own labels in each language,
+had no slide calling net worth a "balance" (13 in 64 before), one bridge
+giving the wrong cause (about six in 32), no outlook working out a figure the
+projection holds (four), and found two gaps in the number check — "2025–26
+年度" and "31.1k増加" — which are fixed.
+
+Not seen: any of it in the app on screen, and no supplied (MLX) model was
+surveyed — the prompts are shared with it.
+
+## Performance: the first of the open findings (17 Oct 2026)
+
+An audit on 12 October listed every performance finding still open from the
+two reviews — including ones the reviews had declined — and on 17 October
+each was re-verified against the code: none had been fixed. The owner's rule
+is that none stays open on my say, so they are being closed in batches. The
+first:
+
+- **The typed account lists** (security, settlement, income and expense
+  accounts) are cached with the flat list of postable accounts and dropped
+  with it when the tree is rebuilt; the stock and currency sheets re-filtered
+  the whole list on every keystroke (P4).
+- **QuickFill's recency list** keys on the transaction revision, not the
+  book revision, so a quote refresh no longer costs the next keystroke a sort
+  of every transaction (R7e).
+- **`Color.appAccent`** is cached, and dropped on every write to the
+  defaults — the accent picker's own `@AppStorage` write posts the
+  notification that does it (R9f).
+- **Match Attachments' Apply** is one edit: each file linked and each
+  suggestion applied inside one undoable block — one refresh, one undo step
+  ("Apply Matches") — instead of up to two of each per match. A second
+  document for the same transaction sees the first's change (P5.1).
+- **The attachments panel** finds the selected transaction's file off the
+  main actor (`AppModel.locateLinkedDocument`), one task for the panel; it
+  used to stat the candidate paths four times in every pass of its body,
+  and a pass came with every drag of its divider (P8a).
+- **Link to Transaction…** searches an index built once per change to the
+  transactions — money-leg transactions newest first, descriptions folded,
+  amounts formatted, dates formatted on the first date query — and formats
+  only the rows it shows (P8b).
+- **The Forecast report and the Close Financial Year preview** are built by a
+  task after the frame that asked for them, with a placeholder on first load;
+  the forecast keeps its last projection, under a small indicator, while a
+  newer one builds, so adding a what-if does not blank the page. The forecast's
+  PDF is made from the projection already shown, and Price History's is
+  memoised — the toolbar asked for them on every pass. The close sheet's
+  equity choices are memoised (P3.2).
+- **Progress where there was none:** the Up Next card's Update Prices row
+  shows the fetch's progress in place of its button; Add commentary and the
+  forecast outlook show a spinner beside their words (§3).
+
+Tests: `AttachmentMatchApplyTests` (one refresh and one undo for a batch, and
+the same transaction twice), `LinkPickerTests` (text, amount prefix, date,
+order and limit, before and after an edit), `MemoInvalidationTests` (each
+memo follows what it was built from). The batch test, the picker test and the
+accent test were each run against the change undone and failed. Not measured:
+timings on the reference book — these are per-pass and per-keystroke costs
+the reviews measured before; the harnesses do not time them. Not seen on
+screen yet: the panel, the Forecast and the close sheet under the new
+loading — that is the relaunch.
+
+### What the review of this batch found (17 Oct 2026)
+
+A ten-angle code review of this batch and the narration work, each finding
+put to a verifier and the list swept once more for gaps, confirmed these, and
+each is fixed:
+
+- **The attachments panel** looked once per selection: a file put in place,
+  or taken away, went unnoticed until another transaction was selected. It
+  now looks again every few seconds while the file is missing, now and then
+  once it is there, and when the app comes back to the front. Its task ran
+  once for each row of the `Group` it hung from, four to six stat passes per
+  selection; it hangs from the panel now. A cloud download that timed out
+  restarted itself for as long as the transaction stayed selected; it is
+  asked for once and looked for again when it lands.
+- **The paths a link names** were built with `appendingPathComponent(_:)`,
+  which stats each one to ask whether it is a folder — on Box Drive and the
+  NAS, from the panel's body. They are built as files.
+- **The transaction editor** looked for its document in `body`, several
+  stats a pass and a pass a keystroke; it looks once, off the main actor, as
+  the panel does.
+- **The Forecast** keyed its projection without the day it starts from, so a
+  window left open past midnight kept yesterday's; the view now wakes at
+  midnight, and its key has the day. Its PDF names the account its points
+  were built for. A projection already in the memo is drawn in the first
+  frame instead of a placeholder (`AppModel.cachedCashFlowForecast`), and so
+  is a warm close preview, whose task now holds the choices it was asked
+  with and pauses a moment while the date is stepped. Its opening balance
+  came from a walk of every transaction in the book, every what-if; it reads
+  the account's own splits.
+- **`Color.appAccent`** was dropped only on `UserDefaults.didChangeNotification`,
+  which another process's write does not post: the tint moved and the cache
+  and the register's glyphs did not. It now compares itself with the stored
+  value at most every half second, and the register drops it when it sees
+  the accent change. (Key-value observing was tried first; the key has a dot
+  in it, which KVO reads as a path, and the test caught it.)
+- **Price History's memo** omitted the date order its rows are written in.
+- **The link picker** ran Foundation's `contains` over every transaction on
+  each keystroke (41–57 ms measured) and formatted every amount up front. It
+  searches plain ASCII byte for byte, narrows from the last search when the
+  query only grew, writes amounts and dates on the first query that reads
+  them (each date once), and shares QuickFill's newest-first order and folds.
+  It now finds "600.50" and "1,234.50" as the rows show them, finds dates in
+  the month-first order's points, and returns nothing for a limit of zero.
+- **The typed account lists** compare engine types (`AccountNode.isType`),
+  the cache's key naming its own filter.
+- **Up Next's price row** is a view of its own, so a tick of the fetch
+  redraws that row and not every tile on the board, and says "Updating
+  prices" aloud when pressed.
+- **finlab documents** applies each batch's matches as the app does, one
+  edit (`applyAttachmentMatches`), instead of two edits and two refreshes of
+  the whole book per receipt.
+- **The audit trail** writes how many transactions an edit touched, as its
+  design says (docs/planning-design.md §9), and the viewer shows it — a
+  batch of thirty links is one line.
+
+One finding was kept as designed: Apply Matches is one undo step for the
+batch, which is the point of P5.1 (and lets a batch over twelve matches be
+undone at all, where `levelsOfUndo = 25` stopped two steps per match). The
+Up Next progress bar, which duplicates the status chip's, is what the
+performance review asked for, and stays.
+
+Tests: `MemoInvalidationTests` gains the date order and the warm forecast;
+`LinkPickerTests` checks every keystroke of six queries against a fresh
+search, and the limit; `AttachmentMatchApplyTests`' second test now splits
+the leg first, so a stale plan would act on a leg that is gone — the old test
+could not fail the way its name said.
+

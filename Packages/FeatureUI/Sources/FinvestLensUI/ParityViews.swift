@@ -231,10 +231,29 @@ struct CloseBookView: View {
     private var equityChoices: [(id: GncGUID, name: String)] { model.equityAccountChoices }
     private var code: String { model.reportCurrency.mnemonic }
 
-    private var preview: (accounts: Int, byCurrency: [AppModel.ClosingCurrencyPreview], missingRate: String?)? {
-        guard let equityID else { return nil }
-        return model.closingPreview(asOf: date, equityID: equityID)
+    /// What a preview was built for.
+    private struct PreviewKey: Hashable {
+        var date: Date
+        var equityID: GncGUID?
+        var revision: Int
     }
+
+    private typealias Preview = (accounts: Int, byCurrency: [AppModel.ClosingCurrencyPreview], missingRate: String?)
+
+    /// The preview, built by a task after the frame that asked for it: each
+    /// new date or equity account walked every balance in the book inside
+    /// `body` (Performance Review P3.2).
+    @State private var built: (key: PreviewKey, preview: Preview?)?
+
+    private var key: PreviewKey { PreviewKey(date: date, equityID: equityID, revision: model.bookRevision) }
+
+    /// The preview for what is chosen now, once it has been built — or the
+    /// memo's, if it is already there, drawn in the first frame.
+    private var preview: Preview? {
+        if built?.key == key { return built?.preview }
+        return equityID.flatMap { model.cachedClosingPreview(asOf: date, equityID: $0) }
+    }
+    private var previewing: Bool { equityID != nil && built?.key != key && preview == nil }
 
     var body: some View {
         NavigationStack {
@@ -254,7 +273,15 @@ struct CloseBookView: View {
                         TextField("Description", text: $description)
                     }
                     Section("Preview") {
-                        if let preview {
+                        if previewing {
+                            HStack(spacing: 6) {
+                                ProgressView().controlSize(.small)
+                                Text("Previewing…").foregroundStyle(.secondary).scaledFont(.caption)
+                            }
+                            // One element for VoiceOver: "Previewing…", not an
+                            // unlabelled spinner beside it.
+                            .accessibilityElement(children: .combine)
+                        } else if let preview {
                             LabeledContent("Accounts to close") { Text("\(preview.accounts)") }
                             // One net per currency — a multi-currency book closes
                             // into a balanced transaction per currency.
@@ -289,6 +316,24 @@ struct CloseBookView: View {
                 }
             }
             .formStyle(.grouped)
+            .task(id: key) {
+                // What was asked for, held for the whole task: `key` reads
+                // the live choices, and read again after the pause it could
+                // pair a new account with a preview of the old (17 October
+                // review).
+                let requested = key
+                guard let equityID = requested.equityID else { return }
+                if model.cachedClosingPreview(asOf: requested.date, equityID: equityID) == nil {
+                    // Stepping the date a day at a time asks for a preview at
+                    // each step; a moment's pause builds only the one the
+                    // stepping stops at.
+                    try? await Task.sleep(for: .milliseconds(150))
+                    guard !Task.isCancelled else { return }
+                }
+                let preview = model.closingPreview(asOf: requested.date, equityID: equityID)
+                guard !Task.isCancelled else { return }
+                built = (requested, preview)
+            }
             .navigationTitle("Close Financial Year")
             .onEscapeCommand { dismiss() }
             .toolbar {
@@ -300,7 +345,7 @@ struct CloseBookView: View {
                         if let equityID { posted = model.closeBook(asOf: date, equityID: equityID,
                                                                    description: description) }
                     }
-                    .disabled(equityID == nil || (preview?.accounts ?? 0) == 0 || preview?.missingRate != nil)
+                    .disabled(equityID == nil || previewing || (preview?.accounts ?? 0) == 0 || preview?.missingRate != nil)
                 }
             }
         }

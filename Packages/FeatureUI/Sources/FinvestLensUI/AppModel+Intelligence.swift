@@ -1240,37 +1240,152 @@ extension AppModel {
         public let hasDocument: Bool
     }
 
+    /// One transaction as the link picker searches it.
+    struct LinkingEntry {
+        let id: GncGUID
+        let date: Date
+        /// The description, lowercased (``AppModel/foldedDescription(of:)``).
+        let folded: String
+        /// Whether `folded` is plain ASCII, which is searched byte for byte.
+        let isASCII: Bool
+        /// Each money leg's magnitude, as a numeric query is compared with it.
+        let magnitudes: [Decimal]
+    }
+
+    /// The link picker's index: every transaction with a money leg, newest
+    /// first, built once per ``transactionRevision`` — with the texts a
+    /// numeric or a date query reads built on the first such query, and the
+    /// last search kept, so the next keystroke can start from it.
+    struct LinkingIndex {
+        var revision: Int
+        var entries: [LinkingEntry]
+        var amounts: [[String]]?
+        var dates: (format: AppDateFormat, texts: [String])?
+        var lastSearch: LinkingSearch?
+    }
+
+    /// A search the link picker made: what was asked, which entries matched
+    /// — all of them, when `complete` — and the rows it returned.
+    struct LinkingSearch {
+        var query: String
+        var limit: Int
+        var format: AppDateFormat
+        var readsAmounts: Bool
+        var readsDates: Bool
+        var matches: [Int]
+        var complete: Bool
+        var picks: [TransactionPick]
+    }
+
     /// Transactions for the manual "Link to Transaction…" picker: filtered by a
     /// query over description, amount (a numeric query matches the money leg's
     /// magnitude — a *prefix* too, so "600" finds 600.55), or date fragment
     /// ("13/3"), newest first. Empty query returns the most recent `limit`.
+    ///
+    /// The picker asks on every keystroke, from its `body`. It used to walk
+    /// every transaction, lowercase every description, format every amount —
+    /// and, for a date, every date — and sort everything that matched, each
+    /// time (Performance Review P8b). The index does the walk and the sort
+    /// once per change to the transactions, sharing QuickFill's order and
+    /// folds; the amounts and dates are written out on the first query that
+    /// reads them, each date once; a plain-ASCII description is searched byte
+    /// for byte, which is what a keystroke spent most of its 40–57 ms on; and
+    /// a keystroke that only adds to the query looks only through what the
+    /// last one found, when that was everything it found (17 October
+    /// review). Only the rows shown are summarised.
     public func transactionsForLinking(query: String, limit: Int = 400) -> [TransactionPick] {
-        guard let book else { return [] }
+        guard let book, limit > 0 else { return [] }
+        if linkingIndex?.revision != transactionRevision {
+            let entries = transactionsNewestFirst.compactMap { txn -> LinkingEntry? in
+                let legs = txn.splits.filter(Self.isMoneyLeg)
+                guard !legs.isEmpty else { return nil }
+                let folded = foldedDescription(of: txn)
+                return LinkingEntry(id: txn.guid, date: txn.datePosted, folded: folded,
+                                    isASCII: folded.utf8.allSatisfy { $0 < 0x80 },
+                                    magnitudes: legs.map { abs($0.value) })
+            }
+            linkingIndex = LinkingIndex(revision: transactionRevision, entries: entries)
+        }
+        guard var index = linkingIndex else { return [] }
         let q = query.trimmingCharacters(in: .whitespaces).lowercased()
-        let qAmount = Decimal(string: q)
-        let qIsDate = q.contains("/") || q.contains("-")
-        var matched: [Transaction] = []
-        for txn in book.transactions {
-            guard txn.splits.contains(where: { Self.isMoneyLeg($0) }) else { continue }
+        let format = AppDateFormat.current
+        // An amount as the rows show it, grouping and all: "1,234.50".
+        let amount = q.replacingOccurrences(of: ",", with: "")
+        let readsAmounts = Decimal(string: amount) != nil
+        // A date in any order's separator, and the month-first order's point:
+        // "3.13" for 13 March read as an amount only, it found no date
+        // (17 October review).
+        let readsDates = q.contains("/") || q.contains("-") || (format.order == .mdy && q.contains("."))
+        if let last = index.lastSearch, last.query == q, last.limit == limit, last.format == format {
+            return last.picks
+        }
+        if readsAmounts, index.amounts == nil {
+            index.amounts = index.entries.map { $0.magnitudes.flatMap(Self.amountTexts) }
+        }
+        if readsDates, index.dates?.format != format {
+            var written: [Date: String] = [:]
+            index.dates = (format, index.entries.map { entry in
+                if let text = written[entry.date] { return text }
+                let text = format.short(entry.date).lowercased()
+                written[entry.date] = text
+                return text
+            })
+        }
+        // Where the last search found everything it could and this one only
+        // adds to its query, what this finds is among what that found — as
+        // long as it reads nothing the last did not.
+        let narrowing: [Int]? = index.lastSearch.flatMap { last in
+            last.complete && last.format == format && !q.isEmpty && q.hasPrefix(last.query)
+                && (!readsAmounts || last.readsAmounts) && (!readsDates || last.readsDates)
+                ? last.matches : nil
+        }
+        let needle = Array(q.utf8)
+        let needleIsASCII = needle.allSatisfy { $0 < 0x80 }
+        var matches: [Int] = []
+        var picks: [TransactionPick] = []
+        var complete = true
+        for position in narrowing ?? Array(index.entries.indices) {
+            let entry = index.entries[position]
             if !q.isEmpty {
-                let byText = txn.transactionDescription.lowercased().contains(q)
-                let byAmount = qAmount != nil && txn.splits.contains { split in
-                    guard Self.isMoneyLeg(split) else { return false }
-                    let magnitude = "\(abs(split.value))"
-                    return magnitude == q || magnitude.hasPrefix(q)
-                }
-                let byDate = qIsDate
-                    && AppDateFormat.current.short(txn.datePosted).lowercased().contains(q)
+                let byText = needleIsASCII && entry.isASCII
+                    ? Self.bytes(of: entry.folded, contain: needle) : entry.folded.contains(q)
+                let byAmount = readsAmounts && (index.amounts?[position].contains { $0.hasPrefix(amount) } ?? false)
+                let byDate = readsDates && (index.dates?.texts[position].contains(q) ?? false)
                 guard byText || byAmount || byDate else { continue }
             }
-            matched.append(txn)
+            if picks.count == limit { complete = false; break }
+            matches.append(position)
+            guard let txn = book.transaction(with: entry.id) else { continue }
+            picks.append(TransactionPick(id: entry.id, date: entry.date,
+                                         summary: transactionSummary(txn),
+                                         hasDocument: txn.documentLink != nil))
         }
-        return matched
-            .sorted { $0.datePosted > $1.datePosted }
-            .prefix(limit)
-            .map { TransactionPick(id: $0.guid, date: $0.datePosted,
-                                   summary: transactionSummary($0),
-                                   hasDocument: $0.documentLink != nil) }
+        index.lastSearch = LinkingSearch(query: q, limit: limit, format: format, readsAmounts: readsAmounts,
+                                         readsDates: readsDates, matches: matches, complete: complete, picks: picks)
+        linkingIndex = index
+        return picks
+    }
+
+    /// An amount as a query may type it: as `Decimal` writes it ("600.5",
+    /// "42") and with the two places the rows show ("600.50", "42.00"). As
+    /// `Decimal` alone, "600.50" found nothing (17 October review).
+    private static func amountTexts(_ value: Decimal) -> [String] {
+        let bare = "\(value)"
+        guard let point = bare.firstIndex(of: ".") else { return [bare, bare + ".00"] }
+        let places = bare.distance(from: bare.index(after: point), to: bare.endIndex)
+        return places >= 2 ? [bare] : [bare, bare + String(repeating: "0", count: 2 - places)]
+    }
+
+    /// Whether `text`'s UTF-8 holds `needle`'s — for ASCII on both sides,
+    /// where a byte is a character and no search needs to know more.
+    private static func bytes(of text: String, contain needle: [UInt8]) -> Bool {
+        guard !text.isEmpty, !needle.isEmpty else { return needle.isEmpty }
+        var text = text
+        return text.withUTF8 { haystack in
+            needle.withUnsafeBufferPointer { needle in
+                memmem(haystack.baseAddress, haystack.count, needle.baseAddress, needle.count) != nil
+            }
+        }
     }
 
     private func transactionSummary(_ txn: Transaction) -> String {
@@ -1611,47 +1726,97 @@ extension AppModel {
     public func applyAttachmentSuggestion(_ suggestion: AttachmentCategorySuggestion,
                                           to transactionID: GncGUID) -> Bool {
         guard let book, let txn = book.transaction(with: transactionID),
-              let account = book.account(with: suggestion.accountID),
-              account.commodity == txn.currency,
-              let target = attachmentTargetSplit(in: txn) else { return false }
+              let plan = attachmentPlan(suggestion, for: txn, in: book) else { return false }
+        editing([transactionID], named: "Categorise from Attachment") {
+            applyAttachmentPlan(suggestion, target: plan.target, account: plan.account, to: txn, in: book)
+        }
+        return true
+    }
 
+    /// Accepted Match Attachments results applied as **one** edit: each file
+    /// linked where it lies and, where its match came with a suggestion, the
+    /// transaction categorised from it. One refresh and one undo step for the
+    /// batch — it was a link and a categorisation per match, each its own
+    /// refresh of the whole book and its own step to undo (Performance Review
+    /// P5.1). Returns how many were linked and how many categorised.
+    @discardableResult
+    public func applyAttachmentMatches(_ matches: [AttachmentMatch]) -> (linked: Int, categorised: Int) {
+        guard let book else { return (0, 0) }
+        let items = matches.compactMap { match -> (match: AttachmentMatch, txn: Transaction)? in
+            guard let id = match.transactionID, let txn = book.transaction(with: id) else { return nil }
+            return (match, txn)
+        }
+        guard !items.isEmpty else { return (0, 0) }
+        var seen = Set<GncGUID>()
+        let ids = items.map(\.txn.guid).filter { seen.insert($0).inserted }
+        let folders = documentFolders
+        var linked = 0
+        var categorised = 0
+        editing(ids, named: "Apply Matches") {
+            for (match, txn) in items {
+                // Linked in place, never copied — see `linkDocument(at:to:)`.
+                let link = Self.relativeLink(for: match.url, under: folders)
+                if txn.documentLink != link { txn.documentLink = link }
+                linked += 1
+                // Checked against the transaction as it now stands, so a
+                // second document for the same transaction sees the first's
+                // change and is refused rather than applied to a stale leg.
+                if let suggestion = match.suggestion,
+                   let plan = attachmentPlan(suggestion, for: txn, in: book) {
+                    applyAttachmentPlan(suggestion, target: plan.target, account: plan.account,
+                                        to: txn, in: book)
+                    categorised += 1
+                }
+            }
+        }
+        return (linked, categorised)
+    }
+
+    /// Whether `suggestion` can be applied to `txn` as it stands, and if so
+    /// the leg it replaces or re-points and the account it names.
+    private func attachmentPlan(_ suggestion: AttachmentCategorySuggestion, for txn: Transaction,
+                                in book: Book) -> (target: Split, account: Account)? {
+        guard let account = book.account(with: suggestion.accountID),
+              account.commodity == txn.currency,
+              let target = attachmentTargetSplit(in: txn) else { return nil }
         // An invoice split only applies when its legs still sum to exactly what
         // the replaced leg carries — if the transaction changed since the
         // suggestion was made, refuse rather than unbalance.
-        let lines = suggestion.lines
-        if let lines {
+        if let lines = suggestion.lines {
             guard lines.reduce(Decimal(0), { $0 + $1.value }) == target.value,
                   lines.allSatisfy({ line in
                       line.value == 0   // the zero-value stock link leg
                           || book.account(with: line.accountID)?.commodity == txn.currency
                   })
-            else { return false }
+            else { return nil }
         }
+        return (target, account)
+    }
 
-        editing([transactionID], named: "Categorise from Attachment") {
-            if let friendly = suggestion.friendlyDescription?.trimmingCharacters(in: .whitespaces),
-               !friendly.isEmpty, friendly != txn.transactionDescription {
-                let narrative = txn.transactionDescription
-                for split in txn.splits where Self.isMoneyLeg(split) && split !== target {
-                    if split.memo.trimmingCharacters(in: .whitespaces).isEmpty {
-                        split.memo = narrative
-                    }
+    /// The categorisation itself; the caller holds the undoable edit.
+    private func applyAttachmentPlan(_ suggestion: AttachmentCategorySuggestion, target: Split,
+                                     account: Account, to txn: Transaction, in book: Book) {
+        if let friendly = suggestion.friendlyDescription?.trimmingCharacters(in: .whitespaces),
+           !friendly.isEmpty, friendly != txn.transactionDescription {
+            let narrative = txn.transactionDescription
+            for split in txn.splits where Self.isMoneyLeg(split) && split !== target {
+                if split.memo.trimmingCharacters(in: .whitespaces).isEmpty {
+                    split.memo = narrative
                 }
-                txn.transactionDescription = friendly
             }
-            if let lines {
-                // One leg per invoice item, replacing the single target leg.
-                txn.removeSplit(target)
-                for line in lines {
-                    guard let lineAccount = book.account(with: line.accountID) else { continue }
-                    txn.addSplit(account: lineAccount, value: line.value, memo: line.memo)
-                }
-            } else {
-                target.account = account
-                target.quantity = target.value   // same-currency by the guard above
-            }
+            txn.transactionDescription = friendly
         }
-        return true
+        if let lines = suggestion.lines {
+            // One leg per invoice item, replacing the single target leg.
+            txn.removeSplit(target)
+            for line in lines {
+                guard let lineAccount = book.account(with: line.accountID) else { continue }
+                txn.addSplit(account: lineAccount, value: line.value, memo: line.memo)
+            }
+        } else {
+            target.account = account
+            target.quantity = target.value   // same-currency by the guard above
+        }
     }
 
     // MARK: FR-AI-03 — Invoice splitting
@@ -1872,6 +2037,9 @@ extension AppModel {
             lowestBalance: lowest?.balance ?? first.balance,
             lowestBalanceDate: lowest?.date,
             upcoming: points.filter { $0.change != 0 }.map { ($0.date, $0.label, $0.change) },
+            // The balance each movement leaves: the projection has it, and
+            // the model, not given it, worked it out (17 October review).
+            upcomingBalances: points.filter { $0.change != 0 }.map(\.balance),
             recentMonthlyNet: net
         )
     }

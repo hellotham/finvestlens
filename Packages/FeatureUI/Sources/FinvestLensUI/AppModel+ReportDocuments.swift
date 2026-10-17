@@ -242,7 +242,17 @@ extension AppModel {
 
     // MARK: Price history (FR-RPT — Price Scatter)
 
+    /// Memoised on the book revision, the report currency and the date order
+    /// its rows are written in: the Price History toolbar asks for it on
+    /// every pass of its body, and a key without the date order kept the old
+    /// dates after Settings ▸ Dates changed (17 October review).
     func priceHistoryDocument() -> ReportDocument? {
+        cachedReport("pricehistorydoc:\(reportCurrency.mnemonic):\(AppDateFormat.current.order.rawValue)") {
+            buildPriceHistoryDocument()
+        }
+    }
+
+    private func buildPriceHistoryDocument() -> ReportDocument? {
         let securities = securitiesWithPriceHistory
         guard !securities.isEmpty else { return nil }
         let code = reportCurrency.mnemonic
@@ -264,9 +274,10 @@ extension AppModel {
 
     // MARK: Cash-flow forecast (FR-RPT — Forecast)
 
-    func forecastDocument() -> ReportDocument? {
-        guard let accountID = defaultForecastAccountID else { return nil }
-        let points = cashFlowForecast(accountID: accountID)
+    /// The forecast as a printable, from a projection already built — the
+    /// Forecast view hands over the points it shows, so its toolbar never
+    /// walks the book again.
+    func forecastDocument(accountID: GncGUID, points: [CashFlowPoint]) -> ReportDocument? {
         let events = points.filter { $0.change != 0 }
         guard !events.isEmpty else { return nil }
         let code = reportCurrency.mnemonic

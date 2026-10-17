@@ -36,10 +36,19 @@ public struct ReviewSlideFacts: Sendable {
     /// Changes vs the prior period, label → signed percent (already ×100),
     /// where a comparison exists.
     public var deltaPercents: [(String, Decimal)]
+    /// What a figure is, by label, where the slide knows — said in words on
+    /// its line, and held to by the checks. A figure with no role is listed
+    /// as it is.
+    public var roles: [String: FigureRole]
+    /// The figures that are one listed figure less another, by label, as the
+    /// slide computed them — said on their lines, so the model need not work
+    /// a relation out, and read by the checks.
+    public var relations: [String: FigureRelation]
 
     public init(kicker: String, periodLabel: String, currencyCode: String,
                 figures: [(String, Decimal)], ratios: [(String, Decimal)] = [],
-                counts: [(String, Int)] = [], deltaPercents: [(String, Decimal)] = []) {
+                counts: [(String, Int)] = [], deltaPercents: [(String, Decimal)] = [],
+                roles: [String: FigureRole] = [:], relations: [String: FigureRelation] = [:]) {
         self.kicker = kicker
         self.periodLabel = periodLabel
         self.currencyCode = currencyCode
@@ -47,7 +56,51 @@ public struct ReviewSlideFacts: Sendable {
         self.ratios = ratios
         self.counts = counts
         self.deltaPercents = deltaPercents
+        self.roles = roles
+        self.relations = relations
     }
+}
+
+/// What a narrated figure is. The deck knows — it computed each one — and the
+/// model, handed a bare list, did not: one draft had expenses "sono scese di
+/// 66.610,82 AUD" (fallen by their own total), another the opening net worth
+/// as the size of a difference, and four had expenses above income
+/// (17 October 2026).
+public enum FigureRole: Sendable, Hashable {
+    /// Where something stands at the end of the period, or on a report's
+    /// date: a net worth, a closing figure. Never the size of a change.
+    case balance
+    /// Where something stood at the start of the period: an opening figure.
+    case openingBalance
+    /// How far something moved over the period.
+    case change
+    /// Money in over the period, which adds to the total: income.
+    case inflow
+    /// Money out over the period, which takes from it: expenses.
+    case outflow
+    /// Value added over the period that is not money in: a revaluation.
+    case gain
+    /// Value lost over the period that is not money out.
+    case loss
+}
+
+/// A figure that is one listed figure less another — a net surplus is
+/// income less expenses — by their labels. Given by whoever computed it.
+/// Worked out from the numbers instead, it named the wrong pair whenever the
+/// difference was not the smallest of three: expenses as "Income less Net
+/// surplus" at a savings rate over a half, liabilities as "Assets less Equity"
+/// on every balance sheet with more equity than debt (17 October review).
+public struct FigureRelation: Sendable, Hashable {
+    public var minuend: String
+    public var subtrahend: String
+
+    public init(_ minuend: String, less subtrahend: String) {
+        self.minuend = minuend
+        self.subtrahend = subtrahend
+    }
+
+    /// The relation as the model reads it on the figure's line.
+    var words: String { "\(minuend) less \(subtrahend)" }
 }
 
 /// What the model writes for a slide.
@@ -79,17 +132,27 @@ public enum ReviewStoryValidator {
 
     static func isGrounded(_ story: ReviewSlideStory, facts: ReviewSlideFacts,
                            locale: Locale) -> Bool {
-        FigureGrounding.isGrounded(
-            story.headline + "\n" + story.insight,
-            facts: FigureGrounding.Facts(
-                figures: facts.figures.map(\.1),
-                percentages: facts.ratios.map(\.1) + facts.deltaPercents.map(\.1),
-                // The counts the slide states, and how many figures were
-                // listed: "the 2 largest", "all 3 categories".
-                counts: facts.counts.map(\.1) + Array(0...facts.figures.count),
-                quotableText: labels(of: facts),
-                currencyCode: facts.currencyCode),
-            locale: locale)
+        FigureGrounding.isGrounded(story.headline + "\n" + story.insight,
+                                   facts: figureFacts(of: facts), locale: locale)
+    }
+
+    /// The slide's figures as the checks read them: every amount, ratio and
+    /// count it states, and — from its roles and relations
+    /// (``FigureGrounding/Facts/attribute(_:roles:relations:)``) — which
+    /// amounts are balances and which may be said as a change, and which way.
+    /// One definition, so the number check and the attribution checks
+    /// cannot disagree about which.
+    static func figureFacts(of facts: ReviewSlideFacts) -> FigureGrounding.Facts {
+        var figures = FigureGrounding.Facts(
+            figures: facts.figures.map(\.1),
+            percentages: facts.ratios.map(\.1) + facts.deltaPercents.map(\.1),
+            // The counts the slide states, and how many figures were
+            // listed: "the 2 largest", "all 3 categories".
+            counts: facts.counts.map(\.1) + Array(0...facts.figures.count),
+            quotableText: labels(of: facts),
+            currencyCode: facts.currencyCode)
+        figures.attribute(facts.figures, roles: facts.roles, relations: facts.relations)
+        return figures
     }
 
     /// Whether a story about a slide that lists a change quotes it, as the
@@ -133,6 +196,31 @@ public enum ReviewStoryValidator {
         return unchangedWords.contains(where: text.contains)
     }
 
+    /// Whether a story says one of the slide's figures of the wrong thing
+    /// (FigureAttribution.swift): a balance as the size of a change —
+    /// "superou o início do período em 381.200 AUD" — a change the other
+    /// way from the one it quotes, or a comparison its figures contradict.
+    /// Three Portuguese drafts of the opening slide, 12 October 2026, put
+    /// expenses of 66.6k "acima do valor inicial de 381,2 mil AUD"; all four
+    /// Japanese drafts of it on 17 October had expenses above income.
+    static func misattributes(_ story: ReviewSlideStory, facts: ReviewSlideFacts,
+                              locale: Locale = LanguageModels.personLocale) -> Bool {
+        FigureGrounding.misattributes(story.headline + "\n" + story.insight,
+                                      facts: figureFacts(of: facts), locale: locale)
+    }
+
+    /// Whether a story may be shown: prose, every number one of the slide's,
+    /// no change called unchanged, and no figure said of the wrong thing.
+    /// What ``ReviewNarrator/story(facts:)`` holds a draft to, and what the
+    /// survey replay counts.
+    static func isSound(_ story: ReviewSlideStory, facts: ReviewSlideFacts,
+                        locale: Locale = LanguageModels.personLocale) -> Bool {
+        LanguageModels.isCleanProse(story.headline + story.insight)
+            && isGrounded(story, facts: facts, locale: locale)
+            && !contradictsAListedChange(story, facts: facts, locale: locale)
+            && !misattributes(story, facts: facts, locale: locale)
+    }
+
     /// "Nothing changed", as the 27 model said it in the eight languages
     /// the app is translated into — taken from its own drafts, not from a
     /// dictionary. Stems, matched anywhere: "stabil" is stabil, stabile,
@@ -168,25 +256,24 @@ public enum ReviewNarrator {
     struct ModelStory {
         @Guide(description: "An investor-deck action title of 5 to 12 words that states the slide's conclusion from the given figures — like 'Spending fell 8% as travel normalised'. State facts, never advice. Use only the given numbers; round naturally.")
         var headline: String
-        @Guide(description: "One or two calm sentences of insight grounded ONLY in the given figures: what dominates, what changed versus the prior period, what the relationship between the numbers is. No advice, no speculation, no invented numbers.")
+        @Guide(description: "One or two calm sentences of insight grounded ONLY in the given figures: what dominates, what changed versus the prior period, how the figures relate as their lines say. No advice, no speculation, no invented numbers.")
         var insight: String
     }
 
     public static func story(facts: ReviewSlideFacts) async throws -> ReviewSlideStory {
-        // A slide that quotes a number it was not given, or calls unchanged
-        // what it was told had changed, is never shown; the rest of the
-        // policy — how many drafts, what happens to a sound one
-        // in the wrong language — is the narrators' shared one.
+        // A slide that quotes a number it was not given, calls unchanged
+        // what it was told had changed, or says one of its figures of the
+        // wrong thing (``ReviewStoryValidator/isSound(_:facts:locale:)``), is
+        // never shown; the rest of the policy — how many drafts, what happens
+        // to a sound one in the wrong language — is the narrators' shared one.
         try await LanguageModels.firstSoundDraft(
             text: { $0.headline + " " + $0.insight },
             quoting: ReviewStoryValidator.labels(of: facts),
             nothingSound: .modelFailure(
-                String(localized: "The model quoted a number that is not in the slide’s facts."))
+                String(localized: "The model misstated the slide’s figures."))
         ) {
             guard let story = try await draft(facts: facts),
-                  LanguageModels.isCleanProse(story.headline + story.insight),
-                  ReviewStoryValidator.isGrounded(story, facts: facts),
-                  !ReviewStoryValidator.contradictsAListedChange(story, facts: facts) else { return nil }
+                  ReviewStoryValidator.isSound(story, facts: facts) else { return nil }
             return story
         }
     }
@@ -204,7 +291,10 @@ public enum ReviewNarrator {
         of your own. Where a figure is listed with its change on the \
         prior period, say which way it moved and by that percentage. \
         Where no change is listed, describe none: not a rise, not a \
-        fall, and not "stable" or "unchanged". Never advise.
+        fall, and not "stable" or "unchanged". Call each figure by its \
+        label. Where a line says what a figure is, keep to it: a figure \
+        as at a date is where something stood, never the size of a \
+        change. Relate figures only as their lines do. Never advise.
         """
 
     /// The slide's facts as the model reads them. Each number goes as what
@@ -217,14 +307,28 @@ public enum ReviewNarrator {
     /// connect the two: of 108 drafts the number check accepted on
     /// 12 October 2026, 26 quoted the change and 52 called spending "stable"
     /// or "unchanged", which no check of numbers can catch.
+    ///
+    /// What each figure *is* goes on its line too — as at a date, money in,
+    /// money out — with the relation the slide computed it from, where it is
+    /// one of its figures less another. Handed a bare list, the model worked
+    /// these out for itself and got them wrong: expenses "fallen by" their
+    /// own total, the opening net worth as the size of a difference, and in
+    /// all four Japanese drafts of one slide, expenses above income
+    /// (17 October 2026). The words say when a figure was, not what it is
+    /// called: "a balance at a point in time" was taken for a name, and the
+    /// next survey had net worth called a "balance", "saldo" or "余额" in 13
+    /// of 64 drafts, against 2 before (17 October review).
     static func prompt(for facts: ReviewSlideFacts) -> String {
         var unplaced = facts.deltaPercents
         let amounts = facts.figures.map { label, amount -> String in
-            var line = "- \(label): \(amount) \(facts.currencyCode)"
-            if let index = unplaced.firstIndex(where: { $0.0 == label }) {
-                line += " — \(change(unplaced.remove(at: index).1))"
+            var notes: [String] = []
+            if let role = facts.roles[label] { notes.append(words(for: role)) }
+            if let found = unplaced.firstIndex(where: { $0.0 == label }) {
+                notes.append(change(unplaced.remove(at: found).1))
             }
-            return line
+            if let relation = facts.relations[label] { notes.append(relation.words) }
+            return "- \(label): \(amount) \(facts.currencyCode)"
+                + (notes.isEmpty ? "" : " — " + notes.joined(separator: "; "))
         }
         let figures = (amounts
             + facts.ratios.map { "- \($0.0): \($0.1)%" }
@@ -241,11 +345,32 @@ public enum ReviewNarrator {
             """
     }
 
+    /// A role as the model reads it on the figure's line: when the figure
+    /// was, or what moved over the period — never a noun the model could
+    /// take for the figure's name.
+    static func words(for role: FigureRole) -> String {
+        switch role {
+        case .balance: "as at the end of the period"
+        case .openingBalance: "as at the start of the period"
+        case .change: "the change over the period"
+        case .inflow: "money in over the period"
+        case .outflow: "money out over the period"
+        case .gain: "value added over the period, not money in"
+        case .loss: "value lost over the period, not money out"
+        }
+    }
+
     /// "down 8.4% on the prior period" — the direction as a word, so that
     /// it does not ride on a minus sign.
     private static func change(_ percent: Decimal) -> String {
-        percent == 0 ? "unchanged on the prior period"
-            : "\(percent > 0 ? "up" : "down") \(abs(percent))% on the prior period"
+        direction(of: percent, size: "\(abs(percent))%", on: "the prior period",
+                  unchanged: "unchanged on the prior period")
+    }
+
+    /// Which way `amount` went from `reference`, as the narrators say it:
+    /// "up 1351 AUD on today's balance", "down 8.4% on the prior period".
+    static func direction(of amount: Decimal, size: String, on reference: String, unchanged: String) -> String {
+        amount == 0 ? unchanged : "\(amount > 0 ? "up" : "down") \(size) on \(reference)"
     }
 
     /// What the model wrote, before anything has checked it. Separate from

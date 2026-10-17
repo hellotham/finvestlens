@@ -103,6 +103,13 @@ extension ReportDocument {
 struct ReportFactsSource {
     var headline: [(String, Decimal)]
     var lines: [(String, Decimal)]
+    /// What each headline figure is, and which are one of the others less
+    /// another, as the report computed them (``FigureRole``,
+    /// ``FigureRelation``).
+    var roles: [String: FigureRole] = [:]
+    var relations: [String: FigureRelation] = [:]
+    /// What each line is, by position in `lines`.
+    var lineRoles: [FigureRole?] = []
 }
 
 // MARK: - Rendering
@@ -295,8 +302,17 @@ struct ReportDocumentView: View {
                     Button {
                         narrate()
                     } label: {
-                        Label(narrating ? "Writing commentary…" : "Add commentary",
-                              systemImage: "sparkles")
+                        // A spinner while the model writes, as "Reading…" has
+                        // beside the attachment: a label that only changes its
+                        // words reads as stuck (Performance Review §3).
+                        if narrating {
+                            HStack(spacing: 6) {
+                                ProgressView().controlSize(.small)
+                                Text("Writing commentary…")
+                            }
+                        } else {
+                            Label("Add commentary", systemImage: "sparkles")
+                        }
                     }
                     .disabled(narrating)
                     IntelligenceRunsNote(.reportCommentary)
@@ -315,7 +331,9 @@ struct ReportDocumentView: View {
         let request = ReportFacts(reportTitle: document.title,
                                   periodLabel: document.periodLabel,
                                   currencyCode: document.currencyCode,
-                                  headline: facts.headline, lines: facts.lines)
+                                  headline: facts.headline, lines: facts.lines,
+                                  roles: facts.roles, relations: facts.relations,
+                                  lineRoles: facts.lineRoles)
         // Asked before the request, of the same list the request runs under.
         let leavesDevice = IntelligenceCommand.reportCommentary.leavesDevice
         Task {

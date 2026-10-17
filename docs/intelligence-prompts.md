@@ -298,18 +298,159 @@ and TEUR — and both were declined as figures nobody had listed. The check
 reads a capital T before a currency symbol or code as thousands (and not in a
 book kept in paʻanga, whose own symbol is T$).
 
-**What these checks cannot see.** Every number in a story being one of the
-facts does not make it said of the right thing. Of 96 forecast headlines —
-64 on a balance that rises and 32 on one that falls — none gave the wrong
-direction, with the change handed over as a bare signed number, so that
-prompt is unchanged. But four said the balance would end "higher by 9,420",
-which is the closing balance and not the rise (Spanish twice, Italian twice),
-and one German headline called a falling balance "negative" when its lowest
-point was 2,480. And three review drafts in Portuguese wrote that expenses
-were "above the opening value" — true numbers in a sentence that means
-nothing, and drafts the stricter rounding had been declining only by
-accident. Nothing here catches those; they are the reason the commentary is
-marked as Apple Intelligence's and sits beside figures that are not.
+**A true number said of the wrong thing.** Every number in a story being one
+of the facts does not make it said of the right thing. Of 96 forecast
+headlines — 64 on a balance that rises and 32 on one that falls — none gave
+the wrong direction, with the change handed over as a bare signed number, so
+that prompt is unchanged. But four said the balance would end "higher by
+9,420", which is the closing balance and not the rise ("supera el saldo
+inicial en 9420", "è superiore di 9420 rispetto al saldo iniziale" — Spanish
+twice, Italian twice), and one German headline gave a balance whose lowest
+point is 2,480 "einen negativen Saldo". And three review drafts in Portuguese
+put expenses of 66.6k "acima do valor inicial de 381,2 mil AUD" — above an
+opening net worth almost six times larger, or above themselves.
+
+The first measure is the prompts, because a check can only turn a wrong
+story into no story. Each narrator now hands the model what each figure *is*
+in words on its line, and the relations it has — the shape the review slide's
+prompt was given for changes, above:
+
+- **Forecast:** "Projected balance at the end: 9420 AUD — up 1351 AUD on
+  today's balance"; "Recent months, on average: income exceeded spending by
+  450 AUD a month"; "Rent — 2600 AUD out, leaving 5469 AUD"; "Scheduled over
+  the horizon: 6315 AUD in, 4964 AUD out". No minus signs: a sign is what the
+  model echoed back as "negative" of things that were not. The balance each
+  movement leaves and the horizon's totals were added after the review of
+  17 October: four of the five outlooks the checks declined that day had
+  worked one of them out for itself.
+- **Review slides:** a role on each figure the deck knows — "as at the end
+  of the period", "as at the start of the period", "money in over the
+  period", "money out over the period", "the change over the period", "value
+  added over the period, not money in" — passed by the deck (`FigureRole`);
+  and the relation the deck computed a figure from, where it is one of its
+  figures less another ("Net surplus: 24032.68 AUD — Income less Expenses"),
+  passed by the deck too (`FigureRelation`). The roles were first worded as
+  kinds — "a balance at a point in time" — and the model took the noun for a
+  name: net worth became "balance", "saldo", "余额" in 13 or more of 64 opening
+  and bridge drafts, against 2 before. The relations were first worked out
+  from the numbers, as the one of a triple smaller than both others, which
+  names the wrong pair whenever the difference is not the smallest: expenses
+  as "Income less Net surplus" at a savings rate over a half, liabilities as
+  "Assets less Equity" on most balance sheets. A valuation of nothing has no
+  role; it had been told it was a rise. The shared instruction that "money
+  in and money out are totals for the period" went too: the investment
+  deck's Money In is a lifetime total.
+- **Report notes:** the roles and relations each report computed — a balance
+  sheet's three balances and equity as assets less liabilities, an income
+  statement's net income as income less expenses, the Net Worth report's
+  start, end and change — and each line's side. A cash flow lists its sources
+  and destinations unsigned, and without a side its commentary had salary as
+  an expense.
+
+Behind the prompts, four checks of words (`FigureAttribution.swift`), each as
+narrow as the unchanged-word check above, each declining a draft rather than
+repairing it, and each reading the numbers the number check read —
+`FigureGrounding.resolve` decides what a sentence's numbers are once, for
+both:
+
+- **A balance given as the size of a change** — a word of change right beside
+  a balance ("by", "um", "supera … en", "superiore di", "uma queda de",
+  "增长", "の増加"). A number reached *to* ("aumenta a 9420", "增长至9420"), a
+  range ("cai de 9420 para 6105"), and a balance after a preposition that also
+  means "of" or "at" with no word of change before it are left alone.
+- **A change said the other way** — a word that says up beside a change that
+  went down, or the reverse ("una disminución de 31.150,4 AUD" of a net worth
+  that rose by that). Comparatives that measure a difference ("1100 AUD
+  上回って", "1,100 more than income") are not words of direction.
+- **A negative balance** said of a forecast that never goes below zero —
+  not "einen negativen Saldoänderungstrend", a falling trend, which is true,
+  nor any sentence with a negation in it.
+- **A comparison its own figures contradict** (all three narrators): the
+  first figure the subject, the second within a few words, and the larger one
+  not the one the words say — including the Japanese order "AにたいしBが上回った".
+  A figure right beside "above" is the size of a difference and is not read.
+
+The review of 17 October ran each check against sentences built to break it,
+with a control beside each, and found the words matching too much or too
+little in ways no survey draft had shown yet. Each is fixed and has a test
+built from the sentence:
+
+- a negation was matched as characters anywhere, and in any language read —
+  "未来90天" ("the next ninety days"), "不断", "はず", "わずか", and English
+  "no" in the Portuguese "no final de agosto" — so false negative balances
+  were let through; it is matched as a word, in the language of the words it
+  negates, near them in Chinese and Japanese. "won’t" with a curly apostrophe
+  was not a negation at all.
+- "falls by 1,351 to 9,420" was read as a range and switched off two checks;
+  a range now needs a word that can mean "from", and an amount — not a date —
+  at its other end.
+- English direction words were only the inflected ones; "will fall by",
+  "expected to decline by", "up by", "down by" said no direction.
+- what follows a number was stepped over by a list of its own, which missed
+  "A$" after a number, "Millionen", "millones de AUD" and thin spaces; it
+  now steps over what the number check reads as a unit.
+- Chinese "A高于B" and "A比B多", and any comparison with its first figure in
+  brackets, were never read; Japanese "より少ない" never counted; "quarterly",
+  "sometimes" and 上半期 counted as multipliers; a figure written with a
+  minus sign was compared as a magnitude.
+- Spanish and Portuguese "su punto más bajo en 3105" (the lowest point) and
+  "supera al inicial y se sitúa en 9420" (a second clause) were taken for
+  changes; "un saldo negativo de 1100 AUD al mes", the monthly net, for a
+  balance below zero.
+- the number check took a run of numbers apart again at every separator: a
+  draft with twenty numbers none of which was a fact took 25 seconds to
+  decline. Each stretch of a run is decided once, and the check stops at the
+  first number that is not a fact.
+
+**Measured on three surveys, read draft by draft** — counting what the checks
+decline is half a measurement, and the first version of this section was
+written from it alone. Reading every draft of a fresh survey on 17 October
+2026 (543 drafts, the old prompts) found that the checks then declined one
+draft while about a dozen misstated something; the review's own reviewers
+found it, not the count.
+
+| | 12 Oct (old prompts, recovered) | 17 Oct (old prompts) | 17 Oct (new prompts) | 17 Oct (after the review) |
+|---|---|---|---|---|
+| Drafts | 185 | 543 | 543 | 541 |
+| Declined by these checks | 8 | 6 | 2 | 1 |
+| Of those, wrongly | 0 | 0 | 0 | 0 |
+| Opening and bridge slides misstating, read by hand | — | 13 of 64 | 5 of 64 | 6 of 64 |
+| … of which "expenses above income", Japanese | — | 4 of 4 | 0 of 4 | 0 of 4 |
+| Net worth called a "balance", "saldo", "余额" | — | 2 of 64 | 13 of 64 | 0 of 64 |
+| Bridge's change put down to the wrong cause | — | — | about 6 of 32 | 1 of 32 |
+| Forecast outlooks working out a figure the projection holds | — | 1 | 4 | 0 |
+| Report notes with salary as an expense | — | — | 4 | 1 |
+
+The last column is the survey after the review's changes (17 October,
+four drafts of each in each language), and it differs from the others in one
+more way: the slides and the report reach the model with the app's own labels
+in each language, as they do in the app, where the earlier surveys sent
+English labels everywhere. Its one decline is right (an Italian headline
+giving the closing balance as the growth). Two things it showed were the
+number check's, and are fixed: "2025–26年度", the period written the Chinese
+way, read as the year 26 (four report notes declined), and "31.1k増加", a
+"k" before a Japanese word read as no unit (one headline). What it still
+shows is the residue above — a cause or a name the model gets wrong, with no
+word a check could read: three Chinese slides inventing a stability or a cause,
+"trimestre précédent" for the prior year, salary called an expense once.
+
+On the review slides the prompt is what helped: the opening slide went from
+about six misstatements in 32 to none, and the bridge from about seven to
+four, two of them declined. On the forecast headlines and the report notes
+no change can be told at four drafts a language — three and about five
+misstatements under the new prompts, one and about five under the old.
+Every decline in all three surveys was read and is a real misattribution;
+the checks were changed once on that reading, when the first version of the
+direction check took 上回る — "exceeds" — for a word of rising and declined a
+true sentence.
+
+What neither the prompts nor the checks reach is a figure given the wrong
+name or the wrong cause, with nothing about it a word could read as wrong:
+the salary called rent, the whole change put down to the valuation movement,
+"la spesa maggiore è rappresentata dallo stipendio". About 17 of the 543
+drafts under the new prompts are like that — roughly three in a hundred.
+That is why the commentary stays marked as the model's and sits beside
+figures that are not.
 
 **The decks' own words are in the reader's language, and that is no longer
 what the model's language turns on.** Before the change above, the review
@@ -669,3 +810,4 @@ it.
 | 12 Oct 2026, profiles | Every request's session is built from a `LanguageModelSession.DynamicProfile` that declares its instructions, model, sampling and tool-calling mode; requests no longer carry options. A session kept for a batch was measured and not adopted. No prompt changed. |
 | 12 Oct 2026, pictures | The invoice reader is shown a document's picture where one document is read and it is one, with Vision's `OCRTool` and — where Vision finds a code — `BarcodeReaderTool`; the reading kept is chosen against the document's own text. Image decoding honours the photograph's orientation. The text prompt is unchanged. |
 | 12 Oct 2026, a model of the person's own | A model the person supplies (MLX) can stand in Apple's place for every feature. For it alone: the answer's schema is written into the instructions as JSON Schema in declared order; the locale phrase goes last; each feature's answer has a token ceiling; an answer's strings are put right of whitespace spelt out as text; and the statement reader reads a slice again in halves when an answer shows it lost its place (this last for any model). No prompt sent to Apple's models changed. |
+| 17 Oct 2026 | Each narrator says what each figure is on its line, and its relations: the forecast's balances, change and movements in words with no minus sign; the review slides' and the reports' roles (`FigureRole`) and relations (`FigureRelation`) as the deck or report computed them. Four checks of words (`FigureAttribution.swift`) decline a balance said as a change, a change said the other way, a negative balance that is not, and a comparison its figures contradict. After the review the same day: roles worded by when a figure was ("as at the end of the period"), not by kind; relations given, not worked out from the numbers; no role for a valuation of nothing, and no shared sentence calling money in and out period totals; reports' lines carry their side; each forecast movement's resulting balance and the horizon's totals; the checks corrected as listed under "A true number said of the wrong thing". The survey sends the app's own labels in each language. |

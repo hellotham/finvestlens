@@ -246,10 +246,64 @@ extension AppModel {
         }
         names.append(link)
         if link.hasPrefix("/") {
-            return names.map { URL(fileURLWithPath: $0) }
+            return names.map { URL(fileURLWithPath: $0, isDirectory: false) }
         }
+        // Told it is a file: without `isDirectory`, appending a component
+        // asks the file system whether it names a folder — a stat per
+        // candidate, in every body that worked out a link's paths, on a
+        // document folder that is Box Drive or the NAS (17 October review).
         let folders = [effectiveDocumentFolder, secondaryDocumentFolder].compactMap { $0 }
-        return folders.flatMap { folder in names.map { folder.appendingPathComponent($0) } }
+        return folders.flatMap { folder in names.map { folder.appendingPathComponent($0, isDirectory: false) } }
+    }
+
+    /// Whether a stored link is a web address rather than a file.
+    nonisolated static func isWebLink(_ link: String) -> Bool {
+        link.hasPrefix("http://") || link.hasPrefix("https://")
+    }
+
+    /// Where a link's file was found.
+    public struct LinkedDocumentLocation: Equatable, Sendable {
+        /// The first candidate present — at its path, or as a cloud
+        /// placeholder — else the first candidate, which is where a "not
+        /// found" should point; `nil` with no candidates.
+        public var url: URL?
+        /// At its path (possibly dataless, which reads as present).
+        public var exists: Bool
+        /// Not at its path, but its iCloud placeholder is: it can be
+        /// downloaded.
+        public var inCloud: Bool
+    }
+
+    /// The stat half of resolving a link — each candidate tried once, in
+    /// order, as ``linkedDocumentURL(for:)`` tries them. Actor-free.
+    nonisolated static func locate(_ candidates: [URL]) -> LinkedDocumentLocation {
+        for candidate in candidates {
+            if FileManager.default.fileExists(atPath: candidate.path) {
+                return LinkedDocumentLocation(url: candidate, exists: true, inCloud: false)
+            }
+            if cloudPlaceholderExists(candidate) {
+                return LinkedDocumentLocation(url: candidate, exists: false, inCloud: true)
+            }
+        }
+        return LinkedDocumentLocation(url: candidates.first, exists: false, inCloud: false)
+    }
+
+    /// A link's file, looked for off the main actor: the paths are the pure
+    /// half (``linkedDocumentCandidates(for:)``, on the caller's side), the
+    /// stats run on a detached task. For a view that shows whether a file is
+    /// there — the attachments panel and the transaction editor stat'd the
+    /// paths in their `body`, on every selection, drag and keystroke.
+    func locateLinkedDocument(_ candidates: [URL]) async -> LinkedDocumentLocation {
+        guard !candidates.isEmpty else { return LinkedDocumentLocation(url: nil, exists: false, inCloud: false) }
+        return await Task.detached(priority: .userInitiated) { Self.locate(candidates) }.value
+    }
+
+    /// The name to show for a link's file: the file found, else the one its
+    /// first candidate names — decoded, the same name in the common case —
+    /// else the link as stored. The Linked Documents list names them so too.
+    func linkedDocumentName(for link: String, at url: URL?) -> String {
+        if Self.isWebLink(link) { return link }
+        return url?.lastPathComponent ?? linkedDocumentCandidates(for: link).first?.lastPathComponent ?? link
     }
 
     /// The first candidate that is present, at its path or as a cloud
@@ -363,7 +417,7 @@ extension AppModel {
         guard let book else { return [] }
         return book.transactions.compactMap { txn -> LinkedDocumentEntry? in
             guard let link = txn.documentLink else { return nil }
-            let isWeb = link.hasPrefix("http://") || link.hasPrefix("https://")
+            let isWeb = Self.isWebLink(link)
             let candidates = isWeb ? [] : linkedDocumentCandidates(for: link)
             return (LinkedDocument(
                 id: txn.guid,

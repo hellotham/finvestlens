@@ -76,23 +76,99 @@ struct ForecastView: View {
     @State private var insights: ForecastInsights?
     @State private var generatingOutlook = false
     @State private var outlookError: String?
+    /// The projection, built by a task after the frame that asked for it —
+    /// it used to be computed in `body`, so the first look after any edit
+    /// held the window while it walked the book (Performance Review P3.2).
+    /// Kept while a newer one builds, with a small indicator, rather than
+    /// blanking the chart: a what-if added should not blink the page.
+    @State private var forecast: (key: ForecastKey, points: [CashFlowPoint])?
+    /// The day the projection starts from, moved on at midnight by the view
+    /// itself — the projection is the book's from today, and nothing else
+    /// redraws a Forecast left open overnight.
+    @State private var today = AppModel.endOfToday()
     @Environment(\.appFontScale) private var appFontScale
     private var dateWidth: CGFloat { 96 * appFontScale }
     private var balanceWidth: CGFloat { 96 * appFontScale }
 
+    /// What a projection was built for: the account, the book, the what-ifs,
+    /// and the day it starts from — the memo's own key has the day, and a
+    /// view key without it kept yesterday's projection past midnight
+    /// (17 October review).
+    struct ForecastKey: Hashable {
+        var accountID: GncGUID
+        var revision: Int
+        var whatIf: [WhatIfEvent]
+        var day: Date
+    }
+
     var body: some View {
         Group {
         if let accountID = model.defaultForecastAccountID {
-            let points = model.cashFlowForecast(accountID: accountID)
-            let events = points.filter { $0.change != 0 }
+            let key = ForecastKey(accountID: accountID, revision: model.bookRevision,
+                                  whatIf: model.whatIfEvents, day: today)
+            // The projection for this key once built, or the memo's if it is
+            // already there — drawn in the first frame rather than a
+            // placeholder — or the last one, under an indicator, while this
+            // one builds.
+            let current = forecast?.key == key ? forecast
+                : model.cachedCashFlowForecast(accountID: accountID).map { (key: key, points: $0) }
+            let shown = current ?? forecast
             VStack(spacing: 0) {
                 ReportMasthead(entity: model.statementEntityName,
                                title: String(localized: "Forecast"),
                                period: model.accountName(accountID) ?? String(localized: "Projected balances"),
                                code: model.reportCurrency.mnemonic)
                     .padding(.top, 12)
+                    .overlay(alignment: .topTrailing) {
+                        if shown != nil, current == nil {
+                            ProgressView().controlSize(.small).padding(12)
+                                .accessibilityLabel("Updating the forecast")
+                        }
+                    }
                 whatIfBar
                 Divider()
+                if let points = shown?.points {
+                    projection(points)
+                } else {
+                    LoadingPlaceholder("Projecting balances…")
+                }
+            }
+            .task(id: key) {
+                let requested = key
+                // One yield so the frame paints first, as the other reports
+                // do — unless the projection is already built.
+                if model.cachedCashFlowForecast(accountID: requested.accountID) == nil { await Task.yield() }
+                let points = model.cashFlowForecast(accountID: requested.accountID)
+                guard !Task.isCancelled else { return }
+                forecast = (requested, points)
+            }
+            .reportPDFToolbar(title: String(localized: "Forecast"), entity: model.statementEntityName) {
+                // From the projection on screen — never a second walk of the
+                // book inside the toolbar's own body — under the account it
+                // was built for, which during a rebuild is not always the one
+                // now chosen.
+                shown.flatMap { model.forecastDocument(accountID: $0.key.accountID, points: $0.points) }
+            }
+        } else {
+            ContentUnavailableView("No account to forecast", systemImage: "banknote",
+                                   description: Text("Create an asset account first."))
+        }
+        }
+        // Wakes at midnight, so the projection moves on with the day — and
+        // sleeps again if it woke a moment early.
+        .task(id: today) {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(max(1, today.timeIntervalSinceNow)))
+                let day = AppModel.endOfToday()
+                if day != today, !Task.isCancelled { today = day; return }
+            }
+        }
+    }
+
+    /// The chart, the outlook and the list of what moves the balance.
+    @ViewBuilder
+    private func projection(_ points: [CashFlowPoint]) -> some View {
+        let events = points.filter { $0.change != 0 }
                 if events.isEmpty {
                     ContentUnavailableView("No upcoming activity", systemImage: "calendar",
                                            description: Text("Add scheduled transactions or a what-if event to forecast cash flow."))
@@ -141,13 +217,6 @@ struct ForecastView: View {
                         }
                     }
                 }
-            }
-        } else {
-            ContentUnavailableView("No account to forecast", systemImage: "banknote",
-                                   description: Text("Create an asset account first."))
-        }
-        }
-        .reportPDFToolbar(title: String(localized: "Forecast"), entity: model.statementEntityName) { model.forecastDocument() }
     }
 
     private var whatIfBar: some View {
@@ -201,8 +270,18 @@ struct ForecastView: View {
                 Label("Outlook", systemImage: "sparkles")
                     .scaledFont(.subheadline).fontWeight(.medium)
                 Spacer()
-                Button(generatingOutlook ? "Generating…" : (insights == nil ? "Generate" : "Refresh")) {
+                Button {
                     generateOutlook()
+                } label: {
+                    // A spinner while the model writes, not only new words.
+                    if generatingOutlook {
+                        HStack(spacing: 4) {
+                            ProgressView().controlSize(.mini)
+                            Text("Generating…")
+                        }
+                    } else {
+                        Text(insights == nil ? "Generate" : "Refresh")
+                    }
                 }
                 .scaledFont(.caption)
                 .disabled(generatingOutlook)

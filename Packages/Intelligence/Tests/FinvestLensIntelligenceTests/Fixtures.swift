@@ -56,7 +56,11 @@ enum Fixtures {
                   ("Opening net worth", Decimal(string: "381200.00")!),
                   ("Change in net worth", Decimal(string: "31150.40")!)],
         ratios: [("Savings rate", Decimal(string: "26.5")!)],
-        deltaPercents: [("Net worth", Decimal(string: "8.2")!)])
+        deltaPercents: [("Net worth", Decimal(string: "8.2")!)],
+        roles: ["Net worth": .balance, "Opening net worth": .openingBalance, "Change in net worth": .change,
+                "Income": .inflow, "Expenses": .outflow],
+        relations: ["Net surplus": FigureRelation("Income", less: "Expenses"),
+                    "Change in net worth": FigureRelation("Net worth", less: "Opening net worth")])
 
     /// The net-worth bridge: a change in something that is *not* listed
     /// under that name, so it goes to the model on a line of its own.
@@ -68,7 +72,10 @@ enum Fixtures {
                   ("Valuation and currency movement", Decimal(string: "7117.72")!),
                   ("Change in net worth", Decimal(string: "31150.40")!),
                   ("Closing net worth", Decimal(string: "412350.40")!)],
-        deltaPercents: [("Net worth", Decimal(string: "8.2")!)])
+        deltaPercents: [("Net worth", Decimal(string: "8.2")!)],
+        roles: ["Opening net worth": .openingBalance, "Closing net worth": .balance, "Change in net worth": .change,
+                "Income": .inflow, "Expenses": .outflow, "Valuation and currency movement": .gain],
+        relations: ["Change in net worth": FigureRelation("Closing net worth", less: "Opening net worth")])
 
     /// The review slides the survey asks about, by name.
     static let slides: [(name: String, facts: ReviewSlideFacts)] = [
@@ -81,7 +88,10 @@ enum Fixtures {
         headline: [("Income", Decimal(string: "90643.50")!), ("Expenses", Decimal(string: "66610.82")!),
                    ("Net income", Decimal(string: "24032.68")!)],
         lines: [("Income:Salary", Decimal(string: "89400.00")!),
-                ("Expenses:Housing", Decimal(string: "25680.00")!)])
+                ("Expenses:Housing", Decimal(string: "25680.00")!)],
+        roles: ["Income": .inflow, "Expenses": .outflow],
+        relations: ["Net income": FigureRelation("Income", less: "Expenses")],
+        lineRoles: [.inflow, .outflow])
 
     /// Noon on a day, in the zone the narrator prints and checks dates in.
     static func day(_ year: Int, _ month: Int, _ day: Int) -> Date {
@@ -90,24 +100,32 @@ enum Fixtures {
         return calendar.date(from: DateComponents(year: year, month: month, day: day, hour: 12))!
     }
 
-    /// A ninety-day forecast: rent on the 1st, the low point on the 2nd,
-    /// salary on the 15th, all in August.
+    /// A ninety-day forecast: rent on the 1st, the low point on the 2nd
+    /// with the car insurance, salary on the 15th and a refund on the 28th,
+    /// all in August. Each movement leaves the balance listed beside it, and
+    /// they add up to the change — a forecast whose low point no movement
+    /// reached could not show whether the balances the model is given agree
+    /// with the ones it would work out (17 October review).
     static let forecast = ForecastFacts(
         currencyCode: "AUD", accountName: "Everyday", horizonDays: 90,
         openingBalance: 8069, closingBalance: 9420, lowestBalance: 3105,
         lowestBalanceDate: day(2026, 8, 2),
-        upcoming: [(day(2026, 8, 1), "Rent", -2600), (day(2026, 8, 15), "Salary", 5200)],
+        upcoming: [(day(2026, 8, 1), "Rent", -2600), (day(2026, 8, 2), "Car insurance", -2364),
+                   (day(2026, 8, 15), "Salary", 5200), (day(2026, 8, 28), "Tax refund", 1115)],
+        upcomingBalances: [5469, 3105, 8305, 9420],
         recentMonthlyNet: 450)
 
     /// The same account running down: the outlook a person most needs to be
     /// told straight, and the one whose change goes to the model as a
-    /// negative number.
+    /// negative number. A holiday on the 21st makes the low point.
     static let fallingForecast = ForecastFacts(
         currencyCode: "AUD", accountName: "Everyday", horizonDays: 90,
         openingBalance: 9420, closingBalance: 6105, lowestBalance: 2480,
         lowestBalanceDate: day(2026, 8, 21),
         upcoming: [(day(2026, 8, 1), "Rent", -2600), (day(2026, 8, 15), "Salary", 5200),
-                   (day(2026, 8, 20), "Car repair", -3400)],
+                   (day(2026, 8, 20), "Car repair", -3400), (day(2026, 8, 21), "Holiday", -6140),
+                   (day(2026, 8, 30), "Bonus", 3625)],
+        upcomingBalances: [6820, 12020, 8620, 2480, 6105],
         recentMonthlyNet: -1100)
 
     /// Two spending categories and an income to budget them from.
@@ -118,6 +136,80 @@ enum Fixtures {
                          monthlyAverage: 460, monthlyMinimum: 300, monthlyMaximum: 640)]
     }
     static let monthlyIncome: Decimal = 7800
+
+    // MARK: - The labels the app would send
+
+    /// The app's string catalog, read from the repository: what a label is
+    /// called in each language the app is translated into. The survey sends
+    /// the model the labels the app sends — `String(localized:)` of these
+    /// same keys — wrapped in the prompts' English words; sent English
+    /// labels in every language, it measured a prompt no person receives
+    /// (17 October review: "Opening net worth" came back in Japanese as "net
+    /// worth at disclosure", where the app says 期首純資産).
+    static let catalog: [String: [String: String]] = {
+        let url = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            .deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("finvestlens/Localizable.xcstrings")
+        guard let data = try? Data(contentsOf: url),
+              let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let strings = root["strings"] as? [String: Any] else { return [:] }
+        var table: [String: [String: String]] = [:]
+        for (key, value) in strings {
+            guard let entry = value as? [String: Any],
+                  let localizations = entry["localizations"] as? [String: Any] else { continue }
+            for (language, localization) in localizations {
+                guard let unit = (localization as? [String: Any])?["stringUnit"] as? [String: Any],
+                      let text = unit["value"] as? String else { continue }
+                table[key, default: [:]][language] = text
+            }
+        }
+        return table
+    }()
+
+    /// `label` as the app would say it to a person in `identifier`'s
+    /// language — or as it is, where the catalog has no such key (an
+    /// account's own name).
+    static func label(_ label: String, in identifier: String) -> String {
+        let locale = Locale(identifier: identifier)
+        let language = locale.language.languageCode?.identifier ?? "en"
+        let key = switch language {
+        case "pt": "pt-BR"
+        case "zh": "zh-Hans"
+        default: language
+        }
+        return catalog[label]?[key] ?? label
+    }
+
+    /// A slide with its labels as the app would send them in `identifier`'s
+    /// language.
+    static func localized(_ facts: ReviewSlideFacts, in identifier: String) -> ReviewSlideFacts {
+        func say(_ text: String) -> String { label(text, in: identifier) }
+        return ReviewSlideFacts(
+            kicker: say(facts.kicker), periodLabel: facts.periodLabel, currencyCode: facts.currencyCode,
+            figures: facts.figures.map { (say($0.0), $0.1) },
+            ratios: facts.ratios.map { (say($0.0), $0.1) },
+            counts: facts.counts.map { (say($0.0), $0.1) },
+            deltaPercents: facts.deltaPercents.map { (say($0.0), $0.1) },
+            roles: Dictionary(uniqueKeysWithValues: facts.roles.map { (say($0.key), $0.value) }),
+            relations: Dictionary(uniqueKeysWithValues: facts.relations.map {
+                (say($0.key), FigureRelation(say($0.value.minuend), less: say($0.value.subtrahend)))
+            }))
+    }
+
+    /// The income statement with the app's labels in `identifier`'s
+    /// language; the lines are account names, the person's own words.
+    static func localized(_ facts: ReportFacts, in identifier: String) -> ReportFacts {
+        func say(_ text: String) -> String { label(text, in: identifier) }
+        return ReportFacts(
+            reportTitle: say(facts.reportTitle), periodLabel: facts.periodLabel, currencyCode: facts.currencyCode,
+            headline: facts.headline.map { (say($0.0), $0.1) }, lines: facts.lines,
+            roles: Dictionary(uniqueKeysWithValues: facts.roles.map { (say($0.key), $0.value) }),
+            relations: Dictionary(uniqueKeysWithValues: facts.relations.map {
+                (say($0.key), FigureRelation(say($0.value.minuend), less: say($0.value.subtrahend)))
+            }),
+            lineRoles: facts.lineRoles)
+    }
 
     // MARK: - Which language a text is in, asked independently
 

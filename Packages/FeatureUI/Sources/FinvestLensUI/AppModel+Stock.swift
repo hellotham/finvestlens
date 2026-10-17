@@ -22,8 +22,16 @@ extension AppModel {
     // MARK: Typed account lists for the assistant
 
     /// Security (stock / mutual-fund) accounts.
-    public var securityAccountNodes: [AccountNode] {
-        postableAccounts.filter { $0.typeName == "Stock" || $0.typeName == "Mutual" }
+    public var securityAccountNodes: [AccountNode] { typedAccounts(.security) }
+
+    /// One of the typed lists, filtered from ``postableAccounts`` once per
+    /// account tree — by the engine types the list names
+    /// (``AccountNode/isType(_:)``), so the cache key is the filter.
+    private func typedAccounts(_ kind: TypedAccounts) -> [AccountNode] {
+        if let cached = typedAccountsCache[kind] { return cached }
+        let list = postableAccounts.filter { $0.isType(kind.types) }
+        typedAccountsCache[kind] = list
+        return list
     }
 
     /// The **portfolios**: every account that directly parents a security
@@ -97,19 +105,13 @@ extension AppModel {
     }
 
     /// Cash / settlement accounts (bank, cash, other assets).
-    public var settlementAccountNodes: [AccountNode] {
-        postableAccounts.filter { ["Bank", "Cash", "Asset"].contains($0.typeName) }
-    }
+    public var settlementAccountNodes: [AccountNode] { typedAccounts(.settlement) }
 
     /// Income accounts (for dividends).
-    public var incomeAccountNodes: [AccountNode] {
-        postableAccounts.filter { $0.typeName == "Income" }
-    }
+    public var incomeAccountNodes: [AccountNode] { typedAccounts(.income) }
 
     /// Expense accounts (for commission / fees).
-    public var expenseAccountNodes: [AccountNode] {
-        postableAccounts.filter { $0.typeName == "Expense" }
-    }
+    public var expenseAccountNodes: [AccountNode] { typedAccounts(.expense) }
 
     // MARK: Recording
 

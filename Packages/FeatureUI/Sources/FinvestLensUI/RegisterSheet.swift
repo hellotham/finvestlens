@@ -1206,6 +1206,10 @@ private final class SheetView: NSView, NSTextFieldDelegate {
         let accent = UserDefaults.standard.string(forKey: AppearanceKey.accent) ?? ""
         if accent != lastAccent {
             lastAccent = accent
+            // Seen here first, from another process's write: the glyphs are
+            // about to be drawn in `Color.appAccent`, so it must not still
+            // hold the old one (17 October review).
+            Color.invalidateAppAccent()
             SheetSymbols.invalidate()
             ReconcileSymbols.invalidate()
             needsDisplay = true

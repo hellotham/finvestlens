@@ -215,15 +215,30 @@ extension AppModel {
             chart: .netWorthLine(series),
             footnote: String(localized: "Net worth as at \(AppDateFormat.current.long(to)) · \(statementEntityName)"),
             facts: {
+                let incomeLabel = String(localized: "Income")
+                let expensesLabel = String(localized: "Expenses")
+                let openingLabel = String(localized: "Opening net worth")
+                let changeLabel = String(localized: "Change in net worth")
                 var figures: [(String, Decimal)] = [
                     (netWorthLabel, netWorth), (surplusLabel, surplus),
-                    (String(localized: "Income"), income),
-                    (String(localized: "Expenses"), current?.totalExpenses ?? 0)]
+                    (incomeLabel, income),
+                    (expensesLabel, current?.totalExpenses ?? 0)]
+                // What each figure is, said on its line to the model and held
+                // to by the checks (`FigureRole`): handed a bare list, it had
+                // expenses above income in every Japanese draft of this slide.
+                var roles: [String: FigureRole] = [netWorthLabel: .balance, incomeLabel: .inflow,
+                                                   expensesLabel: .outflow]
+                // The relations this slide computed, said as computed: the
+                // surplus is the income statement's net income.
+                var relations: [String: FigureRelation] = [surplusLabel: FigureRelation(incomeLabel, less: expensesLabel)]
                 var deltas: [(String, Decimal)] = []
                 var ratios: [(String, Decimal)] = []
                 if let openingNet {
-                    figures.append((String(localized: "Opening net worth"), openingNet))
-                    figures.append((String(localized: "Change in net worth"), netWorth - openingNet))
+                    figures.append((openingLabel, openingNet))
+                    figures.append((changeLabel, netWorth - openingNet))
+                    roles[openingLabel] = .openingBalance
+                    roles[changeLabel] = .change
+                    relations[changeLabel] = FigureRelation(netWorthLabel, less: openingLabel)
                     if let percent = percentDelta(netWorth, openingNet) {
                         deltas.append((netWorthLabel, percent))
                     }
@@ -235,7 +250,7 @@ extension AppModel {
                 }
                 return ReviewSlideFacts(kicker: String(localized: "Highlights"), periodLabel: label,
                                         currencyCode: code, figures: figures, ratios: ratios,
-                                        deltaPercents: deltas)
+                                        deltaPercents: deltas, roles: roles, relations: relations)
             }())
     }
 
@@ -294,15 +309,33 @@ extension AppModel {
             ],
             chart: .waterfall(steps),
             footnote: String(localized: "Valuation & FX derived as closing − opening − net surplus"),
-            facts: ReviewSlideFacts(
-                kicker: String(localized: "Net worth bridge"), periodLabel: label, currencyCode: code,
-                figures: [(String(localized: "Opening net worth"), openingNet),
-                          (incomeLabel, period.totalIncome),
-                          (expensesLabel, period.totalExpenses),
-                          (String(localized: "Valuation and currency movement"), valuation),
-                          (String(localized: "Change in net worth"), change),
-                          (String(localized: "Closing net worth"), closingNet)],
-                deltaPercents: percent.map { [(String(localized: "Net worth"), $0)] } ?? []))
+            facts: {
+                // The waterfall's own figures, each with what it is — the
+                // model was handed these as a bare list and had expenses
+                // "fallen by" their own total, and the opening net worth as
+                // the size of a difference (17 October 2026). A valuation of
+                // nothing — a book with no securities or currencies — is no
+                // gain, and is listed without one.
+                let openingNetLabel = String(localized: "Opening net worth")
+                let closingNetLabel = String(localized: "Closing net worth")
+                let movementLabel = String(localized: "Valuation and currency movement")
+                let changeLabel = String(localized: "Change in net worth")
+                var roles: [String: FigureRole] = [openingNetLabel: .openingBalance, closingNetLabel: .balance,
+                                                   changeLabel: .change, incomeLabel: .inflow,
+                                                   expensesLabel: .outflow]
+                if valuation != 0 { roles[movementLabel] = valuation > 0 ? .gain : .loss }
+                return ReviewSlideFacts(
+                    kicker: String(localized: "Net worth bridge"), periodLabel: label, currencyCode: code,
+                    figures: [(openingNetLabel, openingNet),
+                              (incomeLabel, period.totalIncome),
+                              (expensesLabel, period.totalExpenses),
+                              (movementLabel, valuation),
+                              (changeLabel, change),
+                              (closingNetLabel, closingNet)],
+                    deltaPercents: percent.map { [(String(localized: "Net worth"), $0)] } ?? [],
+                    roles: roles,
+                    relations: [changeLabel: FigureRelation(closingNetLabel, less: openingNetLabel)])
+            }())
     }
 
     private enum FlowSection { case income, expenses }
@@ -377,9 +410,15 @@ extension AppModel {
         if let priorTotal, priorTotal != 0 {
             figures.append((String(localized: "Prior period total"), priorTotal))
         }
-        figures.append(contentsOf: ordered.map { ($0.name, ($0.total.first ?? nil) ?? 0) })
+        let categories = ordered.map { ($0.name, ($0.total.first ?? nil) ?? 0) }
+        figures.append(contentsOf: categories)
         var deltas: [(String, Decimal)] = []
         if let percent { deltas.append((totalLabel, percent)) }
+        // The total and each category are this period's money in or out;
+        // the prior period's total is the period before, and goes as it is.
+        let flow: FigureRole = isIncome ? .inflow : .outflow
+        var roles: [String: FigureRole] = [totalLabel: flow]
+        for (name, _) in categories { roles[name] = flow }
 
         return ReviewSlide(
             id: isIncome ? "income" : "spending",
@@ -390,7 +429,7 @@ extension AppModel {
             footnote: prior == nil ? String(localized: "No prior-period comparison available")
                                    : String(localized: "Prior period: one year earlier"),
             facts: ReviewSlideFacts(kicker: kicker, periodLabel: label, currencyCode: code,
-                                    figures: figures, deltaPercents: deltas))
+                                    figures: figures, deltaPercents: deltas, roles: roles))
     }
 
     private func cashFlowSlide(from: Date, to: Date, label: String, code: String,
@@ -613,7 +652,9 @@ extension AppModel {
                 figures: [(assetsLabel, closing.totalAssets),
                           (liabilitiesLabel, closing.totalLiabilities),
                           (netWorthLabel, net)],
-                ratios: [(debtLabel, debtRounded)]))
+                ratios: [(debtLabel, debtRounded)],
+                roles: [assetsLabel: .balance, liabilitiesLabel: .balance, netWorthLabel: .balance],
+                relations: [netWorthLabel: FigureRelation(assetsLabel, less: liabilitiesLabel)]))
     }
 
     // MARK: Insights (Apple Intelligence, cached)

@@ -666,11 +666,7 @@ struct DashboardView: View {
             if let state = model.upNextState {
                 VStack(alignment: .leading, spacing: 10) {
                     if let days = state.priceAgeDays {
-                        upNextRow("clock.arrow.circlepath",
-                                  "Prices updated \(days) days ago",
-                                  button: "Update Prices") {
-                            Task { await model.updateAllPrices() }
-                        }
+                        UpdatePricesRow(model: model, days: days)
                     }
                     if state.uncategorisedCount > 0 {
                         upNextRow("sparkles",
@@ -706,14 +702,7 @@ struct DashboardView: View {
     /// key at all, and this card is the first thing a reader sees.
     private func upNextRow(_ systemImage: String, _ text: LocalizedStringKey,
                            button: LocalizedStringKey, action: @escaping () -> Void) -> some View {
-        HStack(spacing: 8) {
-            Label(text, systemImage: systemImage)
-                .scaledFont(.callout)
-                .lineLimit(2)
-            Spacer(minLength: 12)
-            Button(button, action: action)
-                .controlSize(.small)
-        }
+        UpNextRow(systemImage: systemImage, text: text, button: button, action: action)
     }
 
     // MARK: Net worth
@@ -1480,4 +1469,54 @@ private struct LocalState<Value, Content: View>: View {
     }
 
     var body: some View { content($value) }
+}
+
+/// One row of Up Next: what is due, and the button that does it — or, while
+/// the row's work runs, its progress as a bar in place of the button, which
+/// is off meanwhile.
+private struct UpNextRow: View {
+    var systemImage: String
+    var text: LocalizedStringKey
+    var button: LocalizedStringKey
+    var progress: Double?
+    var action: () -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Label(text, systemImage: systemImage)
+                .scaledFont(.callout)
+                .lineLimit(2)
+            Spacer(minLength: 12)
+            if let progress {
+                ProgressView(value: progress)
+                    .frame(width: 72)
+                    .accessibilityLabel(Text(button))
+            } else {
+                Button(button, action: action)
+                    .controlSize(.small)
+            }
+        }
+    }
+}
+
+/// Up Next's prices row: the fetch's own progress on the row that started it,
+/// in place of the button while it runs — the button used to stay live and
+/// silent, and a second press did nothing. Its own view, reading the progress
+/// itself, so a tick of the fetch redraws this row and not every tile on the
+/// board, which is what the board's own state is kept apart for (17 October
+/// review).
+private struct UpdatePricesRow: View {
+    let model: AppModel
+    let days: Int
+
+    var body: some View {
+        UpNextRow(systemImage: "clock.arrow.circlepath", text: "Prices updated \(days) days ago",
+                  button: "Update Prices", progress: model.quoteProgress) {
+            // The button gives way to the fetch's progress. Said aloud, or a
+            // VoiceOver user hears the button go and nothing more until the
+            // result's own announcement.
+            AccessibilityNotification.Announcement(String(localized: "Updating prices")).post()
+            Task { await model.updateAllPrices() }
+        }
+    }
 }

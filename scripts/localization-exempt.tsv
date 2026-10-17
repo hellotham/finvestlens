@@ -52,6 +52,10 @@ Packages/Intelligence/Sources/FinvestLensIntelligence/FigureGrounding.swift	pour
 Packages/Intelligence/Sources/FinvestLensIntelligence/FigureGrounding.swift	por ciento	how a narrator writes 'percent', matched when checking its figures
 Packages/Intelligence/Sources/FinvestLensIntelligence/FigureGrounding.swift	por cento	how a narrator writes 'percent', matched when checking its figures
 Packages/Intelligence/Sources/FinvestLensIntelligence/FigureGrounding.swift	per cento	how a narrator writes 'percent', matched when checking its figures
+Packages/Intelligence/Sources/FinvestLensIntelligence/FigureAttribution.swift	is|was|were|are|remains|remained|stands|stood|sits|sat|comes in|came in|ends|ended|lies|lay	verbs of being a narrator writes between a figure and a comparison, matched when checking what it said of its figures
+Packages/Intelligence/Sources/FinvestLensIntelligence/FigureAttribution.swift	est|était|sont|étaient|reste|restait|se situe|se situait|demeure	verbs of being a narrator writes between a figure and a comparison, matched when checking what it said of its figures
+Packages/Intelligence/Sources/FinvestLensIntelligence/FigureAttribution.swift	es|fue|era|son|fueron|eran|está|estuvo|estaba|queda|quedó|se sitúa|se situó|resulta|resultó	verbs of being a narrator writes between a figure and a comparison, matched when checking what it said of its figures
+Packages/Intelligence/Sources/FinvestLensIntelligence/FigureAttribution.swift	è|era|sono|erano|resta|restava|rimane|rimaneva|si attesta|si attestava|risulta|risultava	verbs of being a narrator writes between a figure and a comparison, matched when checking what it said of its figures
 Packages/Intelligence/Sources/FinvestLensIntelligence/ReviewNarrator.swift	no change	a narrator's way of saying 'unchanged', matched when checking a slide
 Packages/Intelligence/Sources/FinvestLensIntelligence/ReviewNarrator.swift	remained at	a narrator's way of saying 'unchanged', matched when checking a slide
 Packages/Intelligence/Sources/FinvestLensIntelligence/ReviewNarrator.swift	remains at	a narrator's way of saying 'unchanged', matched when checking a slide
@@ -111,7 +115,26 @@ Packages/Intelligence/Sources/FinvestLensIntelligence/ReviewNarrator.swift	You w
 Packages/Intelligence/Sources/FinvestLensIntelligence/ReviewNarrator.swift	Slide section: §\nPeriod: §\nFigures:…	a model's prompt
 Packages/Intelligence/Sources/FinvestLensIntelligence/ReviewNarrator.swift	Changes:\n§	a model's prompt
 Packages/Intelligence/Sources/FinvestLensIntelligence/ReviewNarrator.swift	unchanged on the prior period	a model's prompt
-Packages/Intelligence/Sources/FinvestLensIntelligence/ReviewNarrator.swift	§ §% on the prior period	a model's prompt
+Packages/Intelligence/Sources/FinvestLensIntelligence/ForecastNarrator.swift	§ § below zero	the forecast's facts as the model reads them — the prompt, never shown to a person
+Packages/Intelligence/Sources/FinvestLensIntelligence/ForecastNarrator.swift	the same as today's balance	the forecast's facts as the model reads them — the prompt, never shown to a person
+Packages/Intelligence/Sources/FinvestLensIntelligence/ForecastNarrator.swift	income matched spending	the forecast's facts as the model reads them — the prompt, never shown to a person
+Packages/Intelligence/Sources/FinvestLensIntelligence/ForecastNarrator.swift	income exceeded spending by § § a month	the forecast's facts as the model reads them — the prompt, never shown to a person
+Packages/Intelligence/Sources/FinvestLensIntelligence/ForecastNarrator.swift	spending exceeded income by § § a month	the forecast's facts as the model reads them — the prompt, never shown to a person
+Packages/Intelligence/Sources/FinvestLensIntelligence/ForecastNarrator.swift	§ § out	the forecast's facts as the model reads them — the prompt, never shown to a person
+Packages/Intelligence/Sources/FinvestLensIntelligence/ForecastNarrator.swift	§ § in	the forecast's facts as the model reads them — the prompt, never shown to a person
+Packages/Intelligence/Sources/FinvestLensIntelligence/ReviewNarrator.swift	money in over the period	a slide figure's role or relation as the model reads it — the prompt, never shown to a person
+Packages/Intelligence/Sources/FinvestLensIntelligence/ReviewNarrator.swift	money out over the period	a slide figure's role or relation as the model reads it — the prompt, never shown to a person
+Packages/Intelligence/Sources/FinvestLensIntelligence/ReviewNarrator.swift	§ less §	a slide figure's role or relation as the model reads it — the prompt, never shown to a person
+Packages/Intelligence/Sources/FinvestLensIntelligence/ReviewNarrator.swift	as at the end of the period	a slide figure's role or relation as the model reads it — the prompt, never shown to a person
+Packages/Intelligence/Sources/FinvestLensIntelligence/ReviewNarrator.swift	as at the start of the period	a slide figure's role or relation as the model reads it — the prompt, never shown to a person
+Packages/Intelligence/Sources/FinvestLensIntelligence/ReviewNarrator.swift	the change over the period	a slide figure's role or relation as the model reads it — the prompt, never shown to a person
+Packages/Intelligence/Sources/FinvestLensIntelligence/ReviewNarrator.swift	value added over the period, not money in	a slide figure's role or relation as the model reads it — the prompt, never shown to a person
+Packages/Intelligence/Sources/FinvestLensIntelligence/ReviewNarrator.swift	value lost over the period, not money out	a slide figure's role or relation as the model reads it — the prompt, never shown to a person
+Packages/Intelligence/Sources/FinvestLensIntelligence/ReviewNarrator.swift	the prior period	a slide figure's role or relation as the model reads it — the prompt, never shown to a person
+Packages/Intelligence/Sources/FinvestLensIntelligence/ReviewNarrator.swift	§ § on §	a slide figure's role or relation as the model reads it — the prompt, never shown to a person
+Packages/Intelligence/Sources/FinvestLensIntelligence/ForecastNarrator.swift	, leaving §	the forecast's facts as the model reads them — the prompt, never shown to a person
+Packages/Intelligence/Sources/FinvestLensIntelligence/ForecastNarrator.swift	\nScheduled over the horizon: § § in, § § out	the forecast's facts as the model reads them — the prompt, never shown to a person
+Packages/Intelligence/Sources/FinvestLensIntelligence/ForecastNarrator.swift	today's balance	the forecast's facts as the model reads them — the prompt, never shown to a person
 Packages/Intelligence/Sources/FinvestLensIntelligence/SchemaGuide.swift	Answer with one JSON object that matches this JSON Schema.…	a model's prompt
 Packages/Intelligence/Sources/FinvestLensIntelligence/StatementExtractor.swift	You extract transaction rows from bank and credit card statement text.…	a model's prompt
 Packages/Intelligence/Sources/FinvestLensIntelligence/StatementExtractor.swift	Statement page:\n\n§	a model's prompt
@@ -159,9 +182,7 @@ Packages/Reports/Sources/FinvestLensReports/AccountSummary.swift	Liabilities	a s
 Packages/Reports/Sources/FinvestLensReports/AccountSummary.swift	Equity	a section's identifier; ReportBuilders shows the reader's word (accountClassName)
 Packages/Reports/Sources/FinvestLensReports/AccountSummary.swift	Income	a section's identifier; ReportBuilders shows the reader's word (accountClassName)
 Packages/Reports/Sources/FinvestLensReports/AccountSummary.swift	Expenses	a section's identifier; ReportBuilders shows the reader's word (accountClassName)
-Packages/FeatureUI/Sources/FinvestLensUI/AppModel+Stock.swift	Cash	an account type's identifier (typeName)
 Packages/FeatureUI/Sources/FinvestLensUI/IntelligenceViews.swift	Cash	an account type's identifier (typeName)
-Packages/FeatureUI/Sources/FinvestLensUI/AppModel+Stock.swift	Asset	an account type's identifier (typeName)
 Packages/FeatureUI/Sources/FinvestLensUI/IntelligenceViews.swift	Asset	an account type's identifier (typeName)
 Packages/Interchange/Sources/FinvestLensInterchange/LedgerBookMapping.swift	guid: §	a Ledger metadata tag
 Packages/Interchange/Sources/FinvestLensInterchange/LedgerBookMapping.swift	action: §	a Ledger metadata tag

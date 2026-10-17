@@ -49,15 +49,16 @@ public extension FinancialReports {
                                  scheduled: [ScheduledTransaction],
                                  from: Date, horizon: Date, currency: Commodity,
                                  whatIf: [WhatIfEvent] = []) -> [CashFlowPoint] {
-        guard book.account(with: accountID) != nil else { return [] }
+        guard let account = book.account(with: accountID) else { return [] }
 
-        // Starting balance (raw signed quantity) up to `from`.
+        // Starting balance (raw signed quantity) up to `from`, from the
+        // account's own splits. Walking every transaction in the book for one
+        // account's balance was most of a forecast's cost, paid again for
+        // every what-if added or removed (17 October review).
         var running = Decimal(0)
-        for transaction in book.transactions where transaction.datePosted <= from {
-            for split in transaction.splits
-            where split.account?.guid == accountID && split.reconcileState != .voided {
-                running += split.quantity
-            }
+        for split in book.splits(for: account)
+        where split.reconcileState != .voided && (split.transaction?.datePosted ?? .distantFuture) <= from {
+            running += split.quantity
         }
 
         // Upcoming occurrences that affect this account.

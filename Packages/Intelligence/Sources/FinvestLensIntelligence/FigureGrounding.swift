@@ -120,6 +120,18 @@ enum FigureGrounding {
         /// The currency the figures are in, so "2027 AUD" is read as an
         /// amount and not as a year.
         var currencyCode: String = ""
+        /// Of `figures`, the balances at a moment — a closing balance, a net
+        /// worth — which a word of change beside them would make the size of
+        /// a change (FigureAttribution.swift). Empty: nothing is held to it.
+        var levels: [Decimal] = []
+        /// Of `figures`, the ones that are the size of a change and may be
+        /// said as one: "rose by 1,351".
+        var changes: [Decimal] = []
+        /// The sizes of the changes that go up — a rise, money in, a gain —
+        /// and of those that go down, so a change said the other way can be
+        /// told (FigureAttribution.swift). Empty: not held to it.
+        var rises: [Decimal] = []
+        var falls: [Decimal] = []
     }
 
     /// Whether `text` states one of `percentages` — as a percentage, in any
@@ -155,8 +167,39 @@ enum FigureGrounding {
         return difference >= 0 && difference < lastPlace * scale
     }
 
-    /// Whether every number in `text` is one the facts support.
+    /// A number as the check read it: where its digits stand in the
+    /// normalised text, the unit it was read with, and the readings that made
+    /// it a fact — none, where nothing did.
+    ///
+    /// One number may be a run taken apart at a separator ("9420，8月" is an
+    /// amount and a month) or several runs read as one ("6万6611"); each
+    /// comes out as the number it was decided to be, so that what a sentence
+    /// says *about* a number is read off the same numbers the check
+    /// accepted (FigureAttribution.swift).
+    struct Resolved {
+        /// The first and one-past-the-last character of its digits.
+        var start: Int
+        var end: Int
+        var unit: Unit
+        /// Each value it was read as, counted in `scale`.
+        var readings: [Token]
+        var scale: Decimal
+        var supported: Bool
+    }
+
+    /// Whether every number in `text` is one the facts support. Stops at the
+    /// first that is not: nothing after it can make the text true, and taking
+    /// a long run of numbers apart is the costly part of the check.
     static func isGrounded(_ text: String, facts: Facts, locale: Locale = LanguageModels.personLocale) -> Bool {
+        resolve(text, facts: facts, locale: locale, stoppingAtUnsupported: true).allSatisfy(\.supported)
+    }
+
+    /// Every number in `text`, in order, as the check decides to read it —
+    /// up to and including the first the facts do not support, when
+    /// `stoppingAtUnsupported`.
+    static func resolve(_ text: String, facts: Facts,
+                        locale: Locale = LanguageModels.personLocale,
+                        stoppingAtUnsupported: Bool = false) -> [Resolved] {
         let continental = writesDecimalComma(locale)
         let figures = facts.figures.map { abs($0) }
         let percentages = facts.percentages.map { abs($0) }
@@ -240,7 +283,13 @@ enum FigureGrounding {
                 if !facts.dates.isEmpty {
                     return whole && (days.contains(token.value) || counts.contains(token.value))
                 }
-            case .year, .none:
+            case .year:
+                // "2025–26年度": the label's own years, the second written
+                // short, as the label writes it. Read as the year 26, four of
+                // the Chinese report notes in the 17 October survey were
+                // declined for repeating their own period.
+                if whole, suffixes.contains(where: { Decimal($0) == token.value }) { return true }
+            case .none:
                 break
             }
             if isFigure || isPercentage { return true }
@@ -249,38 +298,149 @@ enum FigureGrounding {
                 || days.contains(token.value) || months.contains(token.value)
         }
 
-        /// `text` as one number, read each way its separators allow — or as
-        /// two runs either side of one of those separators, each of them
-        /// supported in turn. The unit belongs to the last number: in
-        /// "3105，8月" it is the 8 that is a month.
-        func runSupported(_ text: Substring, _ unit: Unit) -> Bool {
-            if readings(of: String(text), continental: continental).contains(where: { tokenSupported($0, unit) }) {
-                return true
+        /// The characters `lower..<upper` of a run as one number, read each
+        /// way its separators allow — or as two numbers either side of one of
+        /// those separators, each of them supported in turn. The unit belongs
+        /// to the last number: in "3105，8月" it is the 8 that is a month.
+        /// `nil` when no reading is supported; otherwise the numbers it was
+        /// decided to be.
+        ///
+        /// Each stretch of the run is decided once (`memo`): taken apart
+        /// afresh at every separator, a run of twenty numbers none of which
+        /// is a fact took 25 seconds to refuse (review of 17 October 2026);
+        /// remembered, the same refusal is a few hundred stretches.
+        struct Stretch: Hashable { var lower: Int; var upper: Int }
+        func decompose(_ characters: [Character], _ lower: Int, _ upper: Int, of run: Run,
+                       memo: inout [Stretch: [Resolved]?]) -> [Resolved]? {
+            let stretch = Stretch(lower: lower, upper: upper)
+            if let decided = memo[stretch] { return decided }
+            let unit = upper == characters.count ? run.unit : .none
+            var decided: [Resolved]?
+            let supported = readings(of: String(characters[lower..<upper]), continental: continental)
+                .filter { tokenSupported($0, unit) }
+            if !supported.isEmpty {
+                decided = [Resolved(start: run.start + lower, end: run.start + upper, unit: unit,
+                                    readings: supported, scale: unit.scale ?? 1, supported: true)]
+            } else {
+                for split in stride(from: lower + 1, to: upper - 1, by: 1) where !isDigit(characters[split]) {
+                    if let first = decompose(characters, lower, split, of: run, memo: &memo),
+                       let second = decompose(characters, split + 1, upper, of: run, memo: &memo) {
+                        decided = first + second
+                        break
+                    }
+                }
             }
-            for index in text.indices where !isDigit(text[index]) {
-                let left = text[..<index]
-                let right = text[text.index(after: index)...]
-                guard !left.isEmpty, !right.isEmpty else { continue }
-                if runSupported(left, .none), runSupported(right, unit) { return true }
-            }
-            return false
+            memo.updateValue(decided, forKey: stretch)
+            return decided
         }
 
         let found = runs(in: text, currencyCode: facts.currencyCode)
+        var resolved: [Resolved] = []
         var index = 0
         while index < found.count {
             // "6万6611" and "1億2000万" are one number written in two or
             // three runs; where the whole is a figure, that is what it is.
             if let (total, count) = myriadCompound(found, from: index),
                figures.contains(where: { abs($0 - total) <= halfUnit(at: 0) }) {
+                let last = found[index + count - 1]
+                resolved.append(Resolved(start: found[index].start, end: last.end, unit: last.unit,
+                                         readings: [Token(value: total, decimalPlaces: 0)], scale: 1,
+                                         supported: true))
                 index += count
                 continue
             }
             let run = found[index]
-            guard runSupported(Substring(run.text), run.unit) else { return false }
+            let characters = Array(run.text)
+            var memo: [Stretch: [Resolved]?] = [:]
+            if let parts = decompose(characters, 0, characters.count, of: run, memo: &memo) {
+                resolved += parts
+            } else {
+                resolved.append(Resolved(start: run.start, end: run.end, unit: run.unit, readings: [],
+                                         scale: run.unit.scale ?? 1, supported: false))
+                if stoppingAtUnsupported { return resolved }
+            }
             index += 1
         }
-        return true
+        return resolved
+    }
+
+    /// Where the unit after a number ends, from `end`, the character after its
+    /// last digit: the scale word ("k", "mil", "Tsd.", "Millionen", "万"),
+    /// then the currency ("AUD", "A$", "ドル", "T$", "TAUD", "de AUD"), each
+    /// with the spaces before it.
+    ///
+    /// Built from the vocabulary ``unit(_:before:after:currencyCode:)``
+    /// reads — the scale words, the spaces, the German thousands — so that
+    /// what one calls a unit the other steps over. Where it did not, the
+    /// words after "0,38 Millionen AUD" began "millionen", and every check
+    /// that reads what follows a number missed it (review of 17 October
+    /// 2026).
+    static func tail(after end: Int, in characters: [Character], currencyCode: String) -> Int {
+        func skipSpaces(_ index: Int) -> Int {
+            var index = index
+            while index < characters.count, isUnitSpace(characters[index]) { index += 1 }
+            return index
+        }
+        func isCJK(_ character: Character) -> Bool {
+            character.unicodeScalars.allSatisfy { $0.value >= 0x3000 }
+        }
+        func matches(_ word: String, at index: Int, wordEnding: Bool) -> Int? {
+            let length = word.count
+            guard index + length <= characters.count,
+                  String(characters[index..<(index + length)]).lowercased() == word.lowercased() else { return nil }
+            // A word ends where a letter of its own script does not go on:
+            // "AUDに対し" is AUD and then Japanese.
+            if wordEnding, index + length < characters.count, characters[index + length].isLetter,
+               !isCJK(characters[index + length]) { return nil }
+            return index + length
+        }
+        /// The currency at `index`, and where it ends: German thousands
+        /// ("T$", "TEUR", "TAUD"), the code, a dollar written with its country
+        /// ("A$"), a symbol, or a CJK currency word.
+        func currency(at index: Int) -> Int? {
+            let code = currencyCode.uppercased()
+            if index < characters.count, characters[index] == "T", code != "TOP" {
+                let rest = index + 1
+                if rest < characters.count, germanThousandsSymbols.contains(characters[rest]) { return rest + 1 }
+                for word in ["EUR"] + (code.isEmpty ? [] : [code]) {
+                    if let next = matches(word, at: rest, wordEnding: true) { return next }
+                }
+            }
+            if !code.isEmpty, let next = matches(code, at: index, wordEnding: true) { return next }
+            for word in dollarForms {
+                if let next = matches(word, at: index, wordEnding: false) { return next }
+            }
+            if index < characters.count, currencySymbols.contains(characters[index]) { return index + 1 }
+            for word in currencyWords {
+                if let next = matches(word, at: index, wordEnding: false) { return next }
+            }
+            return nil
+        }
+
+        var cursor = skipSpaces(end)
+        // The scale: a word ("thousand", "mil", "Mio."), a lone "k" or "m",
+        // or a CJK unit character. A long word goes on to its inflection —
+        // "Millionen", "millions", "thousands" — as ``unit`` reads it by its
+        // beginning; "mil", "mio" and "tsd" are whole words or abbreviations.
+        for word in scaleWordsAfter {
+            let cjk = word.unicodeScalars.allSatisfy { $0.value >= 0x3000 }
+            let inflects = !cjk && word.count >= 5
+            guard var next = matches(word, at: cursor, wordEnding: !cjk && !inflects) else { continue }
+            if inflects {
+                while next < characters.count, characters[next].isLetter, !isCJK(characters[next]) { next += 1 }
+            }
+            cursor = next
+            if cursor < characters.count, characters[cursor] == "." { cursor += 1 }
+            // "millones de AUD", "milhões de AUD", "millions d'AUD": the
+            // currency after the preposition is part of the unit.
+            let preposition = skipSpaces(cursor)
+            for word in ["de", "d'", "d’"] {
+                guard let afterWord = matches(word, at: preposition, wordEnding: word == "de") else { continue }
+                if let end = currency(at: word == "de" ? skipSpaces(afterWord) : afterWord) { return end }
+            }
+            break
+        }
+        return currency(at: skipSpaces(cursor)) ?? cursor
     }
 
     /// The value of a number written across adjacent runs in ten-thousands
@@ -426,11 +586,38 @@ enum FigureGrounding {
 
     // MARK: - Units
 
-    private static let percentWords = ["%", "percent", "per cent", "prozent", "pour cent", "por ciento",
-                                       "por cento", "per cento", "パーセント"]
-    private static let thousandWords = ["thousand", "tausend", "tsd", "mille", "milliers", "mila", "千"]
-    private static let millionWords = ["million", "mio", "millón", "millones", "milhão", "milhões",
-                                       "milione", "milioni", "百万"]
+    static let percentWords = ["%", "percent", "per cent", "prozent", "pour cent", "por ciento",
+                               "por cento", "per cento", "パーセント"]
+    static let thousandWords = ["thousand", "tausend", "tsd", "mille", "milliers", "mila", "千"]
+    static let millionWords = ["million", "mio", "millón", "millones", "milhão", "milhões",
+                               "milione", "milioni", "百万"]
+    static let myriadWords = ["万", "萬"]
+    static let hundredMillionWords = ["億", "亿"]
+    /// Every word that scales the number before it, longest first, as
+    /// ``tail(after:in:currencyCode:)`` steps over them: the words above, and
+    /// the "mil", "k" and "m" ``unit(_:before:after:currencyCode:)`` reads
+    /// on their own.
+    static let scaleWordsAfter = (millionWords + thousandWords + ["mil", "k", "m"]
+                                  + myriadWords + hundredMillionWords).sorted { $0.count > $1.count }
+    /// The currency symbols read before a number.
+    static let currencySymbols = "$€£¥₹₩"
+    /// The symbols German accounts write after a "T" for thousands of the
+    /// currency: "66,6 T€", "66.61 T$". Not every symbol: no one writes
+    /// "T₹", and pooled with ``currencySymbols`` it made "2024 T₹" an amount
+    /// in thousands (review of 17 October 2026).
+    static let germanThousandsSymbols = "$€£¥"
+    /// A dollar written with its country, as German and French put it after
+    /// the number and English before it: "9.420 A$", "A$ 9,420".
+    static let dollarForms = ["au$", "a$", "us$"]
+    /// Currencies written as a word after the number in Chinese and Japanese.
+    static let currencyWords = ["澳元", "美元", "欧元", "円", "元", "ドル"]
+
+    /// The spaces that can stand between a number and its unit: the
+    /// ordinary one, and the no-break, narrow and thin spaces French and
+    /// German typesetting put there.
+    static func isUnitSpace(_ character: Character) -> Bool {
+        character == " " || character == "\u{00A0}" || character == "\u{202F}" || character == "\u{2009}"
+    }
 
     /// The unit a number carries, from what follows it — and, for the two
     /// that are written in front, what precedes it.
@@ -439,18 +626,17 @@ enum FigureGrounding {
         // Up to a dozen characters either side are enough for every unit
         // here; spaces between a number and its unit are skipped.
         var cursor = end
-        while cursor < characters.count, characters[cursor] == " " || characters[cursor] == "\u{00A0}"
-                || characters[cursor] == "\u{202F}" { cursor += 1 }
+        while cursor < characters.count, isUnitSpace(characters[cursor]) { cursor += 1 }
         let after = String(characters[cursor..<min(characters.count, cursor + 12)]).lowercased()
         var back = start
-        while back > 0, characters[back - 1] == " " || characters[back - 1] == "\u{00A0}" { back -= 1 }
+        while back > 0, isUnitSpace(characters[back - 1]) { back -= 1 }
         let before = String(characters[max(0, back - 6)..<back]).lowercased()
 
         if percentWords.contains(where: after.hasPrefix) || before.hasSuffix("百分之") || before.hasSuffix("%") {
             return .percent
         }
-        if after.hasPrefix("万") || after.hasPrefix("萬") { return .myriads }
-        if after.hasPrefix("億") || after.hasPrefix("亿") { return .hundredMillions }
+        if myriadWords.contains(where: after.hasPrefix) { return .myriads }
+        if hundredMillionWords.contains(where: after.hasPrefix) { return .hundredMillions }
         if after.hasPrefix("月") { return .month }
         if after.hasPrefix("日") || after.hasPrefix("号") || after.hasPrefix("號") { return .day }
         if after.hasPrefix("年") { return .year }
@@ -461,10 +647,15 @@ enum FigureGrounding {
             return .thousands
         }
         // A lone "k" or "m" — "66.6k AUD", "1.2M" — but not the first letter
-        // of a word ("3 months", "5 km").
+        // of a word ("3 months", "5 km"). A Chinese or Japanese character
+        // after it starts the next word, as ``tail(after:in:currencyCode:)``
+        // reads it: "31.1k増加" is 31,100 and then "increase" — read as no
+        // unit, a true Japanese headline was declined (17 October survey).
         if let first = after.first, first == "k" || first == "m" {
             let next = after.dropFirst().first
-            if next == nil || !(next!.isLetter) { return first == "k" ? .thousands : .millions }
+            if next == nil || !(next!.isLetter) || next!.unicodeScalars.allSatisfy({ $0.value >= 0x3000 }) {
+                return first == "k" ? .thousands : .millions
+            }
         }
         let code = currencyCode.lowercased()
         // German accounts count thousands with a capital T in front of the
@@ -476,13 +667,12 @@ enum FigureGrounding {
         // in a book kept in paʻanga, whose own symbol is T$.
         if code != "top", cursor < characters.count, characters[cursor] == "T" {
             let rest = String(characters[(cursor + 1)..<min(characters.count, cursor + 5)])
-            if let symbol = rest.first, "$€£¥".contains(symbol) { return .thousands }
+            if let symbol = rest.first, germanThousandsSymbols.contains(symbol) { return .thousands }
             if rest.hasPrefix("EUR") || (!code.isEmpty && rest.hasPrefix(code.uppercased())) { return .thousands }
         }
         if !code.isEmpty, after.hasPrefix(code) || before.hasSuffix(code) { return .currency }
-        if let symbol = before.last, "$€£¥₹₩".contains(symbol) { return .currency }
-        if after.hasPrefix("澳元") || after.hasPrefix("美元") || after.hasPrefix("欧元") || after.hasPrefix("円")
-            || after.hasPrefix("元") || after.hasPrefix("ドル") { return .currency }
+        if let symbol = before.last, currencySymbols.contains(symbol) { return .currency }
+        if currencyWords.contains(where: after.hasPrefix) { return .currency }
         return .none
     }
 
@@ -495,7 +685,11 @@ enum FigureGrounding {
     /// ideographic space. Foundation's full-to-half-width transform does the
     /// same and then goes on to turn katakana into its half-width forms, so
     /// "パーセント" stopped being the word this file looks for after a number.
-    private static func normalised(_ text: String) -> String {
+    ///
+    /// Not private: the attribution checks (FigureAttribution.swift) read
+    /// the words around a run, and a run's position counts characters of
+    /// this text, not of the original.
+    static func normalised(_ text: String) -> String {
         var folded = String.UnicodeScalarView()
         for scalar in text.unicodeScalars {
             switch scalar.value {

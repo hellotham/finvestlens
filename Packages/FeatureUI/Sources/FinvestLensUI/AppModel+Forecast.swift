@@ -26,18 +26,29 @@ extension AppModel {
         guard let book else { return [] }
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "UTC") ?? .current
-        // Quantised for the memo key — the old `min(Date(), endOfToday())`
-        // default was always the live clock, so the key changed on every call
-        // and each body pass re-walked the whole book despite the cache.
-        // What-if events are session state; they join the key.
         let start = from ?? Self.endOfToday()
         let horizon = calendar.date(byAdding: .month, value: months, to: start) ?? start
-        return cachedReport("fcast:\(accountID.hexString):\(months):\(start.timeIntervalSinceReferenceDate):\(whatIfEvents.hashValue)") {
+        return cachedReport(forecastKey(accountID: accountID, months: months, start: start)) {
             FinancialReports.cashFlowForecast(book, accountID: accountID,
                                               scheduled: scheduledTransactions,
                                               from: start, horizon: horizon, currency: reportCurrency,
                                               whatIf: whatIfEvents)
         } ?? []
+    }
+
+    /// The projection ``cashFlowForecast(accountID:months:from:)`` would
+    /// return, if it is already built for the book as it stands — never
+    /// building it. The Forecast view draws a warm one in its first frame.
+    func cachedCashFlowForecast(accountID: GncGUID, months: Int = 6) -> [CashFlowPoint]? {
+        peekReport(forecastKey(accountID: accountID, months: months, start: Self.endOfToday()))
+    }
+
+    /// The forecast's memo key. Its start is quantised to the day — the old
+    /// `min(Date(), endOfToday())` default was always the live clock, so the
+    /// key changed on every call and each body pass re-walked the whole book
+    /// despite the cache. What-if events are session state; they join it.
+    private func forecastKey(accountID: GncGUID, months: Int, start: Date) -> String {
+        "fcast:\(accountID.hexString):\(months):\(start.timeIntervalSinceReferenceDate):\(whatIfEvents.hashValue)"
     }
 
     /// Upcoming/overdue bills from scheduled transactions over a window around

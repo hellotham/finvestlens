@@ -33,10 +33,13 @@ extension AppModel {
     private static let auditSizeCap = 1 << 20          // rotate past 1 MB…
     private static let auditKeepBytes = 1 << 19        // …keeping the last 512 KB
 
-    /// Appends one operation line: ISO-8601 timestamp, tab, operation name.
-    /// Undo/redo replays are labelled as such. Failures are ignored — the log
-    /// is an aid, never a reason an edit can't proceed.
-    func auditLog(_ operation: LocalizedStringResource) {
+    /// Appends one operation line: ISO-8601 timestamp, tab, operation name,
+    /// and — where the edit names the transactions it touches — tab and how
+    /// many, as the audit design has it (docs/planning-design.md §9). A
+    /// batch is one line, so the count is what tells thirty linked documents
+    /// from one. Undo/redo replays are labelled as such. Failures are
+    /// ignored — the log is an aid, never a reason an edit can't proceed.
+    func auditLog(_ operation: LocalizedStringResource, transactions: Int? = nil) {
         guard let sidecar = auditSidecar else { return }
         // In the reader's language, as the Edit menu names the same step: the
         // trail is theirs to read. "Undo" and the name are one phrase — the
@@ -50,7 +53,7 @@ extension AppModel {
             name
         }
         let stamp = ISO8601DateFormatter().string(from: Date())
-        let line = "\(stamp)\t\(label)\n"
+        let line = "\(stamp)\t\(label)" + (transactions.map { "\t\($0)" } ?? "") + "\n"
         try? sidecar.append(Data(line.utf8))
         if let size = sidecar.size(), size > Self.auditSizeCap {
             rotateAuditLog(sidecar)
@@ -67,15 +70,17 @@ extension AppModel {
         try? sidecar.write(Data(tail))
     }
 
-    /// The newest entries, most recent first, for the viewer.
-    public func auditLogTail(limit: Int = 500) -> [(date: String, operation: String)] {
+    /// The newest entries, most recent first, for the viewer: when, what, and
+    /// how many transactions, where the line says (older lines do not).
+    public func auditLogTail(limit: Int = 500) -> [(date: String, operation: String, transactions: Int?)] {
         guard let data = auditSidecar?.read(),
               let text = String(data: data, encoding: .utf8) else { return [] }
         return text.split(whereSeparator: \.isNewline).suffix(limit).reversed().map { line in
-            let parts = line.split(separator: "\t", maxSplits: 1)
+            let parts = line.split(separator: "\t", maxSplits: 2)
             let date = parts.first.map(String.init) ?? ""
             let operation = parts.count > 1 ? String(parts[1]) : ""
-            return (date, operation)
+            let transactions = parts.count > 2 ? Int(parts[2]) : nil
+            return (date, operation, transactions)
         }
     }
 }

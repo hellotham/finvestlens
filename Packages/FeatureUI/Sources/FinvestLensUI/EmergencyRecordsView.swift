@@ -148,6 +148,14 @@ struct AuditLogSheet: View {
                         let entry = entries[index]
                         HStack {
                             Text(entry.operation)
+                            // A batch is one line; how many it touched is
+                            // what tells a large one from a small one.
+                            if let count = entry.transactions, count > 1 {
+                                Text("\(count) transactions")
+                                    .scaledFont(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .monospacedDigit()
+                            }
                             Spacer()
                             Text(entry.date.replacingOccurrences(of: "T", with: "  ")
                                     .replacingOccurrences(of: "Z", with: ""))

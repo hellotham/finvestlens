@@ -394,12 +394,17 @@ extension AppModel {
     // MARK: Period-end close (GnuCash Tools ▸ Close Book)
 
     /// Equity accounts a period close can post its result into, as (id, name).
+    ///
+    /// Memoised on the book revision: the close sheet reads it three times
+    /// per pass of its body (Performance Review P3.2).
     public var equityAccountChoices: [(id: GncGUID, name: String)] {
         guard let book else { return [] }
-        return book.accounts
-            .filter { $0.type == .equity && !$0.isPlaceholder }
-            .map { ($0.guid, $0.fullName) }
-            .sorted { $0.name < $1.name }
+        return cachedReport("equitychoices") {
+            book.accounts
+                .filter { $0.type == .equity && !$0.isPlaceholder }
+                .map { ($0.guid, $0.fullName) }
+                .sorted { $0.name < $1.name }
+        } ?? []
     }
 
     /// The net result of a close in one currency, for the preview.
@@ -420,9 +425,20 @@ extension AppModel {
     public func closingPreview(asOf date: Date, equityID: GncGUID)
         -> (accounts: Int, byCurrency: [ClosingCurrencyPreview], missingRate: String?)? {
         guard let book, let equity = book.account(with: equityID) else { return nil }
-        return cachedReport("closepv:\(date.timeIntervalSinceReferenceDate):\(equityID.hexString)") {
+        return cachedReport(closingPreviewKey(date, equityID)) {
             Self.buildClosingPreview(book: book, asOf: date, equity: equity)
         }
+    }
+
+    /// The preview ``closingPreview(asOf:equityID:)`` would return, if it is
+    /// already built for the book as it stands — never building it.
+    func cachedClosingPreview(asOf date: Date, equityID: GncGUID)
+        -> (accounts: Int, byCurrency: [ClosingCurrencyPreview], missingRate: String?)? {
+        peekReport(closingPreviewKey(date, equityID))
+    }
+
+    private func closingPreviewKey(_ date: Date, _ equityID: GncGUID) -> String {
+        "closepv:\(date.timeIntervalSinceReferenceDate):\(equityID.hexString)"
     }
 
     private static func buildClosingPreview(book: Book, asOf date: Date, equity: Account)

@@ -234,6 +234,27 @@ struct GroundingTests {
         #expect(ReviewStoryValidator.isGrounded(japaneseStory, facts: Fixtures.spending, locale: japanese))
     }
 
+    @Test("A lone k before a Chinese or Japanese word is thousands")
+    func thousandsBeforeCJK() {
+        // The model wrote it on the bridge slide, 17 October 2026.
+        let story = ReviewSlideStory(headline: "期末純資産は31.1k増加",
+                                     insight: "期末純資産は412350.4 AUDで、期首の381200 AUDから31150.4 AUD増。")
+        #expect(ReviewStoryValidator.isGrounded(story, facts: Fixtures.bridge, locale: Locale(identifier: "ja_JP")))
+        // Still not the first letter of a word: read as thousands, 90.6 would
+        // be the income of 90,643.50 cut off at its place.
+        #expect(!note("We drove 90.6 kilometres.", english))
+    }
+
+    @Test("A period label's short year, written before 年, is the label's")
+    func labelYearBeforeNian() {
+        // The model wrote it in the survey of 17 October 2026, in four of the
+        // Chinese report notes: the period "FY 2025–26" as "2025–26年度".
+        let chinese = Locale(identifier: "zh_Hans_CN")
+        #expect(note("2025–26年度收入为90643.5澳元，主要来自工资89400澳元。", chinese))
+        // A year the label does not name is not thereby one.
+        #expect(!note("2023年度收入为90643.5澳元。", chinese))
+    }
+
     @Test("Report notes: the figure the model made up is caught, the real ones pass")
     func reportNotes() {
         // What it wrote in English, unchecked, for a net income of 24,032.68.
@@ -426,9 +447,9 @@ struct GroundingTests {
         #expect(bridge.contains("- Closing net worth: 412350.4 AUD"))
         // A ratio keeps its percent sign and a figure with no change says nothing of one.
         let highlights = ReviewNarrator.prompt(for: Fixtures.highlights)
-        #expect(highlights.contains("- Net worth: 412350.4 AUD — up 8.2% on the prior period"))
+        #expect(highlights.contains("- Net worth: 412350.4 AUD — as at the end of the period; up 8.2% on the prior period"))
         #expect(highlights.contains("- Savings rate: 26.5%"))
-        #expect(highlights.contains("- Income: 90643.5 AUD\n"))
+        #expect(highlights.contains("- Income: 90643.5 AUD — money in over the period\n"))
     }
 
     @Test("A separator that is not marking thousands does not make a new number true", arguments: [

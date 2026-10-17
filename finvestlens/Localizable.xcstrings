@@ -17989,6 +17989,53 @@
         }
       }
     },
+    "Apply Matches": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zuordnungen anwenden"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aplicar emparejamientos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Appliquer les associations"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Applica abbinamenti"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "照合結果を適用"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aplicar associações"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "应用匹配"
+          }
+        }
+      }
+    },
     "Apply Rules — Allocate to Goals": {
       "extractionState": "manual",
       "localizations": {
@@ -97721,6 +97768,53 @@
         }
       }
     },
+    "Previewing…": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorschau wird erstellt…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Generando la vista previa…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Création de l’aperçu…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Creazione dell’anteprima…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プレビューを作成中…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gerando a pré-visualização…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在生成预览…"
+          }
+        }
+      }
+    },
     "Previous Tab": {
       "extractionState": "manual",
       "localizations": {
@@ -100453,6 +100547,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "按年龄预测的净资产（按类别堆叠）"
+          }
+        }
+      }
+    },
+    "Projecting balances…": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salden werden prognostiziert…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proyectando los saldos…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Projection des soldes…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proiezione dei saldi…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "残高を予測中…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Projetando os saldos…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在预测余额…"
           }
         }
       }
@@ -125716,49 +125857,49 @@
         }
       }
     },
-    "The commentary quoted figures that are not in this report, so it was discarded.": {
+    "The commentary misstated this report’s figures, so it was discarded.": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Der Kommentar nannte Zahlen, die nicht in diesem Bericht stehen, und wurde daher verworfen."
+            "value": "Der Kommentar gab die Zahlen dieses Berichts falsch wieder und wurde daher verworfen."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "El comentario citaba cifras que no figuran en este informe, por lo que se descartó."
+            "value": "El comentario no reflejaba bien las cifras de este informe, por lo que se descartó."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Le commentaire citait des chiffres absents de ce rapport ; il a donc été écarté."
+            "value": "Le commentaire rendait mal compte des chiffres de ce rapport ; il a donc été écarté."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Il commento citava cifre che non figurano in questo resoconto, quindi è stato scartato."
+            "value": "Il commento riportava in modo errato le cifre di questo resoconto, quindi è stato scartato."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "コメントにこのレポートにない数値が含まれていたため、破棄されました。"
+            "value": "コメントがこのレポートの数値を正しく伝えていなかったため、破棄されました。"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "O comentário citava valores que não constam neste relatório, por isso foi descartado."
+            "value": "O comentário apresentava de forma incorreta os valores deste relatório, por isso foi descartado."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "评述引用了本报表中没有的数字，因此已被舍弃。"
+            "value": "评述错误地陈述了本报表的数字，因此已被舍弃。"
           }
         }
       }
@@ -127132,49 +127273,49 @@
         }
       }
     },
-    "The model quoted a number that is not in the slide’s facts.": {
+    "The model misstated the slide’s figures.": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Das Modell nannte eine Zahl, die nicht zu den Fakten der Folie gehört."
+            "value": "Das Modell gab die Zahlen der Folie falsch wieder."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "El modelo citó una cifra que no figura en los datos de la diapositiva."
+            "value": "El modelo no reflejó bien las cifras de la diapositiva."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Le modèle a cité un chiffre absent des données de la diapositive."
+            "value": "Le modèle a mal rendu compte des chiffres de la diapositive."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Il modello ha citato una cifra che non figura nei dati della diapositiva."
+            "value": "Il modello ha riportato in modo errato le cifre della diapositiva."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "モデルがスライドのデータにない数値を引用しました。"
+            "value": "モデルがスライドの数値を正しく伝えていませんでした。"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "O modelo citou um valor que não consta nos dados do slide."
+            "value": "O modelo apresentou de forma incorreta os valores do slide."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "模型引用了幻灯片数据中没有的数字。"
+            "value": "模型错误地陈述了幻灯片的数字。"
           }
         }
       }
@@ -127320,49 +127461,49 @@
         }
       }
     },
-    "The outlook quoted figures that are not in this forecast, so it was discarded.": {
+    "The outlook misstated this forecast’s figures, so it was discarded.": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Der Ausblick nannte Zahlen, die nicht in dieser Prognose stehen, und wurde daher verworfen."
+            "value": "Der Ausblick gab die Zahlen dieser Prognose falsch wieder und wurde daher verworfen."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "La perspectiva citaba cifras que no figuran en esta previsión, por lo que se descartó."
+            "value": "La perspectiva no reflejaba bien las cifras de esta previsión, por lo que se descartó."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Les perspectives citaient des chiffres absents de cette prévision ; elles ont donc été écartées."
+            "value": "Les perspectives rendaient mal compte des chiffres de cette prévision ; elles ont donc été écartées."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "La prospettiva citava cifre che non figurano in questa previsione, quindi è stata scartata."
+            "value": "La prospettiva riportava in modo errato le cifre di questa previsione, quindi è stata scartata."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "見通しにこの予測にない数値が含まれていたため、破棄されました。"
+            "value": "見通しがこの予測の数値を正しく伝えていなかったため、破棄されました。"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "A perspectiva citava valores que não constam nesta previsão, por isso foi descartada."
+            "value": "A perspectiva apresentava de forma incorreta os valores desta previsão, por isso foi descartada."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "展望引用了本预测中没有的数字，因此已被舍弃。"
+            "value": "展望错误地陈述了本预测的数字，因此已被舍弃。"
           }
         }
       }
@@ -137677,6 +137818,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "更新价格"
+          }
+        }
+      }
+    },
+    "Updating the forecast": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prognose wird aktualisiert"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Actualizando la previsión"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mise à jour de la prévision"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiornamento della previsione"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "予測を更新中"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Atualizando a previsão"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在更新预测"
           }
         }
       }

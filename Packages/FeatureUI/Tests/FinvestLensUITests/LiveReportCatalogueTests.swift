@@ -74,6 +74,9 @@ struct LiveReportCatalogueTests {
         // must build on this book; the forecast legitimately prints nothing
         // when no scheduled activity is upcoming.
         #expect(model.priceHistoryDocument() != nil)
-        print("📊 Forecast: \(model.forecastDocument() == nil ? "no upcoming activity (ok)" : "built")")
+        let forecast = model.defaultForecastAccountID.flatMap {
+            model.forecastDocument(accountID: $0, points: model.cashFlowForecast(accountID: $0))
+        }
+        print("📊 Forecast: \(forecast == nil ? "no upcoming activity (ok)" : "built")")
     }
 }

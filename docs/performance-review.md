@@ -1,5 +1,24 @@
 # Performance Review
 
+> **Status (17 Oct 2026):** an audit of 12 Oct, re-verified against the
+> code on 17 Oct, found these still open, and the owner's rule is that none
+> may stay so. Closed on 17 Oct: **P4**'s derived lists (security,
+> settlement, income and expense accounts — cached with the flat list and
+> dropped with it), **P3.2** for the two reports that still computed in
+> `body` (Forecast, and the Close Financial Year preview, both now built by a
+> task with a placeholder; the close sheet's equity choices memoised), **P5.1**
+> for Match Attachments (one edit for the batch: one refresh, one undo step),
+> **P8**'s attachments panel (its file looked for off the main actor, by one
+> task, and looked for again while it is missing) and link picker (an index
+> per transaction revision; a keystroke narrows the last search where it can,
+> searches plain text byte for byte, and formats only the rows shown), and
+> the §3 rows for
+> Update Prices on the Up Next card (its progress in place of the button)
+> and report commentary / forecast outlook (a spinner beside the words). The
+> rest — P3.3, P5.4, P6, P6b, P7, P9's business and structural operations,
+> P10's save on close and quit, incremental persistence — is being done in
+> that order; this note moves as each closes.
+>
 > **Status (24 Jul 2026):** P1, P2, P4, P5.2, P9 (scoped price/kvp undo
 > snapshots + all hot call sites), P6 (spinner + yield), P10 (status-routed
 > save) and the signpost/DEBUG harness are implemented. P3 is memoise + build-

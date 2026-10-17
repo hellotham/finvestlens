@@ -38,7 +38,9 @@ public extension AccountNode {
     /// display-capitalized raw value ("Bank"), so comparing it to
     /// `AccountType.rawValue` ("bank") directly always fails — the trap that
     /// silently emptied the goal and funding pickers. Compare here, once.
-    func isType(_ types: AccountType...) -> Bool {
+    func isType(_ types: AccountType...) -> Bool { isType(types) }
+
+    func isType(_ types: [AccountType]) -> Bool {
         types.contains { typeName.caseInsensitiveCompare($0.rawValue) == .orderedSame }
     }
 }
@@ -394,7 +396,10 @@ public final class AppModel {
     }
 
     public private(set) var accountTree: [AccountNode] = [] {
-        didSet { postableAccountsCache = nil }
+        didSet {
+            postableAccountsCache = nil
+            typedAccountsCache.removeAll()
+        }
     }
 
     /// Flattened, non-placeholder accounts usable as transfer endpoints —
@@ -402,6 +407,32 @@ public final class AppModel {
     /// of the register's many body passes was measurable; the tree only
     /// changes when it is rebuilt, so the flattening follows it.
     @ObservationIgnored private var postableAccountsCache: [AccountNode]?
+
+    /// The lists the assistants filter from ``postableAccounts`` — security,
+    /// settlement, income and expense accounts — kept for the same reason and
+    /// dropped at the same moment. The stock and currency sheets read them
+    /// several times per body pass, and every keystroke there re-filtered the
+    /// whole flat list (Performance Review P4).
+    @ObservationIgnored var typedAccountsCache: [TypedAccounts: [AccountNode]] = [:]
+
+    /// ``transactionsForLinking(query:limit:)``'s index, per transaction
+    /// revision.
+    @ObservationIgnored var linkingIndex: LinkingIndex?
+
+    /// Which typed list, for ``typedAccountsCache``, and the engine types it
+    /// holds.
+    enum TypedAccounts: Hashable {
+        case security, settlement, income, expense
+
+        var types: [AccountType] {
+            switch self {
+            case .security: [.stock, .mutualFund]
+            case .settlement: [.bank, .cash, .asset]
+            case .income: [.income]
+            case .expense: [.expense]
+            }
+        }
+    }
 
     public var postableAccounts: [AccountNode] {
         if let cached = postableAccountsCache { return cached }
@@ -513,6 +544,15 @@ public final class AppModel {
         return value
     }
 
+    /// The cached value for `key` if it is already there for the book as it
+    /// stands — never computing it. A view that builds a report in a task
+    /// draws a warm one in its first frame with this, instead of a
+    /// placeholder for the frame it takes the task to land.
+    func peekReport<T>(_ key: String) -> T? {
+        guard reportCacheRevision == derivedRevision else { return nil }
+        return reportCache[key] as? T
+    }
+
     /// Fills both caches from **one** sort — the editor shows prices and rates
     /// together, and sorting 102,706 prices once per property would pay the
     /// dominant cost twice. The sorted array itself is not retained.
@@ -529,10 +569,6 @@ public final class AppModel {
                            to: $0.currency.mnemonic, date: $0.date, value: $0.value) }
     }
 
-    /// Distinct transaction descriptions, most-recent first, each with its
-    /// case-folded form. QuickFill used to sort all 46k transactions on every
-    /// keystroke; now the sort happens once per book revision and a keystroke
-    /// is a prefix scan over ~thousands of short strings.
     /// Financial Review slide stories, keyed by (slide, revision, period) —
     /// the on-device model writes each once per book state.
     @ObservationIgnored var reviewStoryCache: [String: ReviewSlideStory] = [:]
@@ -547,14 +583,45 @@ public final class AppModel {
     /// changes one description, so re-folding all 46k on the next keystroke
     /// was the avoidable half of a 139 ms hitch (Performance Review 2, R7).
     @ObservationIgnored private var descriptionFolds: [GncGUID: (text: String, folded: String)] = [:]
+    @ObservationIgnored private var newestFirstCache: [Transaction] = []
+    @ObservationIgnored private var newestFirstRevision = -1
 
+    /// Every transaction, newest first: sorted once per
+    /// ``transactionRevision`` for QuickFill and the link picker alike, which
+    /// each sorted the book for themselves (17 October review).
+    var transactionsNewestFirst: [Transaction] {
+        if newestFirstRevision != transactionRevision {
+            newestFirstCache = (book?.transactions ?? []).sorted { $0.datePosted > $1.datePosted }
+            newestFirstRevision = transactionRevision
+        }
+        return newestFirstCache
+    }
+
+    /// `txn`'s description, lowercased — from the fold kept for QuickFill
+    /// where the description is unchanged, so the link picker and QuickFill
+    /// fold the same text the same way, once.
+    func foldedDescription(of txn: Transaction) -> String {
+        let description = txn.transactionDescription
+        if let known = descriptionFolds[txn.guid], known.text == description { return known.folded }
+        return description.lowercased()
+    }
+
+    /// Distinct transaction descriptions, most-recent first, each with its
+    /// case-folded form. QuickFill used to sort all 46k transactions on every
+    /// keystroke; now the sort happens once per change to the transactions
+    /// and a keystroke is a prefix scan over ~thousands of short strings.
+    ///
+    /// Keyed on ``transactionRevision``: a description changes only with a
+    /// transaction, and keying on the book revision made every quote refresh
+    /// cost the next QuickFill keystroke a sort of every transaction
+    /// (Performance Review 2, R7e).
     var recentDistinctDescriptions: [(text: String, folded: String)] {
-        if descriptionRecencyRevision != derivedRevision {
+        if descriptionRecencyRevision != transactionRevision {
             var seen = Set<String>()
             var entries: [(text: String, folded: String)] = []
             var folds: [GncGUID: (text: String, folded: String)] = [:]
             folds.reserveCapacity(descriptionFolds.count)
-            for txn in (book?.transactions ?? []).sorted(by: { $0.datePosted > $1.datePosted }) {
+            for txn in transactionsNewestFirst {
                 let description = txn.transactionDescription
                 guard !description.isEmpty else { continue }
                 let entry: (text: String, folded: String)
@@ -569,7 +636,7 @@ public final class AppModel {
             }
             descriptionFolds = folds
             descriptionRecencyCache = entries
-            descriptionRecencyRevision = derivedRevision
+            descriptionRecencyRevision = transactionRevision
         }
         return descriptionRecencyCache
     }
@@ -3198,7 +3265,7 @@ public final class AppModel {
     /// changes outside those transactions will not be undone.
     func editing(_ ids: [GncGUID], named: LocalizedStringResource, _ body: () -> Void) {
         if isReadOnly { return }   // read-only session: edits are refused (FR-DAT-06)
-        auditLog(named)
+        auditLog(named, transactions: ids.count)
         let before = ids.map {
             TransactionSnapshot(id: $0, state: book?.transaction(with: $0)?.detachedCopy())
         }
@@ -3279,7 +3346,7 @@ public final class AppModel {
     func editing(accounts accountIDs: [GncGUID], transactions transactionIDs: [GncGUID] = [],
                  prices snapshotsPrices: Bool = false, named: LocalizedStringResource, _ body: () -> Void) {
         if isReadOnly { return }   // read-only session: edits are refused (FR-DAT-06)
-        auditLog(named)
+        auditLog(named, transactions: transactionIDs.isEmpty ? nil : transactionIDs.count)
         let idsBefore = Set(book?.accounts.map(\.guid) ?? [])
         // An account that brings a new security registers its commodity, which
         // removing the account does not undo — so the ones the body adds are
