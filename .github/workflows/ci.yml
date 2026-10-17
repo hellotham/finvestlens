@@ -112,8 +112,20 @@ jobs:
       # due to missing Metal Toolchain". The same package carries a build-tool
       # plug-in (`CudaBuild`) that a headless build has nobody to trust on its
       # behalf, hence `-skipPackagePluginValidation` below.
+      #
+      # The download comes from Apple's asset server, which can fail the
+      # catalog fetch outright: on 17 Oct 2026 it did ("Failed fetching catalog
+      # for assetType (com.apple.MobileAsset.MetalToolchain)", exit 70) one push
+      # after the same step had passed, and the macOS build went red with no
+      # code at fault. So a failed download is tried twice more first.
       - name: Install the Metal toolchain
-        run: xcodebuild -downloadComponent MetalToolchain
+        run: |
+          for attempt in 1 2 3; do
+            if xcodebuild -downloadComponent MetalToolchain; then exit 0; fi
+            echo "::warning::Metal toolchain download failed (attempt $attempt of 3)"
+            if [ "$attempt" -lt 3 ]; then sleep $((attempt * 30)); fi
+          done
+          exit 1
       # `-emit-localized-strings` is passed through OTHER_SWIFT_FLAGS because
       # Xcode extracts only the targets that own a String Catalog — the app and
       # the extensions — and never the SPM packages, where most of the strings

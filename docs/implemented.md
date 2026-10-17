@@ -4824,8 +4824,9 @@ set up, the welcome screen's three buttons stacked one above another inside
 the screen; the Box fields labelled beside them; the Keychain's refusal said
 under the secret — "A required entitlement is not present", the unsigned
 build having none; and after a reinstall moved the container, the last book
-reopening from its new place, its recent rewritten to it. Not seen: an iPad,
-an iPhone build signed for a device, or VoiceOver on any of it.
+reopening from its new place, its recent rewritten to it. Not seen in that
+round: an iPad (seen since, below), an iPhone build signed for a device, or
+VoiceOver on any of it.
 
 Receipts for this round, on the tree as committed: FeatureUI 831 and Cloud 23
 and Lab 18 pass; both platforms build (a separate build folder, so the app
@@ -4833,3 +4834,16 @@ the owner had open was not re-signed under it); the localization gate,
 extraction complete, reports the catalogs matching; `manual.json` in sync;
 SPDX on every new file. Each new test was run with its fix undone and failed:
 the moved recent, the launch-argument restore, the refused secret.
+
+**On the iPad, the File menu was not enough.** Checked on the iPad Pro 11-inch
+(M5) simulator (iOS 27) the same day: the menu bar comes down with a pointer, a
+keyboard or a swipe from the top edge, and the swipe opened Notification Centre
+instead — a touch-only iPad still had no way out of a book. Close Book is now
+also at the foot of the iPad's sidebar, with Settings and Help: beside them
+where the sidebar is wide enough, beneath them where it is not (`SidebarFooter`,
+a `ViewThatFits`). Seen there: after a reinstall moved the container, the last
+book reopened from its new place; the footer showed Settings and Help on one
+line and Close Book under them; Close Book returned to the welcome screen with
+the book in Recents. The welcome screen showed New Book and Open… only, which is
+right — Open from Box… waits for a Box app to be set up. Not seen: VoiceOver, or
+the footer's wide layout, which needs a wider sidebar than the simulator gave.

@@ -78,10 +78,26 @@ struct SidebarFooter: View {
     @Bindable var model: AppModel
 
     var body: some View {
-        HStack(spacing: 16) {
-            Button("Settings", systemImage: "gearshape") { model.showingSettings = true }
-            Button("Help", systemImage: "questionmark.circle") { model.showingHelp = true }
-            Spacer(minLength: 0)
+        // Close Book is here as well as in the File menu: the menu bar is
+        // reached with a pointer, a keyboard or a gesture a touch-only iPad
+        // user may never find, and the book could not otherwise be left.
+        // Beside the others where the sidebar is wide enough, beneath them
+        // where it is not.
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 16) {
+                settings
+                help
+                closeBook
+                Spacer(minLength: 0)
+            }
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 16) {
+                    settings
+                    help
+                    Spacer(minLength: 0)
+                }
+                closeBook
+            }
         }
         .labelStyle(.titleAndIcon)
         .buttonStyle(.borderless)
@@ -89,6 +105,18 @@ struct SidebarFooter: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
         .background(.bar)
+    }
+
+    private var settings: some View {
+        Button("Settings", systemImage: "gearshape") { model.showingSettings = true }
+    }
+
+    private var help: some View {
+        Button("Help", systemImage: "questionmark.circle") { model.showingHelp = true }
+    }
+
+    private var closeBook: some View {
+        Button("Close Book", systemImage: "xmark.circle") { _ = model.saveAndCloseIfOpen() }
     }
 }
 #endif
