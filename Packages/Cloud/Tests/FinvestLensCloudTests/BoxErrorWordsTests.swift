@@ -32,4 +32,15 @@ struct BoxErrorWordsTests {
             #expect(!words.contains("BoxError") && !words.contains("operation couldn"), "\(error)")
         }
     }
+
+    #if canImport(Security)
+    @Test("A refusal from the Keychain is the Keychain's, in its own words — not Box's")
+    func keychainRefusal() {
+        // What an unsigned build gets: -34018, a required entitlement missing.
+        let words = BoxKeychainError(status: -34018).localizedDescription
+        #expect(words.hasPrefix("The Keychain couldn’t keep the Box credential: "), "\(words)")
+        #expect(!words.contains("Box sent"), "\(words)")
+        #expect(words.count > "The Keychain couldn’t keep the Box credential: ".count + 5, "the Keychain's reason: \(words)")
+    }
+    #endif
 }

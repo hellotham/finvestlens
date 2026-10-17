@@ -414,17 +414,36 @@ struct BoxSettingsSection: View {
 
     var body: some View {
         Section("Box") {
-            TextField("Box client ID", text: Binding(get: { model.boxClientID },
-                                                    set: { model.boxClientID = $0 }))
-                .textFieldStyle(.roundedBorder)
-                .autocorrectionDisabled()
+            // Labelled beside the field, not by its placeholder, which is gone
+            // once something is typed — on the phone that left an ID and a row
+            // of dots with nothing to say which was which.
+            LabeledContent("Box client ID") {
+                TextField("Box client ID", text: Binding(get: { model.boxClientID },
+                                                        set: { model.boxClientID = $0 }))
+                    .labelsHidden()
+                    .textFieldStyle(.roundedBorder)
+                    .autocorrectionDisabled()
+            }
             // SecureField, and it goes to the Keychain rather than
             // @AppStorage: Box has no PKCE, so the token exchange needs a
             // real secret.
-            SecureField("Box client secret", text: $secret)
-                .textFieldStyle(.roundedBorder)
-                .onSubmit { model.boxClientSecret = secret }
-                .onChange(of: secret) { model.boxClientSecret = secret }
+            LabeledContent("Box client secret") {
+                SecureField("Box client secret", text: $secret)
+                    .labelsHidden()
+                    .textFieldStyle(.roundedBorder)
+                    .onSubmit { model.boxClientSecret = secret }
+                    .onChange(of: secret) { model.boxClientSecret = secret }
+            }
+            if let failure = model.boxSecretFailure {
+                Label {
+                    Text(verbatim: failure)
+                } icon: {
+                    Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.red)
+                }
+                .scaledFont(.caption)
+                .foregroundStyle(.secondary)
+                .onAppear { AccessibilityNotification.Announcement(failure).post() }
+            }
             HStack {
                 if model.isBoxSignedIn {
                     Button("Disconnect") { model.disconnectBox() }

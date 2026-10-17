@@ -345,6 +345,12 @@ final class FakeBox: BoxTransport, @unchecked Sendable {
     }
 }
 
+/// A Keychain that refuses, as it does an unsigned build (-34018).
+final class RefusingSecretStore: BoxClientSecretStoring, @unchecked Sendable {
+    func secret() -> String? { nil }
+    func setSecret(_ secret: String?) throws { throw BoxKeychainError(status: -34018) }
+}
+
 @MainActor
 @Suite("Books on Box", .serialized)
 struct BoxBookTests {
@@ -964,6 +970,23 @@ struct BoxBookTests {
         await model.finishBoxWork(within: .seconds(15))
         #expect(box.file(id)?.data == (try Data(contentsOf: copy)))
         #expect(model.toast?.message == String(localized: "Uploaded to Box."))
+    }
+
+    @Test("A client secret the Keychain won't keep is said in Settings, not lost without a word")
+    func secretTheKeychainRefusesIsSaid() async throws {
+        let box = FakeBox()
+        let (model, _, cleanup) = makeModel(box)
+        defer { cleanup() }
+
+        model.boxSecretStore = RefusingSecretStore()
+        model.boxClientSecret = "another"
+        let failure = try #require(model.boxSecretFailure)
+        #expect(failure.contains("The Keychain couldn’t keep the Box credential"), "\(failure)")
+        #expect(model.boxClientSecret == "another", "held for this run")
+
+        model.boxSecretStore = InMemoryBoxClientSecretStore()
+        model.boxClientSecret = "kept"
+        #expect(model.boxSecretFailure == nil)
     }
 
     @Test("Removing a copy keeps its audit log and its record; a copy with unsent work stays")

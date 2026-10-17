@@ -2834,6 +2834,53 @@
         }
       }
     },
+    "%@ Until it can be kept, the secret lasts only until FinvestLens quits.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ Solange es nicht gespeichert werden kann, gilt das Box-Client-Geheimnis nur, bis FinvestLens beendet wird."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ Mientras no se pueda guardar, el secreto de cliente solo dura hasta que salgas de FinvestLens."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ Tant qu’il ne peut pas être conservé, le secret client ne vaut que jusqu’à ce que vous quittiez FinvestLens."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ Finché non può essere conservato, il segreto client vale solo fino all’uscita da FinvestLens."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 保存できるようになるまで、クライアントシークレットは FinvestLens を終了するまでしか保持されません。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ Enquanto não puder ser guardado, o segredo do cliente só vale até você sair do FinvestLens."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 在能够保存之前，客户端密钥只保留到 FinvestLens 退出为止。"
+          }
+        }
+      }
+    },
     "%@ via %@": {
       "extractionState": "manual",
       "localizations": {
@@ -53336,6 +53383,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "权益变动表"
+          }
+        }
+      }
+    },
+    "error %d": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fehler %d"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "error %d"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "erreur %d"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "errore %d"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "エラー %d"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "erro %d"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "错误 %d"
           }
         }
       }
@@ -125994,6 +126088,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "交互式报表绘制所有价格随时间的变化；这里列出每只证券的最新价格。"
+          }
+        }
+      }
+    },
+    "The Keychain couldn’t keep the Box credential: %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Schlüsselbund konnte die Box-Zugangsdaten nicht speichern: %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El llavero no pudo guardar la credencial de Box: %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le trousseau n’a pas pu conserver l’identifiant Box : %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il portachiavi non ha potuto conservare la credenziale di Box: %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キーチェーンに Box の認証情報を保存できませんでした: %@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "As chaves não conseguiram guardar a credencial do Box: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "钥匙串无法保存 Box 凭证：%@"
           }
         }
       }

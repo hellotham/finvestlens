@@ -1651,6 +1651,9 @@ public final class AppModel {
     public var boxBrowserRequested = false
     /// Where opening a Box book has got to, for the opening screen.
     public internal(set) var boxOpenPhase: BoxOpenPhase?
+    /// Why the Box client secret could not be kept in the Keychain, for
+    /// Settings to say — until then it lasts only as long as the app runs.
+    public internal(set) var boxSecretFailure: String?
     /// Bumped when the Box sign-in or the Box app's settings change, so
     /// views that show them look again (the Keychain is not observable).
     public internal(set) var boxSessionRevision = 0
@@ -2162,10 +2165,19 @@ public final class AppModel {
             scopedBookURL = url
             return url
         }
-        if let resolved = Self.resolveBookmark(forPath: url.path),
-           resolved.startAccessingSecurityScopedResource() {
-            scopedBookURL = resolved
-            return resolved
+        if let resolved = Self.resolveBookmark(forPath: url.path) {
+            if resolved.startAccessingSecurityScopedResource() {
+                scopedBookURL = resolved
+                return resolved
+            }
+            // A book in the app's own folder needs no scope, so the test
+            // above is false for it — and the first version then opened the
+            // stored path even when the bookmark had found the book somewhere
+            // else (`relocated(paths:bookmarks:)`).
+            if !FileManager.default.fileExists(atPath: url.path),
+               FileManager.default.fileExists(atPath: resolved.path) {
+                return resolved
+            }
         }
         return url
     }
@@ -2184,15 +2196,26 @@ public final class AppModel {
 
     /// Defaults key for "reopen the last book on launch" (window/state
     /// restoration). Defaults to on when absent.
-    public static let reopenLastBookDefaultsKey = "finvestlens.reopenLastBook"
+    public nonisolated static let reopenLastBookDefaultsKey = "finvestlens.reopenLastBook"
 
     /// Reopens the most recent book on launch when enabled and nothing is open
     /// yet (idempotent — `openBook` guards double-opens). Call once from the
     /// root view's `.task`.
     public func reopenLastBookIfEnabled() async {
-        let enabled = (UserDefaults.standard.object(forKey: Self.reopenLastBookDefaultsKey) as? Bool) ?? true
-        guard enabled, !isOpen, !isOpening, let url = recentBooks.first else { return }
+        guard Self.reopensLastBook(UserDefaults.standard), !isOpen, !isOpening,
+              let url = recentBooks.first else { return }
         await openBook(at: url)
+    }
+
+    /// Whether the last book reopens at launch: on unless turned off.
+    ///
+    /// Read with `bool(forKey:)`, which understands every way the setting
+    /// arrives — the Settings toggle stores a Bool, a launch argument
+    /// (`-finvestlens.reopenLastBook NO`) arrives as the string "NO". The
+    /// first version cast the stored object to `Bool`, so the argument was
+    /// not a Bool, fell to the default, and the book reopened anyway.
+    nonisolated static func reopensLastBook(_ defaults: UserDefaults) -> Bool {
+        defaults.object(forKey: reopenLastBookDefaultsKey) == nil || defaults.bool(forKey: reopenLastBookDefaultsKey)
     }
 
     /// User-configurable autosave interval in seconds; 0 disables autosave
@@ -2332,11 +2355,48 @@ public final class AppModel {
         // merely exist — is what separates those from a book that has since
         // been deleted: a bookmark for a deleted file no longer resolves, so
         // the entry drops out instead of haunting the list forever.
-        let bookmarks = UserDefaults.standard
-            .dictionary(forKey: recentBookmarksKey) as? [String: Data] ?? [:]
-        return (UserDefaults.standard.stringArray(forKey: "finvestlens.recentBookPaths") ?? [])
+        let defaults = UserDefaults.standard
+        let stored = relocated(paths: defaults.stringArray(forKey: "finvestlens.recentBookPaths") ?? [],
+                               bookmarks: defaults.dictionary(forKey: recentBookmarksKey) as? [String: Data] ?? [:])
+        if stored.moved {
+            defaults.set(stored.paths, forKey: "finvestlens.recentBookPaths")
+            defaults.set(stored.bookmarks, forKey: recentBookmarksKey)
+        }
+        return stored.paths
             .map { URL(fileURLWithPath: $0) }
-            .filter { FileManager.default.fileExists(atPath: $0.path) || resolves(bookmarks[$0.path]) }
+            .filter { FileManager.default.fileExists(atPath: $0.path) || resolves(stored.bookmarks[$0.path]) }
+    }
+
+    /// Recents whose path is dead but whose bookmark finds the book, moved to
+    /// where it is now.
+    ///
+    /// A book in the app's own folder moves when the folder does — the app's
+    /// container, which on 17 Oct 2026 an iPhone simulator moved when the app
+    /// was reinstalled over itself. The bookmark kept beside each path follows
+    /// the file; the path does not, and opening it failed with "no such file"
+    /// and dropped the book from Recents, session restore with it. Resolved
+    /// here, once, everything that reads Recents — the list, session restore,
+    /// whether a book is a copy from Box — sees where the book is.
+    nonisolated static func relocated(paths: [String], bookmarks: [String: Data],
+                          resolve: (Data) -> URL? = { ScopedBookmark.resolve($0)?.url },
+                          bookmark: (URL) -> Data? = { ScopedBookmark.make($0) })
+        -> (paths: [String], bookmarks: [String: Data], moved: Bool) {
+        var bookmarks = bookmarks
+        var moved = false
+        var result: [String] = []
+        for path in paths {
+            guard !FileManager.default.fileExists(atPath: path), let data = bookmarks[path],
+                  let now = resolve(data), now.path != path,
+                  FileManager.default.fileExists(atPath: now.path) else {
+                result.append(path)
+                continue
+            }
+            bookmarks[path] = nil
+            bookmarks[now.path] = bookmark(now) ?? data
+            moved = true
+            if !result.contains(now.path) { result.append(now.path) }
+        }
+        return (result, bookmarks, moved)
     }
 
     /// `true` when `data` still resolves to a file. Resolution is the existence

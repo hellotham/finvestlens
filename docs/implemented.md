@@ -4762,3 +4762,74 @@ that includes it, and `codesign -d --entitlements` on the built app shows
 the App Group. That build was relaunched and opened its book with no sheet
 on screen. Still not observed: a request to Private Cloud Compute, and the
 window itself, which was behind another app.
+
+**What a second pass found, finishing the work** (same day). Private Cloud
+Compute is now *used*, not only signed in: `PrivateCloudComputeLiveTests`
+(in the app's own test target, command in CLAUDE.md) asks the cloud model
+about a made-up dividend statement on a session built on that model, so a
+failure cannot fall back to the device, and the signed app answered
+`availability: available` and then `42.86` — the franking credits — after
+1.11 s. It needs its own build folder while the app is open (the test
+re-signs the bundle it runs in) and logs inside the app's container, since a
+signed app is sandboxed.
+
+Following the Box path by hand on an iPhone simulator, and then the code it led to, found four more:
+
+- **A phone, or an iPad, could not leave a book.** The phone has no File menu
+  and its More tab had only Settings and Help; the iPad's File menu had Open
+  from Box… but no New Book, Open or Close (its stock New item is New Window).
+  Session restore opens the last book at every launch, so another book, a
+  new one — and on the phone Open from Box… itself — were out of reach.
+  **Close Book** is in the phone's More tab and the iPad's File menu: it
+  saves and closes, which counts as an explicit save for a Box book, and the
+  welcome screen it returns to has the rest.
+- **A client secret the Keychain refused was lost without a word.** The
+  setter used `try?`, so the secret lived in memory, worked until the app
+  quit, and was gone at the next launch. Settings now says so. And both
+  Keychain stores reported a refusal as `BoxError.malformedResponse` — "Box
+  sent an answer that couldn't be read" — for something Box had no part in;
+  `BoxKeychainError` gives the Keychain's own reason. (The simulator's log
+  showed why it refused there: `-34018`, an unsigned build has no
+  application identifier. A signed build has one.)
+- **The two Box fields were labelled only by their placeholders**, gone once
+  typed: an ID and a row of dots, with nothing to say which was which. Each
+  is labelled beside the field now.
+- **Session restore ignored a launch argument**: the setting was cast to
+  `Bool`, and `-finvestlens.reopenLastBook NO` arrives as a string. Read with
+  `bool(forKey:)`, both ways work.
+
+- **Recents lost a book whose folder moved.** Reinstalling the app over
+  itself moved its container on the simulator (three times, three new
+  paths), and every book in the app's own Documents with it. Each recent
+  keeps a bookmark beside its path, and the bookmark followed the book —
+  but the open used the bookmark only when it could start security-scoped
+  access, which a file in the app's own folder never needs, so it opened
+  the dead path, failed with "no such file", and dropped the book from
+  Recents, session restore with it. Recents now move a dead path to where
+  its bookmark finds the book (`AppModel.relocated(paths:bookmarks:)`), and
+  the open uses that place.
+
+Two things that looked like defects were not: the welcome screen's "Version
+1.2 (41d1d26) · Built 11 October 2026" is the committed stamp the release
+process writes (`scripts/stamp_build_info.sh`), and the unsigned simulator's
+"locked by another FinvestLens instance" after a killed run comes from the
+same missing Keychain — iOS keeps the machine identity that lets a dead
+holder's lock be broken silently in the Keychain, and with none the lock is
+put to the person, as `FileLock` says it must be.
+
+
+Seen on the iPhone 17e simulator (iOS 27), 17 Oct 2026, with every fix in:
+Close Book in the More tab, closing the book to the welcome screen; with Box
+set up, the welcome screen's three buttons stacked one above another inside
+the screen; the Box fields labelled beside them; the Keychain's refusal said
+under the secret — "A required entitlement is not present", the unsigned
+build having none; and after a reinstall moved the container, the last book
+reopening from its new place, its recent rewritten to it. Not seen: an iPad,
+an iPhone build signed for a device, or VoiceOver on any of it.
+
+Receipts for this round, on the tree as committed: FeatureUI 831 and Cloud 23
+and Lab 18 pass; both platforms build (a separate build folder, so the app
+the owner had open was not re-signed under it); the localization gate,
+extraction complete, reports the catalogs matching; `manual.json` in sync;
+SPDX on every new file. Each new test was run with its fix undone and failed:
+the moved recent, the launch-argument restore, the refused secret.

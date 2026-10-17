@@ -369,6 +369,15 @@ struct CompactMoreRoot: View {
                         Button("Settings", systemImage: "gearshape") { model.showingSettings = true }
                         Button("Help", systemImage: "questionmark.circle") { model.showingHelp = true }
                     }
+                    // The phone has no File menu, so until 17 Oct 2026 a book
+                    // once open — and session restore opens one at every
+                    // launch — could not be left: no other book, no new one,
+                    // no Open from Box…, all of which are on the welcome
+                    // screen this goes back to. Saved first; closing is one of
+                    // the explicit saves that sends a book from Box up.
+                    Section {
+                        Button("Close Book", systemImage: "xmark.circle") { _ = model.saveAndCloseIfOpen() }
+                    }
                 }
                 .listStyle(.insetGrouped)
             }

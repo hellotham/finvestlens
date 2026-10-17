@@ -222,7 +222,16 @@ extension AppModel {
         }
         set {
             guard newValue != boxClientSecret else { return }
-            try? boxSecretStore.setSecret(newValue)
+            // A refusal is said, not swallowed: the first version used
+            // `try?`, so a secret the Keychain would not keep was held in
+            // memory, worked until the app quit, and was gone at the next
+            // launch with nothing to say why.
+            do {
+                try boxSecretStore.setSecret(newValue)
+                boxSecretFailure = nil
+            } catch {
+                boxSecretFailure = String(localized: "\(error.localizedDescription) Until it can be kept, the secret lasts only until FinvestLens quits.")
+            }
             boxSecretCache = newValue
             boxSessionRevision &+= 1
         }

@@ -80,6 +80,24 @@ public final class InMemoryBoxClientSecretStore: BoxClientSecretStoring, @unchec
 }
 
 #if canImport(Security)
+/// The Keychain refused to keep a Box credential — the client secret or the
+/// sign-in's tokens.
+///
+/// Its own error, with the Keychain's own reason: these were thrown as
+/// ``BoxError/malformedResponse(_:)``, which put "Box sent an answer that
+/// couldn't be read" in front of a refusal Box had no part in, and which the
+/// upload retry counts as worth trying again.
+public struct BoxKeychainError: LocalizedError, Equatable, Sendable {
+    public let status: OSStatus
+
+    public init(status: OSStatus) { self.status = status }
+
+    public var errorDescription: String? {
+        let reason = (SecCopyErrorMessageString(status, nil) as String?) ?? String(localized: "error \(status)")
+        return String(localized: "The Keychain couldn’t keep the Box credential: \(reason)")
+    }
+}
+
 /// The Box application's client secret.
 ///
 /// Box has no PKCE, so the `authorization_code` exchange requires a secret.
@@ -126,10 +144,10 @@ public struct BoxClientSecretStore: BoxClientSecretStoring {
             add[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
             let addStatus = SecItemAdd(add as CFDictionary, nil)
             guard addStatus == errSecSuccess else {
-                throw BoxError.malformedResponse("keychain add failed (\(addStatus))")
+                throw BoxKeychainError(status: addStatus)
             }
         } else if status != errSecSuccess {
-            throw BoxError.malformedResponse("keychain update failed (\(status))")
+            throw BoxKeychainError(status: status)
         }
     }
 }
@@ -178,10 +196,10 @@ public struct KeychainBoxTokenStore: BoxTokenStoring {
             add[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
             let addStatus = SecItemAdd(add as CFDictionary, nil)
             guard addStatus == errSecSuccess else {
-                throw BoxError.malformedResponse("keychain add failed (\(addStatus))")
+                throw BoxKeychainError(status: addStatus)
             }
         } else if status != errSecSuccess {
-            throw BoxError.malformedResponse("keychain update failed (\(status))")
+            throw BoxKeychainError(status: status)
         }
     }
 }

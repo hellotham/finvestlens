@@ -205,9 +205,15 @@ struct finvestlensApp: App {
             // missing item is silently dropped from the menu bar.
             CommandGroup(after: .newItem) {
                 #if os(iOS)
-                // iPadOS keeps its own New and Open; this is the one way into
-                // Box there besides the welcome screen.
+                // The iPad's File menu has no New Book or Open — its stock New
+                // item is New Window — so a book once open could not be left
+                // for another one. Close Book goes back to the welcome screen,
+                // where those are (saving first; closing is one of the
+                // explicit saves that sends a book from Box up). The phone has
+                // no menu bar: its Close Book is in the More tab.
                 Button("Open from Box…") { model.boxBrowserRequested = true }
+                Button("Close Book") { _ = model.saveAndCloseIfOpen() }
+                    .disabled(!model.isOpen)
                 Divider()
                 #endif
                 Button("Save") { Task { await model.saveWithStatus(interactive: true) } }

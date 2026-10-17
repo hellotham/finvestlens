@@ -74,7 +74,15 @@ xcodebuild test -scheme finvestlens -destination 'platform=macOS' \
   -only-testing:finvestlensTests/SuppliedModelLiveTests -skipPackagePluginValidation CODE_SIGNING_ALLOWED=NO
 ```
 
-`xcodebuild` keeps no console log of a hosted run, so timings and the row-by-row diagnostics go to the file `FL_MLX_LOG` names. The tests run *inside the app*, which Xcode launches to host them; `TestHost` (in `finvestlensApp.swift`) is why that launch reopens no book — before it, session restore opened the last one, which here is the real book.
+`xcodebuild` keeps no console log of a hosted run, so timings and the row-by-row diagnostics go to the file `FL_MLX_LOG` names.
+
+Private Cloud Compute is asked for real by `PrivateCloudComputeLiveTests`, in the same target: one made-up dividend statement, on a session built on the cloud model itself (nothing falls back to the device), never a book and never the person's stored choice. It has to be **signed** — the entitlement is what it tests, and Xcode needs an account under Settings ▸ Accounts to issue the profile (`docs/provisioning.md`). Signed means sandboxed, so its answer goes to `~/Library/Containers/com.hellotham.finvestlens/Data/tmp/pcc-live.log`, not to `/tmp`. Give it a build folder of its own while the app is open — the test re-signs the bundle it runs in:
+
+```bash
+TEST_RUNNER_FL_PCC_LIVE=1 xcodebuild test -scheme finvestlens -destination 'platform=macOS' \
+  -derivedDataPath /tmp/fl-pcc -only-testing:finvestlensTests/PrivateCloudComputeLiveTests \
+  -skipPackagePluginValidation -allowProvisioningUpdates
+``` The tests run *inside the app*, which Xcode launches to host them; `TestHost` (in `finvestlensApp.swift`) is why that launch reopens no book — before it, session restore opened the last one, which here is the real book.
 
 Live harnesses in the FeatureUI test target skip themselves unless env vars are set: `FL_PERF_FILE=/path/to/Book.finvestlens` enables the real-book perf/report/planning/round-trip harnesses; `FL_FINLENS=/path/to/finlens` points the CLI parity tests at a built binary. The UI test target's `ScreenshotTests` likewise needs `TEST_RUNNER_FL_SHOT_DIR` and `TEST_RUNNER_FL_SHOT_BOOK` (`TEST_RUNNER_FL_TOUR=1` for the phone tour, `TEST_RUNNER_FL_DUMP=1` for an accessibility dump).
 
