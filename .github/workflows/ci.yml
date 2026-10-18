@@ -152,7 +152,7 @@ jobs:
           rsync -a --prune-empty-dirs \
             --include='*/' --include='*.stringsdata' --exclude='*' \
             DerivedData/Build/Intermediates.noindex/ strings/targets/
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: stringsdata-${{ strategy.job-index }}
           path: strings
