@@ -59,6 +59,10 @@ struct RegisterSheet: View {
     @Bindable var model: AppModel
     /// FR-REG-09: All Transactions — the whole-book journal in this view.
     var wholeBook = false
+    /// The whole-book journal narrowed to what the search matched — GnuCash's
+    /// search ledger (``AppModel/searchLedgerTransactions()``). Only with
+    /// `wholeBook`.
+    var searchScoped = false
     /// ⌘↑/⌘↓ from the shell; consumed here.
     var jump: Binding<RegisterEnd?> = .constant(nil)
     @Environment(\.appDateFormat) private var dateFormat
@@ -75,7 +79,7 @@ struct RegisterSheet: View {
     @State private var saveError: String?
 
     var body: some View {
-        SheetHost(model: model, wholeBook: wholeBook,
+        SheetHost(model: model, wholeBook: wholeBook, searchScoped: searchScoped,
                   rowsKey: rowsKey,
                   accountKey: accountKey,
                   // The chosen style, in every register including this one.
@@ -90,8 +94,9 @@ struct RegisterSheet: View {
                   rowHeight: rowHeight,
                   hiddenColumns: hiddenColumns,
                   dateFormat: dateFormat,
-                  sort: model.registerSort,
-                  sortReversed: model.registerSortReversed,
+                  // The search results keep one order, so no column claims one.
+                  sort: searchScoped ? .standard : model.registerSort,
+                  sortReversed: searchScoped ? false : model.registerSortReversed,
                   editing: model.editingTransactionID,
                   pendingAvailable: model.pendingRegisterSplitID != nil,
                   jump: jump,
@@ -117,7 +122,22 @@ struct RegisterSheet: View {
         hasher.combine(wholeBook ? model.transactionRevision : model.registerRevision)
         hasher.combine(wholeBook)
         if wholeBook {
-            hasher.combine(model.journalTransactions(forAccountID: nil).count)
+            hasher.combine(searchScoped)
+            if searchScoped {
+                // The search ledger has one order and no filter of its own.
+                hasher.combine(model.searchRevision)
+                hasher.combine(model.searchLedgerTransactions().count)
+            } else {
+                // The order and the filter, not just the count: a sort changes
+                // neither revision nor count, so All Transactions did not
+                // re-sort on a header click — and once its rows were kept
+                // across sheets, arriving back showed rows of the old order
+                // under the reset one.
+                hasher.combine(model.registerSort)
+                hasher.combine(model.registerSortReversed)
+                Self.combine(model.registerFilter, into: &hasher)
+                hasher.combine(model.journalTransactions(forAccountID: nil).count)
+            }
         } else {
             hasher.combine(model.selectedAccountID)
             hasher.combine(model.registerSort)
@@ -133,9 +153,24 @@ struct RegisterSheet: View {
 
     private var accountKey: Int {
         var hasher = Hasher()
-        hasher.combine(model.selectedAccountID)
+        // A whole-book sheet belongs to no account: the sidebar's selection
+        // moving under the search results — a click on another account while
+        // they show — settled the open edit and cleared the selection.
+        if !wholeBook { hasher.combine(model.selectedAccountID) }
         hasher.combine(wholeBook)
         return hasher.finalize()
+    }
+
+    private static func combine(_ filter: RegisterFilter, into hasher: inout Hasher) {
+        hasher.combine(filter.statuses.map(\.rawValue).sorted())
+        hasher.combine(filter.startDate)
+        hasher.combine(filter.endDate)
+    }
+
+    /// Drops the whole-book rows kept across sheets (``SheetBaseStore``) —
+    /// the book they were made from is going.
+    static func forgetKeptRows() {
+        SheetBaseStore.entries = [:]
     }
 }
 
@@ -144,6 +179,7 @@ struct RegisterSheet: View {
 private struct SheetHost: NSViewRepresentable {
     let model: AppModel
     let wholeBook: Bool
+    let searchScoped: Bool
     let rowsKey: Int
     let accountKey: Int
     let style: RegisterStyle
@@ -159,7 +195,7 @@ private struct SheetHost: NSViewRepresentable {
     let onError: (String) -> Void
 
     func makeNSView(context: Context) -> SheetContainerView {
-        let view = SheetContainerView(model: model, wholeBook: wholeBook)
+        let view = SheetContainerView(model: model, wholeBook: wholeBook, searchScoped: searchScoped)
         push(into: view)
         return view
     }
@@ -185,8 +221,8 @@ private struct SheetHost: NSViewRepresentable {
         view.headerView.onResize = { [weak view] column, width in
             view?.sheet.resizeColumn(column, to: width)
         }
-        view.headerView.onSort = { [weak model] column in
-            guard let model else { return }
+        view.headerView.onSort = { [weak model, searchScoped] column in
+            guard let model, !searchScoped else { return }
             let target: RegisterSort? = switch column {
             case .date: .date
             case .description: .description
@@ -747,8 +783,19 @@ private final class SheetRowCache {
     private(set) var rows: [SheetRow] = []
     private(set) var indexByTxn: [GncGUID: Int] = [:]
 
-    func refresh(for key: Int, build: () -> [SheetRow]) {
+    /// `slot` names a whole-book ledger, whose rows outlive this sheet in
+    /// ``SheetBaseStore`` — a new sheet with the same key takes them as built.
+    func refresh(for key: Int, sharing slot: SheetBaseStore.Slot? = nil, of book: Book? = nil,
+                 build: () -> [SheetRow]) {
         guard key != self.key else { return }
+        if let slot, let book, let kept = SheetBaseStore.entries[slot],
+           kept.key == key, kept.book === book {
+            rows = kept.rows
+            indexByTxn = kept.index
+            self.key = key
+            SheetTrace.note("base kept (\(rows.count) rows)")
+            return
+        }
         let start = ContinuousClock.now
         rows = build()
         self.key = key
@@ -756,8 +803,37 @@ private final class SheetRowCache {
         index.reserveCapacity(rows.count)
         for (offset, row) in rows.enumerated() { index[row.txn] = offset }
         indexByTxn = index
+        if let slot, let book {
+            SheetBaseStore.entries[slot] = SheetBaseStore.Entry(book: book, key: key, rows: rows, index: index)
+        }
         SheetTrace.note("base rebuilt (\(rows.count) rows) in \(ContinuousClock.now - start)")
     }
+}
+
+/// The whole-book ledgers' base rows, kept across sheets.
+///
+/// Entering Accounts makes a new sheet for All Transactions, and each new
+/// sheet built every row of the book again — the base rows and the facts
+/// measured over them were 43% of entering Accounts on the reference book,
+/// paid on every visit though nothing had changed (build 4: "Accounts View
+/// takes a long time to enter"). The key is the sheet's own (`rowsKey`), so
+/// the rows kept are exactly the rows a rebuild would make; one slot each for
+/// All Transactions and the search ledger, which alternate.
+@MainActor
+private enum SheetBaseStore {
+    enum Slot { case book }
+    /// Transfer names' measured widths, at one text size — they repeat
+    /// across ledgers and keystrokes, and a CoreText measure each is the
+    /// costly part of a rebuild's row facts.
+    static var transferWidths: (fontScale: CGFloat, widths: [String: CGFloat]) = (0, [:])
+    struct Entry {
+        weak var book: Book?
+        let key: Int
+        let rows: [SheetRow]
+        let index: [GncGUID: Int]
+        var facts: (fontScale: CGFloat, facts: SheetView.RowFacts)?
+    }
+    static var entries: [Slot: Entry] = [:]
 }
 
 // MARK: - The sheet view
@@ -766,6 +842,8 @@ private final class SheetRowCache {
 private final class SheetView: NSView, NSTextFieldDelegate {
     let model: AppModel
     let wholeBook: Bool
+    /// The whole book narrowed to the search's matches (``RegisterSheet/searchScoped``).
+    let searchScoped: Bool
     private let cache = SheetRowCache()
     private var rows: [SheetRow] { cache.rows }
     private var indexByTxn: [GncGUID: Int] { cache.indexByTxn }
@@ -856,9 +934,10 @@ private final class SheetView: NSView, NSTextFieldDelegate {
 
     weak var header: SheetHeaderView?
 
-    init(model: AppModel, wholeBook: Bool) {
+    init(model: AppModel, wholeBook: Bool, searchScoped: Bool) {
         self.model = model
         self.wholeBook = wholeBook
+        self.searchScoped = searchScoped
         super.init(frame: .zero)
         itemEdit.isHidden = true
         itemEdit.delegate = self
@@ -947,7 +1026,8 @@ private final class SheetView: NSView, NSTextFieldDelegate {
     override func isAccessibilityElement() -> Bool { false }
     override func accessibilityRole() -> NSAccessibility.Role? { .table }
     override func accessibilityLabel() -> String? {
-        wholeBook ? String(localized: "All Transactions")
+        wholeBook ? (searchScoped ? String(localized: "Search Results")
+                                  : String(localized: "All Transactions"))
                   : String(localized: "Transactions")
     }
     /// Rows, plus the one item editor whenever it is on screen: replacing the
@@ -1318,15 +1398,28 @@ private final class SheetView: NSView, NSTextFieldDelegate {
         }
     }
 
+    /// Where this sheet's rows are kept beyond it: All Transactions'. The
+    /// search ledger's change with every keystroke and are not kept.
+    private var sharedSlot: SheetBaseStore.Slot? {
+        wholeBook && !searchScoped ? .book : nil
+    }
+
     private func reloadRows(key: Int) {
         rowsKey = key
-        cache.refresh(for: key) { buildBase() }
+        cache.refresh(for: key, sharing: sharedSlot, of: model.book) { buildBase() }
         selection = selection.filter { indexByTxn[$0] != nil }
         if let txn = selectedTxn, indexByTxn[txn] == nil { selectedTxn = nil }
         if selection.count == 1 { selectedTxn = selection.first }
         anchorBlock = anchorBlock.flatMap { $0 < rows.count ? $0 : nil }
         leadBlock = leadBlock.flatMap { $0 < rows.count ? $0 : nil }
-        if let d = draft, indexByTxn[d.transactionID] == nil { clearDraft() }
+        // A draft whose transaction has left the rows — the search refined
+        // past it while it was being edited — is settled, as a change of
+        // account settles one: committed if it balances, said if it does not.
+        // Cleared without a word, the edit vanished. A transaction that has
+        // gone from the book has nothing to commit to.
+        if let d = draft, indexByTxn[d.transactionID] == nil {
+            if model.book?.transaction(with: d.transactionID) != nil { settleDirtyDraft() } else { clearDraft() }
+        }
         if let c = cursor, cellRect(of: c) == nil { setCursor(nil) }
         mirrorSelection()
         relayoutColumns()
@@ -1339,13 +1432,17 @@ private final class SheetView: NSView, NSTextFieldDelegate {
     private func buildBase() -> [SheetRow] {
         var out: [SheetRow] = []
         if wholeBook {
-            for txn in model.journalTransactions(forAccountID: nil) {
+            let ledger = searchScoped ? model.searchLedgerTransactions()
+                                      : model.journalTransactions(forAccountID: nil)
+            let reportCurrency = model.reportCurrency
+            out.reserveCapacity(ledger.count)
+            for txn in ledger {
                 // The three facts a single-account row takes from its own
                 // split, taken from the transaction instead — see
                 // `wholeBookRowSummary`, which cites where GnuCash does the
                 // same. `isHeadingOnly` stays true: there is still no anchoring
                 // split to edit through, only facts to read.
-                let summary = model.wholeBookRowSummary(ofTransaction: txn.guid)
+                let summary = AppModel.wholeBookRowSummary(of: txn)
                 out.append(SheetRow(
                     txn: txn.guid,
                     base: SheetMainBase(anchorSplit: nil, isHeadingOnly: true,
@@ -1359,8 +1456,8 @@ private final class SheetView: NSView, NSTextFieldDelegate {
                                         isSimple: false,
                                         transferName: summary.accounts,
                                         amount: summary.total, runningBalance: nil,
-                                        foreignCurrencyCode: model.foreignCurrencyCode(
-                                            ofTransaction: txn.guid))))
+                                        foreignCurrencyCode: AppModel.foreignCurrencyCode(
+                                            of: txn, reportCurrency: reportCurrency))))
             }
             return out
         }
@@ -1613,7 +1710,7 @@ private final class SheetView: NSView, NSTextFieldDelegate {
     /// each rung re-walked all 46k rows of a large register to rediscover the
     /// same four facts (Performance Review 2, R7). Only the date form varies
     /// between rungs, and the per-rung measurement below is a dozen strings.
-    private struct RowFacts {
+    fileprivate struct RowFacts {
         var transferWidths: [CGFloat] = []
         var earliest = Date.distantFuture
         var latest = Date.distantPast
@@ -1626,7 +1723,15 @@ private final class SheetView: NSView, NSTextFieldDelegate {
         if let memo = rowFactsMemo, memo.rowsKey == rowsKey, memo.fontScale == fontScale {
             return memo.facts
         }
+        if let slot = sharedSlot, let kept = SheetBaseStore.entries[slot], kept.key == rowsKey,
+           let measured = kept.facts, measured.fontScale == fontScale {
+            rowFactsMemo = (rowsKey, fontScale, measured.facts)
+            return measured.facts
+        }
         let body = [NSAttributedString.Key.font: bodyFont]
+        if SheetBaseStore.transferWidths.fontScale != fontScale {
+            SheetBaseStore.transferWidths = (fontScale, [:])
+        }
         var facts = RowFacts()
         var transferSeen: Set<String> = []
         for row in rows {
@@ -1634,8 +1739,13 @@ private final class SheetView: NSView, NSTextFieldDelegate {
             // Account names repeat across thousands of rows; measure each
             // distinct one once.
             if !base.transferName.isEmpty, transferSeen.insert(base.transferName).inserted {
-                facts.transferWidths.append((base.transferName as NSString)
-                    .size(withAttributes: body).width)
+                if let known = SheetBaseStore.transferWidths.widths[base.transferName] {
+                    facts.transferWidths.append(known)
+                } else {
+                    let width = (base.transferName as NSString).size(withAttributes: body).width
+                    SheetBaseStore.transferWidths.widths[base.transferName] = width
+                    facts.transferWidths.append(width)
+                }
             }
             if base.date < facts.earliest { facts.earliest = base.date }
             if base.date > facts.latest { facts.latest = base.date }
@@ -1645,6 +1755,9 @@ private final class SheetView: NSView, NSTextFieldDelegate {
             }
         }
         rowFactsMemo = (rowsKey, fontScale, facts)
+        if let slot = sharedSlot, SheetBaseStore.entries[slot]?.key == rowsKey {
+            SheetBaseStore.entries[slot]?.facts = (fontScale, facts)
+        }
         return facts
     }
 
@@ -2994,7 +3107,12 @@ private final class SheetView: NSView, NSTextFieldDelegate {
             if wasTall { geometryChanged(fromBlock: indexByTxn[txn]) }
             else { damageBlock(ofTxn: txn) }
         }
-        window?.makeFirstResponder(self)
+        // Only when the sheet had the keyboard: rows reloading under the
+        // search field took it from the field mid-word.
+        if let responder = window?.firstResponder as? NSView,
+           responder === self || responder.isDescendant(of: self) {
+            window?.makeFirstResponder(self)
+        }
     }
 
     private func bookLegCount(of txn: GncGUID) -> Int {
@@ -3819,8 +3937,8 @@ private final class SheetContainerView: NSView {
     let scrollView = NSScrollView()
     let sheet: SheetView
 
-    init(model: AppModel, wholeBook: Bool) {
-        sheet = SheetView(model: model, wholeBook: wholeBook)
+    init(model: AppModel, wholeBook: Bool, searchScoped: Bool) {
+        sheet = SheetView(model: model, wholeBook: wholeBook, searchScoped: searchScoped)
         super.init(frame: .zero)
         headerView.wholeBook = wholeBook
         sheet.header = headerView

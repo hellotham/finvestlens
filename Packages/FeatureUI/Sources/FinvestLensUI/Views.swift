@@ -122,11 +122,11 @@ private struct FileExportModifiers: ViewModifier {
                 guard model.exportRequested else { return }
                 model.exportRequested = false
                 // The export walks the whole book — seconds on a large one —
-                // so say so and let that frame paint before it starts.
+                // so it is built on a replica off the main actor, behind the
+                // toast, and the panel opens when it is ready (R2e).
                 model.showToast(.info, "Preparing export…")
                 Task { @MainActor in
-                    await Task.yield()
-                    guard let data = model.gnuCashExportData() else { return }
+                    guard let data = await model.gnuCashExportDataOffMain() else { return }
                     exportDocument = GnuCashFileDocument(data: data)
                     showingExport = true
                 }
@@ -140,10 +140,12 @@ private struct FileExportModifiers: ViewModifier {
                 guard model.ledgerExportRequested else { return }
                 model.ledgerExportRequested = false
                 model.showToast(.info, "Preparing export…")
+                // Named for the book asked of, not whichever is open when the
+                // export is ready.
+                let name = bookName
                 Task { @MainActor in
-                    await Task.yield()
-                    guard let text = model.ledgerExportText() else { return }
-                    ledgerFilename = bookName + ".ledger"
+                    guard let text = await model.ledgerExportTextOffMain() else { return }
+                    ledgerFilename = name + ".ledger"
                     ledgerDocument = LedgerFileDocument(text: text)
                     showingLedgerExport = true
                 }
@@ -157,10 +159,11 @@ private struct FileExportModifiers: ViewModifier {
                 guard let kind = model.csvExportRequest else { return }
                 model.csvExportRequest = nil
                 model.showToast(.info, "Preparing export…")
+                let name = bookName
                 Task { @MainActor in
-                    await Task.yield()
-                    csvFilename = kind.filename(book: bookName)
-                    csvDocument = CSVFileDocument(text: model.csvExport(kind))
+                    guard let text = await model.csvExportOffMain(kind) else { return }
+                    csvFilename = kind.filename(book: name)
+                    csvDocument = CSVFileDocument(text: text)
                     showingCSVExport = true
                 }
             }
@@ -216,9 +219,21 @@ extension CommodityNamespace {
 }
 
 enum AmountFormat {
+    /// `value` in `code`: money for an ISO 4217 currency, and for anything
+    /// else — a security's units — GnuCash's rule for a non-ISO commodity
+    /// (`gnc_commodity_print_info`, gnc-ui-util.cpp): no decimals forced, the
+    /// symbol after the number, "1,234.5678 XYZ". Formatted as a currency it
+    /// came out "XYZ 1,234.57" — a unit count rounded to cents, as money.
     static func string(_ value: Decimal, code: String) -> String {
-        value.formatted(.currency(code: code))
+        guard isCurrency(code) else {
+            return "\(value.formatted(.number.precision(.fractionLength(0...9)))) \(code)"
+        }
+        return value.formatted(.currency(code: code))
     }
+
+    /// Whether `code` is an ISO 4217 currency, which formats as money.
+    static func isCurrency(_ code: String) -> Bool { isoCodes.contains(code.uppercased()) }
+    private static let isoCodes = Set(Locale.Currency.isoCurrencies.map { $0.identifier.uppercased() })
 
     /// "$3.8m" / "$120k" — deck callouts breathe better compact. One
     /// implementation (both review decks carried byte-identical private
@@ -246,7 +261,7 @@ enum AmountFormat {
     /// words plus "debit"/"credit", so a dense numeric cell isn't read as a
     /// bare stream of digits with an ambiguous minus sign.
     static func spoken(_ value: Decimal, code: String) -> String {
-        let money = abs(value).formatted(.currency(code: code))
+        let money = string(abs(value), code: code)
         if value == 0 { return money }
         // Two whole keys rather than one with an interpolated word: the word
         // was a bare literal inside the interpolation, which emits no key at
@@ -1615,6 +1630,10 @@ struct RegisterView: View {
     /// control, and All Transactions is a register — the fork was in the
     /// wrapper, not in anything either of them needed.
     var wholeBook = false
+    /// The whole book narrowed to what the search matched — GnuCash's search
+    /// ledger, which its Find opens as a register like any other. Only with
+    /// `wholeBook`.
+    var searchScoped = false
     @State private var filterShown = false
     @State private var goToDateShown = false
     /// GnuCash's View ▸ Double Line, renamed Show Details. A preference
@@ -1673,6 +1692,9 @@ struct RegisterView: View {
     /// accounts and picking one of them silently would post to an account
     /// nobody named.
     private var entryAccountID: GncGUID? {
+        // Not in the search results: a new entry there is usually not a match,
+        // and vanished from the rows the moment it was made.
+        if searchScoped { return nil }
         if wholeBook {
             return model.selectedSplitID.flatMap { model.accountID(ofSplit: $0) }
         }
@@ -1722,7 +1744,8 @@ struct RegisterView: View {
             }
             if wholeBook {
                 Divider()
-                wholeBookSummaryBar
+                wholeBookSummaryBar(searchScoped ? model.searchLedgerSummary()
+                                                 : model.wholeBookRegisterSummary())
             } else if let summary = model.registerSummary {
                 Divider()
                 summaryBar(summary)
@@ -1732,7 +1755,9 @@ struct RegisterView: View {
         // where it cost width the mode buttons needed and repeated what the
         // tab strip already says. HIG *Toolbars*: "If titling a toolbar seems
         // redundant, you can leave the title area empty."
-        .untitledInRegularWidth()
+        // The search results keep their own title ("Results for …", "Find
+        // Results (N)") — an inner empty one here would blank it.
+        .modifier(UntitledUnlessSearching(searching: searchScoped))
         .background { jumpShortcuts }
         // A **latch**, until it was consumed on appear too.
         //
@@ -1773,7 +1798,9 @@ struct RegisterView: View {
     private var registerToolbar: some ToolbarContent {
         ToolbarItemGroup {
             viewMenu
-            filterButton
+            // The search results take no register filter: the search narrows
+            // itself, with its operators.
+            if !searchScoped { filterButton }
         }
         // HIG *Toolbars*: separation between sections is fixed space, not a
         // drawn rule — "Add separation by inserting fixed space between the
@@ -1822,19 +1849,21 @@ struct RegisterView: View {
             // as a third toolbar item — present in the accessibility tree but
             // not on screen, the worst of both. Filtering *is* choosing what
             // the register shows, so it belongs here rather than beside it.
-            Button(model.registerFilter.isShowingEverything ? "Filter Transactions…"
-                                                            : "Filtered — Change…",
-                   systemImage: model.registerFilter.isShowingEverything
-                       ? "line.3.horizontal.decrease.circle"
-                       : "line.3.horizontal.decrease.circle.fill") {
-                filterShown = true
-            }
-            if !model.registerFilter.isShowingEverything {
-                Button("Clear Filter", systemImage: "xmark.circle") {
-                    model.registerFilter = .showAll
+            if !searchScoped {
+                Button(model.registerFilter.isShowingEverything ? "Filter Transactions…"
+                                                                : "Filtered — Change…",
+                       systemImage: model.registerFilter.isShowingEverything
+                           ? "line.3.horizontal.decrease.circle"
+                           : "line.3.horizontal.decrease.circle.fill") {
+                    filterShown = true
                 }
+                if !model.registerFilter.isShowingEverything {
+                    Button("Clear Filter", systemImage: "xmark.circle") {
+                        model.registerFilter = .showAll
+                    }
+                }
+                Divider()
             }
-            Divider()
             Picker(selection: $registerStyle) {
                 ForEach(RegisterStyle.allCases) { style in
                     Label(style.title, systemImage: style.symbol).tag(style)
@@ -1874,15 +1903,19 @@ struct RegisterView: View {
             }
             .help("Choose which columns the register shows")
             #endif
-            Menu {
-                Picker("Sort By", selection: $model.registerSort) {
-                    ForEach(RegisterSort.allCases) { Text($0.title).tag($0) }
+            // The search results keep the general ledger's order: the sort
+            // here is the account register's underneath, not theirs.
+            if !searchScoped {
+                Menu {
+                    Picker("Sort By", selection: $model.registerSort) {
+                        ForEach(RegisterSort.allCases) { Text($0.title).tag($0) }
+                    }
+                    .pickerStyle(.inline)
+                    Divider()
+                    Toggle("Reverse Order", isOn: $model.registerSortReversed)
+                } label: {
+                    Label("Sort By", systemImage: "arrow.up.arrow.down")
                 }
-                .pickerStyle(.inline)
-                Divider()
-                Toggle("Reverse Order", isOn: $model.registerSortReversed)
-            } label: {
-                Label("Sort By", systemImage: "arrow.up.arrow.down")
             }
             Divider()
             Toggle(isOn: $model.registerIncludesSubaccounts) {
@@ -1934,8 +1967,12 @@ struct RegisterView: View {
                 .keyboardShortcut(.upArrow, modifiers: .command)
             Button("Go to Newest Transaction") { jump = .newest }
                 .keyboardShortcut(.downArrow, modifiers: .command)
-            Button("Go to Date…") { goToDateShown = true }
-                .keyboardShortcut("g", modifiers: .command)
+            // Go to Date looks in the account register; in the search results
+            // it found a row nothing showed, and moved the next register later.
+            if !searchScoped {
+                Button("Go to Date…") { goToDateShown = true }
+                    .keyboardShortcut("g", modifiers: .command)
+            }
         }
         .opacity(0)
         .accessibilityHidden(true)
@@ -1945,9 +1982,9 @@ struct RegisterView: View {
     private var content: some View {
         if wholeBook {
             #if os(macOS)
-            RegisterSheet(model: model, wholeBook: true, jump: $jump)
+            RegisterSheet(model: model, wholeBook: true, searchScoped: searchScoped, jump: $jump)
             #else
-            RegisterTableView(model: model, wholeBook: true, jump: $jump)
+            RegisterTableView(model: model, wholeBook: true, searchScoped: searchScoped, jump: $jump)
             #endif
         } else if model.selectedAccountID == nil {
             ContentUnavailableView("Select an account", systemImage: "list.bullet.rectangle",
@@ -2016,8 +2053,7 @@ struct RegisterView: View {
     /// journal does have: how many transactions are showing (the filter is
     /// live, so this moves when it does), and the total debits, which is the
     /// figure the Amount column adds up.
-    private var wholeBookSummaryBar: some View {
-        let summary = model.wholeBookRegisterSummary()
+    private func wholeBookSummaryBar(_ summary: (count: Int, debits: Decimal)) -> some View {
         let code = model.reportCurrency.mnemonic
         return HStack(spacing: 16) {
             HStack(spacing: 4) {
@@ -2040,6 +2076,15 @@ struct RegisterView: View {
     private var currencyCode: String {
         model.postableAccounts.first { $0.id == model.selectedAccountID }?.currencyCode
             ?? model.reportCurrency.mnemonic
+    }
+}
+
+/// ``View/untitledInRegularWidth()`` except for the search results, whose
+/// own title says what was searched for.
+private struct UntitledUnlessSearching: ViewModifier {
+    let searching: Bool
+    func body(content: Content) -> some View {
+        if searching { content } else { content.untitledInRegularWidth() }
     }
 }
 
@@ -2090,6 +2135,14 @@ public struct TransactionActions: View {
     }
 
     private var txnID: GncGUID? { splitID.flatMap { model.transactionID(ofSplit: $0) } }
+
+    /// Every selected row's transaction, once each, in no particular order —
+    /// what Void and Delete act on when more than one is selected.
+    private var selectedTransactionIDs: [GncGUID] {
+        var seen = Set<GncGUID>()
+        return selectionSplitIDs.compactMap { model.transactionID(ofSplit: $0) }
+            .filter { seen.insert($0).inserted }
+    }
 
     /// Each item carries its own condition rather than the whole menu being
     /// disabled together: `disabled` is inherited and cannot be undone by a
@@ -2175,20 +2228,34 @@ public struct TransactionActions: View {
             .disabled(needsRow)
             Button("Schedule…") { model.schedulingTransactionID = txnID }
                 .disabled(needsRow)
-            if let txnID, model.isVoided(txnID) {
-                Button("Unvoid Transaction") { model.unvoidTransaction(txnID) }
-            } else {
-                Button("Void Transaction") {
-                    if let txnID { model.voidTransaction(txnID) }
+            // Several selected: Void and Delete take them all, as one edit and
+            // one Undo — as the search results did before they were a register.
+            // They acted on one, and not even the row under the pointer: the
+            // first of a set.
+            let several = selectedTransactionIDs
+            if several.count > 1 {
+                Button("Void \(several.count) Transactions") { model.voidTransactions(several) }
+                Divider()
+                Button("Delete \(several.count) Transactions", role: .destructive) {
+                    model.deleteTransactions(several)
                 }
+                .keyboardShortcut(.delete, modifiers: .command)
+            } else {
+                if let txnID, model.isVoided(txnID) {
+                    Button("Unvoid Transaction") { model.unvoidTransaction(txnID) }
+                } else {
+                    Button("Void Transaction") {
+                        if let txnID { model.voidTransaction(txnID) }
+                    }
+                    .disabled(needsRow)
+                }
+                Divider()
+                Button("Delete Transaction", role: .destructive) {
+                    if let txnID { model.deleteTransaction(txnID) }
+                }
+                .keyboardShortcut(.delete, modifiers: .command)
                 .disabled(needsRow)
             }
-            Divider()
-            Button("Delete Transaction", role: .destructive) {
-                if let txnID { model.deleteTransaction(txnID) }
-            }
-            .keyboardShortcut(.delete, modifiers: .command)
-            .disabled(needsRow)
         }
         .alert("Paste Transaction", isPresented: Binding(
             get: { pasteError != nil },
@@ -2661,32 +2728,80 @@ struct RegisterFilterSheet: View {
 // MARK: - Search results
 
 struct SearchResultsView: View {
-    @Environment(\.appDateFormat) private var dateFormat
     @Environment(\.isCompactShell) private var compact
     @Bindable var model: AppModel
-    @State private var selection: Set<GncGUID> = []
-    @State private var editingTransactionID: GncGUID?
 
+    /// The results **as a register** — GnuCash's search ledger. Its Find opens
+    /// what it found as a register page (`dialog-find-transactions.c`:
+    /// `gnc_ledger_display_query(query, SEARCH_LEDGER, REG_STYLE_JOURNAL)`),
+    /// which edits like any other; reported on build 4: "The search results
+    /// are not editable and not displayed as a pseudo account register,
+    /// unlike GnuCash". So the results are All Transactions narrowed to the
+    /// matches: the same rows, styles, in-place editing and summary bar, in
+    /// the general ledger's own order — with no register filter or sort,
+    /// which are the account register's underneath, left as they are
+    /// (`searchLedgerTransactions()`). The table of summaries this replaces
+    /// could only open an editor sheet — and diffing tens of thousands of its
+    /// rows on every keystroke was the other half of a search that took
+    /// seconds a key.
     var body: some View {
         Group {
+            #if os(iOS)
             if compact {
-                compactList
+                CompactRegisterView(model: model, searchScoped: true)
             } else {
-                table
+                RegisterView(model: model, wholeBook: true, searchScoped: true)
             }
-        }
-        .sheet(item: $editingTransactionID) { id in
-            TransactionEditor(model: model, editingID: id)
+            #else
+            RegisterView(model: model, wholeBook: true, searchScoped: true)
+            #endif
         }
         .overlay {
-            if model.searchResults.isEmpty { noResults }
+            // The phone's register says so itself.
+            if model.searchMatchCount == 0, !compact { noResults }
         }
         .safeAreaInset(edge: .top) {
             if !model.searchNotices.isEmpty { noticeBanner }
         }
         .toolbar {
+            // From a result to its account's register — the account Find
+            // matched, where it matched one. GnuCash's search ledger does the
+            // same with Actions ▸ Jump to the other account: the ledger is
+            // built with no lead account (`gnc_ledger_display_query`), so
+            // Jump opens the selected split's own account, focused on the
+            // transaction (`gnc_plugin_page_register_cmd_jump`). Selection
+            // drives it, and the phone's list selects nothing — each of its
+            // rows has Show in Register in its own menu — so it is not shown
+            // there, disabled for good.
+            if !compact {
+                ToolbarItem {
+                    let selected = model.selectedTransactionIDs
+                    Button("Show in Register", systemImage: "arrow.right.circle") {
+                        if let id = selected.first { model.showInRegister(id) }
+                    }
+                    .disabled(selected.count != 1)
+                    .help("Open the selected result in its account’s register")
+                }
+            }
             if model.findQuery != nil {
                 ToolbarItemGroup {
+                    // The leg the find was about, in each selected result —
+                    // which the register's own reconcile cell cannot know.
+                    // A selection again, so not on the phone.
+                    if !compact {
+                        let selected = Array(model.selectedTransactionIDs)
+                        Menu {
+                            ForEach(ReconcileState.settableInRegister, id: \.self) { state in
+                                Button(state.label) {
+                                    model.setReconcileStateOfMatches(in: selected, to: state)
+                                }
+                            }
+                        } label: {
+                            Label("Set Reconcile State", systemImage: "checkmark.circle")
+                        }
+                        .disabled(selected.isEmpty)
+                        .help("Set the reconcile state of the matched split in each selected result")
+                    }
                     Button("Edit Find…", systemImage: "slider.horizontal.3") {
                         model.presentedPanel = .find
                     }
@@ -2699,96 +2814,10 @@ struct SearchResultsView: View {
         .navigationTitle(title)
     }
 
-    /// The regular shell's results: a table with the register's columns.
-    private var table: some View {
-        Table(model.searchResults, selection: $selection) {
-            TableColumn("Date") { row in
-                // A Table column is user-resizable, so the width this cell gets
-                // is whatever the divider was last dragged to — the case the
-                // ladder exists for.
-                AdaptiveDate(row.date)
-                    .scaledFont(.body)
-            }
-            TableColumn("Description") { row in
-                Text(row.description).scaledFont(.body)
-            }
-            TableColumn("Accounts") { row in
-                Text(row.accounts).scaledFont(.body)
-            }
-            TableColumn("Amount") { row in
-                Text(AmountFormat.string(row.amount, code: row.currencyCode))
-                    .scaledFont(.body)
-                    .monospacedDigit()
-            }
-        }
-        // A result is a transaction, so it can be worked on like one. Editing
-        // in place is what makes "find, then fix each one" possible without
-        // leaving the results — the nearest thing we have to GnuCash, whose
-        // Find opens its results as a register. With several rows selected the
-        // menu acts on all of them, as one edit and one Undo: "find last
-        // month's cheques, mark them cleared" is one act, not forty.
-        .contextMenu(forSelectionType: GncGUID.self) { ids in
-            let list = Array(ids)
-            if let id = list.first, list.count == 1 {
-                Button("Edit…") { editingTransactionID = id }
-                Button("Show in Register") { model.showInRegister(id) }
-                Divider()
-            }
-            // Reconcile state applies to the *matched* split of each result —
-            // the leg the search was about — so it is only offered where a
-            // structured find remembered one.
-            if model.findQuery != nil, !list.isEmpty {
-                Menu(list.count == 1 ? "Set Reconcile State"
-                     : "Set Reconcile State (\(list.count))") {
-                    ForEach(ReconcileState.settableInRegister, id: \.self) { state in
-                        Button(state.label) {
-                            model.setReconcileStateOfMatches(in: list, to: state)
-                        }
-                    }
-                }
-            }
-            if !list.isEmpty {
-                Button(list.count == 1 ? "Void Transaction"
-                       : "Void \(list.count) Transactions") {
-                    model.voidTransactions(list)
-                }
-                Divider()
-                Button(list.count == 1 ? "Delete Transaction"
-                       : "Delete \(list.count) Transactions", role: .destructive) {
-                    model.deleteTransactions(list)
-                }
-            }
-        } primaryAction: { ids in
-            if let id = ids.first, ids.count == 1 { editingTransactionID = id }
-        }
-    }
-
-    /// The compact shell's results: one row per hit, because a `Table`
-    /// at compact width shows only its first column — the dates alone.
-    private var compactList: some View {
-        List(model.searchResults) { row in
-            Button {
-                editingTransactionID = row.id
-            } label: {
-                SearchHitRow(row: row, dateFormat: dateFormat)
-            }
-            .buttonStyle(.plain)
-            .accessibilityHint("Opens the transaction")
-            .contextMenu {
-                Button("Edit…") { editingTransactionID = row.id }
-                Button("Show in Register") { model.showInRegister(row.id) }
-                Divider()
-                Button("Void Transaction") { model.voidTransactions([row.id]) }
-                Button("Delete Transaction", role: .destructive) { model.deleteTransactions([row.id]) }
-            }
-        }
-        .listStyle(.plain)
-    }
-
     private var title: String {
         model.findQuery == nil
             ? String(localized: "Results for “\(model.searchQuery)”")
-            : String(localized: "Find Results (\(model.searchResults.count))")
+            : String(localized: "Find Results (\(model.searchMatchCount))")
     }
 
     /// Finding nothing is a result. Saying nothing is not: without this the
@@ -4121,39 +4150,3 @@ struct NewItemMenu: View {
     }
 }
 
-/// One search hit as a list row: what matched over which accounts, the
-/// amount over the date — the compact register's shape.
-struct SearchHitRow: View {
-    let row: TransactionSummary
-    let dateFormat: AppDateFormat
-
-    var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(row.description.isEmpty ? String(localized: "(No description)") : row.description)
-                    .scaledFont(.body)
-                    .lineLimit(1)
-                Text(row.accounts)
-                    .scaledFont(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
-            Spacer(minLength: 8)
-            VStack(alignment: .trailing, spacing: 2) {
-                Text(AmountFormat.string(row.amount, code: row.currencyCode))
-                    .scaledFont(.body)
-                    .monospacedDigit()
-                Text(dateFormat.short(row.date))
-                    .scaledFont(.caption)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding(.vertical, 2)
-        .contentShape(Rectangle())
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel([dateFormat.short(row.date),
-                             row.description.isEmpty ? String(localized: "(No description)") : row.description,
-                             row.accounts,
-                             AmountFormat.spoken(row.amount, code: row.currencyCode)].joined(separator: ", "))
-    }
-}

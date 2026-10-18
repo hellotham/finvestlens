@@ -56,6 +56,38 @@ extension AppModel {
         return FinancialReports.netWorthSeries(book, dates: dates, currency: reportCurrency)
     }
 
+    /// Builds the slow parts of the report `configuration` asks for — the lot
+    /// engine's reports, an account's postings — on a replica, off the main
+    /// actor, so that ``reportDocument(for:)`` finds them in the memo and
+    /// only assembles the document here (P3.3). The account and period are
+    /// resolved exactly as the document resolves them.
+    func warmReports(for configuration: ReportConfiguration) async {
+        guard book != nil, let kind = ReportKind(rawValue: configuration.kind),
+              kind.usesScaffold else { return }
+        let (from, to) = resolve(configuration.period)
+        switch kind {
+        case .transactions:
+            await warm(transactionsReportRequest(accountIDs: configuration.accountIDs, from: from, to: to))
+        case .reconcile:
+            guard let account = configuration.accountIDs?.first ?? selectedAccountID
+                ?? postableAccounts.first?.id else { return }
+            await warm(reconcileReportRequest(accountID: account, asOf: to))
+        case .portfolio where !securityCommodities.isEmpty:
+            await warm(advancedPortfolioRequest(asOf: to))
+        case .investmentLots where !securityCommodities.isEmpty:
+            await warm(investmentLotsRequest(asOf: to))
+        case .capitalGains where !securityCommodities.isEmpty:
+            await warm(capitalGainsRequest(from: from, to: to))
+        case .averageBalance:
+            let scope = configuration.accountIDs ?? defaultCashFlowAccountIDs
+            guard !scope.isEmpty else { return }
+            await warm(averageBalanceRequest(accountIDs: scope, from: from, to: to,
+                                             step: configuration.step ?? .month))
+        default:
+            break
+        }
+    }
+
     /// Builds the document for a scaffold report, or `nil` for kinds that keep
     /// interactive views (or a book that is not open).
     func reportDocument(for configuration: ReportConfiguration) -> ReportDocument? {
@@ -90,8 +122,8 @@ extension AppModel {
                             total: (String(localized: "Total Liabilities"), sheet.totalLiabilities)),
                     ReportDocumentSection(
                         title: String(localized: "Equity"),
-                        rows: sheet.equity.map { line in
-                            ReportDocumentRow(label: line.fullName, amount: line.amount)
+                        rows: accountTreeRows([sheet.equity]).map {
+                            ReportDocumentRow(label: $0.label, depth: $0.depth, amount: $0.amounts[0])
                         } + [ReportDocumentRow(label: String(localized: "Retained earnings"),
                                                amount: sheet.retainedEarnings)],
                         total: (String(localized: "Total Equity"), sheet.totalEquity)),
@@ -198,7 +230,7 @@ extension AppModel {
                 facts: nil)
 
         case .accountSummary:
-            let depth = configuration.depth ?? 2
+            let depth = min(configuration.depth ?? accountTreeDepth, accountTreeDepth)
             guard let report = accountSummary(asOf: to, depthLimit: depth) else { return nil }
             let assets = report.sections.first { $0.title == "Assets" }?.total ?? 0
             let liabilities = report.sections.first { $0.title == "Liabilities" }?.total ?? 0
@@ -216,13 +248,20 @@ extension AppModel {
                     let title = Self.accountClassName(section.title)
                     return ReportDocumentSection(
                         title: title,
-                        rows: section.rows.map { row in
-                            ReportDocumentRow(label: row.name, depth: row.depth - 1,
-                                              amount: row.balance)
+                        rows: section.rows.flatMap { row in
+                            var rows = [ReportDocumentRow(label: row.name, depth: row.depth - 1,
+                                                          amount: row.balance)]
+                            if row.hasChildren, row.own != 0 {
+                                rows.append(ReportDocumentRow(label: String(localized: "\(row.name) (direct)"),
+                                                              depth: row.depth, amount: row.own))
+                            }
+                            return rows
                         },
                         total: (String(localized: "Total \(title)"), section.total))
                 },
-                notes: [String(localized: "Accounts deeper than level \(depth) roll into their ancestor, so every depth sums to the same totals. Income and expense balances are lifetime to date."),
+                notes: [depth >= accountTreeDepth
+                        ? String(localized: "Every level of the chart of accounts is shown, each account with everything beneath it. Income and expense balances are lifetime to date.")
+                        : String(localized: "Accounts deeper than level \(depth) roll into their ancestor, so every depth sums to the same totals. Income and expense balances are lifetime to date."),
                         valuationNote(to)],
                 facts: nil)
 
@@ -268,10 +307,13 @@ extension AppModel {
                 ],
                 chart: nil,
                 sections: [
+                    // Largest first, as the cash-flow report orders them.
                     section(String(localized: "Money in, from"), report.inflows,
-                            total: (String(localized: "Total in"), report.totalIn)),
+                            total: (String(localized: "Total in"), report.totalIn),
+                            order: .largestFirst),
                     section(String(localized: "Money out, to"), report.outflows,
-                            total: (String(localized: "Total out"), report.totalOut)),
+                            total: (String(localized: "Total out"), report.totalOut),
+                            order: .largestFirst),
                 ],
                 notes: [String(localized: "Flows through \(report.accountNames.count) account(s): \(Self.listed(report.accountNames))."),
                         String(localized: "Transfers wholly inside the selected accounts are internal and excluded; by double entry, in minus out equals their net change.")],
@@ -304,12 +346,18 @@ extension AppModel {
                 ],
                 chart: .monthlyBars(breakdown.months),
                 sections: [
-                    section(String(localized: "Spending by category"), breakdown.expenseSlices,
-                            total: (String(localized: "Total Expenses"), breakdown.totalExpenses)),
-                    section(String(localized: "Income by category"), breakdown.incomeSlices,
-                            total: (String(localized: "Total Income"), breakdown.totalIncome)),
+                    // Each category broken down into its subcategories, every
+                    // level, largest first — the top rows are the slices to
+                    // the cent, because each node is rounded once from the
+                    // exact amounts beneath it.
+                    section(String(localized: "Spending by category"), breakdown.expenseAccounts,
+                            total: (String(localized: "Total Expenses"), breakdown.totalExpenses),
+                            order: .largestFirst, round: reportCurrency.round),
+                    section(String(localized: "Income by category"), breakdown.incomeAccounts,
+                            total: (String(localized: "Total Income"), breakdown.totalIncome),
+                            order: .largestFirst, round: reportCurrency.round),
                 ],
-                notes: [String(localized: "Categories are top-level accounts with their subtrees rolled up; the slices sum to the income statement for the same period.")],
+                notes: [String(localized: "Each category is broken down into its subcategories at every level, and includes everything beneath it; the top-level categories sum to the income statement for the same period.")],
                 facts: {
                     let income = String(localized: "Income"), expenses = String(localized: "Expenses")
                     let top = ranked((breakdown.expenseSlices, .outflow), (breakdown.incomeSlices, .inflow))
@@ -426,9 +474,7 @@ extension AppModel {
         case .spendingInsights:
             return spendingInsightsDocument(period: configuration.period)
         case .transactions:
-            guard let account = configuration.accountIDs?.first ?? selectedAccountID
-                ?? postableAccounts.first?.id else { return nil }
-            return transactionsDocument(accountID: account, from: from, to: to)
+            return transactionsDocument(accountIDs: configuration.accountIDs, from: from, to: to)
         case .reconcile:
             guard let account = configuration.accountIDs?.first ?? selectedAccountID
                 ?? postableAccounts.first?.id else { return nil }
@@ -561,19 +607,8 @@ extension AppModel {
     private func alignedRows(_ columns: [[ReportLine]],
                              extra: [(label: String, amounts: [Decimal?])] = [])
         -> [ReportDocumentRow] {
-        var order: [String] = []
-        var seen = Set<String>()
-        for column in columns {
-            for line in column where seen.insert(line.fullName).inserted {
-                order.append(line.fullName)
-            }
-        }
-        let maps = columns.map { column in
-            Dictionary(column.map { ($0.fullName, $0.amount) },
-                       uniquingKeysWith: { first, _ in first })
-        }
-        var rows = order.map { key in
-            ReportDocumentRow(label: key, amounts: maps.map { $0[key] })
+        var rows = accountTreeRows(columns).map {
+            ReportDocumentRow(label: $0.label, depth: $0.depth, amounts: $0.amounts)
         }
         rows += extra.map { ReportDocumentRow(label: $0.label, amounts: $0.amounts) }
         return rows
@@ -661,11 +696,121 @@ extension AppModel {
     // MARK: Helpers
 
     private func section(_ title: String, _ lines: [ReportLine],
-                         total: (String, Decimal)) -> ReportDocumentSection {
+                         total: (String, Decimal),
+                         order: AccountTreeOrder = .name,
+                         round: (Decimal) -> Decimal = { $0 }) -> ReportDocumentSection {
         ReportDocumentSection(
             title: title,
-            rows: lines.map { ReportDocumentRow(label: $0.fullName, amount: $0.amount) },
+            rows: accountTreeRows([lines], order: order, round: round).map {
+                ReportDocumentRow(label: $0.label, depth: $0.depth, amount: $0.amounts[0])
+            },
             total: total)
+    }
+
+    /// How a level of the account tree is ordered: by name, as the chart of
+    /// accounts is, or largest first, as a ranking of categories is.
+    enum AccountTreeOrder { case name, largestFirst }
+
+    /// Report lines — one period's, or several side by side — as the account
+    /// tree they belong to: **every level**, each parent carrying the subtotal
+    /// of everything beneath it, indented by depth.
+    ///
+    /// Asked for on build 4: "Income and expense report needs to break down
+    /// into sub categories (recursively)", and "All reports should display max
+    /// indentation depth." The lines were each account's own figure under its
+    /// full name, flat, so a category's total was nowhere on the page. GnuCash
+    /// offers this shape as Parent account balances ▸ Calculate Subtotal
+    /// (`options-utilities.scm`, `'recursive-bal`); its income statement
+    /// defaults to three levels and the parent's own balance
+    /// (`income-statement.scm`), the depth asked to go.
+    ///
+    /// A parent that has postings of its own *and* subaccounts beneath shows
+    /// its own as a "(direct)" row among them, so a parent is always the sum of
+    /// the rows under it and the section still sums to its total. A column in
+    /// which nothing under a row has a line stays blank, as the flat rows did.
+    ///
+    /// `round` is applied to each figure as it is printed, never to what is
+    /// summed: given exact lines, every node is rounded once from the exact
+    /// total beneath it.
+    func accountTreeRows(_ columns: [[ReportLine]], order: AccountTreeOrder = .name,
+                         round: (Decimal) -> Decimal = { $0 })
+        -> [(label: String, depth: Int, amounts: [Decimal?])] {
+        guard let book else { return [] }
+        let width = columns.count
+        var own: [ObjectIdentifier: [Decimal?]] = [:]
+        var shown: Set<ObjectIdentifier> = []
+        var tops: [Account] = []
+        // Lines that are not an account — the balance sheet's unrealised FX
+        // and translation rounding — keep their place after the tree, matched
+        // across columns by name as before.
+        var loose: [(label: String, amounts: [Decimal?])] = []
+        for (column, lines) in columns.enumerated() {
+            for line in lines {
+                guard let account = book.account(with: line.id) else {
+                    // By its own name — "Unrealised FX", in the reader's
+                    // language — not its full name, which is GnuCash's
+                    // "Trading".
+                    if let at = loose.firstIndex(where: { $0.label == line.name }) {
+                        loose[at].amounts[column] = (loose[at].amounts[column] ?? 0) + line.amount
+                    } else {
+                        var amounts = [Decimal?](repeating: nil, count: width)
+                        amounts[column] = line.amount
+                        loose.append((line.name, amounts))
+                    }
+                    continue
+                }
+                let key = ObjectIdentifier(account)
+                var amounts = own[key] ?? Array(repeating: nil, count: width)
+                amounts[column] = (amounts[column] ?? 0) + line.amount
+                own[key] = amounts
+                // The account and every ancestor below the root.
+                var walk: Account? = account
+                while let current = walk, current !== book.rootAccount,
+                      shown.insert(ObjectIdentifier(current)).inserted {
+                    if current.parent == nil || current.parent === book.rootAccount {
+                        tops.append(current)
+                    }
+                    walk = current.parent
+                }
+            }
+        }
+        func add(_ a: [Decimal?], _ b: [Decimal?]) -> [Decimal?] {
+            zip(a, b).map { x, y in x == nil && y == nil ? nil : (x ?? 0) + (y ?? 0) }
+        }
+        var subtotal: [ObjectIdentifier: [Decimal?]] = [:]
+        func total(_ account: Account) -> [Decimal?] {
+            let key = ObjectIdentifier(account)
+            if let known = subtotal[key] { return known }
+            let mine = own[key] ?? Array(repeating: nil, count: width)
+            let sum = account.children.filter { shown.contains(ObjectIdentifier($0)) }
+                .reduce(mine) { add($0, total($1)) }
+            subtotal[key] = sum
+            return sum
+        }
+        func ordered(_ accounts: [Account]) -> [Account] {
+            switch order {
+            case .name:
+                return accounts.sorted { $0.name < $1.name }
+            case .largestFirst:
+                return accounts.sorted {
+                    let a = total($0).first.flatMap { $0 } ?? 0, b = total($1).first.flatMap { $0 } ?? 0
+                    return a == b ? $0.name < $1.name : a > b
+                }
+            }
+        }
+        func printed(_ amounts: [Decimal?]) -> [Decimal?] { amounts.map { $0.map(round) } }
+        var rows: [(label: String, depth: Int, amounts: [Decimal?])] = []
+        func emit(_ account: Account, depth: Int) {
+            let below = ordered(account.children.filter { shown.contains(ObjectIdentifier($0)) })
+            rows.append((account.name, depth, printed(total(account))))
+            if !below.isEmpty, let mine = own[ObjectIdentifier(account)],
+               mine.contains(where: { ($0 ?? 0) != 0 }) {
+                rows.append((String(localized: "\(account.name) (direct)"), depth + 1, printed(mine)))
+            }
+            for child in below { emit(child, depth: depth + 1) }
+        }
+        for top in ordered(tops) { emit(top, depth: 0) }
+        return rows + loose.map { ($0.label, 0, printed($0.amounts)) }
     }
 
     /// The largest lines of several sections, ranked together by size, each

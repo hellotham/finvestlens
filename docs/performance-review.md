@@ -1,5 +1,43 @@
 # Performance Review
 
+> **Status (18 Oct 2026):** the rest is closed. **P6** — Auto-Categorise
+> builds its corpus from a value snapshot and scores it off the main actor
+> (`SmartCategorizer`): the main actor's share on the reference book fell
+> from 180 ms to 12.7 ms (`LiveCategorisePerfTests`). **P6b** — an import's
+> matching runs off the main actor on a replica of the book, behind
+> "Matching the statement…", which VoiceOver announces: 2.2 s on the main
+> actor before, 28 ms now (`LiveImportMatchPerfTests`). **P3.3** — a report
+> whose last build took longer than 80 ms, or that has not been built yet,
+> is built off the main actor on a replica (`Book.replica()`, about 45 ms of
+> main-actor work on the reference book) and kept only if the book has not
+> moved meanwhile (`AppModel.warm`, `ReportWarmTests`). **P9**'s business and
+> structural operations no longer snapshot the whole book: the ten business
+> operations and Post Scheduled Transactions undo by taking out and putting
+> back the transactions they added or removed, with the business tables or
+> the book's slots where they change them (`editingPostings`); Close
+> Financial Year and Repair Book are transaction-scoped edits of the
+> transactions they add or touch. `editingWholeBook` is gone
+> (`ScopedUndoTests`). **P10** — closing a book and quitting save without
+> holding the window (`saveAndClose`, `.terminateLater`; `SaveAndCloseTests`),
+> and **P10b** — a save writes only what changed since the last: a
+> transaction edited in place is updated where it is, ones added since go at
+> the end in book order, prices likewise, and the small tables are rewritten
+> whole. On the reference book the main actor's share of a save fell from
+> 100 ms to 0.78 ms and the write from 2.57 s to 0.66 s; the working copy
+> then holds exactly what a full write would, and the book read back from it
+> exports the same GnuCash XML byte for byte (`LiveSavePerfTests`,
+> `IncrementalSaveTests`). **P5.4** — the lookup indexes and the account
+> tree's balances follow each edit: only the accounts an edit touched are
+> recomputed, as GnuCash's `xaccAccountRecomputeBalance`
+> (`libgnucash/engine/Account.cpp:2277`) recomputes the one account it is
+> given. **P7** — the general ledger's order, which every register surface
+> draws All Transactions from, is patched edit by edit instead of the book
+> being filtered and sorted again (`GeneralLedgerPatchTests`: every sort, each
+> way round, filtered or not, with and without rows; the review found the
+> first version needed rows nothing on screen builds, and so never ran).
+> `FL_VERIFY_INDEXES=1` checks every kept index, balance and ledger against
+> a rebuild after every edit, and CI sets it.
+>
 > **Status (17 Oct 2026):** an audit of 12 Oct, re-verified against the
 > code on 17 Oct, found these still open, and the owner's rule is that none
 > may stay so. Closed on 17 Oct: **P4**'s derived lists (security,

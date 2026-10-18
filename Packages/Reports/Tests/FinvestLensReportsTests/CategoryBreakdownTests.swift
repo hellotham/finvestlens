@@ -130,4 +130,81 @@ struct CategoryBreakdownTests {
                                                            currency: .aud, calendar: utc)
         #expect(!breakdown.expenseSlices.contains { $0.name == "Holidays" })
     }
+
+    @Test("The totals alone are the breakdown's totals, for any window")
+    func totalsAreTheBreakdowns() {
+        let book = makeBook()
+        // A USD expense, valued through a rate, and a closing entry, which
+        // both paths leave out.
+        let usd = book.addAccount(Account(name: "Travel", type: .expense, commodity: .usd))
+        let bank = book.accounts.first { $0.name == "Bank" }!
+        book.addPrice(Price(commodity: .usd, currency: .aud, date: day(1), value: Decimal(string: "1.5")!))
+        let trip = Transaction(currency: .aud, datePosted: day(40), description: "Trip")
+        trip.addSplit(Split(account: usd, value: 150, quantity: 100))
+        trip.addSplit(account: bank, value: -150)
+        book.addTransaction(trip)
+        let close = Transaction(currency: .aud, datePosted: day(58), description: "Close")
+        close.kvp["book_closing"] = .int64(1)
+        close.addSplit(account: book.accounts.first { $0.name == "Salary" }!, value: 10_000)
+        close.addSplit(account: bank, value: -10_000)
+        book.addTransaction(close)
+
+        for (from, to) in [(day(0), day(58)), (day(0), day(30)), (day(31), day(58)), (day(6), day(7))] {
+            let full = FinancialReports.categoryBreakdown(book, from: from, to: to, currency: .aud)
+            let totals = FinancialReports.categoryTotals(book, from: from, to: to, currency: .aud)
+            #expect(totals.income == full.totalIncome)
+            #expect(totals.expenses == full.totalExpenses)
+        }
+    }
+
+    @Test("Several windows' totals in one walk are each window's own")
+    func windowedTotals() {
+        let book = makeBook()
+        let windows = [(day(0), day(58)), (day(0), day(30)), (day(31), day(58)), (day(6), day(7))]
+        let together = FinancialReports.categoryTotals(book, windows: windows.map { (from: $0.0, to: $0.1) },
+                                                       currency: .aud)
+        for ((from, to), totals) in zip(windows, together) {
+            let alone = FinancialReports.categoryTotals(book, from: from, to: to, currency: .aud)
+            #expect(totals.income == alone.income && totals.expenses == alone.expenses)
+        }
+    }
+
+    @Test("Lifetime buckets from balances already walked are the ones it walks for")
+    func bucketsFromGivenBalances() {
+        let book = makeBook()
+        let asOf = day(45)
+        let walked = FinancialReports.lifetimeBuckets(book, currency: .aud, asOf: asOf) { _ in false }
+        let given = FinancialReports.lifetimeBuckets(
+            book, currency: .aud, asOf: asOf,
+            balances: book.balancesByAccount(from: nil, to: asOf)) { _ in false }
+        #expect(given == walked)
+    }
+
+    @Test("Each category's accounts are everything under its top level, so they sum to its slice — mixed types included")
+    func accountsSumToSlices() {
+        let book = Book(baseCurrency: .aud)
+        let bank = book.addAccount(Account(name: "Bank", type: .bank, commodity: .aud))
+        let income = book.addAccount(Account(name: "Income", type: .income, commodity: .aud))
+        let salary = book.addAccount(Account(name: "Salary", type: .income, commodity: .aud), under: income)
+        // An expense account under an income one, as GnuCash allows.
+        let withheld = book.addAccount(Account(name: "Withheld", type: .expense, commodity: .aud), under: salary)
+        let expenses = book.addAccount(Account(name: "Expenses", type: .expense, commodity: .aud))
+        let food = book.addAccount(Account(name: "Food", type: .expense, commodity: .aud), under: expenses)
+        func post(_ a: Account, _ b: Account, _ amount: Decimal) {
+            let t = Transaction(currency: .aud, datePosted: day(5), description: "Move")
+            t.addSplit(account: a, value: amount)
+            t.addSplit(account: b, value: -amount)
+            book.addTransaction(t)
+        }
+        post(bank, salary, 5000)
+        post(withheld, bank, 1000)
+        post(food, bank, 300)
+        let breakdown = FinancialReports.categoryBreakdown(book, from: day(0), to: day(30),
+                                                           currency: .aud, calendar: utc)
+        func sum(_ lines: [ReportLine]) -> Decimal { lines.reduce(0) { $0 + $1.amount } }
+        #expect(sum(breakdown.expenseAccounts) == sum(breakdown.expenseSlices))
+        #expect(sum(breakdown.incomeAccounts) == sum(breakdown.incomeSlices))
+        #expect(breakdown.expenseAccounts.map(\.name) == ["Food"])
+        #expect(Set(breakdown.incomeAccounts.map(\.name)) == ["Salary", "Withheld"])
+    }
 }

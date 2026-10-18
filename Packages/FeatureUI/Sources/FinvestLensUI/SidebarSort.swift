@@ -338,10 +338,9 @@ extension AppModel {
         guard let from = siblings.firstIndex(where: { $0.guid == id }) else { return }
         let clamped = min(max(position, 0), siblings.count - 1)
         guard clamped != from else { return }
-        // Scoped to the accounts it touches. `editingWholeBook` serialises the
-        // whole book to GnuCash XML for its undo snapshot — 46k transactions for
-        // a change of a dozen integers, and the whole-book snapshot CLAUDE.md
-        // says undo must never take.
+        // Scoped to the accounts it touches: a whole-book undo snapshot would
+        // serialise 46k transactions for a change of a dozen integers, and
+        // CLAUDE.md says undo must never take one.
         editingAccounts(siblings.map(\.guid), named: "Reorder Accounts") {
             let moved = siblings.remove(at: from)
             siblings.insert(moved, at: clamped)

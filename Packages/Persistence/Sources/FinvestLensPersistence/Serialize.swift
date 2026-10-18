@@ -61,11 +61,22 @@ enum Serialize {
 
     // MARK: KVP frame (JSON, nil when empty)
 
+    /// Keys in sorted order, so one frame always writes the same text. The
+    /// encoder's default is the dictionary's own order, which differs from
+    /// one copy of a frame to the next: the same book saved twice wrote
+    /// different bytes, and a save of only what changed (P10b) could not be
+    /// checked against a full one. Reading does not care about the order.
     static func kvp(_ frame: KvpFrame) -> String? {
         guard !frame.isEmpty else { return nil }
-        guard let data = try? JSONEncoder().encode(frame) else { return nil }
+        guard let data = try? kvpEncoder.encode(frame) else { return nil }
         return String(decoding: data, as: UTF8.self)
     }
+
+    private static let kvpEncoder: JSONEncoder = {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+        return encoder
+    }()
 
     static func parseKvp(_ text: String?) -> KvpFrame {
         guard let text else { return KvpFrame() }

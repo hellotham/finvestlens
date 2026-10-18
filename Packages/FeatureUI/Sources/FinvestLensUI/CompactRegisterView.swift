@@ -21,6 +21,9 @@ struct CompactRegisterView: View {
     @Bindable var model: AppModel
     /// The account this register was pushed for; `nil` for the journal.
     var accountID: GncGUID?
+    /// The journal narrowed to the search's matches — GnuCash's search ledger
+    /// (``AppModel/searchLedgerTransactions()``). Only with no `accountID`.
+    var searchScoped = false
     @Environment(\.appDateFormat) private var dateFormat
     @State private var editing: GncGUID?
     @State private var adding = false
@@ -55,18 +58,23 @@ struct CompactRegisterView: View {
     /// after Go to Other Account — and a request addressed to "the register"
     /// is for the visible one.
     private var isInFront: Bool {
-        wholeBook ? model.sidebarSelection == .generalLedger : model.selectedAccountID == accountID
+        if searchScoped { return model.isSearching }
+        return wholeBook ? model.sidebarSelection == .generalLedger : model.selectedAccountID == accountID
     }
 
     var body: some View {
         let rows = rows
         let code = currencyCode.isEmpty ? model.reportCurrency.mnemonic : currencyCode
         Group {
-            if rows.isEmpty, wholeBook || model.registerFilter == .showAll {
+            // The search results are empty only when the search found nothing
+            // — not for the frame before their rows are built.
+            if searchScoped ? model.searchMatchCount == 0 : rows.isEmpty && (wholeBook || model.registerFilter == .showAll) {
                 ContentUnavailableView {
                     Label("No transactions", systemImage: "tray")
                 } description: {
-                    if wholeBook {
+                    if searchScoped {
+                        Text("No transactions match.")
+                    } else if wholeBook {
                         Text("This book has no postings yet.")
                     } else {
                         Text("This account has no postings yet.")
@@ -100,6 +108,13 @@ struct CompactRegisterView: View {
                             .buttonStyle(.plain)
                             .accessibilityHint("Opens the transaction")
                             .contextMenu {
+                                if searchScoped {
+                                    // To the account the search was about.
+                                    Button("Show in Register", systemImage: "arrow.right.circle") {
+                                        model.showInRegister(row.id)
+                                    }
+                                    Divider()
+                                }
                                 if let splitID = splitID(of: row) {
                                     TransactionActions(model: model, splitID: splitID,
                                                        selectionSplitIDs: [splitID])
@@ -182,16 +197,20 @@ struct CompactRegisterView: View {
     private struct JournalKey: Equatable {
         let wholeBook: Bool
         let revision: Int
+        let search: Int?
     }
 
     private var journalKey: JournalKey {
-        JournalKey(wholeBook: wholeBook, revision: model.transactionRevision)
+        JournalKey(wholeBook: wholeBook, revision: model.transactionRevision,
+                   search: searchScoped ? model.searchRevision : nil)
     }
 
     /// The journal with the two-account summary the table shows.
     private func buildJournalRows() -> [RegisterRow] {
-        model.journalTransactions(forAccountID: nil).map { txn in
-            let summary = model.wholeBookRowSummary(ofTransaction: txn.guid)
+        let ledger = searchScoped ? model.searchLedgerTransactions()
+                                  : model.journalTransactions(forAccountID: nil)
+        return ledger.map { txn in
+            let summary = AppModel.wholeBookRowSummary(of: txn)
             return RegisterRow(id: txn.guid, date: txn.datePosted, dateEntered: txn.dateEntered,
                                number: txn.number, description: txn.transactionDescription,
                                transfer: summary.accounts, reconcile: summary.reconcile,

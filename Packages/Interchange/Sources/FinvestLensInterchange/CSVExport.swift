@@ -52,8 +52,24 @@ public enum CSVExporter {
             "Commodity/Currency", "Action", "Memo", "Full Account Name",
             "Amount Num.", "Value Num.", "Reconcile", "Reconcile Date", "Rate/Price",
         ])
-        let txns = book.transactions.sorted(by: Self.txnOrder)
-        for txn in txns {
+        // Stable ordering: by posting date, then GUID as a tiebreak — each
+        // key made once, not once per comparison: a guid's hex string was
+        // built twice for every same-day comparison of the sort.
+        let txns = book.transactions
+            .map { (date: $0.datePosted, guid: $0.guid.hexString, txn: $0) }
+            .sorted { $0.date != $1.date ? $0.date < $1.date : $0.guid < $1.guid }
+        var dates = DayStrings()
+        var accountNames: [ObjectIdentifier: String] = [:]
+        func fullName(_ account: Account?) -> String {
+            guard let account else { return "" }
+            if let known = accountNames[ObjectIdentifier(account)] { return known }
+            let name = account.fullName
+            accountNames[ObjectIdentifier(account)] = name
+            return name
+        }
+        for (_, guid, txn) in txns {
+            let posted = dates.string(txn.datePosted)
+            let commodity = "\(GnuCashXMLExporter.namespace(txn.currency.namespace))::\(txn.currency.mnemonic)"
             for split in txn.splits {
                 // Rate/price = |value ÷ quantity| when the split moves a
                 // non-currency quantity (GnuCash's Rate/Price column).
@@ -64,19 +80,19 @@ public enum CSVExporter {
                     rate = ""
                 }
                 out += row([
-                    date(txn.datePosted),
-                    txn.guid.hexString,
+                    posted,
+                    guid,
                     txn.number,
                     txn.transactionDescription,
                     txn.notes,
-                    "\(GnuCashXMLExporter.namespace(txn.currency.namespace))::\(txn.currency.mnemonic)",
+                    commodity,
                     split.action,
                     split.memo,
-                    split.account?.fullName ?? "",
+                    fullName(split.account),
                     num(split.quantity),
                     num(split.value),
                     split.reconcileState.rawValue,
-                    split.reconcileDate.map(date) ?? "",
+                    split.reconcileDate.map { dates.string($0) } ?? "",
                     rate,
                 ])
             }
@@ -89,9 +105,10 @@ public enum CSVExporter {
     public static func prices(_ book: Book) -> String {
         var out = row(["Date", "Namespace", "Commodity", "Currency", "Price", "Source", "Type"])
         let prices = book.prices.sorted(by: Self.priceOrder)
+        var dates = DayStrings()
         for price in prices {
             out += row([
-                date(price.date),
+                dates.string(price.date),
                 GnuCashXMLExporter.namespace(price.commodity.namespace),
                 price.commodity.mnemonic,
                 price.currency.mnemonic,
@@ -121,23 +138,32 @@ public enum CSVExporter {
         numberFormatter.string(from: value as NSDecimalNumber) ?? "\(value)"
     }
 
-    /// Stable ordering: by posting date, then GUID as a tiebreak.
-    static func txnOrder(_ a: Transaction, _ b: Transaction) -> Bool {
-        if a.datePosted != b.datePosted { return a.datePosted < b.datePosted }
-        return a.guid.hexString < b.guid.hexString
-    }
-
     static func priceOrder(_ a: Price, _ b: Price) -> Bool {
         if a.date != b.date { return a.date < b.date }
         return a.commodity.mnemonic < b.commodity.mnemonic
     }
 
+    /// One shared formatter for every date, not one per date: a
+    /// `DateFormatter` is costly to make, and making one per split was most
+    /// of the 12 s the transactions export took on the reference book (104k
+    /// splits; the price export made 164k). It is the one the GnuCash `gdate`
+    /// uses (``GnuCashDate/formatDayOnly(_:)``), where the UTC/POSIX
+    /// configuration lives once; formatting with it is thread-safe.
     static func date(_ date: Date) -> String {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.timeZone = TimeZone(identifier: "UTC")
-        f.dateFormat = "yyyy-MM-dd"
-        return f.string(from: date)
+        GnuCashDate.formatDayOnly(date)
+    }
+
+    /// The day strings of one export, each instant formatted once — a book's
+    /// splits share a few thousand posting dates between them.
+    struct DayStrings {
+        private var known: [Date: String] = [:]
+
+        mutating func string(_ date: Date) -> String {
+            if let hit = known[date] { return hit }
+            let text = CSVExporter.date(date)
+            known[date] = text
+            return text
+        }
     }
 
     /// RFC-4180 row: quote any field containing a comma, quote, or newline.

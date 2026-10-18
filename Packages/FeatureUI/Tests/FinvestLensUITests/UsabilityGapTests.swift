@@ -124,7 +124,7 @@ struct UsabilityGapTests {
         #expect(model.hasUnsavedChanges)
 
         // Create book B, then switch back to A — the edit must have been saved.
-        model.newBook(at: b)
+        await model.newBook(at: b)
         #expect(model.isOpen)
         await model.openBook(at: a)
         #expect(model.accountTree.contains { $0.name == "Assets" })

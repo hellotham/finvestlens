@@ -68,6 +68,51 @@ public extension Book {
         invoices.filter { $0.owner.guid == ownerGuid }
     }
 
+    // MARK: Undo
+
+    /// The business layer as it stands now (see ``BusinessTables``).
+    func businessTables() -> BusinessTables {
+        BusinessTables(
+            customers: customers, vendors: vendors, employees: employees, jobs: jobs,
+            invoices: invoices, billTerms: billTerms, taxTables: taxTables, lots: lots,
+            postings: invoices.map { invoice in
+                (invoice, BusinessTables.Posting(
+                    datePosted: invoice.datePosted, dueDate: invoice.dueDate,
+                    account: invoice.postedAccount, transaction: invoice.postedTransaction,
+                    lot: invoice.postedLot))
+            },
+            lotStates: lots.map { lot in
+                (lot, BusinessTables.LotState(splits: lot.splits, isClosed: lot.isClosed,
+                                              title: lot.title, notes: lot.notes, kvp: lot.kvp))
+            })
+    }
+
+    /// Puts the business layer back as `tables` captured it.
+    func restore(_ tables: BusinessTables) {
+        customers = tables.customers
+        vendors = tables.vendors
+        employees = tables.employees
+        jobs = tables.jobs
+        invoices = tables.invoices
+        billTerms = tables.billTerms
+        taxTables = tables.taxTables
+        lots = tables.lots
+        for (invoice, posting) in tables.postings {
+            invoice.datePosted = posting.datePosted
+            invoice.dueDate = posting.dueDate
+            invoice.postedAccount = posting.account
+            invoice.postedTransaction = posting.transaction
+            invoice.postedLot = posting.lot
+        }
+        for (lot, state) in tables.lotStates {
+            lot.restoreSplits(state.splits)
+            lot.isClosed = state.isClosed
+            lot.title = state.title
+            lot.notes = state.notes
+            lot.kvp = state.kvp
+        }
+    }
+
     // MARK: Default receivable / payable accounts
 
     /// The first non-placeholder A/R account, the default an invoice posts to.
@@ -79,4 +124,43 @@ public extension Book {
     var defaultPayable: Account? {
         accounts.first { $0.type == .payable && !$0.isPlaceholder }
     }
+}
+
+/// The business layer as it stood: which parties, terms, tax tables,
+/// documents and lots the book held, and the fields the business operations
+/// change in place — an invoice's posting, a lot's members. Taken before an
+/// edit to them so it can be undone without a snapshot of the whole book
+/// (``Book/businessTables()``, ``Book/restore(_:)``).
+///
+/// The objects are held, not copied: putting them back restores the very
+/// ones that transactions, lots and invoices point at. Fields the business
+/// operations never change in place — a party's name and address, an
+/// invoice's lines — are not captured; an edit to those needs its own.
+public struct BusinessTables {
+    struct Posting {
+        let datePosted: Date?
+        let dueDate: Date?
+        let account: Account?
+        let transaction: Transaction?
+        let lot: Lot?
+    }
+
+    struct LotState {
+        let splits: [Split]
+        let isClosed: Bool
+        let title: String
+        let notes: String
+        let kvp: KvpFrame
+    }
+
+    let customers: [Customer]
+    let vendors: [Vendor]
+    let employees: [Employee]
+    let jobs: [Job]
+    let invoices: [Invoice]
+    let billTerms: [BillTerm]
+    let taxTables: [TaxTable]
+    let lots: [Lot]
+    let postings: [(Invoice, Posting)]
+    let lotStates: [(Lot, LotState)]
 }

@@ -133,6 +133,53 @@ The sets are written to `screenshots/app-store/` (`mac`, `ipad`, `iphone-6.3`,
 `iphone-6.9`). That folder is git-ignored: the PNGs come to 14 MB, about the
 size of the whole repository, and the recipe above regenerates them.
 
+## App Accessibility (the accessibility nutrition labels)
+
+App Store Connect ▸ App Accessibility asks, per device, which of nine
+features the app supports. Apple's bar (developer.apple.com/help/app-store-
+connect/manage-app-accessibility/, read 18 Oct 2026) is that a person can
+complete **all the common tasks** with the feature, and a label that does not
+meet it is misleading metadata (Guideline 2.3). The owner's rule: declare only
+what was verified.
+
+The evidence comes from Xcode's accessibility audit run over the same tour the
+screenshots take: `TEST_RUNNER_FL_AUDIT=1` makes `ScreenshotTests` audit every
+screen it captures and write `audit.txt` beside the images (contrast, element
+detection, hit regions, descriptions, Dynamic Type, clipped text, traits), and
+`testAuditWelcome` adds the first-launch screen. Set the simulator first:
+`xcrun simctl ui <udid> appearance dark` and `… content_size
+accessibility-extra-extra-extra-large`. The audit tries other text sizes on
+the app as it runs, so run a tour's assertions without it when they are what
+is being checked.
+
+Declared for 1.2, on iPhone, iPad and Mac:
+
+- **Dark Interface** — the app follows the system appearance or its own
+  setting; every iPhone and iPad screen captured in dark mode (62) measured
+  dark from its pixels (mean luminance 5–49 of 255, at most 1.1% bright
+  pixels). The Financial Review slides, the Passport page and the check
+  preview are drawn as paper, light, and are not common tasks. Mac: the same
+  views plus the register's semantic AppKit colours (by reading the code).
+- **Reduced Motion** — nothing in the app spins, zooms, parallaxes or
+  advances on its own: its only animations are fades, a toast's short slide
+  and the system's own transitions (by reading every animation site).
+
+Not declared, and why:
+
+- **Larger Text** — at the largest accessibility size the Overview's charts
+  overlap their own axis labels, the statements' Note column breaks a letter
+  to a line, and the phone tour cannot reach a holding's row. (The welcome
+  screen and the register do scale.)
+- **Sufficient Contrast** — the audit found 150 contrast failures on the
+  iPad's screens, among them the welcome screen's title, tagline and buttons,
+  and toolbar buttons in the lavender accent on glass.
+- **Differentiate Without Color Alone** — the Overview's allocation donut,
+  performance lines and cash-flow bars tell series apart by colour alone, with
+  no legend.
+- **VoiceOver, Voice Control** — Apple asks for proficient testing with each
+  on every device, which has not been done.
+- **Captions, Audio Descriptions** — the app has no video or audio.
+
 ## What a sandboxed FinvestLens does differently
 
 - A book opened before the sandbox reopens only after it is opened once

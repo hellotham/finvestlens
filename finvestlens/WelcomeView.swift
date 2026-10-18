@@ -79,28 +79,47 @@ struct WelcomeView: View {
     let onNew: () -> Void
     let onOpen: () -> Void
 
-    @Environment(\.appFontScale) private var appFontScale
     @Environment(\.colorScheme) private var scheme
 
     var body: some View {
         ZStack {
             backdrop
-            VStack(spacing: 0) {
-                Spacer(minLength: 24)
-                hero
-                Spacer(minLength: 20)
-                actions
-                recents
-                Spacer(minLength: 22)
-                credits
+            #if os(macOS)
+            column
+            #else
+            // The text grows with Dynamic Type, and at the accessibility
+            // sizes the column is taller than a phone: it scrolls, where the
+            // screen squeezed the tagline and the credits down to "…".
+            GeometryReader { proxy in
+                ScrollView {
+                    // The full width as well as the height: a scroll view
+                    // sizes its content to the content, and the column then
+                    // sat left of centre.
+                    column.frame(maxWidth: .infinity, minHeight: proxy.size.height)
+                }
+                .scrollBounceBehavior(.basedOnSize)
             }
-            .padding(.horizontal, 44)
-            .padding(.vertical, 30)
+            #endif
         }
         // A window floor, so macOS only — a phone is narrower than it.
         #if os(macOS)
         .frame(minWidth: 560, minHeight: 520)
         #endif
+    }
+
+    private var column: some View {
+        VStack(spacing: 0) {
+            Spacer(minLength: 24)
+            hero
+            Spacer(minLength: 20)
+            actions
+            recents
+            Spacer(minLength: 22)
+            credits
+        }
+        .multilineTextAlignment(.center)
+        .padding(.horizontal, 44)
+        .padding(.vertical, 30)
     }
 
     // MARK: Backdrop
@@ -138,7 +157,11 @@ struct WelcomeView: View {
             medallion
             VStack(spacing: 10) {
                 Text("FinvestLens")
-                    .font(.system(size: 46 * appFontScale, weight: .bold, design: .rounded))
+                    .scaledFont(size: 46, relativeTo: .largeTitle, weight: .bold, design: .rounded)
+                    // One word, and a logotype: at the largest sizes it
+                    // shrinks to the width rather than breaking in two.
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
                     .foregroundStyle(
                         LinearGradient(
                             colors: scheme == .dark
@@ -147,7 +170,7 @@ struct WelcomeView: View {
                             startPoint: .topLeading, endPoint: .bottomTrailing))
                     .accessibilityAddTraits(.isHeader)
                 Text("Bring your money into focus.")
-                    .font(.system(size: 16 * appFontScale, weight: .medium, design: .rounded))
+                    .scaledFont(size: 16, relativeTo: .title3, weight: .medium, design: .rounded)
                     .foregroundStyle(.secondary)
             }
         }
@@ -204,7 +227,7 @@ struct WelcomeView: View {
                 Task { await DocumentDialogs.importGnuCash(model) }
             }
             .buttonStyle(.link)
-            .font(.system(size: 12.5 * appFontScale, design: .rounded))
+            .scaledFont(size: 12.5, relativeTo: .callout, design: .rounded)
             #endif
         }
     }
@@ -249,7 +272,7 @@ struct WelcomeView: View {
         if !model.recentBooks.isEmpty {
             VStack(spacing: 4) {
                 Text("Recent")
-                    .font(.system(size: 11 * appFontScale, weight: .semibold, design: .rounded))
+                    .scaledFont(size: 11, relativeTo: .caption, weight: .semibold, design: .rounded)
                     .foregroundStyle(.tertiary)
                     .textCase(.uppercase)
                 ForEach(model.recentBooks.prefix(3), id: \.self) { url in
@@ -259,7 +282,7 @@ struct WelcomeView: View {
                     } label: {
                         Label(url.deletingPathExtension().lastPathComponent,
                               systemImage: onBox ? "cloud" : "clock.arrow.circlepath")
-                            .font(.system(size: 12.5 * appFontScale, design: .rounded))
+                            .scaledFont(size: 12.5, relativeTo: .footnote, design: .rounded)
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(Brand.mauve)
@@ -324,10 +347,10 @@ struct WelcomeView: View {
                 .frame(width: 220, height: 1)
                 .padding(.bottom, 4)
             Text("\(BuildInfo.versionString)  ·  Built \(BuildInfo.buildDate)")
-                .font(.system(size: 11.5 * appFontScale, weight: .medium, design: .rounded))
+                .scaledFont(size: 11.5, relativeTo: .caption, weight: .medium, design: .rounded)
                 .foregroundStyle(.secondary)
             Text("© 2026 Hello Tham  ·  Crafted by Chris Tham")
-                .font(.system(size: 11.5 * appFontScale, design: .rounded))
+                .scaledFont(size: 11.5, relativeTo: .caption, design: .rounded)
                 .foregroundStyle(.tertiary)
         }
         .multilineTextAlignment(.center)

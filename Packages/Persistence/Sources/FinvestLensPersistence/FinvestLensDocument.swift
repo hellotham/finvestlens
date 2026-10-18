@@ -59,7 +59,12 @@ public final class FinvestLensDocument {
     /// The shared document location (may be on a NAS / iCloud).
     public let fileURL: URL
     /// The in-memory book (source of truth while open).
-    public private(set) var book: Book
+    public private(set) var book: Book { didSet { bookGeneration &+= 1 } }
+    /// Moves on with every book this document swaps in (revert, a conflict
+    /// version adopted, an undo's restore), so a save knows whether the book
+    /// it was taken from is still the one here. An object's address could not
+    /// say: a book freed by one swap can be reused by the next.
+    private var bookGeneration: UInt64 = 0
     /// What the load had to default (open-what-you-can, NFR-05) — surfaced
     /// as a warning toast by the app layer.
     public var loadWarnings: LoadWarnings? { store.lastLoadWarnings }
@@ -92,6 +97,13 @@ public final class FinvestLensDocument {
     /// on its background thread, never interleave with it.
     private let saveLock = NSLock()
 
+    /// Which staged save last reached the working copy (guarded by
+    /// `saveLock`), and the saves staged and not yet finished with what each
+    /// took from the book. See ``stageSnapshot()``.
+    private let sequence = SaveSequence()
+    private var stagedCount: UInt64 = 0
+    private var inFlight: [UInt64: UnsavedChanges] = [:]
+
     private init(fileURL: URL, book: Book, lock: FileLock, lockHeld: Bool,
                  workingCopyURL: URL, store: SQLiteDocumentStore,
                  fingerprint: Data, dirty: Bool) {
@@ -103,6 +115,24 @@ public final class FinvestLensDocument {
         self.store = store
         self.baselineFingerprint = fingerprint
         self.hasUnsavedChanges = dirty
+        // Every caller hands over a book exactly as its working copy holds it
+        // — just read, or just written — so the next save need write only
+        // what changes from here (P10b).
+        if !dirty { Self.markPersistedIfFaithful(book, readBy: store) }
+    }
+
+    /// Takes `book` as what the working copy holds — unless it was read with
+    /// identifiers that did not parse. Each of those was given a new one, which
+    /// the file does not have, so a save that rewrites or deletes that row by
+    /// it would miss: a deletion came back, and an edit inserted a second row
+    /// under the new identifier and failed every save after on the legs'
+    /// unique ones. The first save writes everything instead.
+    ///
+    /// Open and revert both read a book, so both ask here: revert used to mark
+    /// unconditionally, which is how Revert, Reload from Disk and adopting a
+    /// conflict version reached the very state the open path refused.
+    private static func markPersistedIfFaithful(_ book: Book, readBy store: SQLiteDocumentStore) {
+        if (store.lastLoadWarnings?.guids ?? 0) == 0 { book.markPersisted() }
     }
 
     /// Acquires the advisory lock, tolerating environments where the lock
@@ -335,9 +365,15 @@ public final class FinvestLensDocument {
     /// GnuCash import writing a book it just parsed, notably) — see
     /// ``SQLiteDocumentStore/write(_:progress:)``.
     public func save(progress: (@Sendable (BookLoadProgress) -> Void)? = nil) throws {
-        let token = try stageSave(progress: progress)
-        let fingerprint = try Self.commitSave(workingCopy: workingCopyURL, to: fileURL)
-        finishSave(fingerprint: fingerprint, stagedAt: token)
+        let staged = try stageSnapshot()
+        let fingerprint: Data?
+        do {
+            fingerprint = try Self.commitStaged(staged, progress: progress)
+        } catch {
+            saveFailed(staged)
+            throw error
+        }
+        finishSave(fingerprint: fingerprint, staged: staged)
     }
 
     /// Phase 1 — the guards, then the in-memory book walked into the **local**
@@ -347,13 +383,26 @@ public final class FinvestLensDocument {
     /// so it has to run wherever those edits happen. It writes only to the
     /// working copy, which is local even when the document is not: on APFS a
     /// copy is a clone, so this is the cheap half.
+    ///
+    /// Internal: the app saves through ``stageSnapshot()``,
+    /// ``commitStaged(_:progress:)`` and ``finishSave(fingerprint:staged:)``,
+    /// which also keep count of saves in flight; this older sequence is kept
+    /// for the tests of its phases.
     @discardableResult
-    public func stageSave(progress: (@Sendable (BookLoadProgress) -> Void)? = nil) throws -> UInt64 {
+    func stageSave(progress: (@Sendable (BookLoadProgress) -> Void)? = nil) throws -> UInt64 {
         let staged = try stageSnapshot()
-        try staged.saveLock.withLock {
-            try Self.checkForExternalChange(staged)
-            try staged.store.write(staged.snapshot, progress: progress)   // snapshot → working copy
+        do {
+            try staged.saveLock.withLock {
+                try Self.checkForExternalChange(staged)
+                try Self.write(staged, progress: progress)   // snapshot → working copy
+            }
+        } catch {
+            saveFailed(staged)
+            throw error
         }
+        // Written; the write-back that follows is the caller's, and its
+        // finish names the token. Out of flight now, as it has landed here.
+        inFlight.removeValue(forKey: staged.number)
         return staged.token
     }
 
@@ -368,33 +417,110 @@ public final class FinvestLensDocument {
     public func stageSnapshot() throws -> StagedSave {
         // A read-only session never touches the shared file (FR-DAT-06).
         if isReadOnly { throw DocumentError.readOnly }
-        return StagedSave(token: changeToken, snapshot: BookSnapshot(book), store: store,
+        // Only what changed since the last save — the book has kept count —
+        // and everything when it could not (P10b). Taken now; given back by
+        // ``saveFailed(_:)`` if this save does not land.
+        //
+        // A save staged earlier whose write has not happened yet took its
+        // share of the changes with it; this one takes them too. Saves write
+        // in the order they were staged or not at all — one that comes to
+        // write after a later one has is skipped, the later one holding
+        // everything it had — so the working copy never goes back to older
+        // rows. That was possible with whole-book writes too: an older
+        // snapshot written last undid a newer one.
+        for earlier in inFlight.values { book.restoreUnsaved(earlier) }
+        let unsaved = book.takeUnsaved()
+        stagedCount += 1
+        inFlight[stagedCount] = unsaved
+        return StagedSave(token: changeToken, snapshot: BookSnapshot(book, unsaved: unsaved), store: store,
                           fileURL: fileURL, workingCopyURL: workingCopyURL,
                           baselineFingerprint: baselineFingerprint,
-                          hasSharedFile: FileManager.default.fileExists(atPath: fileURL.path),
-                          saveLock: saveLock)
+                          saveLock: saveLock, unsaved: unsaved, generation: bookGeneration,
+                          number: stagedCount, sequence: sequence)
+    }
+
+    /// A staged save did not land: what it took to write goes back to the
+    /// book, so the next save writes it — unless the book was replaced since,
+    /// when there is nothing to give it back to. Rewriting rows the working
+    /// copy already got, if the write itself had gone in, is harmless.
+    public func saveFailed(_ staged: StagedSave) {
+        inFlight.removeValue(forKey: staged.number)
+        guard staged.generation == bookGeneration else { return }
+        // A save staged after this one took this one's share with it (see
+        // ``stageSnapshot()``), and gives it back itself if it fails. Given
+        // back here too, it would be written again — by its order, at the
+        // end of the file, behind transactions that later save had already
+        // put after it.
+        guard staged.number == stagedCount else { return }
+        book.restoreUnsaved(staged.unsaved)
+    }
+
+    /// ``finishSave(fingerprint:stagedAt:)`` for a staged save, which also
+    /// stops counting it as in flight.
+    public func finishSave(fingerprint: Data?, staged: StagedSave) {
+        inFlight.removeValue(forKey: staged.number)
+        finishSave(fingerprint: fingerprint, stagedAt: staged.token)
+    }
+
+    /// Whether the working copy holds exactly what a full write of the book
+    /// would — every table, in order. A check of the incremental save, for
+    /// tests and the app's verification switch.
+    public func workingCopyHoldsBook() throws -> Bool {
+        try store.holds(BookSnapshot(book))
     }
 
     /// Phases 1b and 2 away from the book: the external-change check, the
     /// write of the snapshot into the working copy, and the write-back to the
     /// shared file. Touches no `Book` and no document state — a snapshot, a
     /// store and two URLs — which is why it may run on any thread. Pass the
-    /// fingerprint it returns to ``finishSave(fingerprint:stagedAt:)``.
+    /// fingerprint it returns to ``finishSave(fingerprint:staged:)``.
     public static func commitStaged(_ staged: StagedSave,
                                     progress: (@Sendable (BookLoadProgress) -> Void)? = nil) throws -> Data? {
         try staged.saveLock.withLock {
             try checkForExternalChange(staged)
-            try staged.store.write(staged.snapshot, progress: progress)
-            return try commitSave(workingCopy: staged.workingCopyURL, to: staged.fileURL)
+            try write(staged, progress: progress)
+            return try writeBack(staged)
         }
     }
 
+    /// The staged rows into the working copy — unless a save staged after
+    /// this one has written already, holding everything this one has (see
+    /// ``stageSnapshot()``). Called under `saveLock`.
+    private static func write(_ staged: StagedSave,
+                              progress: (@Sendable (BookLoadProgress) -> Void)?) throws {
+        guard staged.number > staged.sequence.lastWritten else { return }
+        try staged.store.write(staged.snapshot, progress: progress)
+        staged.sequence.lastWritten = staged.number
+    }
+
     /// Detects an out-of-band change to the shared file (bypassed lock, etc.).
+    /// Against the last write-back this document made, when one has landed
+    /// since this save was staged: a save staged before another's write-back
+    /// would otherwise take that write for someone else's.
     private static func checkForExternalChange(_ staged: StagedSave) throws {
-        guard staged.hasSharedFile, let baseline = staged.baselineFingerprint else { return }
+        // A file that is not there — moved, renamed, taken away by a sync —
+        // is not a change to refuse: the write-back puts it back, as it
+        // always has. Asked now rather than when the save was staged, since
+        // an earlier save's write-back may have made it since; refusing made
+        // every save fail once a session had saved, Close and Quit included.
+        guard FileManager.default.fileExists(atPath: staged.fileURL.path) else { return }
+        let baseline = staged.sequence.wroteBack ? staged.sequence.fingerprint : staged.baselineFingerprint
+        guard let baseline else { return }
         if try fingerprint(of: staged.fileURL) != baseline {
             throw DocumentError.conflict
         }
+    }
+
+    /// The write-back, noted where later commits' checks will look.
+    private static func writeBack(_ staged: StagedSave) throws -> Data? {
+        let fingerprint = try commitSave(workingCopy: staged.workingCopyURL, to: staged.fileURL)
+        staged.sequence.fingerprint = fingerprint
+        // Landed, whether or not the file could be read back: a fingerprint
+        // we could not take is "no baseline", which skips the next check —
+        // falling back to the baseline an earlier-staged save carries would
+        // read this very write as someone else's.
+        staged.sequence.wroteBack = true
+        return fingerprint
     }
 
     /// Phase 2 — the atomic write-back to the shared file, and the fingerprint
@@ -425,7 +551,7 @@ public final class FinvestLensDocument {
     /// cleared only if nothing was edited in between: a change made while the
     /// write-back was in flight is not in the file, so calling it saved would
     /// lose it at the next autosave.
-    public func finishSave(fingerprint: Data?, stagedAt stagedToken: UInt64) {
+    func finishSave(fingerprint: Data?, stagedAt stagedToken: UInt64) {
         baselineFingerprint = fingerprint
         if changeToken == stagedToken { hasUnsavedChanges = false }
         if advisoryLockHeld { heartbeat() }
@@ -434,11 +560,28 @@ public final class FinvestLensDocument {
     /// Discards unsaved changes by reloading the book from the shared file.
     /// The shared file is untouched.
     public func revert() throws {
-        try Self.copyItem(from: fileURL, to: workingCopyURL)
-        store = try SQLiteDocumentStore(path: workingCopyURL.path)
+        try saveLock.withLock {
+            try Self.copyItem(from: fileURL, to: workingCopyURL)
+            store = try SQLiteDocumentStore(path: workingCopyURL.path)
+        }
         book = try store.read()
+        Self.markPersistedIfFaithful(book, readBy: store)
         baselineFingerprint = try Self.fingerprint(of: fileURL)
         hasUnsavedChanges = false
+        // A save staged before this belongs to the session just discarded:
+        // its rows must not reach the copy that replaced it.
+        rebaseline(discardingStaged: true)
+    }
+
+    /// The file as it now stands is the one later saves check against, and
+    /// with `discardingStaged`, no save staged before now writes.
+    private func rebaseline(discardingStaged: Bool) {
+        saveLock.withLock {
+            sequence.fingerprint = baselineFingerprint
+            sequence.wroteBack = true
+            if discardingStaged { sequence.lastWritten = stagedCount }
+        }
+        if discardingStaged { inFlight = [:] }
     }
 
     /// Closes the document, discarding any unsaved working-session changes and
@@ -517,6 +660,7 @@ public final class FinvestLensDocument {
         for version in unresolvedConflictVersions() { version.isResolved = true }
         try? NSFileVersion.removeOtherVersionsOfItem(at: fileURL)
         baselineFingerprint = try Self.fingerprint(of: fileURL)
+        rebaseline(discardingStaged: false)
     }
 
     /// Adopts a specific conflict version as the file contents and reloads.
@@ -565,7 +709,9 @@ public final class FinvestLensDocument {
                                error: &coordinationError) { url in
             do {
                 if FileManager.default.fileExists(atPath: url.path) {
-                    _ = try FileManager.default.replaceItemAt(url, withItemAt: copyToTemp(source, near: url))
+                    let temp = try copyToTemp(source, near: url)
+                    defer { try? FileManager.default.removeItem(at: temp.directory) }
+                    _ = try FileManager.default.replaceItemAt(url, withItemAt: temp.file)
                 } else {
                     try FileManager.default.copyItem(at: source, to: url)
                 }
@@ -575,12 +721,22 @@ public final class FinvestLensDocument {
         if let thrown { throw thrown }
     }
 
-    /// `replaceItemAt` consumes the replacement item, so hand it a throwaway copy.
-    private static func copyToTemp(_ source: URL, near destination: URL) throws -> URL {
-        let temp = destination.deletingLastPathComponent()
-            .appendingPathComponent(".\(UUID().uuidString).tmp")
-        try FileManager.default.copyItem(at: source, to: temp)
-        return temp
+    /// `replaceItemAt` consumes the replacement item, so it is handed a
+    /// throwaway copy — made in the system's item-replacement directory for
+    /// the destination, never beside it. The App Store build's sandbox grants
+    /// the book and its declared sidecars, not the folder they are in: a
+    /// temporary file beside the book was refused ("couldn't be copied
+    /// because you don't have permission to access" the folder), and every
+    /// autosave of a book in an ungranted folder failed. The replacement
+    /// directory is where safe-saving apps write, and the sandbox lets the app
+    /// into it — a sandboxed probe app showed both, on the boot volume and on
+    /// another, 18 Oct 2026.
+    private static func copyToTemp(_ source: URL, near destination: URL) throws -> (file: URL, directory: URL) {
+        let directory = try FileManager.default.url(for: .itemReplacementDirectory, in: .userDomainMask,
+                                                    appropriateFor: destination, create: true)
+        let file = directory.appendingPathComponent(destination.lastPathComponent)
+        try FileManager.default.copyItem(at: source, to: file)
+        return (file, directory)
     }
 
     private static func fingerprint(of url: URL) throws -> Data {
@@ -651,6 +807,27 @@ public struct StagedSave: Sendable {
     let fileURL: URL
     let workingCopyURL: URL
     let baselineFingerprint: Data?
-    let hasSharedFile: Bool
     let saveLock: NSLock
+    /// What the book counted as unsaved, taken for this save.
+    let unsaved: UnsavedChanges
+    /// The book it was taken from (the document's book generation), so a
+    /// failure gives it back to that one and no other.
+    let generation: UInt64
+    /// Its place in the order saves were staged in.
+    let number: UInt64
+    let sequence: SaveSequence
+}
+
+/// The number of the last staged save to reach the working copy. Read and
+/// written only under the document's `saveLock`.
+final class SaveSequence: @unchecked Sendable {
+    var lastWritten: UInt64 = 0
+    /// The fingerprint of the shared file as this document's last
+    /// write-back (or re-baseline) left it; `nil` when it could not be taken,
+    /// which skips the check rather than accusing.
+    var fingerprint: Data?
+    /// Whether ``fingerprint`` has been set since the document opened. Once it
+    /// has, every check compares against it — never against the older
+    /// baseline a save staged before that write-back carries.
+    var wroteBack = false
 }

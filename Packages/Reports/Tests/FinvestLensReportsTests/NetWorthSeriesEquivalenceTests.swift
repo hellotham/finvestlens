@@ -156,6 +156,26 @@ struct NetWorthSeriesEquivalenceTests {
         #expect(sorted == shuffled)
     }
 
+    /// A transaction is filed under the first date on or after its own, so a
+    /// date asked twice, a transaction a second after a date and one on it
+    /// exactly are where filing could go wrong by one.
+    @Test("Repeated dates, and transactions on and just past a date, agree with the reference")
+    func boundaries() {
+        let book = awkwardBook()
+        let audBank = book.accounts.first { $0.name == "AUD Bank" }!
+        let opening = book.accounts.first { $0.name == "Opening" }!
+        for (offset, amount) in [(0.0, "3"), (1.0, "5")] {
+            let txn = Transaction(currency: .aud, datePosted: day(16).addingTimeInterval(offset),
+                                  description: "Edge")
+            txn.addSplit(account: audBank, value: dec(amount))
+            txn.addSplit(account: opening, value: -dec(amount))
+            book.addTransaction(txn)
+        }
+        let asked = [day(16), day(13), day(16), day(16).addingTimeInterval(1), day(25), day(13)]
+        #expect(FinancialReports.netWorthSeries(book, dates: asked, currency: .aud)
+                == reference(book, dates: asked, currency: .aud))
+    }
+
     /// A rate moving with no balance moving still moves net worth — the reason
     /// conversion stays per date instead of being hoisted out of the loop. The
     /// two query dates each sit nearer a different price so, under GnuCash's

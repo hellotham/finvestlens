@@ -441,14 +441,28 @@ struct StatementBuilder {
         for node in face {
             let leaves = node.bearingCount
             if node.children.isEmpty || leaves <= Self.smallSectionLeaves {
-                // Rule 4 — small captions live entirely on the face.
+                // Rule 4 — small captions live entirely on the face: the whole
+                // subtree, every level, each with its total, and a container's
+                // own postings as a "(direct)" line, as the notes show them.
+                // It showed the direct children only, so an account two levels
+                // under a small caption appeared nowhere on the statement —
+                // build 4: "All reports should display max indentation depth."
                 items.append(StatementItem(caption: node.name, noteRef: nil,
                                            amounts: node.total, role: .line))
-                for child in Self.sort(node.children, by: .magnitude) {
-                    items.append(StatementItem(caption: child.name, noteRef: nil,
-                                               amounts: child.total, depth: 1,
-                                               role: .childLine))
+                func faceChildren(of parent: Node, depth: Int) {
+                    if !parent.children.isEmpty, parent.own.contains(where: { ($0 ?? 0) != 0 }) {
+                        items.append(StatementItem(caption: String(localized: "\(parent.name) (direct)"),
+                                                   noteRef: nil, amounts: parent.own, depth: depth,
+                                                   role: .childLine))
+                    }
+                    for child in Self.sort(parent.children, by: .magnitude) {
+                        items.append(StatementItem(caption: child.name, noteRef: nil,
+                                                   amounts: child.total, depth: depth,
+                                                   role: .childLine))
+                        faceChildren(of: child, depth: depth + 1)
+                    }
                 }
+                faceChildren(of: node, depth: 1)
             } else {
                 // Rule 6 — the detail moves to a note.
                 var rows: [StatementNoteRow] = []

@@ -79,24 +79,63 @@ extension AppModel {
 
     // MARK: Transactions (FR-RPT-01)
 
-    func transactionsDocument(accountID: GncGUID, from: Date, to: Date) -> ReportDocument? {
-        guard let report = transactionReport(accountID: accountID, from: from, to: to) else { return nil }
-        let rows = report.rows.map { row in
-            ReportDocumentRow(label: "\(shortDate(row.date))  \(row.description)",
-                              amounts: [row.amount, row.balance])
+    /// Every account in scope, each its own table of postings with a running
+    /// balance and its period's change — GnuCash's default layout for this
+    /// report: by account, subtotalled, then in register order. One account
+    /// keeps the opening, change and closing it always had as its headline.
+    func transactionsDocument(accountIDs: Set<GncGUID>?, from: Date, to: Date) -> ReportDocument? {
+        guard let report = transactionReport(accountIDs: accountIDs, from: from, to: to) else { return nil }
+        // The headline is one account's — the account chosen, with nothing
+        // beneath it — even over a period with nothing in it. A chosen parent
+        // gets none: its one active subaccount's figures are not the parent's.
+        let chosen = accountIDs?.count == 1 ? accountIDs?.first : nil
+        let single = report.groups.count == 1 && report.groups.first?.id == chosen ? report.groups.first : nil
+        let title: String
+        if let chosen, let name = accountName(chosen) {
+            title = String(localized: "Transactions — \(name)")
+        } else if accountIDs == nil {
+            title = String(localized: "Transactions — All Accounts")
+        } else {
+            title = String(localized: "Transactions")
+        }
+        let kpis: [ReportKPI]
+        if let single {
+            kpis = [ReportKPI(label: String(localized: "Opening"), amount: single.opening),
+                    ReportKPI(label: String(localized: "Net change"), amount: single.total, signed: true),
+                    ReportKPI(label: String(localized: "Closing"), amount: single.closing)]
+        } else {
+            kpis = []
+        }
+        // A date is formatted once, not once a posting: a year of the whole
+        // book is tens of thousands of rows and a few hundred days.
+        var days: [Date: String] = [:]
+        func dayText(_ date: Date) -> String {
+            if let known = days[date] { return known }
+            let text = shortDate(date)
+            days[date] = text
+            return text
+        }
+        let sections = report.groups.map { group in
+            ReportDocumentSection(
+                title: group.accountName,
+                rows: group.rows.map { row in
+                    ReportDocumentRow(label: "\(dayText(row.date))  \(row.description)",
+                                      amounts: [row.amount, row.balance])
+                },
+                columns: [String(localized: "Amount"), String(localized: "Balance")],
+                columnTotals: (String(localized: "Net change and closing balance"), [group.total, group.closing]),
+                currencyCode: group.currencyCode,
+                identity: group.id.hexString)
+        }
+        var notes = [String(localized: "Postings: \(report.postingCount) · Accounts: \(report.groups.count)"),
+                     String(localized: "Each account shows its postings in date order with a running balance, in the account’s own currency — a security’s in its units.")]
+        if accountIDs != nil {
+            notes.append(String(localized: "Each chosen account includes all of its subaccounts."))
         }
         return ReportDocument(
-            title: String(localized: "Transactions — \(accountName(accountID) ?? String(localized: "Account"))"),
-            periodLabel: range(from, to), currencyCode: report.currencyCode,
-            kpis: [ReportKPI(label: String(localized: "Opening"), amount: report.opening),
-                   ReportKPI(label: String(localized: "Net change"), amount: report.total, signed: true),
-                   ReportKPI(label: String(localized: "Closing"), amount: report.closing)],
-            chart: nil,
-            sections: [ReportDocumentSection(
-                title: String(localized: "Postings"), rows: rows,
-                columns: [String(localized: "Amount"), String(localized: "Balance")],
-                columnTotals: (String(localized: "Closing balance"), [report.total, report.closing]))],
-            notes: [], facts: nil)
+            title: title,
+            periodLabel: range(from, to), currencyCode: single?.currencyCode ?? reportCurrency.mnemonic,
+            kpis: kpis, chart: nil, sections: sections, notes: notes, facts: nil)
     }
 
     // MARK: Reconciliation (FR-RPT-04)

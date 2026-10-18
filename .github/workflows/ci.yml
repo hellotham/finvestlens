@@ -64,6 +64,12 @@ jobs:
         run: swift build
       - name: Test
         working-directory: Packages/${{ matrix.package }}
+        # Every edit the app follows incrementally — the lookup indexes, the
+        # account tree's balances, the general ledger, the incremental save —
+        # is checked against a rebuild after the edit (AppModel
+        # `verifiesKeptIndexes`). Only FeatureUI reads it; the rest ignore it.
+        env:
+          FL_VERIFY_INDEXES: "1"
         run: swift test
 
   license-headers:

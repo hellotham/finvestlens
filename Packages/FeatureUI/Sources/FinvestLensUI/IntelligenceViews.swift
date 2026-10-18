@@ -143,12 +143,10 @@ struct AutoCategorizeSheet: View {
             .task {
                 let scope = model.selectedTransactionIDs
                 scopeCount = scope.isEmpty ? nil : scope.count
-                // One runloop turn so the spinner commits before the corpus
-                // scan holds the main actor (P6 — the book isn't sendable,
-                // so the scan can't leave it).
-                await Task.yield()
                 items = model.uncategorizedItems(limitedTo: scope.isEmpty ? nil : scope)
-                plans = model.smartCategoryPlans(for: items)
+                // Tokenising and scoring leave the main actor (P6); only the
+                // copy of what they read is taken here, so the spinner turns.
+                plans = await model.smartCategoryPlansOffMain(for: items)
                 acceptedPlans = Set(plans.keys)
                 loaded = true
             }

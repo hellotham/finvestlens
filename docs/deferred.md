@@ -263,12 +263,14 @@ Not open work — recorded so they aren't re-raised as bugs. Detail in
   GnuCash's money-in/out model washes them out (~[redacted] realised across ~6
   accounts). Matching would mean adopting GnuCash's money-flow model, which is
   arguably *not* more correct — kept per-parcel by decision.
-- **`rebuildAccountTree` subtree-only rebuild / incremental journal rebuild**
-  (NFR-02) — the ~0.04s of a refresh spent on a full-tree rebuild is fast
-  enough to feel instant; subtree-only and incremental-journal rebuilds are
-  micro-optimizations to do only if a profile shows they matter. The Jul 2026
-  `Perf` signpost harness now watches exactly these paths, so the trigger is
-  a measured number, not a hunch.
+- **`rebuildAccountTree` subtree-only rebuild** (NFR-02) — still a whole-tree
+  build of nodes after each edit: one conversion per account and the roll-up,
+  about 18 ms on the reference book. What used to make it slow was the walk
+  of every split behind it, and that is gone: since 18 Oct 2026 (P5.4) the
+  native balances are kept and recomputed only for the accounts an edit
+  touched. The incremental journal rebuild this entry also deferred was
+  built the same day (P7: the general ledger is patched edit by edit) —
+  see architecture.md §10, "Derived state follows the edit".
 - **Investment Review: no benchmark or volatility statistics** (Jul 2026
   report redesign) — fund factsheets carry benchmark-relative performance and
   risk measures (standard deviation, Sharpe); the book holds no benchmark

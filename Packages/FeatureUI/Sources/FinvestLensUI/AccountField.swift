@@ -55,6 +55,8 @@ struct AccountField: View {
     @State private var searching = false
     @State private var query = ""
     @FocusState private var focused: Bool
+    /// One dropdown row, growing with the text size.
+    @ScaledMetric(relativeTo: .callout) private var rowHeight: CGFloat = 22
 
     private var selectedName: String { AccountSearch.name(of: selection, in: nodes) }
     private var matches: [AccountNode] { AccountSearch.matches(query, in: nodes) }
@@ -169,18 +171,35 @@ struct AccountField: View {
                     .scaledFont(.caption).foregroundStyle(.secondary)
                     .padding(.vertical, 3)
             } else {
-                ForEach(matches.prefix(limit)) { node in
-                    Button { pick(node) } label: {
-                        Text(node.fullName)
-                            .scaledFont(.callout)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .contentShape(Rectangle())
+                // Every match, `limit` rows high, the rest a scroll away.
+                // Reported on build 4: the filter "allows search but does not
+                // have a scrollable dropdown list" — it showed the first eight
+                // matches and nothing past them, so an account the typing had
+                // not yet narrowed to could not be reached at all. Lazy, so a
+                // one-letter query over 559 accounts builds only what shows.
+                let visible = CGFloat(min(matches.count, limit))
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 0) {
+                        ForEach(matches) { node in
+                            Button { pick(node) } label: {
+                                Text(node.fullName)
+                                    .scaledFont(.callout)
+                                    .lineLimit(1)
+                                    .truncationMode(.middle)
+                                    .frame(maxWidth: .infinity, minHeight: rowHeight, alignment: .leading)
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
-                    .buttonStyle(.plain)
-                    .padding(.vertical, 2)
                 }
+                .frame(height: visible * rowHeight)
+                #if os(iOS)
+                // A scroll dismisses the keyboard by default; the field then
+                // loses focus and the list closes — under the very scroll
+                // that was reaching for a match past the first eight.
+                .scrollDismissesKeyboard(.never)
+                #endif
             }
         }
         .padding(6)

@@ -19,23 +19,36 @@ public final class Transaction {
     /// Stable identity, preserved across GnuCash round-trips.
     public let guid: GncGUID
 
+    /// The book that holds the transaction, while one does. Every change to
+    /// a field below, or to a leg, tells it — so the next save writes the
+    /// transaction whoever made the change and whether or not they said so,
+    /// as GnuCash's own setters mark what they touch (`xaccSplitSetMemo`,
+    /// `mark_split`). Weak: the book owns its transactions.
+    internal(set) weak var owner: Book?
+
     /// The currency all split values are expressed in.
-    public var currency: Commodity
+    public var currency: Commodity { didSet { owner?.noteEdited(self) } }
 
     /// The economic date of the transaction (when it is considered to occur).
-    public var datePosted: Date
+    public var datePosted: Date { didSet { owner?.noteEdited(self) } }
     /// When the transaction was entered into the book.
-    public var dateEntered: Date
+    public var dateEntered: Date { didSet { owner?.noteEdited(self) } }
 
-    public var number: String
-    public var transactionDescription: String
-    public var notes: String
+    public var number: String { didSet { owner?.noteEdited(self) } }
+    public var transactionDescription: String { didSet { owner?.noteEdited(self) } }
+    public var notes: String { didSet { owner?.noteEdited(self) } }
 
     /// Preserved key-value slots.
-    public var kvp: KvpFrame
+    public var kvp: KvpFrame { didSet { owner?.noteEdited(self) } }
 
     /// The legs of the transaction, owned strongly.
     public private(set) var splits: [Split]
+
+    /// Where the transaction stands in its book's order: given when the book
+    /// takes it, rising with each one and never reused, so the book's own
+    /// list is always in this order — and its lookup index keeps every
+    /// account's legs in it too (``Book/reindex(_:previous:)``).
+    public internal(set) var bookOrder = 0
 
     /// Free-form tags, stored in a preserved KVP slot so they survive save and
     /// GnuCash round-trips (`FR-TAG-01`).
@@ -125,6 +138,7 @@ public final class Transaction {
     public func addSplit(_ split: Split) -> Split {
         split.transaction = self
         splits.append(split)
+        owner?.noteEdited(self, accounts: [split.account])
         return split
     }
 
@@ -144,6 +158,7 @@ public final class Transaction {
         guard split.transaction === self else { return }
         splits.removeAll { $0 === split }
         split.transaction = nil
+        owner?.noteEdited(self, accounts: [split.account])
     }
 
     // MARK: Balancing

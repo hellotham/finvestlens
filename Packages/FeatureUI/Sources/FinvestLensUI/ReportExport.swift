@@ -27,6 +27,9 @@ struct PrintableSection: Identifiable {
     let heading: String
     let rows: [PrintableRow]
     var columns: [String]?
+    /// The section's own currency, where it differs from the statement's —
+    /// a transaction report's foreign account.
+    var code: String?
 }
 
 /// A clean, VStack-based statement layout for PDF rendering (avoids List/Table
@@ -59,7 +62,7 @@ struct PrintableStatement: View {
                             HStack {
                                 Text(row.label).fontWeight(row.bold ? .bold : .regular)
                                 Spacer()
-                                Text(AmountFormat.string(row.amount, code: code))
+                                Text(AmountFormat.string(row.amount, code: section.code ?? code))
                                     .fontWeight(row.bold ? .bold : .regular)
                             }
                         }
@@ -86,7 +89,7 @@ struct PrintableStatement: View {
                     GridRow {
                         Text(row.label).fontWeight(row.bold ? .bold : .regular)
                         ForEach(Array((row.amounts ?? []).enumerated()), id: \.offset) { _, amount in
-                            Text(amount.map { AmountFormat.string($0, code: code) } ?? "")
+                            Text(amount.map { AmountFormat.string($0, code: section.code ?? code) } ?? "")
                                 .fontWeight(row.bold ? .bold : .regular)
                                 .gridColumnAlignment(.trailing)
                         }
@@ -94,6 +97,39 @@ struct PrintableStatement: View {
                 }
             }
         }
+    }
+}
+
+extension PrintableStatement {
+    /// The statement cut into pages of at most `rowsPerPage` rows, each with
+    /// the masthead and, where a section runs on, its heading again.
+    ///
+    /// Rendered whole, a long report was one page the height of every row —
+    /// the Transactions report over every account is thousands of rows, a
+    /// page past what PDF allows (14,400 points) and seconds of layout at
+    /// once. A page of this many rows is about a printed page tall.
+    func pages(rowsPerPage: Int) -> [PrintableStatement] {
+        var pages: [[PrintableSection]] = [[]]
+        var used = 0
+        for section in sections {
+            var rest = section.rows[...]
+            repeat {
+                // A heading is worth a row or so; a section never starts on
+                // the last line of a page.
+                if used + 2 > rowsPerPage, !(pages.last?.isEmpty ?? true) {
+                    pages.append([])
+                    used = 0
+                }
+                let room = max(1, rowsPerPage - used - 1)
+                let chunk = rest.prefix(room)
+                rest = rest.dropFirst(chunk.count)
+                pages[pages.count - 1].append(PrintableSection(heading: section.heading, rows: Array(chunk),
+                                                               columns: section.columns, code: section.code))
+                used += chunk.count + 1
+            } while !rest.isEmpty
+        }
+        return pages.map { PrintableStatement(title: title, subtitle: subtitle, code: code,
+                                              sections: $0, entity: entity) }
     }
 }
 
@@ -112,16 +148,20 @@ struct PDFReportDocument: FileDocument {
     }
 }
 
-/// A report shareable as a PDF via `ShareLink`. Holds only the (Sendable)
-/// statement data; the expensive `ImageRenderer` pass is deferred until the
-/// share is actually performed, so building the item per toolbar render is cheap.
+/// A report shareable as a PDF via `ShareLink`. Holds the document, not its
+/// printable: the conversion — a row per line, thousands in an every-account
+/// Transactions report — and the `ImageRenderer` pass both wait until the
+/// share is performed, so the item built on every toolbar pass is a copy.
 struct ShareableReportPDF: Transferable {
     let title: String
-    let statement: PrintableStatement
+    let document: ReportDocument
+    /// The masthead's entity line (the book's name).
+    var entity: String = ""
 
     static var transferRepresentation: some TransferRepresentation {
         DataRepresentation(exportedContentType: .pdf) { item in
-            await ReportExport.pdfData(item.statement) ?? Data()
+            await MainActor.run { ReportExport.pdf(item.document.printable(entity: item.entity)) }
+                ?? Data()
         }
         .suggestedFileName { "\($0.title).pdf" }
     }
@@ -145,8 +185,44 @@ struct ShareableStatementPDF: Transferable {
 /// a static, VStack-based layout (not `List`/`Table`, which virtualise).
 @MainActor
 enum ReportExport {
-    /// The statement rendered to PDF data on the main actor (for `ShareLink`).
-    static func pdfData(_ statement: PrintableStatement) -> Data? { pdf(statement) }
+    /// Rows on one page of a long statement (``PrintableStatement/pages(rowsPerPage:)``).
+    static let rowsPerPage = 32
+
+    /// A statement as PDF: one page when it is short — as it always was —
+    /// and one page per ``rowsPerPage`` rows when it is not.
+    static func pdf(_ statement: PrintableStatement, scale: CGFloat = 2) -> Data? {
+        let rows = statement.sections.reduce(0) { $0 + $1.rows.count }
+        guard rows > rowsPerPage else { return pdf(pages: [statement], scale: scale) }
+        return pdf(pages: statement.pages(rowsPerPage: rowsPerPage), scale: scale)
+    }
+
+    /// Several views, each its own page the height of its content.
+    static func pdf(pages: [some View], scale: CGFloat = 2) -> Data? {
+        let pdf = NSMutableData()
+        guard let consumer = CGDataConsumer(data: pdf as CFMutableData) else { return nil }
+        var mediaBox = CGRect(x: 0, y: 0, width: 612, height: 792)
+        guard let context = CGContext(consumer: consumer, mediaBox: &mediaBox, nil) else { return nil }
+        for page in pages {
+            render(page, scale: scale, into: context)
+        }
+        context.closePDF()
+        return pdf as Data
+    }
+
+    private static func render(_ view: some View, scale: CGFloat, into context: CGContext) {
+        let renderer = ImageRenderer(content:
+            view.padding(24).background(Color.white).frame(width: 560, alignment: .leading))
+        renderer.scale = scale
+        renderer.render { size, draw in
+            var box = CGRect(origin: .zero, size: size)
+            let info = [kCGPDFContextMediaBox as String:
+                        CFDataCreate(nil, withUnsafeBytes(of: &box) { $0.bindMemory(to: UInt8.self).baseAddress },
+                                     MemoryLayout<CGRect>.size) as Any] as CFDictionary
+            context.beginPDFPage(info)
+            draw(context)
+            context.endPDFPage()
+        }
+    }
 
     /// One fixed-size page (deck slides): the view is rendered at exactly
     /// `size`, landscape or portrait as given.
@@ -168,26 +244,7 @@ enum ReportExport {
     }
 
     static func pdf(_ view: some View, scale: CGFloat = 2) -> Data? {
-        let renderer = ImageRenderer(content:
-            view.padding(24).background(Color.white).frame(width: 560, alignment: .leading))
-        renderer.scale = scale
-
-        let pdf = NSMutableData()
-        guard let consumer = CGDataConsumer(data: pdf as CFMutableData) else { return nil }
-        var mediaBox = CGRect(x: 0, y: 0, width: 612, height: 792)
-        guard let context = CGContext(consumer: consumer, mediaBox: &mediaBox, nil) else { return nil }
-
-        renderer.render { size, draw in
-            var box = CGRect(origin: .zero, size: size)
-            let info = [kCGPDFContextMediaBox as String:
-                        CFDataCreate(nil, withUnsafeBytes(of: &box) { $0.bindMemory(to: UInt8.self).baseAddress },
-                                     MemoryLayout<CGRect>.size) as Any] as CFDictionary
-            context.beginPDFPage(info)
-            draw(context)
-            context.endPDFPage()
-        }
-        context.closePDF()
-        return pdf as Data
+        pdf(pages: [AnyView(view)], scale: scale)
     }
 }
 
@@ -210,7 +267,7 @@ struct ReportPDFToolbar: ViewModifier {
                 ToolbarItem {
                     Button("PDF", systemImage: "arrow.up.doc") {
                         guard let doc = makeDocument(),
-                              let data = ReportExport.pdf(branded(doc)) else { return }
+                              let data = ReportExport.pdf(doc.printable(entity: entity)) else { return }
                         document = PDFReportDocument(data: data)
                         exporting = true
                     }
@@ -219,8 +276,8 @@ struct ReportPDFToolbar: ViewModifier {
                 ToolbarItem {
                     // Share the report straight to Mail / Messages / AirDrop; the
                     // PDF is only rendered when the share is actually performed.
-                    if let statement = makeDocument().map(branded) {
-                        ShareLink(item: ShareableReportPDF(title: title, statement: statement),
+                    if let doc = makeDocument() {
+                        ShareLink(item: ShareableReportPDF(title: title, document: doc, entity: entity),
                                   preview: SharePreview("\(title).pdf")) {
                             Label("Share", systemImage: "square.and.arrow.up")
                         }
@@ -230,13 +287,6 @@ struct ReportPDFToolbar: ViewModifier {
             }
             .fileExporter(isPresented: $exporting, document: document,
                           contentType: .pdf, defaultFilename: title) { _ in }
-    }
-
-    /// The printable, branded with the masthead's entity line.
-    private func branded(_ doc: ReportDocument) -> PrintableStatement {
-        var printable = doc.printable
-        printable.entity = entity
-        return printable
     }
 }
 

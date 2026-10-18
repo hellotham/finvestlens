@@ -148,9 +148,12 @@ public enum ReportKind: String, CaseIterable, Identifiable, Codable, Sendable {
     }
 
     var usesDepth: Bool { self == .accountSummary }
-    var usesAccounts: Bool { self == .cashFlow || self == .averageBalance }
-    /// Reports over exactly one account (a register listing, a reconciliation).
-    var usesSingleAccount: Bool { self == .transactions || self == .reconcile }
+    var usesAccounts: Bool { self == .cashFlow || self == .averageBalance || self == .transactions }
+    /// Reports whose account scope, left empty, means every account — each
+    /// chosen account standing for its whole subtree.
+    var scopeEmptyMeansAll: Bool { self == .transactions }
+    /// Reports over exactly one account (a reconciliation).
+    var usesSingleAccount: Bool { self == .reconcile }
     /// Reports whose figures depend on the cost-basis method and fee treatment.
     var usesInvestmentOptions: Bool {
         self == .portfolio || self == .investmentLots || self == .capitalGains
@@ -197,7 +200,7 @@ public enum ReportKind: String, CaseIterable, Identifiable, Codable, Sendable {
         case .cashFlow: String(localized: "Where the money came from and went")
         case .incomeExpense: String(localized: "Spending and income by category and month")
         case .averageBalance: String(localized: "Average balance over time, by interval")
-        case .transactions: String(localized: "An account's postings over a period")
+        case .transactions: String(localized: "Every account's postings over a period, or the accounts you choose")
         case .reconcile: String(localized: "Reconciled, cleared, and outstanding")
         case .forecast: String(localized: "Projected balances from scheduled transactions")
         case .spendingInsights: String(localized: "This period against the last, in plain language")
@@ -223,7 +226,9 @@ public enum ReportKind: String, CaseIterable, Identifiable, Codable, Sendable {
         ReportConfiguration(kind: rawValue,
                             period: model.period,
                             accountIDs: nil,
-                            depth: usesDepth ? 2 : nil,
+                            // Every level (`nil`): asked for on build 4 — "All reports
+                            // should display max indentation depth."
+                            depth: nil,
                             step: usesStep ? .month : nil)
     }
 }
@@ -730,9 +735,9 @@ struct ReportScreen: View {
                             Label("Share", systemImage: "square.and.arrow.up")
                         }
                         .help("Share this report as a PDF")
-                    } else if let printable = sharablePrintable {
-                        ShareLink(item: ShareableReportPDF(title: kindTitle,
-                                                           statement: printable),
+                    } else if let document {
+                        ShareLink(item: ShareableReportPDF(title: kindTitle, document: document,
+                                                           entity: model.statementEntityName),
                                   preview: SharePreview("\(kindTitle).pdf")) {
                             Label("Share", systemImage: "square.and.arrow.up")
                         }
@@ -766,13 +771,24 @@ struct ReportScreen: View {
                 PeriodSelector(model: model, period: $model.period)
             }
             if kind?.usesDepth == true {
-                Stepper("Depth: \(configuration.depth ?? 2)", value: Binding(
-                    get: { configuration.depth ?? 2 },
-                    set: { configuration.depth = $0 }), in: 1...6)
-                    .fixedSize()
+                // Up to the book's own deepest level, which is "All" — the
+                // default — rather than a fixed six that a deeper book outgrew.
+                let deepest = model.accountTreeDepth
+                let shown = min(configuration.depth ?? deepest, deepest)
+                Stepper(value: Binding(
+                    get: { shown },
+                    set: { configuration.depth = $0 >= deepest ? nil : $0 }), in: 1...deepest) {
+                    if shown >= deepest {
+                        Text("Depth: All")
+                    } else {
+                        Text("Depth: \(shown)")
+                    }
+                }
+                .fixedSize()
             }
             if kind?.usesAccounts == true {
-                AccountScopeButton(model: model, accountIDs: $configuration.accountIDs)
+                AccountScopeButton(model: model, accountIDs: $configuration.accountIDs,
+                                   emptyMeansAll: kind?.scopeEmptyMeansAll == true)
             }
             if kind?.usesSingleAccount == true {
                 AccountField(nodes: model.postableAccounts, selection: Binding(
@@ -865,9 +881,13 @@ struct ReportScreen: View {
     }
 
     private func recompute() async {
-        // One yield so the spinner paints before the (fast, but not free)
-        // computation runs.
+        // One yield so the spinner paints before the computation runs.
         await Task.yield()
+        // The slow parts — the lot engine's reports, an account's postings —
+        // are built off the main actor first (P3.3); the document is then
+        // assembled from the memo.
+        await model.warmReports(for: configuration)
+        guard !Task.isCancelled else { return }
         document = model.reportDocument(for: configuration)
         computeFinished = true
     }
@@ -900,20 +920,12 @@ struct ReportScreen: View {
         }
     }
 
-    /// The scaffold document as a printable, branded with the entity line.
-    private var sharablePrintable: PrintableStatement? {
-        guard let document else { return nil }
-        var printable = document.printable
-        printable.entity = model.statementEntityName
-        return printable
-    }
-
     private func exportPDF() {
         let data: Data?
         if let statement {
             data = ReportExport.pdf(StatementSheet(statement: statement))
-        } else if let printable = sharablePrintable {
-            data = ReportExport.pdf(printable)
+        } else if let document {
+            data = ReportExport.pdf(document.printable(entity: model.statementEntityName))
         } else {
             data = nil
         }
@@ -928,18 +940,29 @@ struct ReportScreen: View {
 struct AccountScopeButton: View {
     @Bindable var model: AppModel
     @Binding var accountIDs: Set<GncGUID>?
+    /// The transaction report's scope: nothing chosen is every account, and a
+    /// chosen account — a placeholder parent included — is its whole subtree.
+    var emptyMeansAll = false
     @State private var pickerShown = false
 
     var body: some View {
         Button(label) { pickerShown = true }
             .popover(isPresented: $pickerShown) {
-                AccountMatchPicker(tree: model.accountTree, selection: Binding(
-                    get: { accountIDs ?? model.defaultCashFlowAccountIDs },
-                    set: { accountIDs = $0 }))
+                if emptyMeansAll {
+                    AccountMatchPicker(tree: model.accountTree, selection: Binding(
+                        get: { accountIDs ?? [] },
+                        set: { accountIDs = $0.isEmpty ? nil : $0 }),
+                        emptyMeansAll: true)
+                } else {
+                    AccountMatchPicker(tree: model.accountTree, selection: Binding(
+                        get: { accountIDs ?? model.defaultCashFlowAccountIDs },
+                        set: { accountIDs = $0 }))
+                }
             }
     }
 
     private var label: String {
+        if emptyMeansAll, accountIDs?.isEmpty ?? true { return String(localized: "All accounts") }
         guard let ids = accountIDs else { return String(localized: "Bank & cash accounts") }
         switch ids.count {
         case 0: return String(localized: "Choose accounts…")

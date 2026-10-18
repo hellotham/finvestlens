@@ -75,6 +75,67 @@ struct RefreshScopeTests {
         #expect(model.registerRows.count == 2)
     }
 
+    @Test("A slot-only edit leaves the register, the tree and the search, and still dirties the book")
+    func kvpEditKeepsRegister() throws {
+        let model = AppModel()
+        let undo = UndoManager()
+        model.undoManager = undo
+        let url = tempURL()
+        try model.newDocument(at: url)
+        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        let bank = try #require(model.addAccount(name: "Bank", type: .bank))
+        let food = try #require(model.addAccount(name: "Food", type: .expense))
+        _ = try model.addTransaction(
+            date: Date(), description: "Lunch", currency: .aud,
+            splits: [SplitInput(accountID: bank, value: -25),
+                     SplitInput(accountID: food, value: 25)])
+        model.selectedAccountID = bank
+        #expect(model.registerRows.count == 1)
+        try model.save()
+        undo.removeAllActions()
+
+        let bookBefore = model.bookRevision
+        let registerBefore = model.registerRevision
+        let transactionsBefore = model.transactionRevision
+        let treeBefore = model.accountTree.map(\.id)
+
+        model.toggleFavouriteAccount(bank)
+
+        #expect(model.favouriteAccountIDs == [bank])
+        #expect(model.registerRevision == registerBefore, "no register row changed")
+        #expect(model.transactionRevision == transactionsBefore, "no transaction changed")
+        #expect(model.accountTree.map(\.id) == treeBefore)
+        #expect(model.bookRevision != bookBefore, "slots feed reports — their memos must go")
+        #expect(model.hasUnsavedChanges)
+
+        undo.undo()
+        #expect(model.favouriteAccountIDs.isEmpty)
+        #expect(model.registerRevision == registerBefore)
+        #expect(model.transactionRevision == transactionsBefore)
+    }
+
+    @Test("A budget edited in its slot reaches the memoised budget report")
+    func kvpEditReachesReports() throws {
+        let model = AppModel()
+        let url = tempURL()
+        try model.newDocument(at: url)
+        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        let bank = try #require(model.addAccount(name: "Bank", type: .bank))
+        let food = try #require(model.addAccount(name: "Food", type: .expense))
+        _ = try model.addTransaction(
+            date: Date(), description: "Lunch", currency: .aud,
+            splits: [SplitInput(accountID: bank, value: -25),
+                     SplitInput(accountID: food, value: 25)])
+        var budget = Budget(name: "Household", lines: [BudgetLine(accountGUID: food, amount: 100)])
+        model.addBudget(budget)
+        #expect(model.budgetActuals(budget).first { $0.id == food }?.budgeted == 100)
+
+        budget.lines = [BudgetLine(accountGUID: food, amount: 250)]
+        model.updateBudget(budget)
+        #expect(model.budgetActuals(budget).first { $0.id == food }?.budgeted == 250)
+        #expect(model.budgetActuals(budget).first { $0.id == food }?.actual == 25)
+    }
+
     @Test("Editing a price's value undoes and redoes through the change log")
     func priceValueRoundTrip() throws {
         let model = AppModel()

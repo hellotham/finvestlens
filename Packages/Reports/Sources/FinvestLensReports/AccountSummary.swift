@@ -23,9 +23,14 @@ public struct AccountSummaryRow: Identifiable, Hashable, Sendable {
     public var fullName: String
     /// 1 for a top-level account; drives indentation.
     public var depth: Int
-    /// Converted, presentation-signed. At the depth limit this includes
-    /// everything rolled up from beneath.
+    /// Converted, presentation-signed: the account and everything beneath
+    /// it — a parent carries its subtree, at every depth.
     public var balance: Decimal
+    /// The account's own balance, without its subaccounts — what a parent
+    /// holds itself, shown beside its children as a "(direct)" line.
+    public var own: Decimal = 0
+    /// Whether rows for subaccounts follow this one.
+    public var hasChildren = false
 }
 
 public struct AccountSummarySection: Identifiable, Sendable {
@@ -75,8 +80,13 @@ public extension FinancialReports {
             account.children.reduce(own(account)) { $0 + rolled($1) }
         }
 
+        // Every row carries its subtree, as a parent's subtotal (GnuCash's
+        // "Calculate Subtotal" parent mode, options-utilities.scm). With every
+        // level the default (build 4: "All reports should display max
+        // indentation depth"), the account's own balance alone left every
+        // placeholder category at 0.00 and no total anywhere above a leaf.
         func rows(_ account: Account, depth: Int) -> [AccountSummaryRow] {
-            let balance = depth == limit ? rolled(account) : own(account)
+            let balance = rolled(account)
             let children = depth < limit
                 ? account.children
                     .sorted { $0.name < $1.name }
@@ -89,7 +99,9 @@ public extension FinancialReports {
             guard visible else { return [] }
             return [AccountSummaryRow(id: account.guid, name: account.name,
                                       fullName: account.fullName, depth: depth,
-                                      balance: currency.round(balance))] + children
+                                      balance: currency.round(balance),
+                                      own: currency.round(own(account)),
+                                      hasChildren: !children.isEmpty)] + children
         }
 
         func section(_ title: String, _ types: Set<AccountType>) -> AccountSummarySection {

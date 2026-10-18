@@ -111,7 +111,15 @@ public extension FinancialReports {
         step: AverageBalanceStep = .month,
         calendar: Calendar = .current
     ) -> AverageBalanceReport {
-        let fromDay = calendar.startOfDay(for: from)
+        // All Time starts where the book does, as the net-worth chart's does.
+        // It resolves to the distant past, and from there this walked one day
+        // at a time from the year 1 — 739,910 days, most of a second before a
+        // bar was drawn — with the overall average taken over thousands of
+        // years of zeros before the book's first entry. A period that names
+        // its dates keeps every day of them, before an account opened or not.
+        let start = from == .distantPast
+            ? (book.transactions.lazy.map(\.datePosted).min() ?? from) : from
+        let fromDay = calendar.startOfDay(for: start)
         let toDay = calendar.startOfDay(for: to)
 
         func value(_ native: Decimal, _ commodity: Commodity, on day: Date) -> Decimal {
@@ -128,16 +136,18 @@ public extension FinancialReports {
             var events: [(day: Date, delta: Decimal)]
             var cursor: Int = 0
         }
+        // From each account's own legs, in book order — the same legs, in the
+        // same order, as walking every transaction for each account, which
+        // took a calendar day of every transaction in the book once per
+        // account: 2.4 s on the reference book for its cash accounts.
         var states: [AccountState] = accounts.map { account in
             var prior = Decimal(0)
             var events: [(Date, Decimal)] = []
-            for transaction in book.transactions {
+            for split in book.splits(for: account) where split.reconcileState != .voided {
+                guard let transaction = split.transaction else { continue }
                 let day = calendar.startOfDay(for: transaction.datePosted)
-                for split in transaction.splits
-                where split.account === account && split.reconcileState != .voided {
-                    if day < fromDay { prior += split.quantity }
-                    else if day <= toDay { events.append((day, split.quantity)) }
-                }
+                if day < fromDay { prior += split.quantity }
+                else if day <= toDay { events.append((day, split.quantity)) }
             }
             events.sort { $0.0 < $1.0 }
             return AccountState(account: account, running: prior, events: events)

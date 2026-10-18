@@ -112,8 +112,11 @@ struct ReportCatalogueSyntheticTests {
 
         let transactions = try #require(model.reportDocument(
             for: ReportKind.transactions.defaultConfiguration(for: model)))
-        #expect(transactions.title == "Transactions — Bank")
-        #expect(transactions.sections.first?.rows.count == 4)      // pay, shop, buy, sell
+        // Every account by default (build 4: "needs to show transactions
+        // belong to all accounts"), each in a section of its own.
+        #expect(transactions.title == "Transactions — All Accounts")
+        let bankPostings = try #require(transactions.sections.first { $0.title == "Bank" })
+        #expect(bankPostings.rows.count == 4)      // pay, shop, buy, sell
 
         let portfolio = try #require(model.reportDocument(
             for: ReportKind.portfolio.defaultConfiguration(for: model)))

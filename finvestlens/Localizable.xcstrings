@@ -4403,6 +4403,143 @@
         }
       }
     },
+    "%lld accounts selected, with their subaccounts": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld account selected, with its subaccounts"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld accounts selected, with their subaccounts"
+                }
+              }
+            }
+          }
+        },
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Konto ausgewählt, mit seinen Unterkonten"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Konten ausgewählt, mit ihren Unterkonten"
+                }
+              }
+            }
+          }
+        },
+        "es": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld cuenta seleccionada, con sus subcuentas"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld cuentas seleccionadas, con sus subcuentas"
+                }
+              }
+            }
+          }
+        },
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld compte sélectionné, avec ses sous-comptes"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld comptes sélectionnés, avec leurs sous-comptes"
+                }
+              }
+            }
+          }
+        },
+        "it": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld conto selezionato, con i suoi sottoconti"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld conti selezionati, con i loro sottoconti"
+                }
+              }
+            }
+          }
+        },
+        "ja": {
+          "variations": {
+            "plural": {
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld 件の勘定科目を選択（子勘定科目を含む）"
+                }
+              }
+            }
+          }
+        },
+        "pt-BR": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld conta selecionada, com suas subcontas"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld contas selecionadas, com suas subcontas"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hans": {
+          "variations": {
+            "plural": {
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "已选 %lld 个科目（含子科目）"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld addresses": {
       "extractionState": "manual",
       "localizations": {
@@ -17143,53 +17280,6 @@
         }
       }
     },
-    "An account's postings over a period": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Die Buchungszeilen eines Kontos in einem Zeitraum"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Los asientos de una cuenta en un período"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Les écritures d’un compte sur une période"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Le registrazioni di un conto in un periodo"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "期間内の 1 つの勘定科目の記帳"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Os lançamentos de uma conta em um período"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "某一科目在一段期间内的过账记录"
-          }
-        }
-      }
-    },
     "Analysing six months of spending with your model…": {
       "extractionState": "manual",
       "localizations": {
@@ -21749,6 +21839,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "所有交易"
+          }
+        }
+      }
+    },
+    "All accounts": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Konten"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todas las cuentas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tous les comptes"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tutti i conti"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべての勘定科目"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todas as contas"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "所有科目"
           }
         }
       }
@@ -31190,53 +31327,6 @@
         }
       }
     },
-    "Categories are top-level accounts with their subtrees rolled up; the slices sum to the income statement for the same period.": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kategorien sind Konten der obersten Ebene einschließlich ihrer Unterkonten; die Teile ergeben zusammen die Gewinn- und Verlustrechnung desselben Zeitraums."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Las categorías son cuentas de primer nivel con sus subcuentas agregadas; las porciones suman el estado de resultados del mismo periodo."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Les catégories sont des comptes de premier niveau, sous-comptes inclus ; les parts totalisent le compte de résultat de la même période."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Le categorie sono conti di primo livello con i relativi sottoconti aggregati; le quote sommate danno il conto economico dello stesso periodo."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "カテゴリは最上位の勘定科目で、下位の科目を合算しています。各項目の合計は同じ期間の損益計算書と一致します。"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "As categorias são contas de primeiro nível com as subcontas agregadas; as fatias somam a demonstração de resultados do mesmo período."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "类别为顶级科目并汇总其下级科目；各部分之和等于同期利润表。"
-          }
-        }
-      }
-    },
     "Categorise Transactions": {
       "extractionState": "manual",
       "localizations": {
@@ -33677,53 +33767,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "期末"
-          }
-        }
-      }
-    },
-    "Closing balance": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Endsaldo"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Saldo final"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Solde de clôture"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Saldo finale"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "期末残高"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Saldo final"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "期末余额"
           }
         }
       }
@@ -48114,6 +48157,53 @@
         }
       }
     },
+    "Depth: All": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tiefe: Alle"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Profundidad: todas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Profondeur : toutes"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Profondità: tutte"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "階層: すべて"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Profundidade: todas"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "层级：全部"
+          }
+        }
+      }
+    },
     "Derived from the earliest transaction — the book records no opening date.": {
       "extractionState": "manual",
       "localizations": {
@@ -50041,6 +50131,53 @@
         }
       }
     },
+    "Drag to reorder, or onto another account to move it there": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ziehen, um die Reihenfolge zu ändern, oder auf ein anderes Konto, um es dorthin zu verschieben"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arrastra para reordenar, o sobre otra cuenta para moverla allí"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Faites glisser pour réordonner, ou sur un autre compte pour l’y déplacer"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trascina per riordinare, o su un altro conto per spostarlo lì"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ドラッグして並べ替え、または別の勘定科目の上にドロップしてそこへ移動します"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arraste para reordenar, ou sobre outra conta para movê-la para lá"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拖动以重新排序，或拖到另一个科目上以将其移到那里"
+          }
+        }
+      }
+    },
     "Due": {
       "extractionState": "manual",
       "localizations": {
@@ -50272,6 +50409,147 @@
           "stringUnit": {
             "state": "translated",
             "value": "复制选中的交易"
+          }
+        }
+      }
+    },
+    "Each account shows its postings in date order with a running balance, in the account’s own currency — a security’s in its units.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jedes Konto zeigt seine Buchungszeilen in Datumsfolge mit laufendem Saldo, in der Währung des Kontos – bei Wertpapieren in Stück."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cada cuenta muestra sus asientos por fecha con un saldo acumulado, en la moneda de la propia cuenta, o en unidades si es un valor."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chaque compte présente ses écritures par date avec un solde courant, dans la devise du compte — en unités pour un titre."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ogni conto mostra le sue registrazioni in ordine di data con un saldo progressivo, nella valuta del conto, o in unità se è un titolo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "各勘定科目の記帳を日付順に、累計残高とともにその勘定科目の通貨で表示します（証券は数量で表示します）。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cada conta mostra seus lançamentos em ordem de data, com saldo acumulado, na moeda da própria conta — ou em unidades, se for um título."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每个科目按日期列出其过账记录及累计余额，以该科目自身的货币显示；证券科目以数量显示。"
+          }
+        }
+      }
+    },
+    "Each category is broken down into its subcategories at every level, and includes everything beneath it; the top-level categories sum to the income statement for the same period.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jede Kategorie ist auf allen Ebenen in ihre Unterkategorien aufgeschlüsselt und umfasst alles darunter; die Kategorien der obersten Ebene ergeben zusammen die Gewinn- und Verlustrechnung desselben Zeitraums."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cada categoría se desglosa en sus subcategorías en todos los niveles e incluye todo lo que tiene debajo; las categorías de primer nivel suman el estado de resultados del mismo periodo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chaque catégorie est détaillée en sous-catégories à tous les niveaux et inclut tout ce qui se trouve en dessous ; les catégories de premier niveau totalisent le compte de résultat de la même période."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ogni categoria è suddivisa nelle sue sottocategorie a ogni livello e include tutto ciò che sta sotto; le categorie di primo livello sommate danno il conto economico dello stesso periodo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "各カテゴリはすべての階層でサブカテゴリに分けて表示され、下位のすべてを含みます。最上位のカテゴリの合計は同じ期間の損益計算書と一致します。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cada categoria é detalhada em suas subcategorias em todos os níveis e inclui tudo o que está abaixo dela; as categorias de primeiro nível somam a demonstração de resultados do mesmo período."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每个类别都按各级子类别细分，并包含其下的全部内容；顶级类别之和等于同期利润表。"
+          }
+        }
+      }
+    },
+    "Each chosen account includes all of its subaccounts.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jedes gewählte Konto schließt alle seine Unterkonten ein."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cada cuenta elegida incluye todas sus subcuentas."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chaque compte choisi inclut tous ses sous-comptes."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ogni conto scelto include tutti i suoi sottoconti."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選択した各勘定科目には、そのすべての子勘定科目が含まれます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cada conta escolhida inclui todas as suas subcontas."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每个所选科目都包含其全部子科目。"
           }
         }
       }
@@ -55458,6 +55736,53 @@
         }
       }
     },
+    "Every account's postings over a period, or the accounts you choose": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Buchungszeilen aller Konten in einem Zeitraum – oder der Konten Ihrer Wahl"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los asientos de todas las cuentas en un periodo, o de las que elijas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les écritures de tous les comptes sur une période, ou des comptes de votre choix"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le registrazioni di tutti i conti in un periodo, o dei conti che scegli"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "期間内のすべての勘定科目の記帳、または選んだ勘定科目の記帳"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Os lançamentos de todas as contas em um período, ou das contas que você escolher"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "所有科目在一段期间内的过账记录，或你所选科目的过账记录"
+          }
+        }
+      }
+    },
     "Every attachment in the book, with its transaction": {
       "extractionState": "manual",
       "localizations": {
@@ -55654,6 +55979,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "所有持仓均已定价"
+          }
+        }
+      }
+    },
+    "Every level of the chart of accounts is shown, each account with everything beneath it. Income and expense balances are lifetime to date.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Ebenen des Kontenplans werden angezeigt, jedes Konto mit allem darunter. Ertrags- und Aufwandssalden sind seit Beginn aufgelaufen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se muestran todos los niveles del plan de cuentas, cada cuenta con todo lo que tiene debajo. Los saldos de ingresos y gastos son acumulados hasta la fecha."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tous les niveaux du plan comptable sont affichés, chaque compte avec tout ce qui se trouve en dessous. Les soldes de produits et de charges sont cumulés depuis l’origine."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sono mostrati tutti i livelli del piano dei conti, ogni conto con tutto ciò che sta sotto. I saldi di entrate e uscite sono cumulati dall’inizio."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "勘定科目表のすべての階層を表示しています。各勘定科目にはその下位のすべてが含まれます。収益と費用の残高は開始時からの累計です。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todos os níveis do plano de contas são exibidos, cada conta com tudo o que está abaixo dela. Os saldos de receitas e despesas são acumulados desde o início."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "显示科目表的所有层级，每个科目都包含其下的全部内容。收入和费用余额为自始至今的累计。"
           }
         }
       }
@@ -67965,6 +68337,53 @@
         }
       }
     },
+    "Reverted to the saved book — including what the save that was running wrote.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf das gesicherte Buch zurückgesetzt — einschließlich dessen, was die laufende Sicherung geschrieben hat."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se ha vuelto al libro guardado, incluido lo que escribió el guardado que estaba en curso."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retour au livre enregistré — y compris ce qu’a écrit l’enregistrement en cours."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ripristinato il libro salvato, compreso ciò che ha scritto il salvataggio in corso."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存した帳簿に戻しました。実行中だった保存で書き込まれた内容も含まれます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Revertido para o livro salvo, incluindo o que o salvamento em andamento gravou."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已复原到存储的账簿，其中包括当时正在进行的存储所写入的内容。"
+          }
+        }
+      }
+    },
     "is": {
       "extractionState": "manual",
       "localizations": {
@@ -77197,6 +77616,241 @@
         }
       }
     },
+    "No transactions match.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Buchungen passen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ninguna transacción coincide."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucune opération ne correspond."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessuna transazione corrisponde."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一致する取引はありません。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nenhuma transação corresponde."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有匹配的交易。"
+          }
+        }
+      }
+    },
+    "Open the selected result in its account’s register": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das ausgewählte Ergebnis im Kontobuch seines Kontos öffnen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abrir el resultado seleccionado en el registro de su cuenta"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouvrir le résultat sélectionné dans le registre de son compte"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apri il risultato selezionato nel registro del suo conto"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選択した結果をその勘定科目の帳簿で開きます"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abrir o resultado selecionado no registro da sua conta"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在其科目的账簿中打开所选结果"
+          }
+        }
+      }
+    },
+    "Postings: %lld · Accounts: %lld": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buchungszeilen: %lld · Konten: %lld"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Asientos: %lld · Cuentas: %lld"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Écritures : %lld · Comptes : %lld"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registrazioni: %lld · Conti: %lld"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "記帳：%lld・勘定科目：%lld"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lançamentos: %lld · Contas: %lld"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "过账记录：%lld · 科目：%lld"
+          }
+        }
+      }
+    },
+    "Search Results": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suchergebnisse"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resultados de búsqueda"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Résultats de recherche"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Risultati della ricerca"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "検索結果"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resultados da busca"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "搜索结果"
+          }
+        }
+      }
+    },
+    "Transactions — All Accounts": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buchungen — Alle Konten"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transacciones — Todas las cuentas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opérations — Tous les comptes"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transazioni — Tutti i conti"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取引 — すべての勘定科目"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transações — Todas as contas"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "交易 — 所有科目"
+          }
+        }
+      }
+    },
     "matches any account": {
       "extractionState": "manual",
       "localizations": {
@@ -77615,6 +78269,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "批量匹配收据文件夹 —**匹配附件…**— 同样会就地链接这些文件。把它指向你平时归档的那个文件夹即可。"
+          }
+        }
+      }
+    },
+    "Matching the statement…": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auszug wird zugeordnet …"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Emparejando el extracto…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Association du relevé…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abbinamento dell’estratto conto…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "明細を照合中…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Associando o extrato…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在匹配对账单…"
           }
         }
       }
@@ -80941,6 +81642,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "净资产"
+          }
+        }
+      }
+    },
+    "Net change and closing balance": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nettoveränderung und Endsaldo"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Variación neta y saldo final"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Variation nette et solde de clôture"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Variazione netta e saldo finale"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "純増減と期末残高"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Variação líquida e saldo final"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "净变动与期末余额"
           }
         }
       }
@@ -97012,53 +97760,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "记账年份为 %@。年份打错的交易依然借贷平衡、依然能对账——它只是离开了本该所属的期间，因而从每一份按日期取数的报表中消失。搜索该年份即可找到它们。清理不会改动它们：只有你知道原本想填的是哪一年。"
-          }
-        }
-      }
-    },
-    "Postings": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Buchungszeilen"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Asientos"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Écritures"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Registrazioni"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "記帳"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lançamentos"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "过账记录"
           }
         }
       }
@@ -117133,53 +117834,6 @@
         }
       }
     },
-    "Set Reconcile State (%lld)": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Abgleichstatus setzen (%lld)"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Definir el estado de conciliación (%lld)"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Définir l’état de rapprochement (%lld)"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Imposta lo stato di riconciliazione (%lld)"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "照合状態を設定 (%lld)"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Definir status de reconciliação (%lld)"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "设置对账状态（%lld）"
-          }
-        }
-      }
-    },
     "Set Target": {
       "extractionState": "manual",
       "localizations": {
@@ -117787,6 +118441,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "设置估值频率"
+          }
+        }
+      }
+    },
+    "Set the reconcile state of the matched split in each selected result": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abgleichstatus des gefundenen Buchungsteils in jedem ausgewählten Ergebnis setzen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Definir el estado de conciliación del desglose coincidente en cada resultado seleccionado"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Définir l’état de rapprochement de la répartition trouvée dans chaque résultat sélectionné"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Imposta lo stato di riconciliazione della suddivisione trovata in ogni risultato selezionato"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選択した各結果で、一致したスプリットの照合状態を設定します"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Definir o status de reconciliação da divisão encontrada em cada resultado selecionado"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "为每个所选结果中匹配的分录设置对账状态"
           }
         }
       }
@@ -122420,6 +123121,53 @@
         }
       }
     },
+    "Statements show every level of your accounts, each with the total of everything beneath it.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abschlüsse zeigen alle Ebenen Ihrer Konten, jede mit der Summe von allem darunter."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los estados muestran todos los niveles de tus cuentas, cada uno con el total de todo lo que tiene debajo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les états présentent tous les niveaux de vos comptes, chacun avec le total de tout ce qui se trouve en dessous."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I prospetti mostrano tutti i livelli dei tuoi conti, ciascuno con il totale di tutto ciò che sta sotto."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "財務諸表には勘定科目のすべての階層が表示され、各階層にはその下位すべての合計が示されます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Os demonstrativos mostram todos os níveis das suas contas, cada um com o total de tudo o que está abaixo dele."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "报表显示科目的所有层级，每一级都附有其下全部内容的合计。"
+          }
+        }
+      }
+    },
     "Statements, charts, decks and the end-of-year pack.": {
       "extractionState": "manual",
       "localizations": {
@@ -125387,6 +126135,53 @@
         }
       }
     },
+    "The **Transactions** report covers every account until you choose some; an account you choose brings its subaccounts with it.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Bericht **Buchungen** umfasst alle Konten, bis Sie einige auswählen; ein gewähltes Konto bringt seine Unterkonten mit."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El informe **Transacciones** abarca todas las cuentas hasta que elijas algunas; una cuenta elegida incluye sus subcuentas."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le rapport **Opérations** couvre tous les comptes jusqu’à ce que vous en choisissiez ; un compte choisi inclut ses sous-comptes."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il report **Transazioni** copre tutti i conti finché non ne scegli alcuni; un conto scelto porta con sé i suoi sottoconti."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**取引**レポートは、勘定科目を選ぶまではすべての勘定科目を対象にします。選んだ勘定科目には子勘定科目も含まれます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O relatório **Transações** abrange todas as contas até você escolher algumas; uma conta escolhida inclui as suas subcontas."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**交易**报表在你选择科目之前涵盖所有科目；所选科目会连同其子科目一并包含。"
+          }
+        }
+      }
+    },
     "The Apple Intelligence model is still downloading. Try again shortly.": {
       "extractionState": "manual",
       "localizations": {
@@ -128166,49 +128961,49 @@
         }
       }
     },
-    "The search box above the register searches the description, amount and date. It also understands operators, which can be combined:": {
+    "The search box searches every transaction’s description, number, memos and account names, and shows what it finds as a register — the rows of All Transactions, only the matches, which you edit as you would any other. It also understands operators, which can be combined:": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Das Suchfeld über dem Kontobuch durchsucht Beschreibung, Betrag und Datum. Es versteht außerdem Operatoren, die sich kombinieren lassen:"
+            "value": "Das Suchfeld durchsucht Beschreibung, Nummer, Notizen und Kontonamen jeder Buchung und zeigt die Treffer als Kontobuch — die Zeilen von „Alle Buchungen“, nur die Treffer, die Sie wie in jedem anderen Kontobuch bearbeiten. Es versteht außerdem Operatoren, die sich kombinieren lassen:"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "El cuadro de búsqueda sobre el libro busca en la descripción, el importe y la fecha. También entiende operadores, que se pueden combinar:"
+            "value": "El cuadro de búsqueda busca en la descripción, el número, las notas y los nombres de cuenta de cada transacción, y muestra lo que encuentra como un registro: las filas de Todas las transacciones, solo las coincidencias, que editas como en cualquier otro. También entiende operadores, que se pueden combinar:"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Le champ de recherche au-dessus du registre cherche dans le libellé, le montant et la date. Il comprend aussi des opérateurs, combinables entre eux :"
+            "value": "Le champ de recherche examine la description, le numéro, les mémos et les noms de compte de chaque opération, et présente ce qu’il trouve comme un registre — les lignes de Toutes les opérations, seulement les résultats, que vous modifiez comme dans n’importe quel autre. Il comprend aussi des opérateurs, combinables entre eux :"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Il campo di ricerca sopra il libro mastro cerca in descrizione, importo e data. Riconosce anche operatori, combinabili tra loro:"
+            "value": "La casella di ricerca cerca nella descrizione, nel numero, nelle note e nei nomi dei conti di ogni transazione, e mostra ciò che trova come un registro: le righe di Tutte le transazioni, solo le corrispondenze, che modifichi come in qualsiasi altro. Capisce anche operatori, che si possono combinare:"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "記入帳の上にある検索欄は、摘要・金額・日付を検索します。さらに、組み合わせ可能な演算子も使えます:"
+            "value": "検索ボックスは各取引の摘要、番号、メモ、勘定科目名を検索し、見つかったものを帳簿として表示します。「すべての取引」の行のうち一致したものだけで、ほかの帳簿と同じように編集できます。組み合わせて使える演算子も使えます："
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "O campo de busca acima do razão procura na descrição, no valor e na data. Ele também entende operadores, que podem ser combinados:"
+            "value": "A caixa de busca procura na descrição, no número, nas notas e nos nomes de conta de cada transação, e mostra o que encontra como um registro — as linhas de Todas as transações, só as correspondências, que você edita como em qualquer outro. Ela também entende operadores, que podem ser combinados:"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "流水账上方的搜索框可搜索摘要、金额与日期，同时支持可组合使用的运算符："
+            "value": "搜索框会搜索每笔交易的描述、编号、备注和科目名称，并将结果显示为账簿——即“所有交易”中仅匹配的行，你可以像在其他账簿中一样编辑它们。它还支持可组合使用的运算符："
           }
         }
       }
@@ -135873,6 +136668,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "未分类"
+          }
+        }
+      }
+    },
+    "Under Manual Order, drag an account to reorder it, or drop it on another account to move it there — on the Mac by the grip at the end of its row, on iPhone and iPad by touching and holding the row.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bei manueller Reihenfolge ziehen Sie ein Konto, um es umzuordnen, oder legen es auf einem anderen Konto ab, um es dorthin zu verschieben — auf dem Mac am Griff am Ende seiner Zeile, auf iPhone und iPad durch Berühren und Halten der Zeile."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Con el orden manual, arrastra una cuenta para reordenarla, o suéltala sobre otra cuenta para moverla allí: en el Mac por el asa al final de su fila, y en el iPhone y el iPad manteniendo pulsada la fila."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En ordre manuel, faites glisser un compte pour le réordonner, ou déposez-le sur un autre compte pour l’y déplacer — sur Mac par la poignée en fin de ligne, sur iPhone et iPad en touchant longuement la ligne."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Con l’ordine manuale, trascina un conto per riordinarlo, o rilascialo su un altro conto per spostarlo lì: sul Mac dalla maniglia alla fine della sua riga, su iPhone e iPad tenendo premuta la riga."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "手動の並び順では、勘定科目をドラッグして並べ替えるか、別の勘定科目の上にドロップしてそこへ移動します。Mac では行の末尾のつまみで、iPhone と iPad では行を長押ししてドラッグします。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Na ordem manual, arraste uma conta para reordená-la, ou solte-a sobre outra conta para movê-la para lá — no Mac pela alça no fim da linha, no iPhone e no iPad tocando e segurando a linha."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在手动顺序下，拖动科目可重新排序，或将其放到另一个科目上以移到那里——在 Mac 上拖动行末尾的把手，在 iPhone 和 iPad 上按住该行再拖动。"
           }
         }
       }

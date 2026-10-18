@@ -361,7 +361,14 @@ enum TextStyleMetrics {
     /// macOS has no Dynamic Type; the preference is the whole story there.
     /// Floors: HIG Accessibility — 10 pt minimum on macOS, 11 pt on iOS.
     static func scaledSize(_ style: Font.TextStyle, appScale: CGFloat) -> CGFloat {
-        let base = max(10, size(style) * appScale)
+        scaledSize(points: size(style), relativeTo: style, appScale: appScale)
+    }
+
+    /// The same for a point size no text style has — the welcome screen's
+    /// title — grown along `style`'s Dynamic Type curve.
+    static func scaledSize(points: CGFloat, relativeTo style: Font.TextStyle,
+                           appScale: CGFloat) -> CGFloat {
+        let base = max(10, points * appScale)
         #if canImport(UIKit)
         return max(11, UIFontMetrics(forTextStyle: uiStyle(style)).scaledValue(for: base))
         #else
@@ -412,12 +419,16 @@ struct ScaledFont: ViewModifier {
     // dependency makes SwiftUI come back and ask again.
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let style: Font.TextStyle
+    /// A size of its own in place of the style's, still grown along the
+    /// style's curve.
+    var points: CGFloat? = nil
     let weight: Font.Weight?
     let design: Font.Design?
 
     func body(content: Content) -> some View {
         content.font(.system(
-            size: TextStyleMetrics.scaledSize(style, appScale: scale),
+            size: TextStyleMetrics.scaledSize(points: points ?? TextStyleMetrics.size(style),
+                                              relativeTo: style, appScale: scale),
             weight: weight ?? TextStyleMetrics.weight(style),
             design: design ?? .default))
     }
@@ -430,6 +441,16 @@ public extension View {
                     weight: Font.Weight? = nil,
                     design: Font.Design? = nil) -> some View {
         modifier(ScaledFont(style: style, weight: weight, design: design))
+    }
+
+    /// The same for a size no text style has. `.font(.system(size: n *
+    /// appFontScale))` followed the app's Text Size and nothing else, so on
+    /// iOS it ignored Dynamic Type — which is how the welcome screen, the
+    /// first thing a person sees, stayed small at every accessibility size.
+    func scaledFont(size points: CGFloat, relativeTo style: Font.TextStyle,
+                    weight: Font.Weight? = nil,
+                    design: Font.Design? = nil) -> some View {
+        modifier(ScaledFont(style: style, points: points, weight: weight, design: design))
     }
 }
 
@@ -459,6 +480,14 @@ public struct AppearanceModifier: ViewModifier {
     @AppStorage(AppearanceKey.accent) private var accentRaw = AppAccent.lavender.rawValue
     @AppStorage(AppearanceKey.textStep) private var textStep = TextSize.defaultStep
     @AppStorage(AppDateFormat.orderKey) private var dateOrderRaw = DateOrder.dmy.rawValue
+    // Read for the same reason ``ScaledFont`` reads it: the default font set
+    // below is sized through `UIFontMetrics`, which reads the live setting,
+    // but nothing came back to ask again when the setting moved — so every
+    // unstyled label (buttons, lists, forms) kept the size it launched with
+    // until something else redrew the root. Xcode's accessibility audit found
+    // it: "Dynamic Type font sizes are unsupported" on the welcome screen's
+    // New Book and Open… buttons.
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     public init() {}
 

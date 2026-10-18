@@ -1,5 +1,26 @@
 # Performance Review 2 (9 Oct 2026)
 
+> **Status (18 Oct 2026):** the four left open are closed. **R2e** — File ▸
+> Export builds the GnuCash, Ledger and CSV files off the main actor, on a
+> replica of the book; the CSV of every transaction is also cheaper to write
+> (one date formatter for the export, account names cached, sort keys
+> computed once) and fell from 11.9 s to 0.58 s on the reference book
+> (`ExportOffMainTests`; `CSVExportTests` against a reference CSV). **R8i** —
+> an edit to the book's slots alone refreshes with `RefreshScope.kvp`: the
+> account tree, the register, the search, the journal caches and the lookup
+> indexes stand, and what reads slots rebuilds as it is next asked for
+> (`RefreshScopeTests`). **R5b** — the Overview draws from `BoardData`, one
+> value of everything its cards read, built by a task after an edit while
+> the last one stays on screen; Up Next's state fell from 44 ms to 3.8 ms,
+> the performance sampler from 86 ms to 0.85 ms, the net worth series from
+> 44 ms to 12 ms (it no longer sorts the book), and the board's whole pass
+> after an edit from 101 ms to 67–72 ms, under the 100 ms target
+> (`LiveDashboardPerfTests`, Release, quiet machine). There are no per-card
+> placeholders: the board shows its last values until the new ones are
+> built. **R10b** — the iPad register finds an edited transaction's block
+> from a map instead of scanning: one keystroke's splice into a
+> 150,000-row journal takes 7.7 ms, against 22 ms (`RegisterSplicePerfTests`).
+>
 > **Status (17 Oct 2026):** the items this review closed only in part, or
 > declined, are being finished — the owner's rule is that a finding is not
 > declined on my say. Closed on 17 Oct: **R7e** (the recency list keys on

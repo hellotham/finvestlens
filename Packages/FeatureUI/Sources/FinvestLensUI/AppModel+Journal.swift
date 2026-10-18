@@ -103,6 +103,7 @@ extension AppModel {
     /// rows are uniform, so the whole journal can be a `Table` and no longer
     /// needs to be windowed to stay responsive.
     public func journalRows(forAccountID accountID: GncGUID?) -> [JournalRow] {
+        journalCachesFollowSettings()
         if let cached = journalRowCache[accountID] { return cached }
         guard let book else { return [] }
         let focusSet = journalFocusSet(forAccountID: accountID)
@@ -138,26 +139,220 @@ extension AppModel {
         var rows: [JournalRow] = []
         rows.reserveCapacity(journalTransactions(forAccountID: accountID).count * 3)
         for txn in journalTransactions(forAccountID: accountID) {
-            rows.append(JournalRow(
-                id: txn.guid, transactionID: txn.guid, isHeading: true,
-                date: txn.datePosted, text: txn.transactionDescription,
-                amount: nil, currencyCode: txn.currency.mnemonic, isFocusAccount: false,
-                notes: txn.notes, hasDocument: txn.documentLink != nil))
-            for split in txn.splits {
-                let isFocus = inFocus(split)
-                rows.append(JournalRow(
-                    id: split.guid, transactionID: txn.guid, isHeading: false,
-                    date: nil, text: split.account?.name ?? "—",
-                    amount: split.value, currencyCode: txn.currency.mnemonic,
-                    isFocusAccount: isFocus,
-                    memo: split.memo, action: split.action,
-                    reconcile: split.reconcileState.rawValue,
-                    runningBalance: isFocus ? balances[split.guid] : nil))
-            }
+            Self.appendJournalBlock(of: txn, to: &rows, inFocus: inFocus, balances: balances)
         }
         journalRowCache[accountID] = rows
+        if accountID == nil { ledgerBlockStarts = nil }
         return rows
     }
+
+    /// A transaction's rows: its heading, then each leg.
+    private static func appendJournalBlock(of txn: Transaction, to rows: inout [JournalRow],
+                                           inFocus: (Split) -> Bool, balances: [GncGUID: Decimal]) {
+        rows.append(JournalRow(
+            id: txn.guid, transactionID: txn.guid, isHeading: true,
+            date: txn.datePosted, text: txn.transactionDescription,
+            amount: nil, currencyCode: txn.currency.mnemonic, isFocusAccount: false,
+            notes: txn.notes, hasDocument: txn.documentLink != nil))
+        for split in txn.splits {
+            let isFocus = inFocus(split)
+            rows.append(JournalRow(
+                id: split.guid, transactionID: txn.guid, isHeading: false,
+                date: nil, text: split.account?.name ?? "—",
+                amount: split.value, currencyCode: txn.currency.mnemonic,
+                isFocusAccount: isFocus,
+                memo: split.memo, action: split.action,
+                reconcile: split.reconcileState.rawValue,
+                runningBalance: isFocus ? balances[split.guid] : nil))
+        }
+    }
+
+    // MARK: Following an edit (P7)
+
+    /// The register settings every journal follows; a cache built under
+    /// other settings is dropped on the next ask.
+    struct JournalSettings: Equatable {
+        let sort: RegisterSort
+        let reversed: Bool
+        let filter: RegisterFilter
+        let subaccounts: Bool
+    }
+
+    func journalCachesFollowSettings() {
+        let current = JournalSettings(sort: registerSort, reversed: registerSortReversed,
+                                      filter: registerFilter, subaccounts: registerIncludesSubaccounts)
+        if journalSettings != current {
+            dropJournalCaches()
+            journalSettings = current
+        }
+    }
+
+    func dropJournalCaches() {
+        journalTransactionCache = [:]
+        journalRowCache = [:]
+        ledgerBlockStarts = nil
+    }
+
+    /// The journals after an edit. An account's own journal carries a running
+    /// balance the edit may move on every later row, and is the size of one
+    /// account: it goes, and is built again when asked for. The general
+    /// ledger — every transaction, filtered and sorted, and ~150k rows on the
+    /// reference book when they are built — is patched instead: each changed
+    /// transaction taken out from where its old fields filed it, and put where
+    /// its new ones file it (P7). The order is what every register surface
+    /// draws the whole book from; the rows go with it when something built
+    /// them. An edit that does not say what it changed, that changed accounts
+    /// (rows name them), or that touched more than a few transactions — each
+    /// patch moves everything after it — has it built again too.
+    func followJournals(_ changes: EditChanges?) {
+        journalCachesFollowSettings()
+        guard let changes, !changes.accounts, changes.transactions.count <= 8,
+              journalTransactionCache[nil] != nil,
+              patchGeneralLedger(changes.transactions) else {
+            dropJournalCaches()
+            return
+        }
+        journalTransactionCache = journalTransactionCache.filter { $0.key == nil }
+        journalRowCache = journalRowCache.filter { $0.key == nil }
+    }
+
+    /// `changed` applied to the general ledger's caches; `false` when it
+    /// could not be — a transaction not where it was filed — and the caches
+    /// must be built again.
+    private func patchGeneralLedger(_ changed: [(before: Transaction?, live: Transaction?)]) -> Bool {
+        // Out of the dictionaries while they change, so they can change in
+        // place rather than be copied first. Until the 18 October review the
+        // patch needed the rows as well — which only `journalRows` builds,
+        // and nothing on screen asks for — so in the app it never ran: every
+        // edit re-sorted the whole book on the next pass of All Transactions.
+        guard let book, var order = journalTransactionCache.removeValue(forKey: nil) else { return false }
+        let builtRows = journalRowCache.removeValue(forKey: nil)
+        let hasRows = builtRows != nil
+        var rows = builtRows ?? []
+        var starts = hasRows ? (ledgerBlockStarts ?? rows.indices.filter { rows[$0].isHeading }) : []
+        ledgerBlockStarts = nil
+        guard !hasRows || starts.count == order.count else { return false }
+        func blockEnd(_ index: Int) -> Int { index + 1 < starts.count ? starts[index + 1] : rows.count }
+
+        // Out first, every one, found by who it is. A transaction changed in
+        // place sits where its old fields filed it but already carries its
+        // new ones, so no search by fields can be trusted to find it — or to
+        // step over it while looking for another.
+        for (before, live) in changed {
+            guard let guid = before?.guid ?? live?.guid,
+                  let index = order.firstIndex(where: { $0.guid == guid }) else {
+                // Not there: fine if it was not shown, or is new.
+                if let before, journalTransactionsInclude(before) { return false }
+                continue
+            }
+            if hasRows {
+                let range = starts[index]..<blockEnd(index)
+                rows.removeSubrange(range)
+                starts.remove(at: index)
+                for later in index..<starts.count { starts[later] -= range.count }
+            }
+            order.remove(at: index)
+        }
+        // Then in, where its new fields file it: after everything that sorts
+        // before it, the book's order breaking a tie, as the stable sorts do.
+        for (_, live) in changed {
+            guard let live, book.transaction(with: live.guid) === live, journalTransactionsInclude(live)
+            else { continue }
+            var low = 0, high = order.count
+            while low < high {
+                let mid = (low + high) / 2
+                if ledgerPrecedes(order[mid], live) { low = mid + 1 } else { high = mid }
+            }
+            if hasRows {
+                let at = low < starts.count ? starts[low] : rows.count
+                var block: [JournalRow] = []
+                Self.appendJournalBlock(of: live, to: &block, inFocus: { _ in false }, balances: [:])
+                rows.insert(contentsOf: block, at: at)
+                starts.insert(at, at: low)
+                for later in (low + 1)..<starts.count { starts[later] += block.count }
+            }
+            order.insert(live, at: low)
+        }
+        journalTransactionCache[nil] = order
+        if hasRows {
+            journalRowCache[nil] = rows
+            ledgerBlockStarts = starts
+        }
+        return true
+    }
+
+    /// Whether the general ledger shows `txn` under the register's filter.
+    private func journalTransactionsInclude(_ txn: Transaction) -> Bool {
+        let filter = registerFilter
+        guard !filter.isShowingEverything else { return true }
+        let calendar = Calendar.current
+        let day = calendar.startOfDay(for: txn.datePosted)
+        if let start = filter.startDate.map({ calendar.startOfDay(for: $0) }), day < start { return false }
+        if let end = filter.endDate.map({ calendar.startOfDay(for: $0) }), day > end { return false }
+        return txn.splits.contains { filter.statuses.contains($0.reconcileState) }
+    }
+
+    /// The general ledger's order without the book-order tie-break: the
+    /// register's sort, then the date — what the two stable sorts in
+    /// ``journalTransactions(forAccountID:)`` leave — reversed when asked.
+    private func ledgerCompare(_ a: Transaction, _ b: Transaction) -> ComparisonResult {
+        func compare<T: Comparable>(_ x: T, _ y: T) -> ComparisonResult {
+            x < y ? .orderedAscending : (y < x ? .orderedDescending : .orderedSame)
+        }
+        func debits(_ txn: Transaction) -> Decimal {
+            txn.splits.filter { $0.value > 0 }.reduce(0) { $0 + $1.value }
+        }
+        var result: ComparisonResult
+        switch registerSort {
+        case .standard, .date: result = .orderedSame
+        case .dateEntered: result = compare(a.dateEntered, b.dateEntered)
+        case .number:
+            let n = Transaction.numOrString(a.number, b.number)
+            result = n < 0 ? .orderedAscending : (n > 0 ? .orderedDescending : .orderedSame)
+        case .amount: result = compare(debits(a), debits(b))
+        case .description: result = a.transactionDescription.localizedCaseInsensitiveCompare(b.transactionDescription)
+        case .memo: result = (a.splits.first?.memo ?? "").localizedCaseInsensitiveCompare(b.splits.first?.memo ?? "")
+        }
+        if result == .orderedSame { result = compare(a.datePosted, b.datePosted) }
+        guard registerSortReversed else { return result }
+        switch result {
+        case .orderedAscending: return .orderedDescending
+        case .orderedDescending: return .orderedAscending
+        case .orderedSame: return .orderedSame
+        }
+    }
+
+    /// Whether `a` comes before `b` in the general ledger, the book's order
+    /// deciding a tie.
+    private func ledgerPrecedes(_ a: Transaction, _ b: Transaction) -> Bool {
+        switch ledgerCompare(a, b) {
+        case .orderedAscending: return true
+        case .orderedDescending: return false
+        case .orderedSame:
+            let earlier = a.bookOrder < b.bookOrder
+            return registerSortReversed ? !earlier && a !== b : earlier
+        }
+    }
+
+    /// Whether the general ledger's caches, followed edit by edit, are what
+    /// building them again gives. For tests and the verification switch.
+    func generalLedgerMatchesRebuild() -> Bool {
+        guard let order = journalTransactionCache[nil] else { return true }
+        let rows = journalRowCache[nil]
+        let keptStarts = ledgerBlockStarts
+        let keptTransactions = journalTransactionCache
+        let keptRows = journalRowCache
+        let keptSettings = journalSettings
+        dropJournalCaches()
+        journalSettings = keptSettings
+        let freshOrder = journalTransactions(forAccountID: nil)
+        let freshRows = rows == nil ? nil : journalRows(forAccountID: nil)
+        journalTransactionCache = keptTransactions
+        journalRowCache = keptRows
+        ledgerBlockStarts = keptStarts
+        return freshOrder.map(ObjectIdentifier.init) == order.map(ObjectIdentifier.init) && freshRows == rows
+    }
+
 
     /// The leg rows of one transaction — what an opened-out line draws beneath
     /// itself.
@@ -287,6 +482,7 @@ extension AppModel {
     /// explicit that the general journal has no anchoring split
     /// (`gnc-split-reg.c:894`), so "the focus legs" becomes "the legs".
     func journalTransactions(forAccountID accountID: GncGUID?) -> [Transaction] {
+        journalCachesFollowSettings()
         if let cached = journalTransactionCache[accountID] { return cached }
         guard let book else { return [] }
         let focusSet = journalFocusSet(forAccountID: accountID)
@@ -296,11 +492,17 @@ extension AppModel {
         }
         func relevant(_ split: Split) -> Bool { focusSet.isEmpty || inFocus(split) }
 
-        var transactions = book.transactions
-            .filter { txn in
-                focusSet.isEmpty || txn.splits.contains(where: inFocus)
-            }
-            .sorted { $0.datePosted < $1.datePosted }
+        let inScope = focusSet.isEmpty ? book.transactions
+            : book.transactions.filter { txn in txn.splits.contains(where: inFocus) }
+        // By date, stably — on keys taken once, with the book position as the
+        // tie-break, rather than two object reads a comparison: the general
+        // ledger's first build sorts the whole book, and comparing `Date`s
+        // through the transactions was the largest of what entering Accounts
+        // still cost the first time (build 4). Same order, as a stable sort
+        // by date gives.
+        let keyed = inScope.indices.map { (key: inScope[$0].datePosted.timeIntervalSinceReferenceDate, at: $0) }
+            .sorted { $0.key != $1.key ? $0.key < $1.key : $0.at < $1.at }
+        var transactions = keyed.map { inScope[$0.at] }
 
         let filter = registerFilter
         if !filter.isShowingEverything {
@@ -390,39 +592,63 @@ extension AppModel {
     /// and the debit total is what the Amount column adds up, on the same
     /// definition the rows use.
     public func wholeBookRegisterSummary() -> (count: Int, debits: Decimal) {
-        // Memoised per revision: the All Transactions body asked on every
-        // click, and the reduce over every split was 21 ms each time
-        // (Performance Review 2, R7).
-        // The journal honours the register filter, so the key carries it.
-        let filter = registerFilter
-        let statuses = filter.statuses.map(\.rawValue).sorted().joined()
-        let key = "wholeBookSummary:\(statuses):\(filter.startDate?.timeIntervalSinceReferenceDate ?? -1)"
-            + ":\(filter.endDate?.timeIntervalSinceReferenceDate ?? -1)"
-        return cachedReport(key) { () -> (count: Int, debits: Decimal) in
-            let transactions = journalTransactions(forAccountID: nil)
-            let debits = transactions.reduce(Decimal(0)) { running, txn in
-                running + txn.splits.filter { $0.value > 0 }.reduce(0) { $0 + $1.value }
-            }
-            return (transactions.count, debits)
-        } ?? (0, 0)
+        // Memoised per transaction revision and filter — not in the report
+        // memo, which a price edit empties though no transaction moved — and
+        // summed without an array per transaction: on the reference book this
+        // was 17% of entering Accounts (build 4), on every visit after a quote
+        // refresh. The journal honours the register filter, so the key does.
+        let key = WholeBookSummaryKey(revision: transactionRevision, filter: registerFilter)
+        if let memo = wholeBookSummaryMemo, memo.key == key { return memo.value }
+        let value = Self.debitSummary(journalTransactions(forAccountID: nil))
+        wholeBookSummaryMemo = (key, value)
+        return value
+    }
+
+    /// How many transactions, and their debit total — the whole-book bar's two
+    /// facts, of any run of transactions.
+    static func debitSummary(_ transactions: [Transaction]) -> (count: Int, debits: Decimal) {
+        var debits = Decimal(0)
+        for txn in transactions {
+            for split in txn.splits where split.value > 0 { debits += split.value }
+        }
+        return (transactions.count, debits)
     }
 
     public func wholeBookRowSummary(ofTransaction id: GncGUID) -> WholeBookRowSummary {
         guard let txn = book?.transaction(with: id) else {
             return WholeBookRowSummary(reconcile: "", accounts: "", total: 0)
         }
+        return Self.wholeBookRowSummary(of: txn)
+    }
+
+    /// ``wholeBookRowSummary(ofTransaction:)`` of a transaction in hand: one
+    /// pass over its legs and no array made. The whole-book registers ask it of
+    /// every transaction in the book — 46k on the reference book — and the
+    /// lookups, sets and filtered arrays it used to make were most of their
+    /// base build, paid on entering Accounts (build 4).
+    static func wholeBookRowSummary(of txn: Transaction) -> WholeBookRowSummary {
         let splits = txn.splits
-
-        let states = Set(splits.map(\.reconcileState))
-        let reconcile = states.count == 1 ? (states.first?.rawValue ?? "") : ""
-
+        var reconcile = splits.first?.reconcileState
+        var agreed = true
         // Debits first, so a two-legged row reads in the direction the money
-        // moved rather than in storage order.
-        let debits = splits.filter { $0.value > 0 }.compactMap { $0.account?.name }
-        let credits = splits.filter { $0.value < 0 }.compactMap { $0.account?.name }
+        // moved rather than in storage order. Legs with no account are not counted,
+        // as they were not when these were arrays of names.
+        var debitName: String?, creditName: String?
+        var debitLegs = 0, creditLegs = 0
+        var total = Decimal(0)
+        for split in splits {
+            if agreed, split.reconcileState != reconcile { agreed = false; reconcile = nil }
+            if split.value > 0 {
+                total += split.value
+                if let name = split.account?.name { debitLegs += 1; debitName = debitName ?? name }
+            } else if split.value < 0, let name = split.account?.name {
+                creditLegs += 1
+                creditName = creditName ?? name
+            }
+        }
         let accounts: String
-        if debits.count == 1, credits.count == 1 {
-            accounts = "\(credits[0]) → \(debits[0])"
+        if debitLegs == 1, creditLegs == 1, let debitName, let creditName {
+            accounts = "\(creditName) → \(debitName)"
         } else if splits.count == 1 {
             // Not reachable through the app — `addTransaction` refuses
             // `.tooFewSplits` — but an imported GnuCash book can carry an
@@ -432,12 +658,11 @@ extension AppModel {
         } else {
             // The same marker the single-account register already uses for a
             // transaction with more than one other side.
-            accounts = String(localized: "— Split —")
+            accounts = splitMarker
         }
-
-        return WholeBookRowSummary(
-            reconcile: reconcile,
-            accounts: accounts,
-            total: splits.filter { $0.value > 0 }.reduce(0) { $0 + $1.value })
+        return WholeBookRowSummary(reconcile: reconcile?.rawValue ?? "", accounts: accounts, total: total)
     }
+
+    /// "— Split —", looked up once rather than once a row.
+    private static let splitMarker = String(localized: "— Split —")
 }

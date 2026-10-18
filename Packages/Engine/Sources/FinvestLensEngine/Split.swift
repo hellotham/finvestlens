@@ -26,20 +26,27 @@ public final class Split {
     public internal(set) weak var transaction: Transaction?
 
     /// The account this leg posts to.
-    public var account: Account?
+    public var account: Account? { didSet { edited(balances: [oldValue, account]) } }
 
     /// Amount in the transaction's currency (drives balancing).
-    public var value: Decimal
+    public var value: Decimal { didSet { edited(balances: [account]) } }
     /// Amount in the account's commodity (shares, or foreign-currency units).
-    public var quantity: Decimal
+    public var quantity: Decimal { didSet { edited(balances: [account]) } }
 
-    public var reconcileState: ReconcileState
-    public var reconcileDate: Date?
-    public var memo: String
-    public var action: String
+    public var reconcileState: ReconcileState { didSet { edited(balances: [account]) } }
+    public var reconcileDate: Date? { didSet { edited() } }
+    public var memo: String { didSet { edited() } }
+    public var action: String { didSet { edited() } }
 
     /// Preserved key-value slots.
-    public var kvp: KvpFrame
+    public var kvp: KvpFrame { didSet { edited() } }
+
+    /// Tells the book holding this leg's transaction, if one does, that it
+    /// changed — see ``Transaction/owner``.
+    private func edited(balances accounts: [Account?] = []) {
+        guard let transaction, let book = transaction.owner else { return }
+        book.noteEdited(transaction, accounts: accounts)
+    }
 
     public init(
         guid: GncGUID = .random(),

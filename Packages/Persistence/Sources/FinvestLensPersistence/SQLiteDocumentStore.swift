@@ -319,6 +319,13 @@ public final class SQLiteDocumentStore: @unchecked Sendable {
     /// with, so the bytes landing in the file are unchanged.
     public func write(_ snapshot: BookSnapshot,
                       progress: (@Sendable (BookLoadProgress) -> Void)? = nil) throws {
+        // Everything, by the incremental path, is the full write without its
+        // progress — and a GnuCash import's bar sat still for the whole of
+        // its write. Only a save of part of the book goes that way.
+        if let delta = snapshot.delta, !(delta.allTransactions && delta.allPrices) {
+            try write(snapshot, changes: delta)
+            return
+        }
         try dbQueue.write { db in
             for table in ["split", "txn", "account", "commodity", "price",
                           "invoice_entry", "invoice", "lot_split", "lot", "job",
@@ -409,6 +416,167 @@ public final class SQLiteDocumentStore: @unchecked Sendable {
             try db.execute(sql: "INSERT OR REPLACE INTO meta (key, value) VALUES ('bookKvp', ?)",
                            arguments: [snapshot.bookKvp])
             reporter?.finished()
+        }
+    }
+
+    /// The incremental save (P10b): what changed since the last one, onto
+    /// the working copy that last one left. The book is read back in the
+    /// file's row order, so the order is kept: a transaction the file
+    /// already had is rewritten where it is (`UPDATE` keeps its row), one
+    /// added since goes at the end in book order, and its legs are written
+    /// again as a whole. Prices added since go at the end too. The small
+    /// tables are rewritten whole, last — the same rows the full write gives,
+    /// from the same snapshot code.
+    private func write(_ snapshot: BookSnapshot, changes delta: BookSnapshot.Delta) throws {
+        try dbQueue.write { db in
+            let txnInsert = try db.makeStatement(sql: """
+                INSERT INTO txn
+                (guid, currencyNamespace, currencyMnemonic, datePosted, dateEntered,
+                 num, transactionDescription, notes, kvp)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """)
+            let splitInsert = try db.makeStatement(sql: """
+                INSERT INTO split
+                (guid, txnGuid, accountGuid, value, quantity,
+                 reconcileState, reconcileDate, memo, action, kvp)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """)
+
+            if delta.allTransactions {
+                try db.execute(sql: "DELETE FROM split")
+                try db.execute(sql: "DELETE FROM txn")
+                for txn in snapshot.transactions {
+                    try txnInsert.execute(arguments: txn.values.arguments)
+                    for split in txn.splits { try splitInsert.execute(arguments: split.arguments) }
+                }
+            } else {
+                let txnUpdate = try db.makeStatement(sql: """
+                    UPDATE txn SET currencyNamespace = ?, currencyMnemonic = ?, datePosted = ?,
+                        dateEntered = ?, num = ?, transactionDescription = ?, notes = ?, kvp = ?
+                    WHERE guid = ?
+                    """)
+                let splitsDelete = try db.makeStatement(sql: "DELETE FROM split WHERE txnGuid = ?")
+                let txnDelete = try db.makeStatement(sql: "DELETE FROM txn WHERE guid = ?")
+                // Every changed transaction's legs out first: a leg moved from
+                // one transaction to another must be gone before it returns.
+                for guid in delta.deletedTransactions {
+                    try splitsDelete.execute(arguments: [guid])
+                    try txnDelete.execute(arguments: [guid])
+                }
+                for txn in snapshot.transactions {
+                    try splitsDelete.execute(arguments: [txn.values[0].databaseValue])
+                }
+                for (txn, inPlace) in zip(snapshot.transactions, delta.inPlace) {
+                    var placed = false
+                    if inPlace {
+                        let values = txn.values
+                        try txnUpdate.execute(arguments: StatementArguments(
+                            values.dropFirst().map(\.databaseValue) + [values[0].databaseValue]))
+                        placed = db.changesCount > 0
+                    }
+                    if !placed {
+                        try txnDelete.execute(arguments: [txn.values[0].databaseValue])
+                        try txnInsert.execute(arguments: txn.values.arguments)
+                    }
+                    for split in txn.splits { try splitInsert.execute(arguments: split.arguments) }
+                }
+            }
+
+            let priceInsert = try db.makeStatement(sql: """
+                INSERT INTO price
+                (guid, commodityNamespace, commodityMnemonic, currencyNamespace, currencyMnemonic,
+                 date, value, source, type)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """)
+            if delta.allPrices {
+                try db.execute(sql: "DELETE FROM price")
+            } else {
+                let priceDelete = try db.makeStatement(sql: "DELETE FROM price WHERE guid = ?")
+                for guid in delta.deletedPrices { try priceDelete.execute(arguments: [guid]) }
+            }
+            for row in snapshot.prices { try priceInsert.execute(arguments: row.arguments) }
+
+            // The small tables, whole, as the full write does them.
+            for table in ["account", "commodity", "invoice_entry", "invoice", "lot_split", "lot",
+                          "job", "customer", "vendor", "employee",
+                          "taxtable_entry", "taxtable", "billterm"] {
+                try db.execute(sql: "DELETE FROM \(table)")
+            }
+            let commodityInsert = try db.makeStatement(sql: """
+                INSERT OR REPLACE INTO commodity
+                (namespace, mnemonic, fullName, smallestFraction, roundingMode,
+                 exchangeCode, getQuotes, quoteSource, quoteTimezone, kvp)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """)
+            for row in snapshot.commodities { try commodityInsert.execute(arguments: row.arguments) }
+            let accountInsert = try db.makeStatement(sql: """
+                INSERT INTO account
+                (guid, name, type, code, accountDescription, notes,
+                 commodityNamespace, commodityMnemonic, placeholder, hidden, parentGuid, kvp)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """)
+            for row in snapshot.accounts { try accountInsert.execute(arguments: row.arguments) }
+            try Self.writeBusiness(snapshot, into: db)
+
+            changeCounter += 1
+            try db.execute(sql: "INSERT OR REPLACE INTO meta (key, value) VALUES ('changeCounter', ?)",
+                           arguments: [changeCounter])
+            try db.execute(sql: "INSERT OR REPLACE INTO meta (key, value) VALUES ('bookGuid', ?)",
+                           arguments: [snapshot.bookGuid])
+            try db.execute(sql: "INSERT OR REPLACE INTO meta (key, value) VALUES ('bookKvp', ?)",
+                           arguments: [snapshot.bookKvp])
+        }
+    }
+
+    /// Whether the store holds exactly what a full write of `snapshot` would:
+    /// every table's rows, the order-bearing ones — transactions, prices, a
+    /// transaction's legs — in the same order. A check of the incremental
+    /// save, for tests and the app's verification switch.
+    public func holds(_ snapshot: BookSnapshot) throws -> Bool {
+        try dbQueue.read { db in
+            // Slots compared as what they say, not as text: rows a build
+            // before 18 October wrote keep their keys unsorted until an edit
+            // rewrites them, and are no less the book for it.
+            func normalised(_ value: DatabaseValue) -> DatabaseValue {
+                guard let text = String.fromDatabaseValue(value), text.hasPrefix("{"),
+                      let object = try? JSONSerialization.jsonObject(with: Data(text.utf8)),
+                      let data = try? JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
+                else { return value }
+                return String(decoding: data, as: UTF8.self).databaseValue
+            }
+            func rows(sql: String) throws -> [[DatabaseValue]] {
+                try Row.fetchAll(db, sql: sql).map { $0.databaseValues.map(normalised) }
+            }
+            func values(_ snapshotRows: [[SnapshotValue]]) -> [[DatabaseValue]] {
+                snapshotRows.map { $0.map { normalised($0.databaseValue) } }
+            }
+            let txns = try rows(sql: """
+                SELECT guid, currencyNamespace, currencyMnemonic, datePosted, dateEntered,
+                       num, transactionDescription, notes, kvp FROM txn ORDER BY rowid
+                """)
+            guard txns == values(snapshot.transactions.map(\.values)) else { return false }
+            var legs: [String: [[DatabaseValue]]] = [:]
+            for row in try Row.fetchAll(db, sql: """
+                SELECT guid, txnGuid, accountGuid, value, quantity, reconcileState, reconcileDate,
+                       memo, action, kvp FROM split ORDER BY rowid
+                """) {
+                legs[row["txnGuid"], default: []].append(row.databaseValues.map(normalised))
+            }
+            for txn in snapshot.transactions {
+                let guid = String.fromDatabaseValue(txn.values[0].databaseValue) ?? ""
+                guard legs[guid] ?? [] == values(txn.splits) else { return false }
+            }
+            guard legs.values.reduce(0, { $0 + $1.count }) == snapshot.splitCount else { return false }
+            let prices = try rows(sql: """
+                SELECT guid, commodityNamespace, commodityMnemonic, currencyNamespace, currencyMnemonic,
+                       date, value, source, type FROM price ORDER BY rowid
+                """)
+            guard prices == values(snapshot.prices) else { return false }
+            let accounts = try rows(sql: """
+                SELECT guid, name, type, code, accountDescription, notes, commodityNamespace,
+                       commodityMnemonic, placeholder, hidden, parentGuid, kvp FROM account ORDER BY rowid
+                """)
+            return accounts == values(snapshot.accounts)
         }
     }
 

@@ -856,6 +856,21 @@ enum ModeSidebarRows {
 struct AccountSidebarRow: View {
     let node: AccountNode
     let label: String
+    /// Starts a drag from the row's grip (macOS, manual order only).
+    ///
+    /// Reported on build 4: "The sidebar click does not work reliably —
+    /// depends on where the mouse pointer is." Proven in a harness before
+    /// anything changed: with `.onDrag` on the whole row, a click whose
+    /// pointer moved two points between press and release — an ordinary hand
+    /// — selected nothing whenever it landed on the row's text, dot or
+    /// balance, and worked on the empty gap between them. Plain rows selected
+    /// on every such click; so did rows whose drag began from a small handle
+    /// (32 of 32). A tap gesture alongside did not help. So on the Mac the
+    /// drag starts from a grip, and the rest of the row is a click.
+    var dragHandle: (() -> NSItemProvider)? = nil
+    #if os(macOS)
+    @State private var hovering = false
+    #endif
 
     var body: some View {
         HStack {
@@ -874,7 +889,32 @@ struct AccountSidebarRow: View {
                 .scaledFont(.body)
                 .monospacedDigit()
                 .foregroundStyle(node.balance < 0 ? Color.negativeAmount : Color.secondary)
+            #if os(macOS)
+            if let dragHandle {
+                // Always in the layout, shown on hover: the balance never moves
+                // when the pointer arrives, and the grip is where it was.
+                Image(systemName: "line.3.horizontal")
+                    .scaledFont(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(width: 22)
+                    .frame(maxHeight: .infinity)
+                    .contentShape(.rect)
+                    .opacity(hovering ? 1 : 0)
+                    // The account being carried, not the grip's glyph.
+                    .onDrag(dragHandle) {
+                        Label(label, systemImage: "line.3.horizontal")
+                            .scaledFont(.body)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                    }
+                    .help("Drag to reorder, or onto another account to move it there")
+                    .accessibilityHidden(true)
+            }
+            #endif
         }
+        #if os(macOS)
+        .onHover { hovering = $0 }
+        #endif
         .tag(SidebarSelection.account(node.id))
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(label)
@@ -952,25 +992,40 @@ struct AccountBranch: View {
     @ViewBuilder
     private func row(_ node: AccountNode) -> some View {
         if canReorder {
-            AccountSidebarRow(node: node, label: node.name)
+            #if os(macOS)
+            // The drag from the grip, never the whole row — see
+            // `AccountSidebarRow.dragHandle`. The drop target stays the row.
+            AccountSidebarRow(node: node, label: node.name, dragHandle: { provider(for: node) })
                 .modifier(AccountDropFeedback(zone: drag.zone(for: node.id)))
-                .onDrag {
-                    drag.dragging = node.id
-                    // The provider only has to *advertise* the row's own content
-                    // type so the drop zones below accept it — the delegate reads
-                    // `drag.dragging`, never the payload. `AccountDragPayload` is
-                    // the Transferable declared for exactly this; registering it
-                    // replaces `init(item:typeIdentifier:)`, deprecated in macOS 27.
-                    let provider = NSItemProvider()
-                    provider.register(AccountDragPayload(id: node.id))
-                    return provider
-                }
                 .onDrop(of: [UTType.finvestLensAccountRow],
                         delegate: AccountRowDrop(node: node, siblings: nodes,
                                                  model: model, drag: drag))
+            #else
+            // A touch drag begins with a long press, which a tap never makes.
+            AccountSidebarRow(node: node, label: node.name)
+                .modifier(AccountDropFeedback(zone: drag.zone(for: node.id)))
+                .onDrag { provider(for: node) }
+                .onDrop(of: [UTType.finvestLensAccountRow],
+                        delegate: AccountRowDrop(node: node, siblings: nodes,
+                                                 model: model, drag: drag))
+            #endif
         } else {
             AccountSidebarRow(node: node, label: node.name)
         }
+    }
+}
+
+extension AccountBranch {
+    /// What a drag of `node` carries. The provider only has to *advertise* the
+    /// row's own content type so the drop zones accept it — the delegate reads
+    /// `drag.dragging`, never the payload. `AccountDragPayload` is the
+    /// Transferable declared for exactly this; registering it replaces
+    /// `init(item:typeIdentifier:)`, deprecated in macOS 27.
+    fileprivate func provider(for node: AccountNode) -> NSItemProvider {
+        drag.dragging = node.id
+        let provider = NSItemProvider()
+        provider.register(AccountDragPayload(id: node.id))
+        return provider
     }
 }
 

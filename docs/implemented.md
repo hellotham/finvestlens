@@ -2394,6 +2394,8 @@ own figures where possible):
 - **Search results are actionable** — select, Edit-in-place, Show in Register
   (opens the balance-sheet leg, not `Imbalance-*`), and multi-select bulk
   actions (set reconcile state / void / delete, each one edit + one Undo).
+  *(Since 19 Oct 2026 the results are a register — see "Build 4, as tested";
+  the bulk actions are the register's own, over its selection.)*
 - **Find Account (⌘I)** — type, Return; shares the `matching` predicate with Find
   and the sidebar filter. Import Bank File moved to ⌥⌘I.
 - **Register Sort By / Filter By** — Sort menu (Standard/Date/Entry/Number/
@@ -3770,7 +3772,8 @@ bundle; the lock observed beside the Box Drive book with `/usr/bin/log`.
   save instead of dropping the line. One door (`TransactionEditor`) picks
   between the two editors wherever an edit is asked for. Search results are
   rows (`SearchHitRow`), since a `Table` at compact width shows its first
-  column only. The holdings row drops its sparkline and age column and keeps
+  column only *(since 19 Oct 2026, the phone's register list, narrowed to the
+  matches)*. The holdings row drops its sparkline and age column and keeps
   cost and value on one line (`compactColumns`). An open report takes the
   title and the toolbar to itself. The board is the same packed board — it
   does not scroll on the phone either (F8).
@@ -5033,3 +5036,291 @@ search, and the limit; `AttachmentMatchApplyTests`' second test now splits
 the leg first, so a stale plan would act on a leg that is gone — the old test
 could not fail the way its name said.
 
+
+## Performance: the rest of the open findings (18 Oct 2026)
+
+The second to fifth batches close every finding the 12 October audit left
+open. Figures are Release builds on a temporary copy of the reference book,
+on a quiet machine, from the live harnesses (`FL_PERF_FILE`), which print
+timings and counts only.
+
+**Off the main actor.**
+
+- **Auto-Categorise** (P6) builds its corpus from a value snapshot of the
+  transactions it learns from and scores off the main actor
+  (`SmartCategorizer`); the main actor's share fell from 180 ms to 12.7 ms
+  (`LiveCategorisePerfTests`). Scoring numbers tokens in sorted order, so the
+  same book gives the same plans on every run — iterating a `Set` did not.
+- **An import's matching** (P6b) runs on a replica of the book, behind
+  "Matching the statement…", announced to VoiceOver: 2.2 s on the main actor
+  before, 28 ms now (`LiveImportMatchPerfTests`). The matcher memoises its
+  washes and suggestions and buckets candidates by amount.
+- **File ▸ Export** (R2e) builds the GnuCash, Ledger and CSV files on a
+  replica. The CSV of every transaction fell from 11.9 s to 0.58 s (one date
+  formatter per export, account names cached, sort keys computed once), and
+  is checked against a reference CSV written the old way (`CSVExportTests`,
+  `ExportOffMainTests`).
+- **Slow reports** (P3.3) are built on a replica when their last build took
+  longer than 80 ms or they have not been built yet, and kept only if the
+  book has not moved meanwhile (`AppModel.warm`, `ReportRequest`;
+  `ReportWarmTests`). Average Balance itself fell from 2.39 s to 64 ms by
+  reading each account's own splits.
+- **Closing a book and quitting** (P10) save without holding the window:
+  the quit answers `.terminateLater` and replies when the save and any Box
+  upload have finished (`saveAndClose`; `SaveAndCloseTests`).
+
+**Undo without the whole book** (P9c, P9d). The ten business operations and
+Post Scheduled Transactions undo by taking out the transactions they added,
+putting back those they removed — the same objects, which invoices and lots
+point at — and restoring the business tables or the book's slots where they
+change them (`editingPostings`). Close Financial Year and Repair Book are
+transaction-scoped edits of the transactions they add or touch.
+`editingWholeBook`, and the GnuCash export it took before every such edit,
+are gone (`ScopedUndoTests`, `BusinessModelFlowTests`).
+
+**Derived state that follows the edit.** Each edit reports what it changed
+(`EditChanges`), and the book's lookup indexes are re-filed for those
+transactions (`Book.reindex(_:previous:)`), the account tree recomputes the
+native balances of the accounts they touch only (P5.4), and the general
+ledger takes their rows out and puts them back where its sort files them
+(P7; `GeneralLedgerPatchTests`, every sort each way round, filtered or not).
+An edit to the book's slots alone refreshes with `RefreshScope.kvp` (R8i;
+`RefreshScopeTests`). With `FL_VERIFY_INDEXES=1` every kept index, balance
+and ledger is checked against a rebuild after every edit, and a save's
+working copy against a full write.
+
+**Incremental saves** (P10b). The book keeps count of what it has not saved;
+a save updates the transactions edited in place where they are, appends the
+transactions and prices added since in book order, deletes what was removed,
+and rewrites the small tables whole, so the file's order is the order a full
+write gives. A save staged while an earlier one is still writing takes the
+earlier one's share too, and the earlier one is skipped if it comes to write
+second; a save that fails gives its share back. On the reference book the
+main actor's share of a save fell from 100 ms to 0.78 ms and the write from
+2.57 s to 0.66 s; the working copy then holds exactly what a full write
+would, and the book read back from it exports the same GnuCash XML byte for
+byte (`LiveSavePerfTests`; `IncrementalSaveTests`: forty random rounds of
+edits, adds, removals, restores and prices, a failed save, and two saves
+landing in either order).
+
+**The Overview** (R5b) draws from one value of everything its cards read
+(`BoardData`), built by a task after an edit while the last one stays on
+screen. Up Next's state fell from 44 ms to 3.8 ms, the performance sampler
+from 86 ms to 0.85 ms, and the net worth series from 44 ms to 12 ms — it
+files each transaction under the first date asked for on or after its own,
+by halving the dates, instead of sorting the book. The board's whole pass
+after an edit fell from 101 ms to 67–72 ms (`LiveDashboardPerfTests`).
+
+**The iPad register** (R10b) finds an edited transaction's block from a map:
+one keystroke's splice into a 150,000-row journal takes 7.7 ms, against
+22 ms (`RegisterSplicePerfTests`).
+
+### What the review of these batches found (18 Oct 2026)
+
+A ten-angle code review, each finding checked against the code before it was
+fixed, and a final sweep for gaps. Fixed:
+
+- **An edit nobody reported was left out of the file.** The incremental save
+  wrote what the edit wrappers named, so a change made any other way was
+  saved as "done" and gone on reopening. The Engine's own setters now record
+  it, as GnuCash's mark what they touch (`xaccSplitSetMemo`, `mark_split`):
+  every field of a transaction or a leg, and adding or removing a leg, tells
+  the book that holds it (`Transaction.owner`, `Book.noteEdited`), which puts
+  the transaction in the next save and its accounts' balances up for
+  recomputing (`IncrementalSaveTests.unreportedEdits`).
+- **A book read with identifiers it could not parse** had them replaced, as
+  before, but was still taken as matching its file — so a deletion came back
+  and an edit made every later save fail on a unique key. Its first save now
+  writes everything (`IncrementalSaveTests.inventedIdentifiers`).
+- **A save that failed after a later one had landed** gave back what the later
+  one had already written, and the next save put it at the end of the file —
+  the book reopened in another order. It gives back nothing now that a later
+  save carries (`earlierFailsAfterLaterLands`; both tests were run against
+  their fix undone and failed).
+- **A book file moved or removed** while open made every save after the first
+  refuse as a conflict, Close and Quit included; a fingerprint that could not
+  be read back made the next save do the same. The write-back puts a missing
+  file back, as it always did, and an unread fingerprint is "no baseline".
+- **Two closes at once** — Close Book then ⌘Q during an autosave — both wrote,
+  and the first closed the book under the second. Closes now share one.
+- **Undoing a payment, a posting or a scheduled post** after the transaction
+  had been deleted and restored in the register found nothing to take out —
+  the restored one is a copy — while the invoice and the schedule rewound. It
+  finds them by GUID.
+- **Preview's matching off the main actor** left Import live with the last
+  preview on screen, which imported it into the newly chosen account. Import
+  waits for the match, and a new account or statement clears the preview.
+- **An edit of many transactions** — a reconcile, a bulk void or delete — re-
+  filed each one in the lookup indexes, hashing every leg of the busiest
+  accounts per transaction. Legs are now compared by identity, and past 64
+  transactions the indexes are dropped once and rebuilt on the next lookup
+  (`BulkEditFollowTests`).
+- **The first save after every open** rewrote every transaction: refreshing a
+  book just read forgot that nothing in it was unsaved. Now only an edit that
+  cannot say what it changed does that (`BulkEditFollowTests.openedIsSaved`).
+- **The general ledger's patch never ran in the app.** It needed the ledger's
+  rows, which only `journalRows` builds and nothing on screen asks for; every
+  edit re-sorted the book for All Transactions. It now keeps the order alone,
+  which every register surface draws from (`GeneralLedgerPatchTests`, with
+  and without rows).
+- **Off the main actor:** a replica now carries the built price index (it
+  rebuilt 0.35 s of it for every report) and accounts outside the tree under
+  their own parents; an export, an import's matching and Auto-Categorise's
+  plans are dropped if the book was closed or replaced while they ran; a
+  report overtaken by an edit is built again off the main actor rather than
+  left to build on it; and a whole-book save takes the full write again, whose
+  progress the GnuCash import shows.
+- **Smaller:** undoing a large price import before a save was quadratic; the
+  saved-copy check compared slots as text, so a book written by an older build
+  failed it; a save identified its book by address; two English strings and
+  three SQL statements would have failed the localization check; three
+  real-book harnesses could print book contents when an expectation failed
+  (they compare digests and counts now); two doc comments sat on the wrong
+  functions; the CSV export's day formatter and the uncategorised count each
+  duplicated another's.
+
+Left as they are, and why: an undo of a transaction-scoped edit restores
+copies, so an invoice or lot that pointed at a deleted original keeps pointing
+at it (as before this work; Repair Book now undoes that way too); the full and
+the incremental write each spell out the SQL they share; the main-actor twins
+of the off-main operations are kept for the suites that test them; and
+renaming a security still makes the next save a whole one.
+
+`FL_VERIFY_INDEXES=1` now runs in CI's package tests, so every incremental
+follow-up is checked against a rebuild on every push. Receipts: the FeatureUI
+suite with it set (878 tests), and the other package suites, before the
+commit.
+
+## Build 4, as tested: the defects reported, fixed (19 Oct 2026)
+
+The owner tested build 4 on the Mac and reported seven defects, then asked for
+every report to show its full depth. All of them are in build 5. Timings are
+Release builds on a temporary copy of the reference book, from the live
+harnesses (`FL_PERF_FILE`) and a lab that hosts the app's own root view
+(`FinvestLensRootView`) in a transparent window; both print timings and counts
+only.
+
+- **Autosave failed** — "couldn't be copied because you don't have permission
+  to access" the book's folder. The safe-save copied the book to a sibling
+  temporary file, and the sandbox grants the document, not its folder; proven
+  with a sandboxed probe app on two volumes. The copy now goes to the
+  item-replacement directory for the document and is swapped in with a
+  coordinated replace (`FinvestLensDocument.copyToTemp`).
+- **Search took seconds a key, and sometimes crashed.** Each keystroke walked
+  the book lowercasing every field (73–286 ms), made a row for every match (a
+  one-letter query matches nearly the whole book), and handed tens of
+  thousands of rows to a SwiftUI table to diff. The text is now folded once
+  per book change into one byte buffer scanned with `memmem`
+  (`SearchTextIndex`, 49 ms to build), a query that only lengthens the last
+  one searches among its matches, and rows are made only when asked: 1–5 ms a
+  keystroke after the first (`LiveSearchPerfTests`). The index finds exactly
+  what the walk found, case, accents and operators alike, and narrowing was
+  run against a broken version and failed (`SearchIndexTests`).
+- **Search results were not editable and not a register, unlike GnuCash** —
+  whose Find opens its results as a register page
+  (`dialog-find-transactions.c:62-70`, `gnc_ledger_display_query(query,
+  SEARCH_LEDGER, REG_STYLE_JOURNAL)`). On the Mac and the iPad the results
+  are All Transactions narrowed to the matches (`searchLedgerTransactions()`):
+  the same rows and styles, edited in place, with Show in Register, the
+  matched split's reconcile state, and Void or Delete over a selection as one
+  edit. They keep the general ledger's own order and take no register filter
+  or sort: those are the account register's underneath, which search does
+  not leave, and taking them hid matches and re-sorted that register. On the
+  phone they are its register list, edited in its editor sheet, with Show in
+  Register on each row.
+- **Sidebar clicks depended on where the pointer was.** Proven in a harness
+  first: with `.onDrag` on the whole row, a click whose pointer moved two
+  points between press and release selected nothing over the row's text, dot
+  or balance and worked on the gap between them; plain rows, and rows whose
+  drag starts from a small handle, selected on every such click (32 of 32);
+  a tap gesture alongside did not help. On the Mac the drag now starts from a
+  grip at the end of the row, shown on hover; the lab, clicking the real
+  sidebar with a three-point movement, selected every row at every point.
+  The iPad keeps the whole-row drag, which starts with a long press.
+- **Accounts took a long time to enter** (on the Mac). Entering Accounts
+  made a new register sheet, which rebuilt every row of the book (46k),
+  measured them, and summed the debits; and the general ledger's first build
+  sorted the book comparing dates through the transactions. The rows and
+  their measured facts are now kept across sheets (keyed by the order and
+  filter too), the row summary and foreign-currency check make one pass with
+  no arrays, the debit total is kept per edit, and the sort runs on keys
+  taken once. First frame on the Mac: 0.90 s to 0.27 s the first time,
+  0.47 s to 0.16 s after; All Transactions from a register, 0.28 s to 0.14 s.
+- **The Transaction report** showed one account. It now covers every account
+  by default — GnuCash opens it on none, because "selecting all accounts will
+  always imply an insanely long waiting time upon opening"
+  (`trep-engine.scm:660-664`); here it builds off the main actor from each
+  account's own postings — and each account chosen brings its subaccounts,
+  every level. Accounts are grouped and subtotalled in name order, then in
+  date order, as GnuCash's defaults are (`trep-engine.scm:688-693`); each
+  prints in its own commodity, as GnuCash's Amount column does
+  (`trep-engine.scm:1287-1291`) — a security's in units, number first and
+  no decimals forced, GnuCash's print rule for a non-ISO commodity
+  (`gnc_commodity_print_info`), where it had come out as money rounded to
+  cents — and a long section draws lazily. The picker is
+  the scrollable account tree, placeholders included; the search-and-pick
+  field used elsewhere now scrolls through every match rather than showing
+  the first eight.
+- **Income & Expense** rolled every category up to the top level. Each
+  category is now broken down into its subcategories, every level, largest
+  first; a parent with postings of its own shows them as a "(direct)" row, as
+  the statements' notes already did; each node is rounded once from the exact
+  amounts beneath it, so the top rows are the old slices to the cent.
+- **Every report at its full depth.** The Account Summary opens on all
+  levels, its stepper reaches the book's deepest, and each parent now carries
+  its subtree's total with its own money as a "(direct)" line — GnuCash's
+  "Calculate Subtotal" parent mode (`options-utilities.scm:213-219`); at every
+  level its default, the account's own balance, left each placeholder at
+  0.00. Cash Flow shows the counterpart accounts as the same tree, largest
+  first. The on-screen income statement and balance sheet are the
+  annual-report statements: a large caption's detail is in its note, every
+  level, as it was; a small caption — three accounts or fewer — now shows its
+  whole subtree on the face, where it showed its direct children only and an
+  account two levels down appeared nowhere (`StatementTests`).
+  GnuCash's income statement defaults to three levels
+  (`income-statement.scm:155-156`).
+
+A first review of this work's code, by agents reading across files, found
+three more, fixed: Revert, Reload from Disk and adopting a conflict version marked a book
+saved even when its file had identifiers that did not parse (the open path
+already refused); opening, creating or importing a book while another was
+still closing for a first one let both land, the first unseen with its working
+copy (`SaveAndCloseTests.oneReplacementAtATime`); and a report measured quick
+on a small book or a quiet account kept a busy one's build on the main actor —
+build times now carry how much they read and are forgotten when a book closes
+(`ReportWarmTests`). Each test was run against its fix undone and failed.
+
+A second, ten-angle review of the build-4 changes, each finding checked by a
+separate verifier and a final sweep for gaps, found and this fixes: the search
+results took the account register's filter and sort and wrote them back;
+refining the search dropped an unsaved edit in the results and took the
+keyboard from the search field; Void and Delete over a selection acted on one
+transaction, and not the one clicked; kept All Transactions rows ignored the
+sort; Income & Expense rows could stop adding up when income and expense
+accounts nest in each other, as GnuCash allows; a chosen account with nothing
+in the period lost its opening and closing, and a chosen parent showed one
+subaccount's as its own; two accounts with one full name drew one of them as a
+gap; a long report's PDF was one page taller than PDF allows — it is paged
+now; Revert during a save waited on it on the main actor and then said
+"Reverted" over what the save had written — it waits off the main actor and
+says so, and is disabled while a save writes; Keep Both on Box replaced a book
+created while it closed; on the phone, Show in Register on a result was
+unreachable and two empty states overprinted; on iOS the account list closed
+when scrolled; selecting another account under the results reset them; Cash
+Flow lost its largest-first order; same-day postings in the Transactions
+report ran in entry order rather than the register's
+(`Transaction.canonicalOrder`); All Time in Average Balance started in the
+year 1 — 739,910 days, and an average over centuries of zeros; a negated word
+matched by a different rule from the word; long sections' amount columns
+ignored the Mac's Text Size; the search index folded each account name once a
+leg rather than once a build; the search ledger re-measured every transfer
+name on each keystroke; and the report formatted a date once a posting rather
+than once a day. Four more were closed after it: the report screen
+converted its whole document for sharing on every toolbar pass — the
+conversion now waits for the share; a security's postings printed as money
+(above); Average Balance's build estimate counted only postings, so a
+quick month vouched for All Time — years of days walked one by one — on the
+main actor; it counts the days now (`ReportWarmTests`); and the phone's
+results toolbar carried Show in Register and Set Reconcile State, which read
+a selection its list never makes, so could never be used — they are gone from
+it, and each row's menu has Show in Register.

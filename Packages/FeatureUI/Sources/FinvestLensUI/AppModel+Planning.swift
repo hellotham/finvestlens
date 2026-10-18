@@ -376,20 +376,22 @@ extension AppModel {
             let sixMonthsAgo = calendar.date(byAdding: .month, value: -6, to: now) ?? now
             let yearAgo = calendar.date(byAdding: .year, value: -1, to: now) ?? now
 
-            let recent = FinancialReports.categoryBreakdown(book, from: threeMonthsAgo, to: now,
-                                                            currency: reportCurrency)
-            let prior = FinancialReports.categoryBreakdown(book, from: sixMonthsAgo,
-                                                           to: threeMonthsAgo,
-                                                           currency: reportCurrency)
-            let year = FinancialReports.categoryBreakdown(book, from: yearAgo, to: now,
-                                                          currency: reportCurrency)
+            // Totals only: the breakdowns' month-by-month walk is the bar
+            // chart's, and nothing here reads it (R5b).
+            // The three windows' totals in one walk.
+            let totals = FinancialReports.categoryTotals(
+                book, windows: [(threeMonthsAgo, now), (sixMonthsAgo, threeMonthsAgo), (yearAgo, now)],
+                currency: reportCurrency)
+            let (recent, prior, year) = (totals[0], totals[1], totals[2])
 
-            // Liquid funds and non-mortgage debt from the bucket walk.
+            // Liquid funds and non-mortgage debt from the bucket walk — over
+            // the same balances the mortgage needs, and the balance sheet
+            // asks for too, walked once.
+            let map = balances(asOf: now)
             let buckets = FinancialReports.lifetimeBuckets(book, currency: reportCurrency,
-                                                           asOf: now,
+                                                           asOf: now, balances: map,
                                                            isRetirement: Self.isRetirementAccount)
             var mortgage = Decimal(0)
-            let map = book.balancesByAccount(from: nil, to: now)
             for account in book.accounts where !account.isPlaceholder {
                 guard account.type == .liability || account.type == .credit else { continue }
                 let name = account.name.lowercased()
@@ -398,13 +400,13 @@ extension AppModel {
             }
 
             return WellbeingScore.compute(.init(
-                income3Months: recent.totalIncome,
-                spending3Months: recent.totalExpenses,
-                priorSpending3Months: prior.totalExpenses,
+                income3Months: recent.income,
+                spending3Months: recent.expenses,
+                priorSpending3Months: prior.expenses,
                 liquidBalance: buckets.cash,
-                monthlySpend: recent.totalExpenses / 3,
+                monthlySpend: recent.expenses / 3,
                 nonMortgageDebt: max(0, buckets.debts - mortgage),
-                annualIncome: year.totalIncome))
+                annualIncome: year.income))
         }
     }
 

@@ -24,10 +24,23 @@ import XCTest
 /// default is the previous financial year, which is where the demo book's
 /// postings are). `FL_DUMP=1` also writes accessibility dumps. Every capture
 /// is the device's full screen at native scale, as App Store Connect wants.
+///
+/// `FL_AUDIT=1` runs Xcode's accessibility audit on every screen captured —
+/// contrast, element detection, hit regions, descriptions, Dynamic Type,
+/// clipped text and traits — and writes what it finds to `audit.txt` beside
+/// the images, one line per issue, without failing the run: the audit is
+/// evidence to read (App Store Connect ▸ App Accessibility asks for it), and a
+/// run that stops at its first finding would show only one. Set the
+/// simulator's text size and appearance with `xcrun simctl ui <udid>
+/// content_size …` and `… appearance …` first; `testAuditWelcome` adds the
+/// screen a first launch shows.
 final class ScreenshotTests: XCTestCase {
     private var shotDirectory: URL!
     private var bookURL: URL!
     private var compact = false
+    /// The app on screen, for the audit `capture` runs.
+    private var launched: XCUIApplication?
+    private var auditing: Bool { ProcessInfo.processInfo.environment["FL_AUDIT"] != nil }
 
     override func setUpWithError() throws {
         let environment = ProcessInfo.processInfo.environment
@@ -63,6 +76,7 @@ final class ScreenshotTests: XCTestCase {
             "-session.period:\(path)", "<\(periodHex)>",
         ]
         app.launch()
+        launched = app
         dismissNotificationPrompt()
         // The book is open once the mode bar — or the phone's tab bar — is on
         // screen.
@@ -329,6 +343,25 @@ final class ScreenshotTests: XCTestCase {
         XCTAssertTrue(app.buttons["Settings"].firstMatch.isHittable, "Done closes Help")
     }
 
+    /// The welcome screen — what a first launch shows, with no book open and
+    /// none remembered. Runs with `FL_AUDIT=1`.
+    @MainActor
+    func testAuditWelcome() throws {
+        guard auditing else { throw XCTSkip("Set TEST_RUNNER_FL_AUDIT=1 for the accessibility audit") }
+        let app = XCUIApplication()
+        app.launchArguments += ["-finvestlens.recentBookPaths", "()",
+                                "-finvestlens.reopenLastBook", "NO"]
+        app.launch()
+        launched = app
+        dismissNotificationPrompt()
+        guard app.buttons["New Book"].firstMatch.waitForExistence(timeout: 30) else {
+            dump("no-welcome", app)
+            return XCTFail("the welcome screen never showed")
+        }
+        settle(2)
+        capture("00-welcome")
+    }
+
     /// Taps a button by name if there is one. Returns whether it did.
     @MainActor
     @discardableResult
@@ -511,6 +544,44 @@ final class ScreenshotTests: XCTestCase {
             try png.write(to: url)
         } catch {
             XCTFail("could not write \(url.path): \(error)")
+        }
+        if auditing { audit(name) }
+    }
+
+    /// Appends what the accessibility audit finds on the screen now showing
+    /// to `audit.txt` — every issue handled here, so none fails the run.
+    @MainActor
+    private func audit(_ name: String) {
+        guard let app = launched else { return }
+        var lines: [String] = []
+        do {
+            try app.performAccessibilityAudit(for: .all) { issue in
+                var element = "-"
+                if let target = issue.element, target.exists {
+                    element = "\(target.elementType.rawValue) “\(target.label)” id “\(target.identifier)”"
+                }
+                lines.append([name, "type \(issue.auditType.rawValue)", issue.compactDescription,
+                              element, issue.detailedDescription.replacingOccurrences(of: "\n", with: " ")]
+                    .joined(separator: "\t"))
+                return true
+            }
+        } catch {
+            lines.append("\(name)\taudit did not run: \(error)")
+        }
+        // The audit tries other text sizes on the app and puts its own back;
+        // the redraw that follows swallowed the tour's next tap — a menu that
+        // never opened failed two assertions on 18 Oct 2026 that the same
+        // tour, run without the audit, passes. Let it settle first.
+        settle(3)
+        if lines.isEmpty { lines.append("\(name)\tno issues") }
+        let url = shotDirectory.appendingPathComponent("audit.txt")
+        let text = lines.joined(separator: "\n") + "\n"
+        if let handle = try? FileHandle(forWritingTo: url) {
+            handle.seekToEndOfFile()
+            handle.write(Data(text.utf8))
+            try? handle.close()
+        } else {
+            try? text.write(to: url, atomically: true, encoding: .utf8)
         }
     }
 

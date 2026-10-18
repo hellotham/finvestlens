@@ -64,6 +64,31 @@ public struct BookSnapshot: Sendable {
     public let splitCount: Int
     public let priceCount: Int
 
+    /// For a save of only what changed (P10b), what else the write has to
+    /// know; `nil` for a snapshot of everything.
+    let delta: Delta?
+
+    /// An incremental save. The small tables — accounts, commodities, the
+    /// business tables, lots, the book's own slots — are in the snapshot
+    /// whole and written whole, as always; `transactions` and `prices` hold
+    /// only what changed, and the file keeps the rest.
+    struct Delta: Sendable {
+        /// `transactions` is every transaction, written whole.
+        let allTransactions: Bool
+        /// `prices` is every price, written whole.
+        let allPrices: Bool
+        /// Which of `transactions` the file has where the book has them, to
+        /// be rewritten in place; the rest were added since the last save and
+        /// go at the end of the file, in book order — the order a reopened
+        /// book is read back in.
+        let inPlace: [Bool]
+        /// Transactions the file has and the book no longer does.
+        let deletedTransactions: [String]
+        /// Prices to take out of the file: removed, or re-added since (and so
+        /// written again at the end, with the rest of `prices`).
+        let deletedPrices: [String]
+    }
+
     /// Walks `book` once. The argument lists below are the store's INSERT
     /// argument lists, moved here verbatim: the write must stay byte-for-byte
     /// what it was, and the round-trip suites are what hold it to that.
@@ -73,7 +98,61 @@ public struct BookSnapshot: Sendable {
     /// here was 0.95 s of main-actor time per save on the reference book,
     /// most of what remained after the write itself left the actor.
     public init(_ book: Book) {
+        self.init(book, transactions: book.transactions, prices: book.prices, delta: nil)
+    }
+
+    /// A snapshot of only what changed since the last save, for an
+    /// incremental one (P10b): the small tables whole, the transactions and
+    /// prices `unsaved` names. Everything, when `unsaved` cannot say — or
+    /// when the prices added since are not the book's last prices, as they
+    /// must be for the file's order to stay the book's.
+    public init(_ book: Book, unsaved: UnsavedChanges) {
+        var transactions: [Transaction] = []
+        var inPlace: [Bool] = []
+        var deleted: [String] = []
+        if let changed = unsaved.transactions {
+            var appended: [Transaction] = []
+            for guid in changed {
+                guard let txn = book.transaction(with: guid) else {
+                    deleted.append(guid.hexString)
+                    continue
+                }
+                if txn.bookOrder < unsaved.orderCeiling {
+                    transactions.append(txn)
+                    inPlace.append(true)
+                } else {
+                    appended.append(txn)
+                }
+            }
+            appended.sort { $0.bookOrder < $1.bookOrder }
+            transactions += appended
+            inPlace += Array(repeating: false, count: appended.count)
+        } else {
+            transactions = book.transactions
+        }
+
+        var prices = book.prices
+        var deletedPrices: [String] = []
+        var allPrices = true
+        if let unsavedPrices = unsaved.prices {
+            let added = unsavedPrices.added
+            let tail = book.prices.suffix(added.count)
+            if tail.map(\.guid) == added {
+                prices = Array(tail)
+                deletedPrices = Set(unsavedPrices.removed).union(added).map(\.hexString)
+                allPrices = false
+            }
+        }
+        self.init(book, transactions: transactions, prices: prices,
+                  delta: Delta(allTransactions: unsaved.transactions == nil, allPrices: allPrices,
+                               inPlace: inPlace, deletedTransactions: deleted,
+                               deletedPrices: deletedPrices))
+    }
+
+    private init(_ book: Book, transactions bookTransactions: [Transaction], prices bookPrices: [Price],
+                 delta: Delta?) {
         func row(_ values: [SnapshotValue]) -> Row { values }
+        self.delta = delta
 
         commodities = book.commodities.map { commodity in
             row([.v(Serialize.namespace(commodity.namespace)), .v(commodity.mnemonic),
@@ -92,7 +171,7 @@ public struct BookSnapshot: Sendable {
         }
 
         var splits = 0
-        transactions = book.transactions.map { txn in
+        transactions = bookTransactions.map { txn in
             let txnGuid = txn.guid.hexString
             splits += txn.splits.count
             return TransactionRow(
@@ -106,16 +185,16 @@ public struct BookSnapshot: Sendable {
                          .v(split.memo), .v(split.action), .kvp(split.kvp)])
                 })
         }
-        transactionCount = book.transactions.count
+        transactionCount = bookTransactions.count
         splitCount = splits
 
-        prices = book.prices.map { price in
+        prices = bookPrices.map { price in
             row([.v(price.guid.hexString),
                  .v(Serialize.namespace(price.commodity.namespace)), .v(price.commodity.mnemonic),
                  .v(Serialize.namespace(price.currency.namespace)), .v(price.currency.mnemonic),
                  .v(price.date), .decimal(price.value), .v(price.source), .v(price.type)])
         }
-        priceCount = book.prices.count
+        priceCount = bookPrices.count
 
         billTerms = book.billTerms.map { term in
             row([.v(term.guid.hexString), .v(term.name), .v(term.termDescription),

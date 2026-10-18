@@ -373,6 +373,18 @@ public final class AppModel {
     /// True while a book is being opened.
     public var isOpening: Bool { openingURL != nil }
 
+    /// A book is on its way in — opened, created or imported, the one on
+    /// screen closing for it first. Claimed before the first suspension and
+    /// released on the way out.
+    ///
+    /// Closing is a suspension (``saveAndClose()`` writes off the main actor,
+    /// seconds on a NAS) and the window stays live through it, so File ▸ New
+    /// Book… and then Open Recent could both get past their checks and both
+    /// land a document — the first one dropped unseen, with its working copy
+    /// and whatever was typed into it meanwhile. One replacement at a time; a
+    /// second is ignored, as a second click on Open always was.
+    @ObservationIgnored var isReplacingBook = false
+
     /// The GnuCash file currently being imported, or `nil`. Parsing and the
     /// write-back both run off the main actor — on a large export (the
     /// Ashley Bears book: 46k transactions, 103k prices) each can run to
@@ -552,6 +564,66 @@ public final class AppModel {
         guard reportCacheRevision == derivedRevision else { return nil }
         return reportCache[key] as? T
     }
+
+    /// `request` from the memo, built here if it is cold.
+    func report<Value>(_ request: ReportRequest<Value>) -> Value? {
+        guard let book else { return nil }
+        return cachedReport(request.key) {
+            let start = ContinuousClock.now
+            let value = request.build(book)
+            reportBuildTimes[request.kind] = ReportBuildTime(took: ContinuousClock.now - start,
+                                                             work: request.work)
+            return value
+        }
+    }
+
+    /// Builds `request` off the main actor, on a replica, when the memo does
+    /// not hold it yet and building it is slow — so a report that takes
+    /// seconds leaves the window drawing while it does (P3.3).
+    ///
+    /// Slow is measured, not assumed. Taking the replica is main-actor work
+    /// too (45 ms on the reference book), so a report that builds faster than
+    /// that is built where it is asked, and only one whose last build took
+    /// longer than ``offMainThreshold`` — or that has not been built yet, so
+    /// a first build on a large book never blocks — comes here. Every build
+    /// records its time, so the choice follows the book as it grows, and how
+    /// much it read, so a quick build over a quiet account does not vouch for
+    /// the busiest one; closing the book forgets them all. What is
+    /// built is kept under the revision the replica was taken at: an edit made
+    /// meanwhile leaves it out, and the next ask builds again.
+    func warm<Value>(_ request: ReportRequest<Value>) async {
+        guard book != nil, (peekReport(request.key) as Value?) == nil else { return }
+        if let last = reportBuildTimes[request.kind],
+           last.isFast(for: request.work, under: Self.offMainThreshold) { return }
+        // A revision that moves while it builds — an edit, a quote refresh
+        // landing — leaves that build out of the memo, and the next ask
+        // built it again on the main actor: the very wait this exists to
+        // spare. So it builds again here, on a fresh replica, a few times.
+        for _ in 0..<3 {
+            guard !Task.isCancelled, let book, (peekReport(request.key) as Value?) == nil else { return }
+            let revision = derivedRevision
+            let replica = book.replica()
+            let (value, took) = await Task.detached(priority: .userInitiated) {
+                let start = ContinuousClock.now
+                let value = request.build(replica.book)
+                return (value, ContinuousClock.now - start)
+            }.value
+            guard self.book === book else { return }
+            reportBuildTimes[request.kind] = ReportBuildTime(took: took, work: request.work)
+            guard let value else { return }
+            guard derivedRevision == revision else { continue }
+            if reportCacheRevision != derivedRevision {
+                reportCache.removeAll(keepingCapacity: true)
+                reportCacheRevision = derivedRevision
+            }
+            reportCache[request.key] = value
+            return
+        }
+    }
+
+    /// A report that builds in less than this is built where it is asked:
+    /// taking a replica to build it elsewhere costs the main actor more.
+    static let offMainThreshold: Duration = .milliseconds(80)
 
     /// Fills both caches from **one** sort — the editor shows prices and rates
     /// together, and sorting 102,706 prices once per property would pay the
@@ -1197,7 +1269,7 @@ public final class AppModel {
 
     /// Suspends the view-state setters' own refreshes while a saved register
     /// arrangement is applied field by field; the caller refreshes once after.
-    @ObservationIgnored private var isRestoringRegisterView = false
+    @ObservationIgnored var isRestoringRegisterView = false
 
     /// What the current `registerRows` were built from. A rebuild asked for
     /// the same inputs — returning to an account whose rows are still there,
@@ -1329,7 +1401,66 @@ public final class AppModel {
         didSet { scheduleSearch() }
     }
     @ObservationIgnored private var searchDebounceTask: Task<Void, Never>?
-    public internal(set) var searchResults: [TransactionSummary] = []
+
+    /// What the search bar or Find matched: the transactions themselves, in
+    /// book order. The results are shown as a register over them — GnuCash's
+    /// search ledger (``searchLedgerTransactions()``) — and made into rows
+    /// (``searchResults``) only when something asks for rows.
+    @ObservationIgnored var searchMatches: [Transaction] = []
+    /// Moves whenever ``searchMatches`` does. The search ledger and the result
+    /// rows are kept per revision, and the views that show them read it.
+    public private(set) var searchRevision = 0
+    /// Rows made of the matches, for the revision they were made at.
+    @ObservationIgnored var searchResultsCache: (search: Int, transactions: Int, rows: [TransactionSummary])?
+    /// The search ledger, for the settings and revisions it was cut at.
+    @ObservationIgnored var searchLedgerCache: (key: SearchLedgerKey, transactions: [Transaction])?
+    /// The search ledger's summary bar, for the same key.
+    @ObservationIgnored var searchSummaryMemo: (key: SearchLedgerKey, value: (count: Int, debits: Decimal))?
+    /// All Transactions' summary bar, per transaction revision and filter.
+    @ObservationIgnored var wholeBookSummaryMemo: (key: WholeBookSummaryKey, value: (count: Int, debits: Decimal))?
+    struct WholeBookSummaryKey: Equatable {
+        var revision: Int
+        var filter: RegisterFilter
+    }
+    /// The folded text the search bar scans, for the book as it stands.
+    @ObservationIgnored var searchTextIndex: (revision: Int, index: SearchTextIndex)?
+    /// The last query's plain words and what they matched — so a query that
+    /// only lengthens them looks among those, not the whole book again.
+    @ObservationIgnored var lastWordSearch: (revision: Int, words: [String], positions: [Int])?
+
+    /// Drops everything the search kept for the book that is going: its
+    /// folded text, the last words' matches, the ledger and its summary, and
+    /// the rows — and the whole-book summary. Close, Revert and Reload all
+    /// replace the book; the next book's revisions start where these left
+    /// off, so a cache keyed on them alone could answer for the wrong book,
+    /// and each holds the old book's transactions alive meanwhile.
+    func forgetSearchCaches() {
+        searchTextIndex = nil
+        lastWordSearch = nil
+        searchLedgerCache = nil
+        searchResultsCache = nil
+        searchSummaryMemo = nil
+        wholeBookSummaryMemo = nil
+        #if os(macOS)
+        RegisterSheet.forgetKeptRows()
+        #endif
+    }
+
+    /// Replaces the matches — leaving the revision where it was when they are
+    /// the same transactions, as after an edit that moved none in or out, so
+    /// nothing redraws for a search that did not change.
+    func setSearchMatches(_ matches: [Transaction]) {
+        if matches.count == searchMatches.count,
+           zip(matches, searchMatches).allSatisfy({ $0 === $1 }) { return }
+        searchMatches = matches
+        searchRevision &+= 1
+    }
+
+    /// What the search ledger was cut from: the matches and the book.
+    struct SearchLedgerKey: Equatable {
+        var search: Int
+        var transactions: Int
+    }
 
     private func scheduleSearch() {
         searchDebounceTask?.cancel()
@@ -1846,6 +1977,15 @@ public final class AppModel {
 
     /// Built journal rows, keyed the same way and dropped at the same time.
     @ObservationIgnored var journalRowCache: [GncGUID?: [JournalRow]] = [:]
+    /// Where each general-ledger transaction's rows begin in
+    /// `journalRowCache[nil]`, in the order of `journalTransactionCache[nil]`
+    /// — made on the first patch, kept by the patches after (P7).
+    @ObservationIgnored var ledgerBlockStarts: [Int]?
+    /// How long each kind of report last took to build, and over how much of
+    /// the book (``warm(_:)``). They describe one book: ``close()`` empties it.
+    @ObservationIgnored var reportBuildTimes: [String: ReportBuildTime] = [:]
+    /// The register settings the journal caches were built under.
+    @ObservationIgnored var journalSettings: JournalSettings?
 
     @ObservationIgnored var quoteRefreshTask: Task<Void, Never>?
 
@@ -2066,8 +2206,10 @@ public final class AppModel {
 
     /// Scoped undo for edits that touch only the **book's kvp frame**
     /// (settings, serialized collections). Same rationale as ``editingPrices``.
-    /// What a kvp edit invalidates. `.book` is the default and drops every
-    /// derived cache. `.preference` is for a display setting the book happens
+    /// What a kvp edit invalidates. `.book` is the default: the slots' own
+    /// refresh (``RefreshScope/kvp``), which drops the report memos and keeps
+    /// the tree, the register and the search. `.preference` is for a display
+    /// setting the book happens
     /// to store — the sparkline window, Show Closed Positions — which changes
     /// no balance, row or report: it marks the document dirty and bumps
     /// ``preferencesRevision``, which the setting's readers observe, and
@@ -2081,7 +2223,7 @@ public final class AppModel {
         body()
         switch scope {
         case .book:
-            refreshAfterChange()
+            refreshAfterChange(scope: .kvp)
         case .preference:
             document?.markDirty()
             documentStateRevision &+= 1
@@ -2187,8 +2329,10 @@ public final class AppModel {
     /// safe while another instance holds a live lock. Editing and saving are
     /// disabled for the session.
     public func openReadOnly(at url: URL) async {
-        if isOpening { return }
-        guard saveAndCloseIfOpen() else { return }
+        if isOpening || isReplacingBook { return }
+        isReplacingBook = true
+        defer { isReplacingBook = false }
+        guard await saveAndClose() else { return }
         openingURL = url
         loadProgress = nil
         defer { openingURL = nil; loadProgress = nil }
@@ -2347,7 +2491,17 @@ public final class AppModel {
     /// discarding unsaved local edits.
     public func reloadFromDisk() {
         guard let document else { return }
+        // Not over a save that is writing: the document would wait for it on
+        // the main actor, seconds on a network volume (see ``revertWithStatus()``).
+        if isSaving {
+            Task { @MainActor in
+                while isSaving { await waitForSaveToFinish() }
+                reloadFromDisk()
+            }
+            return
+        }
         try? document.reloadFromDisk()
+        forgetSearchCaches()
         externalChangePending = false
         // The freshly adopted book invalidates every undo snapshot — replaying
         // one would silently rewrite the other device's data (an "Add
@@ -2384,6 +2538,13 @@ public final class AppModel {
     /// Adopts the most recent conflicting version and reloads from it.
     public func resolveConflictsUsingOther() {
         guard let document else { return }
+        if isSaving {
+            Task { @MainActor in
+                while isSaving { await waitForSaveToFinish() }
+                resolveConflictsUsingOther()
+            }
+            return
+        }
         let versions = document.unresolvedConflictVersions()
         if let newest = versions.max(by: {
             ($0.modificationDate ?? .distantPast) < ($1.modificationDate ?? .distantPast)
@@ -2522,7 +2683,7 @@ public final class AppModel {
         // first one's lock and working copy. The check and the set are both on
         // the main actor with no suspension between them, so two clicks cannot
         // both get past it.
-        if isOpening { return }
+        if isOpening || isReplacingBook { return }
         let boxFileID = boxLibrary.fileID(ofCopyAt: url)
         // A book whose Keep Both is under way is about to move; it opens when
         // that is done, from where it went.
@@ -2531,18 +2692,19 @@ public final class AppModel {
             return
         }
         openingURL = url
+        isReplacingBook = true
         loadProgress = nil
         // Cleared on the way out as well as the way in: a late report can land
         // after the load returns (the hop is a `Task`), and the next open must
         // start from an empty bar rather than the last one's 100%.
-        defer { openingURL = nil; loadProgress = nil }
+        defer { openingURL = nil; loadProgress = nil; isReplacingBook = false }
         // A book from Box is brought up to date *before* the open book is
         // closed: when Box cannot be reached and there is no copy here, the
         // book the person was working in stays open.
         if let boxFileID, boxLibrary.record(boxFileID) != nil {
             guard await prepareBoxCopy(boxFileID) else { return }
         }
-        guard saveAndCloseIfOpen() else { return }
+        guard await saveAndClose() else { return }
         do {
             try await open(at: url, breakStaleLock: breakStaleLock)
             publishWidgetData()
@@ -2585,8 +2747,11 @@ public final class AppModel {
     }
 
     /// Saves any open book, then creates a new one at `url`.
-    public func newBook(at url: URL, baseCurrency: Commodity = .aud) {
-        guard saveAndCloseIfOpen() else { return }
+    public func newBook(at url: URL, baseCurrency: Commodity = .aud) async {
+        if isOpening || isReplacingBook { return }
+        isReplacingBook = true
+        defer { isReplacingBook = false }
+        guard await saveAndClose() else { return }
         do {
             try newDocument(at: url, baseCurrency: baseCurrency)
         } catch {
@@ -2601,8 +2766,12 @@ public final class AppModel {
     /// raw lock error — pass `breakStaleLock: true` to retry through it.
     public func importGnuCashBook(from source: URL, saveAs destination: URL,
                                   breakStaleLock: Bool = false) async {
-        guard saveAndCloseIfOpen() else { return }
-        if isImporting { return }
+        // Refused before the close, not after it: a second import used to
+        // close the book on screen and only then find the first still running.
+        if isImporting || isOpening || isReplacingBook { return }
+        isReplacingBook = true
+        defer { isReplacingBook = false }
+        guard await saveAndClose() else { return }
         importingURL = source
         loadProgress = nil
         defer { importingURL = nil; loadProgress = nil }
@@ -2644,6 +2813,59 @@ public final class AppModel {
                     message: String(localized: "Couldn’t save “\(documentURL?.lastPathComponent ?? "")”: \(error.localizedDescription)"))
                 return false
             }
+        }
+        // Closing a book from Box — and switching books, and quitting, which
+        // close it — sends what Box has not got, autosaved work included: it
+        // is often the last save before the book is picked up elsewhere.
+        requestUploadOfOpenBoxBook(announce: false)
+        close()
+        return true
+    }
+
+    /// ``saveAndCloseIfOpen()`` without holding the main actor for the write
+    /// (P10). Close Book, switching books and quitting all saved with
+    /// ``save()`` — the whole rewrite on the main actor, so the window froze
+    /// for seconds at each, and an autosave already writing made it wait on
+    /// that one first. This waits for an autosave in flight instead of racing
+    /// it, writes on a background thread, and saves again if an edit landed
+    /// while the file was being written, so closing never drops one. Returns
+    /// `false` (leaving the book open and surfacing ``documentError``) if the
+    /// save failed; callers must not proceed with whatever would have
+    /// replaced the book.
+    @discardableResult
+    public func saveAndClose() async -> Bool {
+        // One close at a time: a second — Close Book then ⌘Q, or an open
+        // while a close runs — waits for the first and takes its answer. Two
+        // both wrote, and the first to finish closed the book, deleting the
+        // working copy under the other's write.
+        if let closing { return await closing.value }
+        let task = Task { await saveAndCloseNow() }
+        closing = task
+        defer { closing = nil }
+        return await task.value
+    }
+
+    /// The close in progress, which ``saveAndClose()`` callers share.
+    @ObservationIgnored private var closing: Task<Bool, Never>?
+
+    private func saveAndCloseNow() async -> Bool {
+        var writes = 0
+        while true {
+            // Until none is in flight: one can start between a save's end
+            // and this waking (an autosave, a save before suspension).
+            while isSaving { await waitForSaveToFinish() }
+            guard isOpen else { return true }
+            guard hasUnsavedChanges else { break }
+            do {
+                // Still changing after three writes: one more that nothing
+                // can interleave with, so the loop ends.
+                if writes < 3 { try await writeInBackground() } else { try save() }
+            } catch {
+                documentError = DocumentError(
+                    message: String(localized: "Couldn’t save “\(documentURL?.lastPathComponent ?? "")”: \(error.localizedDescription)"))
+                return false
+            }
+            writes += 1
         }
         // Closing a book from Box — and switching books, and quitting, which
         // close it — sends what Box has not got, autosaved work included: it
@@ -2697,10 +2919,38 @@ public final class AppModel {
         return LedgerExport.text(from: book)
     }
 
+    /// ``gnuCashExportData(compressed:)`` built on a replica, off the main
+    /// actor (R2e): the export walks the whole book, 1.6 s on the reference
+    /// book, and File ▸ Export held the window for all of it before the save
+    /// panel could appear. Only the copy is taken here — 44 ms.
+    public func gnuCashExportDataOffMain(compressed: Bool = false) async -> Data? {
+        await onReplica { GnuCashXMLExporter.export($0, compressed: compressed) }
+    }
+
+    /// ``ledgerExportText()`` built on a replica, off the main actor (R2e).
+    public func ledgerExportTextOffMain() async -> String? {
+        await onReplica { LedgerExport.text(from: $0) }
+    }
+
+    /// `work` run on a replica of the open book, off the main actor — or
+    /// `nil` when no book is open, or when the book it was asked of was
+    /// closed or replaced while it ran: an export of one book must not open
+    /// its save panel over another, under the other's name.
+    func onReplica<Value: Sendable>(_ work: @escaping @Sendable (Book) -> Value) async -> Value? {
+        guard let book else { return nil }
+        let replica = book.replica()
+        let value = await Task.detached(priority: .userInitiated) { work(replica.book) }.value
+        guard self.book === book else { return nil }
+        return value
+    }
+
     /// Imports a Ledger journal as a new native book, reporting the summary
     /// (or the failure) the way the GnuCash import does.
-    public func importLedgerBook(from source: URL, saveAs destination: URL) {
-        guard saveAndCloseIfOpen() else { return }
+    public func importLedgerBook(from source: URL, saveAs destination: URL) async {
+        if isImporting || isOpening || isReplacingBook { return }
+        isReplacingBook = true
+        defer { isReplacingBook = false }
+        guard await saveAndClose() else { return }
         do {
             let summary = try importLedger(from: source, saveAs: destination)
             recordLastBook(destination)
@@ -2761,8 +3011,16 @@ public final class AppModel {
         return result.summary
     }
 
+    /// `FL_VERIFY_INDEXES=1`: a save with no edit landing during it must
+    /// leave the working copy exactly what a full write would (P10b).
+    private func verifySavedWorkingCopy(_ document: FinvestLensDocument) {
+        guard Self.verifiesKeptIndexes, !document.hasUnsavedChanges else { return }
+        precondition((try? document.workingCopyHoldsBook()) == true, "an incremental save left the working copy short of the book")
+    }
+
     public func save() throws {
         try document?.save()
+        if let document { verifySavedWorkingCopy(document) }
         // A save changes the file, not the book: nothing derived needs
         // rebuilding, only the dirty flag's readers need to look again.
         documentStateRevision &+= 1
@@ -2781,32 +3039,9 @@ public final class AppModel {
         // One save at a time. Autosave can fire while an earlier one is still
         // writing back, and two `replaceItem`s racing on the same destination
         // is not a race worth having.
-        guard !isSaving, let document else { return }
-        isSaving = true
-        defer {
-            isSaving = false
-            let waiting = saveWaiters
-            saveWaiters = []
-            waiting.forEach { $0.resume() }
-        }
-        await Task.yield()   // commit the chip before the staging walk
+        guard !isSaving, document != nil else { return }
         do {
-            // Phase 1 on the main actor, because it reads the book — but only
-            // into a value snapshot, a fraction of a second. Phase 2 — the
-            // SQLite rewrite of the working copy and the write-back to the
-            // shared file — reads nothing but that snapshot, so it goes to a
-            // background thread: that is where the seconds are (9.6 s for the
-            // whole save on the reference book, measured 9 Oct 2026), and
-            // doing the rewrite here froze the window for every autosave.
-            // Phase 3 records the result back on the main actor; an edit made
-            // meanwhile leaves the document dirty for the next save.
-            let staged = try document.stageSnapshot()
-            let fingerprint = try await Task.detached(priority: .userInitiated) {
-                try FinvestLensDocument.commitStaged(staged)
-            }.value
-            document.finishSave(fingerprint: fingerprint, stagedAt: staged.token)
-            documentStateRevision &+= 1
-            publishWidgetData()
+            try await writeInBackground()
             if interactive { showToast(.success, "Saved.") }
             // ⌘S sends a book from Box up as a new version — after the
             // write-back, so the bytes sent are the ones on disk, and in a task
@@ -2825,9 +3060,62 @@ public final class AppModel {
         }
     }
 
+    /// The save itself, with the write off the main actor (P10). Phase 1 runs
+    /// here, because it reads the book — but only into a value snapshot, a
+    /// fraction of a second. Phase 2 — the SQLite rewrite of the working copy
+    /// and the write-back to the shared file — reads nothing but that
+    /// snapshot, so it goes to a background thread: that is where the seconds
+    /// are (9.6 s for the whole save on the reference book, measured 9 Oct
+    /// 2026), and doing the rewrite here froze the window for every save.
+    /// Phase 3 records the result back here; an edit made meanwhile leaves the
+    /// document dirty for the next save. Callers make sure no other save is
+    /// writing (``isSaving``).
+    private func writeInBackground() async throws {
+        guard let document else { return }
+        isSaving = true
+        defer {
+            isSaving = false
+            let waiting = saveWaiters
+            saveWaiters = []
+            waiting.forEach { $0.resume() }
+        }
+        await Task.yield()   // commit the chip before the staging walk
+        let staged = try document.stageSnapshot()
+        let fingerprint: Data?
+        do {
+            fingerprint = try await Task.detached(priority: .userInitiated) {
+                try FinvestLensDocument.commitStaged(staged)
+            }.value
+        } catch {
+            document.saveFailed(staged)
+            throw error
+        }
+        document.finishSave(fingerprint: fingerprint, staged: staged)
+        verifySavedWorkingCopy(document)
+        documentStateRevision &+= 1
+        publishWidgetData()
+    }
+
     /// Revert with the outcome reported (F20) — a failed revert is exactly
     /// when the user must know the file on disk was not what they thought.
     public func revertWithStatus() {
+        // A save already writing finishes first, and what it wrote is part of
+        // the saved book: it cannot be unwritten. Reverting under it waited on
+        // the save's lock on the main actor — the window frozen for the rest
+        // of the write — and then said "Reverted" over the very edits it had
+        // been asked to discard. Now it waits off the main actor, and says so.
+        if isSaving {
+            Task { @MainActor in
+                while isSaving { await waitForSaveToFinish() }
+                do {
+                    try revert()
+                    showToast(.info, "Reverted to the saved book — including what the save that was running wrote.")
+                } catch {
+                    documentError = DocumentError(message: String(localized: "Couldn’t revert: \(error.localizedDescription)"))
+                }
+            }
+            return
+        }
         do {
             try revert()
             showToast(.success, "Reverted to the saved book.")
@@ -2838,6 +3126,7 @@ public final class AppModel {
 
     public func revert() throws {
         try document?.revert()
+        forgetSearchCaches()
         // Pre-revert undo entries would replay stale snapshots onto the
         // reloaded book (and autosave would then persist them) — every other
         // book-replacement path clears the stack too.
@@ -2867,10 +3156,12 @@ public final class AppModel {
         document = nil
         endBookAccess()
         publishWidgetData()   // book is now nil → clears the widget snapshot
-        journalTransactionCache = [:]
-        journalRowCache = [:]
+        dropJournalCaches()
         priceRowCache = nil
         rateRowCache = nil
+        // Measured on this book; the next one may be a hundred times larger.
+        reportBuildTimes = [:]
+        forgetSearchCaches()
         derivedRevision &+= 1
         accountTree = []
         registerRows = []
@@ -3117,22 +3408,65 @@ public final class AppModel {
     /// register row, journal row or search result — those are built from
     /// splits and transaction currencies, never from prices — and it cannot
     /// stale the book's split lookup indexes, so none of that is touched.
-    enum RefreshScope { case book, prices }
+    ///
+    /// `.kvp` is for an edit to the book's own slots and nothing else — a
+    /// favourite, a rule, a budget, a saved search, a schedule's settings
+    /// (R8i). No account, transaction, split or price changed, so the account
+    /// tree, the register, the search, the journal caches and the lookup
+    /// indexes all still stand: none of them reads a slot (the tree values in
+    /// the book's base currency, which is the root account's, not a slot's).
+    /// The report memos go — budgets, forecasts, planning and report settings
+    /// all read slots — and with them anything else keyed on
+    /// ``derivedRevision``, which rebuilds as it is next asked for.
+    enum RefreshScope { case book, prices, kvp }
 
-    func refreshAll(scope: RefreshScope = .book) {
+    /// What an edit says it changed, so what derives from the book follows it
+    /// instead of starting again: the lookup indexes, the tree's balances
+    /// (P5.4), the general ledger (P7). An edit that says nothing — `nil` —
+    /// means anything, and everything is rebuilt.
+    struct EditChanges {
+        /// Each transaction the edit touched, as it was — a copy taken before,
+        /// or the removed object — and as it is (`nil` once removed). Whole
+        /// transactions an edit added have no `before`.
+        var transactions: [(before: Transaction?, live: Transaction?)] = []
+        /// Accounts changed too: names, types, places in the tree — which
+        /// every journal row naming one shows.
+        var accounts = false
+    }
+
+    nonisolated static let verifiesKeptIndexes =
+        ProcessInfo.processInfo.environment["FL_VERIFY_INDEXES"] != nil
+
+    func refreshAll(scope: RefreshScope = .book, changes: EditChanges? = nil) {
         if scope == .book {
             // Splits are added/removed on their transactions inside edit
-            // closures, which the book cannot observe — drop its GUID lookup
-            // indexes here.
-            book?.invalidateLookupIndexes()
-            journalTransactionCache = [:]
-            journalRowCache = [:]
+            // closures, which the book cannot observe — so its lookup indexes
+            // are dropped here, unless the edit told the book what it changed
+            // (``reindex(_:)``, P5.4), which keeps them current.
+            // A book just read from its file has nothing unsaved to forget —
+            // an open, a revert, an import that has just been written — and
+            // forgetting made the first save after every open rewrite every
+            // transaction. An edit that cannot say what it changed always
+            // marks the document dirty before it gets here.
+            if changes == nil {
+                if document?.hasUnsavedChanges == false { book?.dropLookupIndexes() } else { book?.invalidateLookupIndexes() }
+            }
+            followJournals(changes)
         }
         priceRowCache = nil
         rateRowCache = nil
         derivedRevision &+= 1
         if scope == .book { transactionRevision &+= 1 }
+        guard scope != .kvp else { return }
         rebuildAccountTree()
+        // `FL_VERIFY_INDEXES=1`: every edit that kept the indexes is checked
+        // against a rebuild, and the tree's kept balances against a walk — so
+        // a test run finds an edit that changed legs without saying so.
+        if Self.verifiesKeptIndexes, scope == .book, changes != nil, let book {
+            precondition(book.lookupIndexesMatchRebuild(), "an edit left the lookup indexes stale")
+            precondition(treeNativesMatchWalk(), "an edit left the account tree's balances stale")
+            precondition(generalLedgerMatchesRebuild(), "an edit left the general ledger stale")
+        }
         guard scope == .book else { return }
         refreshRegister()
         // Whichever search is showing has to survive an edit: editing a result
@@ -3146,14 +3480,15 @@ public final class AppModel {
 
     /// Marks the document dirty and rebuilds derived state. Records nothing on
     /// the undo stack, so it is *not* how a user's edit gets applied — those go
-    /// through ``editing(_:named:)`` or ``editingWholeBook(named:)``, which call
+    /// through ``editing(_:named:)`` and the other scoped edits, which call
     /// this for you.
-    func refreshAfterChange(scope: RefreshScope = .book) {
+    func refreshAfterChange(scope: RefreshScope = .book, changes: EditChanges? = nil) {
         document?.markDirty()
         documentStateRevision &+= 1
-        refreshAll(scope: scope)
-        // A price cannot delete anything a tab shows.
-        if scope == .book { pruneDeadTabs() }
+        refreshAll(scope: scope, changes: changes)
+        // A price cannot delete anything a tab shows; a slot can (a saved
+        // report a tab holds).
+        if scope != .prices { pruneDeadTabs() }
     }
 
     /// Closes any tab whose subject the book no longer has.
@@ -3240,10 +3575,12 @@ public final class AppModel {
     // redo work, and it means undo and redo are one code path.
     //
     // `editing` copies only the transactions named, which is what keeps the
-    // register instant. `editingWholeBook` falls back to a GnuCash XML export
-    // (it round-trips everything, including KVP slots) and is for structural and
-    // bulk changes, where the touched transactions can't be named up front.
-    // Neither holds a baseline between edits, so opening a book pays nothing.
+    // register instant. Every other edit is scoped the same way — accounts,
+    // prices, the book's slots, and the transactions an edit adds or removes
+    // (`editingPostings`). There is no whole-book snapshot: the GnuCash XML
+    // export that business and structural edits took before they ran cost
+    // seconds on the reference book, and an import of it to undo them. None
+    // holds a baseline between edits, so opening a book pays nothing.
 
     /// The focused window's undo manager, injected by the root view.
     @ObservationIgnored public weak var undoManager: UndoManager? {
@@ -3270,7 +3607,7 @@ public final class AppModel {
             TransactionSnapshot(id: $0, state: book?.transaction(with: $0)?.detachedCopy())
         }
         body()
-        refreshAfterChange()
+        refreshAfterChange(changes: EditChanges(transactions: reindex(before)))
         guard isOpen else { return }
         undoManager?.registerUndo(withTarget: self) { model in
             model.editing(ids, named: named) { model.restore(before) }
@@ -3284,7 +3621,7 @@ public final class AppModel {
     /// ``TransactionSnapshot`` does for transactions. Transactions are not
     /// captured here; an edit that moves postings names them separately
     /// (``editing(accounts:transactions:prices:named:_:)``), so an account edit
-    /// never needs the whole-book serialisation ``editingWholeBook`` costs.
+    /// never needs a whole-book serialisation.
     struct AccountSnapshot {
         let id: GncGUID
         let state: AccountState?
@@ -3324,16 +3661,16 @@ public final class AppModel {
     /// `ids` must name every account `body` changes (for a cascade, the whole
     /// affected subtree). Only their value fields and tree placement are
     /// captured — transactions and other accounts are not — so an account edit
-    /// no longer pays the whole-book serialisation ``editingWholeBook`` costs.
+    /// pays for nothing it does not touch.
     func editingAccounts(_ ids: [GncGUID], named: LocalizedStringResource, _ body: () -> Void) {
         editing(accounts: ids, named: named, body)
     }
 
     /// Applies `body` as one undoable edit of named accounts and transactions,
-    /// and optionally the price database — the scoped alternative to
-    /// ``editingWholeBook(named:_:)`` for everything that is not structural
-    /// (Performance Review 2, R2: the whole-book snapshot was 6.65 s on the
-    /// reference book, paid by New Account and Change Colour alike).
+    /// and optionally the price database — scoped where the whole-book
+    /// snapshot it replaced was not (Performance Review 2, R2: that snapshot
+    /// was 6.65 s on the reference book, paid by New Account and Change
+    /// Colour alike).
     ///
     /// `accounts` must name every *existing* account `body` changes — for a
     /// deletion, the account and the children it re-parents, parents before
@@ -3364,7 +3701,8 @@ public final class AppModel {
         }
         accountsBefore += created.map { AccountSnapshot(id: $0, state: nil) }
         let allAccountIDs = accountIDs + created
-        refreshAfterChange()
+        refreshAfterChange(changes: EditChanges(transactions: reindex(transactionsBefore),
+                                                accounts: !allAccountIDs.isEmpty))
         guard isOpen else { return }
         let snapshots = accountsBefore
         undoManager?.registerUndo(withTarget: self) { model in
@@ -3470,21 +3808,94 @@ public final class AppModel {
         undoManager?.setActionName(String(localized: named))
     }
 
-    /// Applies `body` as one undoable edit of the whole book, exporting it
-    /// first. Costs a full serialisation — use ``editing(_:named:)`` (or
-    /// ``editingAccounts(_:named:)``) whenever the touched objects can be named.
-    func editingWholeBook(named: LocalizedStringResource, _ body: () -> Void) {
+    /// An edit that adds or removes whole transactions — invoices posted and
+    /// paid, schedules posted — undone by taking them out and putting them
+    /// back, without the whole-book snapshot these took before (P9c, P9d):
+    /// a GnuCash export of the book before the edit, and an import of it on
+    /// undo. The transactions are held, not copied — an invoice's posting and
+    /// a lot's members point at the very objects, and a copy put back would
+    /// leave them pointing at ones no longer in the book. That is sound only
+    /// because none of these edits changes a transaction that was already
+    /// there. With `business` the business tables are captured too
+    /// (``BusinessTables``); with `kvp`, the book's slots, where the
+    /// schedules keep their last-posted dates.
+    func editingPostings(named: LocalizedStringResource, business: Bool = false, kvp: Bool = false,
+                         _ body: () -> Void) {
         if isReadOnly { return }   // read-only session: edits are refused (FR-DAT-06)
+        guard let book else { return }
         auditLog(named)
-        let before = Perf.measure("wholeBookSnapshot") { gnuCashExportData() }
+        let tables = business ? book.businessTables() : nil
+        let slots = kvp ? book.kvp : nil
+        let before = book.transactions
+        let commoditiesBefore = Set(book.commodities)
         body()
-        refreshAfterChange()
-        guard isOpen, let before else { return }
+        let after = book.transactions
+        let beforeIDs = Set(before.map(ObjectIdentifier.init))
+        let added = after.filter { !beforeIDs.contains(ObjectIdentifier($0)) }
+        var removed: [Transaction] = []
+        if before.count + added.count != after.count {
+            let afterIDs = Set(after.map(ObjectIdentifier.init))
+            removed = before.filter { !afterIDs.contains(ObjectIdentifier($0)) }
+        }
+        let commoditiesAfter = Set(book.commodities)
+        let registered = commoditiesAfter.subtracting(commoditiesBefore)
+        let dropped = commoditiesBefore.subtracting(commoditiesAfter)
+        // Whole transactions only, which the book indexes as it adds and
+        // removes them.
+        refreshAfterChange(changes: EditChanges(
+            transactions: added.map { (before: nil, live: $0) } + removed.map { (before: $0, live: nil) }))
+        guard isOpen else { return }
         undoManager?.registerUndo(withTarget: self) { model in
-            model.editingWholeBook(named: named) { model.restoreBook(before) }
+            // An undo belongs to the book it was made in.
+            guard model.book === book else { return }
+            model.editingPostings(named: named, business: business, kvp: kvp) {
+                // By GUID, not by identity: a transaction deleted in the
+                // register and brought back by its undo is a copy, and the
+                // original is not in the book to take out — undoing a
+                // payment then rewound the invoice and left the money.
+                for transaction in added {
+                    if let live = book.transaction(with: transaction.guid) { book.removeTransaction(live) }
+                }
+                for transaction in removed where book.transaction(with: transaction.guid) == nil {
+                    book.restoreTransaction(transaction)
+                }
+                if let tables { book.restore(tables) }
+                for commodity in dropped { book.registerCommodity(commodity) }
+                for commodity in registered { book.unregisterCommodity(commodity) }
+                if let slots {
+                    book.kvp = slots
+                    // The published collections mirror kvp slots; without a
+                    // reload the next persist would re-write the undone values.
+                    model.reloadKvpCollections()
+                }
+            }
         }
         undoManager?.setActionName(String(localized: named))
     }
+
+    /// Tells the book which transactions an edit changed in place, and what
+    /// their legs were before, so its lookup indexes stay current instead of
+    /// being dropped and rebuilt for the whole book (P5.4). A transaction the
+    /// edit added or removed, the book filed or unfiled itself.
+    @discardableResult
+    private func reindex(_ snapshots: [TransactionSnapshot]) -> [(before: Transaction?, live: Transaction?)] {
+        guard let book else { return [] }
+        // Re-filing is a pass over each touched account's legs per
+        // transaction. Past a few dozen transactions — a reconcile, an
+        // import, a bulk edit — one rebuild on the next lookup is cheaper;
+        // what the save has to write is still recorded edit by edit. Each is
+        // looked up first: a lookup after the drop would rebuild at once.
+        let found = snapshots.map { ($0, book.transaction(with: $0.id)) }
+        if snapshots.count > Self.refileLimit { book.dropLookupIndexes() }
+        return found.map { snapshot, live in
+            if let live { book.reindex(live, previous: snapshot.state?.splits ?? []) }
+            return (snapshot.state, live)
+        }
+    }
+
+    /// More transactions than this in one edit are not re-filed one by one;
+    /// the lookup indexes are rebuilt instead (``reindex(_:)``).
+    static let refileLimit = 64
 
     /// Puts snapshotted transactions back as they were.
     private func restore(_ snapshot: [TransactionSnapshot]) {
@@ -3522,14 +3933,6 @@ public final class AppModel {
         }
     }
 
-    /// Swaps a whole-book snapshot back in.
-    private func restoreBook(_ data: Data) {
-        guard let document,
-              let result = try? GnuCashXMLImporter.importBook(from: data) else { return }
-        document.replaceBook(result.book)
-        reloadKvpCollections()
-    }
-
     /// Clears the undo stack (call when a book is opened/created/closed).
     func resetUndoStack() {
         undoManager?.removeAllActions(withTarget: self)
@@ -3541,11 +3944,23 @@ public final class AppModel {
 
     private func rebuildAccountTreeBody() {
         guard let book else { accountTree = []; return }
-        // Native balances for every account in a single pass, then one
-        // conversion per account, rolled up the tree. Asking the book for each
-        // account's balance separately re-walked the whole book every time, and
-        // the subtree sums did it once per ancestor on top of that.
-        let natives = book.balancesByAccount()
+        // Native balances for every account, kept from the last build and
+        // recomputed only for the accounts whose legs changed since — each
+        // from its own legs, as GnuCash recomputes an account marked
+        // `balance_dirty` (P5.4). The whole book is walked only when the book
+        // cannot say what changed. Then one conversion per account, rolled up
+        // the tree.
+        let natives: [ObjectIdentifier: Decimal]
+        if treeNativesBook === book, let changed = book.takeChangedAccounts() {
+            var kept = treeNatives
+            for account in changed { kept[ObjectIdentifier(account)] = book.quantityTotal(of: account) }
+            natives = kept
+        } else {
+            _ = book.takeChangedAccounts()      // what changed is in the walk
+            natives = book.balancesByAccount()
+        }
+        treeNatives = natives
+        treeNativesBook = book
         var converted: [ObjectIdentifier: Decimal] = [:]
         for account in book.accounts {
             let native = natives[ObjectIdentifier(account)] ?? 0
@@ -3556,6 +3971,20 @@ public final class AppModel {
         accountTree = book.rootAccount.children.map {
             node(for: $0, book: book, natives: natives, converted: converted)
         }
+    }
+
+    /// Every account's native balance as the tree last built it, and the
+    /// book that was for (see ``rebuildAccountTreeBody()``).
+    @ObservationIgnored private var treeNatives: [ObjectIdentifier: Decimal] = [:]
+    @ObservationIgnored private weak var treeNativesBook: Book?
+
+    /// Whether the tree's kept balances are what a walk of the book gives —
+    /// for tests of the accounts recomputed edit by edit.
+    func treeNativesMatchWalk() -> Bool {
+        guard let book, treeNativesBook === book else { return true }
+        let walked = book.balancesByAccount()
+        let keys = Set(walked.keys).union(treeNatives.keys)
+        return keys.allSatisfy { (treeNatives[$0] ?? 0) == (walked[$0] ?? 0) }
     }
 
     /// `native` (an account's own balance, in its own commodity) valued in
@@ -3642,10 +4071,11 @@ public final class AppModel {
     }
 
     private func refreshRegisterBody() {
-        // The journal styles honour the same sort/filter/subaccounts settings,
-        // and their caches were built under the old ones.
-        journalTransactionCache = [:]
-        journalRowCache = [:]
+        // The journal styles honour the same sort/filter/subaccounts settings;
+        // their caches note the settings they were built under and go when
+        // asked under others (`journalCachesFollowSettings()`), and an edit
+        // patches or drops them in `followJournals(_:)` — so selecting an
+        // account no longer throws away a general ledger nothing changed.
         autoSplitRowsCache = nil
         // So is the rotor's, and it is keyed on `derivedRevision` — which does
         // not move when only the *register* changes. Selecting another account

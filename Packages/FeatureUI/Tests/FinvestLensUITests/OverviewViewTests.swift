@@ -168,3 +168,49 @@ struct OverviewViewTests {
         #expect(model.currentOverviewView.id == "overview")
     }
 }
+
+@MainActor
+@Suite("The Overview's values, held between revisions")
+struct BoardDataTests {
+    @Test("The board's values are the model's, and stand in only for the same period and day")
+    func valuesAndCover() throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
+        let model = AppModel()
+        try model.newDocument(at: url)
+        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        let bank = try #require(model.addAccount(name: "Bank", type: .bank))
+        let salary = try #require(model.addAccount(name: "Salary", type: .income))
+        let food = try #require(model.addAccount(name: "Food", type: .expense))
+        let today = AppModel.endOfToday()
+        _ = try model.addTransaction(date: today.addingTimeInterval(-86_400 * 3), description: "Pay", currency: .aud,
+                                     splits: [SplitInput(accountID: bank, value: 3000),
+                                              SplitInput(accountID: salary, value: -3000)])
+        _ = try model.addTransaction(date: today.addingTimeInterval(-86_400), description: "Shop", currency: .aud,
+                                     splits: [SplitInput(accountID: bank, value: -80),
+                                              SplitInput(accountID: food, value: 80)])
+        let range = model.resolve(model.period)
+        let key = BoardData.Key(revision: model.bookRevision, from: range.from, to: range.to, day: today)
+        let data = model.boardData(key)
+        #expect(data.income?.totalIncome == model.incomeStatement(from: range.from, to: range.to)?.totalIncome)
+        #expect(data.netWorth.map(\.netWorth) == model.netWorthSeries(months: 12, endingAt: min(range.to, today)).map(\.netWorth))
+        #expect(data.sheet?.totalAssets == model.balanceSheet(asOf: min(range.to, today))?.totalAssets)
+        #expect(data.recent.map(\.id) == model.recentJournalHeadings.map(\.id))
+        #expect(data.wellbeing?.total == model.wellbeingScore()?.total)
+
+        // After an edit the last values stand in for the same period and day…
+        _ = try model.addTransaction(date: today, description: "Coffee", currency: .aud,
+                                     splits: [SplitInput(accountID: bank, value: -5),
+                                              SplitInput(accountID: food, value: 5)])
+        let next = BoardData.Key(revision: model.bookRevision, from: range.from, to: range.to, day: today)
+        #expect(next != key)
+        #expect(data.covers(next))
+        // …and never for another period or another day.
+        #expect(!data.covers(BoardData.Key(revision: next.revision, from: range.from.addingTimeInterval(-86_400),
+                                           to: range.to, day: today)))
+        #expect(!data.covers(BoardData.Key(revision: next.revision, from: range.from, to: range.to,
+                                           day: today.addingTimeInterval(86_400))))
+        // The next build has the edit.
+        #expect(model.boardData(next).recent.first?.text == "Coffee")
+    }
+}

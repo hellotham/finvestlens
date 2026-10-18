@@ -100,11 +100,13 @@ extension AppModel {
         /// Schedules that refused to post — an unbalanced instance, typically a
         /// template whose formula this parser cannot evaluate.
         var blocked: [String] = []
-        // ONE whole-book undoable action: the posted transactions and the
-        // schedules' advanced `lastPosted` must rewind together. Registering
-        // only the kvp restore left the transactions in the book — ⌘Z made
-        // the same dates due again and the next post created duplicates.
-        editingWholeBook(named: "Post Scheduled Transactions") {
+        // ONE undoable action: the posted transactions and the schedules'
+        // advanced `lastPosted` must rewind together. Registering only the
+        // kvp restore left the transactions in the book — ⌘Z made the same
+        // dates due again and the next post created duplicates. Posting only
+        // adds transactions, so the undo takes those out and puts the slots
+        // back, rather than re-importing a snapshot of the whole book (P9d).
+        editingPostings(named: "Post Scheduled Transactions", kvp: true) {
             for index in list.indices {
                 let dueDates = list[index].dueDates(through: through)
                 // Post in chronological order and advance `lastPosted` only across the

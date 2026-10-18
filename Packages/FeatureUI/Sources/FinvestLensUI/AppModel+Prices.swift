@@ -153,11 +153,15 @@ extension AppModel {
     /// Realised capital gains and open lots under the selected cost-basis
     /// method (`FR-RPT-03`).
     public func capitalGains(from: Date = .distantPast, to: Date = .distantFuture) -> CapitalGainsReport? {
-        guard let book, !securityCommodities.isEmpty else { return nil }
-        return cachedReport("cg:\(from.timeIntervalSinceReferenceDate):\(to.timeIntervalSinceReferenceDate):\(costBasisMethod.rawValue):\(feeTreatment.rawValue)") {
-            FinancialReports.capitalGains(book, currency: reportCurrency,
-                                          from: from, to: to, method: costBasisMethod,
-                                          feeTreatment: feeTreatment)
+        guard !securityCommodities.isEmpty else { return nil }
+        return report(capitalGainsRequest(from: from, to: to))
+    }
+
+    func capitalGainsRequest(from: Date, to: Date) -> ReportRequest<CapitalGainsReport> {
+        let currency = reportCurrency, method = costBasisMethod, fees = feeTreatment
+        return ReportRequest(key: "cg:\(from.timeIntervalSinceReferenceDate):\(to.timeIntervalSinceReferenceDate):\(method.rawValue):\(fees.rawValue)") { book in
+            FinancialReports.capitalGains(book, currency: currency, from: from, to: to,
+                                          method: method, feeTreatment: fees)
         }
     }
 
@@ -208,27 +212,35 @@ extension AppModel {
     /// The advanced portfolio (cost basis, avg cost, unrealized/realized gain,
     /// allocation) under the selected cost-basis method (`FR-RPT-02a`).
     public func advancedPortfolio(asOf: Date = Date()) -> AdvancedPortfolio? {
-        guard let book, !securityCommodities.isEmpty else { return nil }
+        guard !securityCommodities.isEmpty else { return nil }
+        return report(advancedPortfolioRequest(asOf: asOf))
+    }
+
+    func advancedPortfolioRequest(asOf: Date) -> ReportRequest<AdvancedPortfolio> {
         // "As of now" quantises to end-of-day: a live Date() key would defeat
         // the memo (one entry per call), and holdings don't move mid-day here.
         let cap = min(asOf, Self.endOfToday())
-        return cachedReport("apf:\(cap.timeIntervalSinceReferenceDate):\(costBasisMethod.rawValue):\(feeTreatment.rawValue)") {
-            FinancialReports.advancedPortfolio(book, currency: reportCurrency,
-                                               asOf: cap, method: costBasisMethod,
-                                               feeTreatment: feeTreatment)
+        let currency = reportCurrency, method = costBasisMethod, fees = feeTreatment
+        return ReportRequest(key: "apf:\(cap.timeIntervalSinceReferenceDate):\(method.rawValue):\(fees.rawValue)") { book in
+            FinancialReports.advancedPortfolio(book, currency: currency, asOf: cap,
+                                               method: method, feeTreatment: fees)
         }
     }
 
     /// Every open tax lot valued at the latest price, under the selected
     /// cost-basis method (`FR-RPT-02`, Investment Lots).
     public func investmentLots(asOf: Date = Date()) -> [LotDetail] {
-        guard let book, !securityCommodities.isEmpty else { return [] }
+        guard !securityCommodities.isEmpty else { return [] }
+        return report(investmentLotsRequest(asOf: asOf)) ?? []
+    }
+
+    func investmentLotsRequest(asOf: Date) -> ReportRequest<[LotDetail]> {
         let cap = min(asOf, Self.endOfToday())
-        return cachedReport("lots:\(cap.timeIntervalSinceReferenceDate):\(costBasisMethod.rawValue):\(feeTreatment.rawValue)") {
-            FinancialReports.investmentLots(book, currency: reportCurrency,
-                                            asOf: cap, method: costBasisMethod,
-                                            feeTreatment: feeTreatment)
-        } ?? []
+        let currency = reportCurrency, method = costBasisMethod, fees = feeTreatment
+        return ReportRequest(key: "lots:\(cap.timeIntervalSinceReferenceDate):\(method.rawValue):\(fees.rawValue)") { book in
+            FinancialReports.investmentLots(book, currency: currency, asOf: cap,
+                                            method: method, feeTreatment: fees)
+        }
     }
 
     /// End of the current day — the stable stand-in for "now" in report memo

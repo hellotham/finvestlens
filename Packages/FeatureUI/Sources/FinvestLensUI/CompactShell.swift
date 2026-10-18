@@ -376,7 +376,7 @@ struct CompactMoreRoot: View {
                     // screen this goes back to. Saved first; closing is one of
                     // the explicit saves that sends a book from Box up.
                     Section {
-                        Button("Close Book", systemImage: "xmark.circle") { _ = model.saveAndCloseIfOpen() }
+                        Button("Close Book", systemImage: "xmark.circle") { Task { await model.saveAndClose() } }
                     }
                 }
                 .listStyle(.insetGrouped)

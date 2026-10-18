@@ -1084,7 +1084,19 @@ extension AppModel {
         // Box has it. The copy here becomes the new book's copy — asked now,
         // not before the upload, whether it is open.
         let openNow = documentURL.map { BoxLibrary.samePath($0, copy) } ?? false
-        if openNow { guard saveAndCloseIfOpen() else { return } }
+        // The open book is going: the replacement is claimed for the close
+        // and the move, as every other one is (``isReplacingBook``) — a New
+        // Book… issued meanwhile landed and was closed again by the reopen
+        // below — and handed to `openBook` with no suspension between, which
+        // claims it for itself.
+        let claimed = openNow && !isOpening && !isReplacingBook
+        if claimed { isReplacingBook = true }
+        if openNow {
+            guard await saveAndClose() else {
+                if claimed { isReplacingBook = false }
+                return
+            }
+        }
         var moved = BoxBookLink(fileID: created.id, fileName: created.name,
                                 parentID: created.parentID ?? folder, etag: created.etag,
                                 syncedSHA256: snapshot.sha256, syncedSize: snapshot.size,
@@ -1104,6 +1116,7 @@ extension AppModel {
                 // first; the conflict stays on record and the next ⌘S asks
                 // again — not now, over the alert that says what went wrong.
                 boxResolving.remove(conflict.fileID)
+                if claimed { isReplacingBook = false }
                 await openBook(at: copy)
                 boxConflict = nil
             }
@@ -1119,6 +1132,7 @@ extension AppModel {
         showToast(.success, verbatim: String(localized: "Your version is on Box as “\(created.name)”."))
         if openNow {
             boxResolving.remove(conflict.fileID)
+            if claimed { isReplacingBook = false }
             await openBook(at: destination)
         } else if moved.uploadRequested {
             startBoxUpload(created.id)

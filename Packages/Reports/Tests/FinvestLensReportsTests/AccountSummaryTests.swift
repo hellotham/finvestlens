@@ -80,20 +80,26 @@ struct AccountSummaryTests {
         #expect(savings.balance == 750)                // 500 + rolled 250
         #expect(!section.rows.contains { $0.name == "Holiday" })
 
-        // One level deeper, Savings shows its own money and Holiday its own.
+        // One level deeper, Holiday shows its own money and Savings still its
+        // subtree — with its own 500 kept on the row, for its "(direct)" line.
         let deeper = assets(FinancialReports.accountSummary(book, asOf: day(10), currency: .aud,
                                                             depthLimit: 4))
-        #expect(deeper.rows.first { $0.name == "Savings" }?.balance == 500)
+        #expect(deeper.rows.first { $0.name == "Savings" }?.balance == 750)
+        #expect(deeper.rows.first { $0.name == "Savings" }?.own == 500)
         #expect(deeper.rows.first { $0.name == "Holiday" }?.balance == 250)
     }
 
-    @Test("A placeholder shows structure, not money of its own")
+    @Test("A placeholder carries its subtree's total, and holds no money of its own")
     func placeholders() throws {
         let book = makeBook()
         let report = FinancialReports.accountSummary(book, asOf: day(10), currency: .aud,
                                                      depthLimit: 4)
         let banks = try #require(assets(report).rows.first { $0.name == "Banks" })
-        #expect(banks.balance == 0)     // its children carry the money
+        // Every level is the default now, so a parent is a subtotal: the
+        // children beneath it show where the money is.
+        #expect(banks.balance == 1750)
+        #expect(banks.own == 0)
+        #expect(banks.hasChildren)
         #expect(banks.depth == 2)
         // But cut at its level, it answers for the subtree.
         let cut = FinancialReports.accountSummary(book, asOf: day(10), currency: .aud,

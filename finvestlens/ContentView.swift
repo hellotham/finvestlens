@@ -191,7 +191,7 @@ struct RootHost: View {
         // destroying books created there. Documents is user-visible in the
         // Files app ("On My iPhone > finvestlens") since the app declares
         // UISupportsDocumentBrowser.
-        model.newBook(at: AppModel.newBookURL(in: URL.documentsDirectory))
+        Task { await model.newBook(at: AppModel.newBookURL(in: URL.documentsDirectory)) }
         #endif
     }
 

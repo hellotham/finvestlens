@@ -52,6 +52,8 @@ struct ImportView: View {
     /// the next statement from the same account needs no choosing.
     @State private var fileAccountID: String?
     @State private var results: [MatchResult] = []
+    /// While Preview's matcher runs, off the main actor (P6b).
+    @State private var matching = false
     @State private var assignments: [UUID: GncGUID] = [:]
     /// Rows the user cleared, to leave out of the import. A separate set
     /// because `assignments[id] = nil` *removes* the key rather than storing an
@@ -234,8 +236,19 @@ struct ImportView: View {
                 }
 
                 Section {
-                    Button("Preview") { preview() }
-                        .disabled(targetID == nil || !csvMappingIsUsable)
+                    Button {
+                        preview()
+                    } label: {
+                        if matching {
+                            HStack(spacing: 6) {
+                                ProgressView().controlSize(.small)
+                                Text("Matching the statement…")
+                            }
+                        } else {
+                            Text("Preview")
+                        }
+                    }
+                    .disabled(targetID == nil || !csvMappingIsUsable || matching)
                 }
 
                 if !results.isEmpty {
@@ -368,12 +381,18 @@ struct ImportView: View {
                         }
                         dismiss()
                     }
-                    .disabled(importCount == 0
-                              && !(markMatchedCleared && includedResults.contains(where: \.isDuplicate)))
+                    // Not while Preview is matching: what is on screen until
+                    // it lands belongs to the statement and account before.
+                    .disabled(matching || (importCount == 0
+                              && !(markMatchedCleared && includedResults.contains(where: \.isDuplicate))))
                 }
             }
         }
         .windowFloor(minWidth: 640, minHeight: 520)
+        // A preview is of one statement into one account: another of either
+        // leaves nothing to import until Preview is pressed again.
+        .onChange(of: targetID) { clearPreview() }
+        .onChange(of: selectedStatement) { clearPreview() }
         .alert("Save Import Profile", isPresented: $showingSaveProfile) {
             TextField("Profile name", text: $newProfileName)
             Button("Save") {
@@ -518,7 +537,31 @@ struct ImportView: View {
         let staged = statementAccounts.count > 1
             ? parsed.filter { $0.sourceAccountID == nil || $0.sourceAccountID == selectedStatement }
             : parsed
-        results = model.matchStaged(staged, intoAccountID: targetID)
+        // The matcher reads the whole book — seconds on a large one into a
+        // busy account — so it runs off the main actor, and the button says
+        // what it is doing meanwhile (P6b).
+        clearPreview()
+        matching = true
+        AccessibilityNotification.Announcement(String(localized: "Matching the statement…")).post()
+        let statement = selectedStatement
+        Task {
+            let matched = await model.matchStagedOffMain(staged, intoAccountID: targetID)
+            matching = false
+            // A different account or statement chosen meanwhile asks again.
+            guard self.targetID == targetID, selectedStatement == statement else { return }
+            showMatched(matched, staged: staged, targetID: targetID)
+        }
+    }
+
+    private func clearPreview() {
+        results = []
+        investments = []
+        assignments = [:]
+        excluded = []
+    }
+
+    private func showMatched(_ matched: [MatchResult], staged: [StagedTransaction], targetID: GncGUID) {
+        results = matched
         assignments = [:]
         excluded = []
 
@@ -583,7 +626,7 @@ struct ImportView: View {
             Button("Create \(creatableInvestments.count) Investment Transactions") {
                 createInvestments()
             }
-            .disabled(creatableInvestments.isEmpty)
+            .disabled(matching || creatableInvestments.isEmpty)
         }
     }
 

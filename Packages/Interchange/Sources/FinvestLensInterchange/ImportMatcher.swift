@@ -158,6 +158,35 @@ public enum ImportMatcher {
         let targetSplits = book.splits(for: target)
         let calendar = utcCalendar
 
+        // Asked once per account, not once per leg: the wash test trims and
+        // lowercases the account's name, and the transfer scan below asks it
+        // of every leg in the book.
+        var washByAccount: [ObjectIdentifier: Bool] = [:]
+        func wash(_ account: Account) -> Bool {
+            if let known = washByAccount[ObjectIdentifier(account)] { return known }
+            let answer = isWash(account)
+            washByAccount[ObjectIdentifier(account)] = answer
+            return answer
+        }
+
+        // Each of the account's splits rounded once, and listed by amount.
+        // Every row used to round every split of the account on each pass —
+        // 2.2 s for a 180-row statement into a 5.6k-split account on the
+        // reference book. A bucket holds its splits in the account's order,
+        // so a pass visits exactly the splits it always reached, in the order
+        // it reached them; the key is the amount in whole smallest units,
+        // which two equal amounts share however each is held.
+        let roundedQuantity: [Decimal?] = targetSplits.map { split in
+            split.account.map { $0.commodity.round(split.quantity) }
+        }
+        func units(_ rounded: Decimal) -> Int64 {
+            NSDecimalNumber(decimal: rounded * Decimal(target.commodity.smallestFraction)).int64Value
+        }
+        var splitsByAmount: [Int64: [Int]] = [:]
+        for (index, rounded) in roundedQuantity.enumerated() {
+            if let rounded { splitsByAmount[units(rounded), default: []].append(index) }
+        }
+
         // Payee → counter-account frequency, learned from existing history.
         // Keyed on the description *and* the target-leg memo: once a
         // transaction is renamed to a friendly label, the raw bank narrative
@@ -175,7 +204,7 @@ public enum ImportMatcher {
                     // learning them would let Imbalance outvote a real category
                     // the user actually used (and a non-nil wash suggestion
                     // also suppresses the funding fallback).
-                    if let account = other.account, !isWash(account) {
+                    if let account = other.account, !wash(account) {
                         payeeAccounts[key, default: [:]][account.guid, default: 0] += 1
                     }
                 }
@@ -229,7 +258,19 @@ public enum ImportMatcher {
             return exact ? counts : [:]
         }
 
+        // A statement repeats its payees, and the substring fallback below
+        // walks every payee the history knows; the answer depends only on the
+        // payee and which way the money went.
+        var suggestions: [String: GncGUID?] = [:]
         func suggest(for payee: String, amount: Decimal) -> GncGUID? {
+            let memo = (amount < 0 ? "-" : amount > 0 ? "+" : "0") + payee
+            if let known = suggestions[memo] { return known }
+            let answer = suggestUnremembered(for: payee, amount: amount)
+            suggestions[memo] = answer
+            return answer
+        }
+
+        func suggestUnremembered(for payee: String, amount: Decimal) -> GncGUID? {
             let key = payee.lowercased()
             guard !key.isEmpty else { return nil }
             if let hit = payeeAccounts[key] {
@@ -263,7 +304,7 @@ public enum ImportMatcher {
                       transaction.datePosted >= windowStart else { continue }
                 for other in transaction.splits where other !== split {
                     guard let account = other.account, isFundingSource(account.type),
-                          !isWash(account) else { continue }
+                          !wash(account) else { continue }
                     counts[account.guid, default: 0] += 1
                     latest[account.guid] = max(latest[account.guid] ?? .distantPast,
                                                transaction.datePosted)
@@ -286,19 +327,19 @@ public enum ImportMatcher {
         var transferCandidates: [Decimal: [TransferCandidate]] = [:]
         for transaction in book.transactions {
             guard transaction.currency == target.commodity else { continue }
-            let washSplits = transaction.splits.filter { $0.account.map(isWash) ?? false }
-            guard washSplits.count == 1, let wash = washSplits.first else { continue }
+            let washSplits = transaction.splits.filter { $0.account.map(wash) ?? false }
+            guard washSplits.count == 1, let washLeg = washSplits.first else { continue }
             guard !transaction.splits.contains(where: { $0.account === target }) else { continue }
-            for split in transaction.splits where split !== wash {
+            for split in transaction.splits where split !== washLeg {
                 guard let account = split.account, isTransferSide(account.type),
-                      !isWash(account), account !== target,
+                      !wash(account), account !== target,
                       account.commodity == target.commodity else { continue }
                 let key = target.commodity.round(split.value)
                 var tokens = narrativeTokens(transaction.transactionDescription)
                 tokens.formUnion(narrativeTokens(split.memo))
-                tokens.formUnion(narrativeTokens(wash.memo))
+                tokens.formUnion(narrativeTokens(washLeg.memo))
                 transferCandidates[key, default: []].append(
-                    TransferCandidate(otherAccount: account, washSplit: wash,
+                    TransferCandidate(otherAccount: account, washSplit: washLeg,
                                       transaction: transaction, tokens: tokens))
             }
         }
@@ -336,7 +377,7 @@ public enum ImportMatcher {
         func counterLegsAllWash(_ split: Split) -> Bool {
             guard let transaction = split.transaction else { return false }
             let others = transaction.splits.filter { $0 !== split }
-            return !others.isEmpty && others.allSatisfy { $0.account.map(Self.isWash) ?? false }
+            return !others.isEmpty && others.allSatisfy { $0.account.map(wash) ?? false }
         }
 
         /// Whether an amount-equal split's narrative *contradicts* the row's.
@@ -385,8 +426,9 @@ public enum ImportMatcher {
             // close dates notwithstanding, these are different transactions
             // (the boundary-week trap: a new statement's rows against last
             // statement's entries).
-            func amountCandidate(_ split: Split) -> Bool {
-                guard split.account?.commodity.round(split.quantity) == amount else { return false }
+            func amountCandidate(_ index: Int) -> Bool {
+                guard roundedQuantity[index] == amount else { return false }
+                let split = targetSplits[index]
                 // Only a bank-unique id on *both* sides makes a mismatch
                 // definitive. A free-text row reference (a CSV "Reference"
                 // column) says nothing about a split carrying a real FITID,
@@ -404,7 +446,7 @@ public enum ImportMatcher {
             // memo that merely embeds it ("Invoice 20205"), silently dropping
             // a real transaction; a genuine re-import is still caught below.
             if !row.reference.isEmpty {
-                for split in targetSplits where !claimed.contains(split.guid) {
+                for (index, split) in targetSplits.enumerated() where !claimed.contains(split.guid) {
                     guard let transaction = split.transaction else { continue }
                     // Unconditional *only* for a bank-unique id. A CSV
                     // "Reference" column lands in the same slot but is free
@@ -426,7 +468,7 @@ public enum ImportMatcher {
                         // row. (The FITID-mismatch veto inside amountCandidate
                         // applies here too; the FITID-equality branch above
                         // stays unconditional, as that key is bank-unique.)
-                        if amountCandidate(split) { return split }
+                        if amountCandidate(index) { return split }
                     }
                 }
             }
@@ -437,8 +479,10 @@ public enum ImportMatcher {
             // one-to-one with their own day, instead of an earlier row
             // greedily claiming a neighbouring day's leg and starving the
             // last row into a false "new" transaction.
-            for split in targetSplits where !claimed.contains(split.guid) {
-                guard let transaction = split.transaction, amountCandidate(split),
+            let sameAmount = splitsByAmount[units(amount)] ?? []
+            for index in sameAmount where !claimed.contains(targetSplits[index].guid) {
+                let split = targetSplits[index]
+                guard let transaction = split.transaction, amountCandidate(index),
                       sameDay(transaction, as: row.date),
                       !narrativeContradicts(split, row) else { continue }
                 return split
@@ -452,8 +496,9 @@ public enum ImportMatcher {
             // date is checked too: when a transaction's posted date was
             // adjusted to its invoice date, the bank's date lives in
             // `statementDate` — a re-imported statement must still recognise it.
-            for split in targetSplits where !claimed.contains(split.guid) {
-                guard let transaction = split.transaction, amountCandidate(split),
+            for index in sameAmount where !claimed.contains(targetSplits[index].guid) {
+                let split = targetSplits[index]
+                guard let transaction = split.transaction, amountCandidate(index),
                       !counterLegsAllWash(split),
                       !narrativeContradicts(split, row) else { continue }
                 let dates = [transaction.datePosted, transaction.statementDate].compactMap { $0 }

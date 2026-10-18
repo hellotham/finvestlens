@@ -268,7 +268,16 @@ public extension FinancialReports {
     /// regardless of type. The seed is a starting point the user can override.
     static func lifetimeBuckets(_ book: Book, currency: Commodity, asOf: Date,
                                 isRetirement: (Account) -> Bool) -> LifetimeProjection.Buckets {
-        let map = balanceMap(book, from: nil, to: asOf)
+        lifetimeBuckets(book, currency: currency, asOf: asOf,
+                        balances: balanceMap(book, from: nil, to: asOf), isRetirement: isRetirement)
+    }
+
+    /// ``lifetimeBuckets(_:currency:asOf:isRetirement:)`` from balances the
+    /// caller already walked for — `book.balancesByAccount(to: asOf)` — so a
+    /// caller that needs them too walks once, not twice.
+    static func lifetimeBuckets(_ book: Book, currency: Commodity, asOf: Date,
+                                balances map: [ObjectIdentifier: Decimal],
+                                isRetirement: (Account) -> Bool) -> LifetimeProjection.Buckets {
         var buckets = LifetimeProjection.Buckets()
         for account in book.accounts where !account.isPlaceholder {
             switch account.type {

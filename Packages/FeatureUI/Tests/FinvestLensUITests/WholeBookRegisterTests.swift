@@ -251,4 +251,52 @@ struct WholeBookRegisterTests {
         let totals = sorted.map { f.model.wholeBookRowSummary(ofTransaction: $0.guid).total }
         #expect(totals == [10, 45, 80])
     }
+
+    /// The single-pass summary (build 4) against the arrays-and-sets one it
+    /// replaced, kept here as the oracle: every leg shape and reconcile mix.
+    @Test("The one-pass row summary is the one it replaced, leg shape by leg shape")
+    func onePassMatchesTheOld() throws {
+        let f = try makeFixture()
+        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        func old(_ txn: Transaction) -> WholeBookRowSummary {
+            let splits = txn.splits
+            let states = Set(splits.map(\.reconcileState))
+            let reconcile = states.count == 1 ? (states.first?.rawValue ?? "") : ""
+            let debits = splits.filter { $0.value > 0 }.compactMap { $0.account?.name }
+            let credits = splits.filter { $0.value < 0 }.compactMap { $0.account?.name }
+            let accounts: String
+            if debits.count == 1, credits.count == 1 {
+                accounts = "\(credits[0]) → \(debits[0])"
+            } else if splits.count == 1 {
+                accounts = splits[0].account?.name ?? ""
+            } else {
+                accounts = String(localized: "— Split —")
+            }
+            return WholeBookRowSummary(reconcile: reconcile, accounts: accounts,
+                                       total: splits.filter { $0.value > 0 }.reduce(0) { $0 + $1.value })
+        }
+        let date = Date(timeIntervalSince1970: 1_700_000_000)
+        let shapes: [[SplitInput]] = [
+            [SplitInput(accountID: f.groceries, value: 12), SplitInput(accountID: f.bank, value: -12)],
+            [SplitInput(accountID: f.groceries, value: 10), SplitInput(accountID: f.fees, value: 2),
+             SplitInput(accountID: f.bank, value: -12)],
+            [SplitInput(accountID: f.bank, value: 100), SplitInput(accountID: f.income, value: -90),
+             SplitInput(accountID: f.fees, value: -10)],
+            [SplitInput(accountID: f.groceries, value: 0), SplitInput(accountID: f.bank, value: 0)],
+        ]
+        for (index, splits) in shapes.enumerated() {
+            let id = try f.model.addTransaction(date: date, description: "Shape \(index)",
+                                                currency: .aud, splits: splits)
+            let txn = try #require(f.model.book?.transaction(with: id))
+            for states in [[ReconcileState.notReconciled], [.cleared], [.cleared, .reconciled]] {
+                f.model.editing([id], named: "States") {
+                    for (leg, split) in txn.splits.enumerated() { split.reconcileState = states[leg % states.count] }
+                }
+                let now = AppModel.wholeBookRowSummary(of: txn), then = old(txn)
+                #expect(now.reconcile == then.reconcile, "shape \(index), \(states)")
+                #expect(now.accounts == then.accounts, "shape \(index)")
+                #expect(now.total == then.total, "shape \(index)")
+            }
+        }
+    }
 }

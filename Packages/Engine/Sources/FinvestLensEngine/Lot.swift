@@ -44,6 +44,11 @@ public final class Lot: Identifiable, @unchecked Sendable {
         splits.removeAll { $0 === split }
     }
 
+    /// Puts the lot's members back as an undo captured them (``BusinessTables``).
+    func restoreSplits(_ members: [Split]) {
+        splits = members
+    }
+
     /// The net value of the lot's splits — the amount still outstanding for a
     /// business lot (positive on an A/R lot means the customer still owes).
     public var balance: Decimal {

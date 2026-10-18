@@ -86,3 +86,106 @@ struct CSVExportTests {
         #expect(staged.first?.value == dec("105.20"))
     }
 }
+
+/// The CSV exports as they were before their formatter and sort keys were
+/// cached (17 Oct 2026), kept as the oracle the faster ones must match.
+private enum ReferenceCSV {
+    static func date(_ date: Date) -> String {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = TimeZone(identifier: "UTC")
+        f.dateFormat = "yyyy-MM-dd"
+        return f.string(from: date)
+    }
+
+    static func transactions(_ book: Book) -> String {
+        var out = CSVExporter.row([
+            "Date", "Transaction ID", "Number", "Description", "Notes",
+            "Commodity/Currency", "Action", "Memo", "Full Account Name",
+            "Amount Num.", "Value Num.", "Reconcile", "Reconcile Date", "Rate/Price",
+        ])
+        let txns = book.transactions.sorted { a, b in
+            if a.datePosted != b.datePosted { return a.datePosted < b.datePosted }
+            return a.guid.hexString < b.guid.hexString
+        }
+        for txn in txns {
+            for split in txn.splits {
+                let rate: String
+                if split.quantity != 0, split.quantity != split.value {
+                    rate = CSVExporter.num(abs(split.value / split.quantity))
+                } else {
+                    rate = ""
+                }
+                out += CSVExporter.row([
+                    date(txn.datePosted), txn.guid.hexString, txn.number,
+                    txn.transactionDescription, txn.notes,
+                    "\(GnuCashXMLExporter.namespace(txn.currency.namespace))::\(txn.currency.mnemonic)",
+                    split.action, split.memo, split.account?.fullName ?? "",
+                    CSVExporter.num(split.quantity), CSVExporter.num(split.value),
+                    split.reconcileState.rawValue, split.reconcileDate.map(date) ?? "", rate,
+                ])
+            }
+        }
+        return out
+    }
+
+    static func prices(_ book: Book) -> String {
+        var out = CSVExporter.row(["Date", "Namespace", "Commodity", "Currency", "Price", "Source", "Type"])
+        for price in book.prices.sorted(by: CSVExporter.priceOrder) {
+            out += CSVExporter.row([
+                date(price.date), GnuCashXMLExporter.namespace(price.commodity.namespace),
+                price.commodity.mnemonic, price.currency.mnemonic, CSVExporter.num(price.value),
+                price.source, price.type,
+            ])
+        }
+        return out
+    }
+}
+
+@Suite("CSV export matches its reference")
+struct CSVExportReferenceTests {
+
+    /// Same-day transactions (the guid tie-break), nested and missing
+    /// accounts, reconcile dates, a security with a rate, and prices across
+    /// days and commodities — instants late in a UTC day included.
+    private func makeBook() -> Book {
+        let book = Book(baseCurrency: .aud)
+        let assets = book.addAccount(Account(name: "Assets", type: .asset, commodity: .aud))
+        let bank = book.addAccount(Account(name: "Bank, Main", type: .bank, commodity: .aud), under: assets)
+        let salary = book.addAccount(Account(name: "Salary", type: .income, commodity: .aud))
+        let stock = Commodity(namespace: .security("ASX"), mnemonic: "CBA",
+                              fullName: "Commonwealth Bank", smallestFraction: 10000)
+        let shares = book.addAccount(Account(name: "CBA", type: .stock, commodity: stock), under: assets)
+        let base = Date(timeIntervalSince1970: 1_700_000_000)
+        for index in 0..<60 {
+            let day = base.addingTimeInterval(Double(index / 4) * 86_400 + Double(index % 4) * 21_600)
+            let txn = Transaction(currency: .aud, datePosted: day, number: "\(index)",
+                                  description: index % 7 == 0 ? "Pay, \"bonus\"" : "Entry \(index)",
+                                  notes: index % 5 == 0 ? "line\nbreak" : "")
+            if index % 3 == 0 {
+                txn.addSplit(Split(account: shares, value: dec("1052.00"), quantity: dec("10"),
+                                   reconcileState: .reconciled, reconcileDate: day.addingTimeInterval(86_400),
+                                   memo: "buy", action: "Buy"))
+                txn.addSplit(Split(account: bank, value: dec("-1052.00")))
+            } else {
+                txn.addSplit(Split(account: bank, value: dec("\(index).25"),
+                                   reconcileState: index % 2 == 0 ? .cleared : .notReconciled))
+                txn.addSplit(Split(account: index % 11 == 0 ? nil : salary, value: dec("-\(index).25")))
+            }
+            book.addTransaction(txn)
+        }
+        for index in 0..<40 {
+            book.addPrice(Price(commodity: index % 2 == 0 ? stock : .usd, currency: .aud,
+                                date: base.addingTimeInterval(Double(index / 3) * 86_400),
+                                value: dec("\(100 + index).125"), source: "user:price", type: "last"))
+        }
+        return book
+    }
+
+    @Test("Transactions and prices are byte for byte what they were")
+    func matchesReference() {
+        let book = makeBook()
+        #expect(CSVExporter.transactions(book) == ReferenceCSV.transactions(book))
+        #expect(CSVExporter.prices(book) == ReferenceCSV.prices(book))
+    }
+}

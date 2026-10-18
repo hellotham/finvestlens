@@ -171,6 +171,7 @@ public enum HelpBook {
                 "**Placeholder** accounts group children but take no transactions of their own.",
                 "**Hidden** accounts stay out of the sidebar until you switch them back on.",
                 "The filter box at the top of the sidebar narrows the tree as you type.",
+                "Under Manual Order, drag an account to reorder it, or drop it on another account to move it there — on the Mac by the grip at the end of its row, on iPhone and iPad by touching and holding the row.",
             ]),
         ])
 
@@ -232,8 +233,10 @@ public enum HelpBook {
         keywords: "search find filter query operator saved tag amount date jump",
         blocks: [
             .text("""
-                The search box above the register searches the description, amount and \
-                date. It also understands operators, which can be combined:
+                The search box searches every transaction’s description, number, memos and \
+                account names, and shows what it finds as a register — the rows of All \
+                Transactions, only the matches, which you edit as you would any other. It \
+                also understands operators, which can be combined:
                 """),
             .table([
                 ("`tag:holiday`", "Transactions carrying a tag."),
@@ -699,6 +702,8 @@ public enum HelpBook {
                 """),
             .bullets([
                 "Change the period and options at the top of any report.",
+                "Statements show every level of your accounts, each with the total of everything beneath it.",
+                "The **Transactions** report covers every account until you choose some; an account you choose brings its subaccounts with it.",
                 "Save a report with its settings as a **favourite** to come back to it.",
                 "Export any report as a PDF, or share it.",
             ]),

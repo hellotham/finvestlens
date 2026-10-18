@@ -98,3 +98,33 @@ struct BalancesByAccountTests {
         #expect(book.balance(of: bank, filter: .reconciled).amount == 100)
     }
 }
+
+@Suite("Balances for several windows in one walk")
+struct BalancesByAccountWindowsTests {
+    @Test("Each window's map is the one asked for alone, closing entries and filters included")
+    func windowsMatchSingleWalks() {
+        let book = Book(baseCurrency: .aud)
+        let bank = book.addAccount(Account(name: "Bank", type: .bank, commodity: .aud))
+        let income = book.addAccount(Account(name: "Income", type: .income, commodity: .aud))
+        for day in 0..<60 {
+            let txn = Transaction(currency: .aud, datePosted: Date(timeIntervalSince1970: Double(day) * 86_400))
+            if day % 13 == 0 { txn.kvp["book_closing"] = .int64(1) }
+            txn.addSplit(Split(account: bank, value: Decimal(day + 1),
+                               reconcileState: day % 4 == 0 ? .reconciled : (day % 7 == 0 ? .voided : .notReconciled)))
+            txn.addSplit(account: income, value: -Decimal(day + 1))
+            book.addTransaction(txn)
+        }
+        let windows: [(from: Date?, to: Date?)] = [
+            (nil, nil), (Date(timeIntervalSince1970: 86_400 * 10), Date(timeIntervalSince1970: 86_400 * 30)),
+            (nil, Date(timeIntervalSince1970: 86_400 * 45)), (Date(timeIntervalSince1970: 86_400 * 50), nil)]
+        for filter in [BalanceFilter.all, .cleared, .reconciled] {
+            for excluding in [false, true] {
+                let together = book.balancesByAccount(windows: windows, filter: filter, excludingClosing: excluding)
+                for (window, map) in zip(windows, together) {
+                    #expect(map == book.balancesByAccount(filter: filter, from: window.from, to: window.to,
+                                                          excludingClosing: excluding))
+                }
+            }
+        }
+    }
+}

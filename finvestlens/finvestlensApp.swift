@@ -35,22 +35,32 @@ import AppKit
 /// data and never leaves a stale lock behind. If the save fails, quitting is
 /// cancelled so the error alert is seen instead of the data being lost.
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    var terminationHandler: (() -> Bool)?
+    /// Saves and closes the open book; `false` when the save failed.
+    var saveAndClose: (() async -> Bool)?
     /// Work that should finish before the app goes — an upload to Box — and
     /// whether there is any. Waited for briefly, never indefinitely: what
     /// does not finish is recorded as not uploaded and goes at next launch.
     var pendingWorkBeforeQuit: (() -> Bool)?
     var finishWorkBeforeQuit: (() async -> Void)?
 
+    /// Always later, never now: the save writes on a background thread, and
+    /// the window goes on drawing its "Saving…" while it does, where a save
+    /// here froze it for the whole rewrite (P10).
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        guard terminationHandler?() ?? true else { return .terminateCancel }
-        guard pendingWorkBeforeQuit?() == true, let finish = finishWorkBeforeQuit else {
-            return .terminateNow
-        }
+        guard let saveAndClose else { return .terminateNow }
         Task { @MainActor in
-            await finish()
-            // Anything opened during the wait is saved and closed too.
-            _ = self.terminationHandler?()
+            guard await saveAndClose() else {
+                NSApp.reply(toApplicationShouldTerminate: false)
+                return
+            }
+            if self.pendingWorkBeforeQuit?() == true, let finish = self.finishWorkBeforeQuit {
+                await finish()
+                // Anything opened during the wait is saved and closed too.
+                guard await saveAndClose() else {
+                    NSApp.reply(toApplicationShouldTerminate: false)
+                    return
+                }
+            }
             NSApp.reply(toApplicationShouldTerminate: true)
         }
         return .terminateLater
@@ -149,9 +159,7 @@ struct finvestlensApp: App {
                 // outlives every window, so the handler holds it strongly —
                 // a weak capture here only contradicts the enclosing scope.
                 .onAppear {
-                    appDelegate.terminationHandler = {
-                        model.saveAndCloseIfOpen()
-                    }
+                    appDelegate.saveAndClose = { await model.saveAndClose() }
                     // The save on quitting starts a Box book's upload; give it
                     // half a minute to land, so the next device has it.
                     appDelegate.pendingWorkBeforeQuit = { model.hasBoxWorkInFlight }
@@ -212,7 +220,7 @@ struct finvestlensApp: App {
                 // explicit saves that sends a book from Box up). The phone has
                 // no menu bar: its Close Book is in the More tab.
                 Button("Open from Box…") { model.boxBrowserRequested = true }
-                Button("Close Book") { _ = model.saveAndCloseIfOpen() }
+                Button("Close Book") { Task { await model.saveAndClose() } }
                     .disabled(!model.isOpen)
                 Divider()
                 #endif
@@ -222,7 +230,9 @@ struct finvestlensApp: App {
                     // Box its autosaved work, or a decision: ⌘S sends it.
                     .disabled(!model.hasUnsavedChanges && !model.openBoxBookNeedsUpload)
                 Button("Revert to Saved") { model.revertWithStatus() }
-                    .disabled(!model.isOpen || !model.hasUnsavedChanges)
+                    // Not while a save is writing: what it writes is saved,
+                    // and cannot be reverted (``AppModel/revertWithStatus()``).
+                    .disabled(!model.isOpen || !model.hasUnsavedChanges || model.isSaving)
                 Divider()
                 #if os(macOS)
                 Button("Import GnuCash…") { Task { await DocumentDialogs.importGnuCash(model) } }
@@ -241,7 +251,7 @@ struct finvestlensApp: App {
                 .disabled(!model.isOpen)
                 #endif
                 Divider()
-                Button("Close Book") { model.saveAndCloseIfOpen() }
+                Button("Close Book") { Task { await model.saveAndClose() } }
                     .keyboardShortcut("w", modifiers: [.command, .shift])
                     .disabled(!model.isOpen)
             }

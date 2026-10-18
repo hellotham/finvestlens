@@ -67,15 +67,30 @@ struct LiveWholeBookPerfTests {
             single = clock.measure { _ = model.journalTransactions(forAccountID: busiest.guid) }
         }
 
+        // What the register then does with the journal on entry: a summary
+        // for every row (the Mac sheet and the iPad table both), and, in the
+        // Transaction Journal style, every leg of every transaction.
+        let journal = model.journalTransactions(forAccountID: nil)
+        let summaries = clock.measure {
+            for txn in journal { _ = model.wholeBookRowSummary(ofTransaction: txn.guid) }
+        }
+        var legCount = 0
+        let legs = clock.measure {
+            for txn in journal { legCount += model.legRows(ofTransaction: txn.guid).count }
+        }
+
+        // Not the file's name: the reference book is a real household's.
         print("""
 
-        === All Transactions cost on \(source.lastPathComponent) ===
+        === All Transactions cost on the reference book ===
         transactions in book : \(book.transactions.count)
         splits in book       : \(book.transactions.reduce(0) { $0 + $1.splits.count })
         whole-book rows      : \(rows)
         whole-book build     : \(wholeBook)   (cold — cache invalidated first)
         whole-book warm      : \(warm)   (memoised hit)
         busiest account      : \(book.splits(for: busiest).count) splits, cold build \(single)
+        row summaries        : \(summaries)   (one per row, as the register builds them)
+        leg rows             : \(legs)   (\(legCount) legs — the Journal style's)
 
         """)
     }

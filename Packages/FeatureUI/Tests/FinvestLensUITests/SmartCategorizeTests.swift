@@ -287,6 +287,76 @@ struct SmartCategorizeTests {
         #expect(f.model.applyCategorization(plans: [], assignments: [:]) == 0)
     }
 
+    @Test("Off the main actor the categoriser proposes exactly what it does on it")
+    func offMainMatchesMainActor() async throws {
+        let f = try makeFixture()
+        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+
+        let pay = try f.model.addTransaction(
+            date: Date(timeIntervalSince1970: 2_000_000),
+            description: "ACME PTY LTD PAYROLL 00456", currency: .aud, splits: [
+                SplitInput(accountID: f.bank, value: dec("1500")),
+                SplitInput(accountID: f.imbalance, value: dec("-1500"))])
+        let shop = try f.model.addTransaction(
+            date: Date(timeIntervalSince1970: 2_100_000),
+            description: "WOOLWORTHS 5678 SYDNEY", currency: .aud, splits: [
+                SplitInput(accountID: f.bank, value: dec("-45.10")),
+                SplitInput(accountID: f.imbalance, value: dec("45.10"))])
+
+        let items = f.model.uncategorizedItems()
+        let onMain = f.model.smartCategoryPlans(for: items)
+        let offMain = await f.model.smartCategoryPlansOffMain(for: items)
+        #expect(Set(onMain.keys) == [pay, shop])
+        #expect(Set(offMain.keys) == Set(onMain.keys))
+        for (id, plan) in onMain {
+            let other = try #require(offMain[id])
+            #expect(other.templateDescription == plan.templateDescription)
+            #expect(other.confidence == plan.confidence)
+            #expect(other.newDescription == plan.newDescription)
+            #expect(other.anchorSplitIDs == plan.anchorSplitIDs)
+            #expect(other.legs.map(\.accountID) == plan.legs.map(\.accountID))
+            #expect(other.legs.map(\.value) == plan.legs.map(\.value))
+            #expect(other.legs.map(\.accountName) == plan.legs.map(\.accountName))
+        }
+    }
+
+    @Test("A plan its transaction has outgrown is not applied, and nothing unbalances")
+    func stalePlansRefused() throws {
+        let f = try makeFixture()
+        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        let book = try #require(f.model.book)
+
+        func payroll(_ amount: String, at seconds: TimeInterval) throws -> GncGUID {
+            try f.model.addTransaction(
+                date: Date(timeIntervalSince1970: seconds),
+                description: "ACME PTY LTD PAYROLL 00456", currency: .aud, splits: [
+                    SplitInput(accountID: f.bank, value: dec(amount)),
+                    SplitInput(accountID: f.imbalance, value: -dec(amount))])
+        }
+        let categorised = try payroll("1500", at: 2_000_000)
+        let revalued = try payroll("1500", at: 2_100_000)
+        let plans = f.model.smartCategoryPlans(for: f.model.uncategorizedItems())
+        let stale = try [#require(plans[categorised]), #require(plans[revalued])]
+
+        // Between the sheet opening and Apply: one is categorised by hand, the
+        // other's amount is corrected.
+        let first = try #require(book.transaction(with: categorised))
+        let second = try #require(book.transaction(with: revalued))
+        f.model.editing([categorised, revalued], named: "Edit Transactions") {
+            first.splits.first { $0.account?.isWash ?? false }?.account = book.account(with: f.salary)
+            for split in second.splits { split.value = split.value > 0 ? dec("1600") : dec("-1600") }
+            for split in second.splits { split.quantity = split.value }
+        }
+        let parkedLeg = try #require(first.splits.first { $0.account?.guid == f.salary })
+
+        #expect(f.model.applyCategorization(plans: stale,
+                                            assignments: [parkedLeg.guid: f.groceries]) == 0)
+        #expect(first.isBalanced && second.isBalanced)
+        #expect(first.splits.count == 2 && second.splits.count == 2)
+        #expect(parkedLeg.account?.guid == f.salary)    // a categorised leg is not moved
+        #expect(f.model.uncategorizedItems().map(\.transactionID) == [revalued])
+    }
+
     @Test("Tokenisation keeps payee words and drops noise: numbers, dates, filler")
     func tokenisation() {
         #expect(AppModel.significantTokens("PayPal *DigiDirect 12345")

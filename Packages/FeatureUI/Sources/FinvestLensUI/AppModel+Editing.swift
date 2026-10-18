@@ -481,7 +481,10 @@ extension AppModel {
             return nil
         }
         guard !result.transactions.isEmpty else { return 0 }
-        editingWholeBook(named: "Close Financial Year") {
+        // The closing entries are all the close adds, so they are all the undo
+        // needs — each recorded as not yet existing, as adding any transaction
+        // is, where this used to snapshot the whole book (P9d).
+        editing(result.transactions.map(\.guid), named: "Close Financial Year") {
             for txn in result.transactions { book.addTransaction(txn) }
         }
         return result.closedAccountCount
@@ -889,16 +892,77 @@ extension AppModel {
 
     func runSearch() {
         guard let book, !searchQuery.trimmingCharacters(in: .whitespaces).isEmpty else {
-            searchResults = []
+            setSearchMatches([])
             searchNotices = []
             return
         }
         findQuery = nil                  // typing replaces a structured find
         findMatchedSplitID = [:]
         searchNotices = notices(for: searchQuery)
-        searchResults = transactionsMatching(searchQuery, in: book)
+        setSearchMatches(transactionsMatching(searchQuery, in: book))
+    }
+
+    /// The matches as rows, newest first: the phone's list, and what tests
+    /// read. Made when asked — a one-letter query matches nearly the whole
+    /// book, and making a row of every match was three quarters of what each
+    /// keystroke cost before the results were shown as a register.
+    public var searchResults: [TransactionSummary] {
+        let revisions = (searchRevision, transactionRevision)
+        if let cached = searchResultsCache, cached.search == revisions.0, cached.transactions == revisions.1 {
+            return cached.rows
+        }
+        let rows = searchMatches
             .sorted { $0.datePosted > $1.datePosted }
             .map { summary(for: $0) }
+        searchResultsCache = (revisions.0, revisions.1, rows)
+        return rows
+    }
+
+    /// How many transactions the search or Find matched.
+    public var searchMatchCount: Int {
+        _ = searchRevision
+        return searchMatches.count
+    }
+
+    /// The general ledger narrowed to what the search matched — GnuCash's
+    /// search ledger. Its Find opens the results as a register
+    /// (`dialog-find-transactions.c`: `gnc_ledger_display_query(query,
+    /// SEARCH_LEDGER, REG_STYLE_JOURNAL)`), editable like any other, and so do
+    /// these: the rows, sort and filter of All Transactions, only the matches.
+    ///
+    /// In the general ledger's own order — by date, the book's order within a
+    /// day — and under no register filter or sort. Those belong to whichever
+    /// account is selected underneath (search takes over the pane, not the
+    /// sidebar), and taking them hid matches behind another account's
+    /// "Unreconciled only" while sorting the results quietly re-sorted, and
+    /// saved, that account's register. The search narrows itself, with its
+    /// operators (`from:`, `amount:`, `-word`).
+    func searchLedgerTransactions() -> [Transaction] {
+        let key = SearchLedgerKey(search: searchRevision, transactions: transactionRevision)
+        if let cached = searchLedgerCache, cached.key == key { return cached.transactions }
+        let matches = searchMatches
+        var keyed: [(key: TimeInterval, at: Int)] = []
+        keyed.reserveCapacity(matches.count)
+        for (at, txn) in matches.enumerated() {
+            keyed.append((txn.datePosted.timeIntervalSinceReferenceDate, at))
+        }
+        keyed.sort { lhs, rhs in lhs.key != rhs.key ? lhs.key < rhs.key : lhs.at < rhs.at }
+        let ledger = keyed.map { matches[$0.at] }
+        searchLedgerCache = (key, ledger)
+        return ledger
+    }
+
+    /// What the search ledger's summary bar says: how many are showing and
+    /// their debit total — the whole-book bar's two facts, of the matches.
+    public func searchLedgerSummary() -> (count: Int, debits: Decimal) {
+        // Asked on every pass of the register's body: kept with the ledger it
+        // sums, for the same key.
+        _ = searchLedgerTransactions()
+        if let memo = searchSummaryMemo, memo.key == searchLedgerCache?.key { return memo.value }
+        guard let cached = searchLedgerCache else { return (0, 0) }
+        let value = Self.debitSummary(cached.transactions)
+        searchSummaryMemo = (cached.key, value)
+        return value
     }
 
     // MARK: Structured find (GnuCash Edit ▸ Find…, `FR-FIND-01`)
@@ -991,9 +1055,7 @@ extension AppModel {
             }
         }
         findMatchedSplitID = matched
-        searchResults = ordered
-            .sorted { $0.datePosted > $1.datePosted }
-            .map { summary(for: $0) }
+        setSearchMatches(ordered)
     }
 
     /// Whether there are results for refine/add/delete to work against.
@@ -1005,7 +1067,7 @@ extension AppModel {
         findPipeline = []
         findMatchedSplitID = [:]
         findSplitIDs = []
-        searchResults = []
+        setSearchMatches([])
     }
 
     // MARK: In-register quick entry (FR-REG-05)
@@ -1141,9 +1203,63 @@ extension AppModel {
     /// description / number / memo / account name (`FR-FIND-01`).
     func transactionsMatching(_ query: String, in book: Book) -> [Transaction] {
         let tokens = query.split(separator: " ").map(String.init).filter { !$0.isEmpty }
-        return book.transactions.filter { txn in
-            tokens.allSatisfy { matchesToken($0, txn) }
+        let index = searchIndex(for: book)
+        // Plain words — what a person types — go through the folded index, a
+        // scan of bytes. A query that only lengthens the last one's words
+        // ("gro" → "groc") can only match fewer, so it looks among those.
+        let words = tokens.filter(Self.isPlainWord).map(SearchTextIndex.fold)
+        // "-word" is answered by the same index, so a word and its negation
+        // are exact complements: by `String.contains` a word ending inside a
+        // stored grapheme ("👍" in "👍🏽", a Thai or Indic syllable typed half
+        // way) found a transaction that its negation did not exclude.
+        let negated = tokens.compactMap(Self.negatedPlainWord).map(SearchTextIndex.fold)
+        var positions: [Int]?
+        if let last = lastWordSearch, last.revision == transactionRevision, !last.words.isEmpty,
+           last.words.allSatisfy({ old in words.contains { $0.utf8.firstRange(of: old.utf8) != nil } }) {
+            positions = last.positions
         }
+        for word in words {
+            positions = index.positions(containing: word, among: positions)
+            if positions?.isEmpty == true { break }
+        }
+        lastWordSearch = words.isEmpty ? nil : (transactionRevision, words, positions ?? [])
+        for word in negated {
+            let candidates = positions ?? Array(index.transactions.indices)
+            let excluded = Set(index.positions(containing: word, among: candidates))
+            positions = candidates.filter { !excluded.contains($0) }
+        }
+        let pool = positions.map { $0.map { index.transactions[$0] } } ?? index.transactions
+        // The rest — negated keys and `key:value` — are tested on what is left.
+        let rest = tokens.filter { !Self.isPlainWord($0) && Self.negatedPlainWord($0) == nil }
+        guard !rest.isEmpty else { return pool }
+        return pool.filter { txn in rest.allSatisfy { matchesToken($0, txn) } }
+    }
+
+    /// The search index for `book` as it stands, built on first use after a
+    /// change: typing never changes the book, so every keystroke but the
+    /// first reads the same one.
+    func searchIndex(for book: Book) -> SearchTextIndex {
+        if let cached = searchTextIndex, cached.revision == transactionRevision { return cached.index }
+        let index = SearchTextIndex(book.transactions)
+        searchTextIndex = (transactionRevision, index)
+        lastWordSearch = nil
+        return index
+    }
+
+    /// Whether `token` is free text — matched against the folded fields —
+    /// rather than a negation or a `key:value`, which keep their own tests.
+    /// An unknown key is free text, colon and all, as it always was.
+    static func isPlainWord(_ token: String) -> Bool {
+        if token.hasPrefix("-"), token.count > 1 { return false }
+        guard let colon = token.firstIndex(of: ":") else { return true }
+        return !searchKeys.contains(token[..<colon].lowercased())
+    }
+
+    /// The word of a negated plain word — `-lunch` → `lunch` — or `nil`.
+    static func negatedPlainWord(_ token: String) -> String? {
+        guard token.hasPrefix("-"), token.count > 1 else { return nil }
+        let word = String(token.dropFirst())
+        return isPlainWord(word) ? word : nil
     }
 
     private func matchesToken(_ rawToken: String, _ txn: Transaction) -> Bool {

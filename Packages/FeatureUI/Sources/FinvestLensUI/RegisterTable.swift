@@ -138,6 +138,14 @@ private final class RegisterRowCache {
     private var composedStructure: Int = .min
     private var composedContent: Int = .min
     private var composed: [RegisterTableRow] = []
+    /// Where each transaction's first run of base rows sits, and its block of
+    /// composed rows (``RegisterBlocks``) — built on the first keystroke after
+    /// the rows they map were built, so a keystroke finds its block by lookup
+    /// instead of by three walks of every row (R10b). The composed map stands
+    /// across splices that leave a block the length it was; one that changes
+    /// the length moves every later block, and the map goes.
+    private var baseBlocks: [GncGUID: Range<Int>]?
+    private var composedBlocks: RegisterBlocks?
     private var rotorKey: Int = .min
     private var rotor: [UnreconciledRotorEntry] = []
 
@@ -149,28 +157,49 @@ private final class RegisterRowCache {
         if key != baseKey {
             base = timed("base") { build() }
             baseKey = key
+            baseBlocks = nil
         }
         return base
     }
 
     /// The composed rows. `structure` decides which rows exist and which are
     /// selected, editable or disclosed; `content` is the draft's text. When
-    /// only the content moved (a keystroke), `patch` is offered the previous
-    /// rows to splice the drafted transaction's block into, so a keystroke
-    /// recomposes one transaction instead of every row of the register
-    /// (Performance Review 2, R10). A `nil` from `patch` means a full compose.
-    func composed(structure: Int, content: Int,
-                  patch: ([RegisterTableRow]) -> [RegisterTableRow]?,
+    /// only the content moved (a keystroke), the drafted transaction's block
+    /// alone is recomposed — `recompose`, from its own base rows — and
+    /// spliced into the previous pass's rows, so a keystroke recomposes one
+    /// transaction instead of every row of the register (Performance Review
+    /// 2, R10). No draft, no block for it, or two headings for it: a full
+    /// compose.
+    func composed(structure: Int, content: Int, draft: GncGUID?,
+                  recompose: (ArraySlice<RegisterBaseRow>) -> [RegisterTableRow],
                   build: () -> [RegisterTableRow]) -> [RegisterTableRow] {
         if structure == composedStructure, content == composedContent { return composed }
-        if structure == composedStructure, let patched = timed("patch", { patch(composed) }) {
+        if structure == composedStructure, let draft,
+           let patched = timed("patch", { splice(draft, recompose) }) {
             composed = patched
         } else {
             composed = timed("compose") { build() }
             composedStructure = structure
+            composedBlocks = nil
         }
         composedContent = content
         return composed
+    }
+
+    private func splice(_ txn: GncGUID,
+                        _ recompose: (ArraySlice<RegisterBaseRow>) -> [RegisterTableRow]) -> [RegisterTableRow]? {
+        if baseBlocks == nil { baseBlocks = RegisterBlocks.firstRuns(of: base) }
+        if composedBlocks == nil { composedBlocks = RegisterBlocks(composed) }
+        guard let source = baseBlocks?[txn],
+              let target = composedBlocks?.block(of: txn) else { return nil }
+        let fresh = recompose(base[source])
+        // Let go of the cache's own hold first, so where nothing else holds
+        // the rows either they change in place rather than being copied.
+        var rows = composed
+        composed = []
+        rows.replaceSubrange(target, with: fresh)
+        if fresh.count != target.count { composedBlocks = nil }
+        return rows
     }
 
     func rotorEntries(for key: Int,
@@ -299,6 +328,10 @@ struct RegisterTableView: View {
     @Bindable var model: AppModel
     /// FR-REG-09: All Transactions — the whole-book journal in this same view.
     var wholeBook = false
+    /// The whole-book journal narrowed to the search's matches — GnuCash's
+    /// search ledger (``AppModel/searchLedgerTransactions()``). Only with
+    /// `wholeBook`.
+    var searchScoped = false
     /// ⌘↑/⌘↓ from the shell; consumed here.
     var jump: Binding<RegisterEnd?> = .constant(nil)
     @Environment(\.appDateFormat) private var dateFormat
@@ -438,7 +471,9 @@ struct RegisterTableView: View {
 
     private func table(_ rows: [RegisterTableRow], code: String, baseKey: Int) -> some View {
         ScrollViewReader { proxy in
-            Table(rows, selection: $selection, sortOrder: tableSortOrder) {
+            // The search results keep one order; a header click there would
+            // re-sort the account register underneath instead.
+            Table(rows, selection: $selection, sortOrder: searchScoped ? .constant([]) : tableSortOrder) {
                 // **A blank primary column.** iPadOS 27 draws a `Table`'s
                 // first column header as a band spanning the table's full
                 // width, with the label at the table's own leading edge —
@@ -491,6 +526,9 @@ struct RegisterTableView: View {
             }
             .onAppear { showPendingOrNewest(proxy, rows: rows) }
             .onChange(of: model.selectedAccountID) {
+                // A whole-book register belongs to no account: the sidebar
+                // moving under the search results is not a reason to reset them.
+                guard !wholeBook else { return }
                 settleAndReset()
                 Task { @MainActor in showPendingOrNewest(proxy, rows: buildRows(baseKey: cacheKey)) }
             }
@@ -929,7 +967,20 @@ struct RegisterTableView: View {
         hasher.combine(wholeBook)
         hasher.combine(disclosesEveryRow)
         if wholeBook {
-            hasher.combine(model.journalTransactions(forAccountID: nil).count)
+            hasher.combine(searchScoped)
+            if searchScoped {
+                hasher.combine(model.searchRevision)
+                hasher.combine(model.searchLedgerTransactions().count)
+            } else {
+                // The order and the filter too: a sort changes neither the
+                // revision nor the count, and the rows did not re-sort.
+                hasher.combine(model.registerSort)
+                hasher.combine(model.registerSortReversed)
+                hasher.combine(model.registerFilter.statuses.map(\.rawValue).sorted())
+                hasher.combine(model.registerFilter.startDate)
+                hasher.combine(model.registerFilter.endDate)
+                hasher.combine(model.journalTransactions(forAccountID: nil).count)
+            }
         } else {
             hasher.combine(model.selectedAccountID)
             hasher.combine(model.registerSort)
@@ -980,8 +1031,10 @@ struct RegisterTableView: View {
 
     private func wholeBookBase() -> [RegisterBaseRow] {
         var out: [RegisterBaseRow] = []
-        for txn in model.journalTransactions(forAccountID: nil) {
-            let summary = model.wholeBookRowSummary(ofTransaction: txn.guid)
+        let ledger = searchScoped ? model.searchLedgerTransactions()
+                                  : model.journalTransactions(forAccountID: nil)
+        for txn in ledger {
+            let summary = AppModel.wholeBookRowSummary(of: txn)
             out.append(RegisterBaseRow(
                 id: .txn(txn.guid), txn: txn.guid,
                 kind: .main(RegisterMainBase(
@@ -1018,22 +1071,12 @@ struct RegisterTableView: View {
         structure.combine(currentExpanded)
         structure.combine(draft?.transactionID)
         let base = cache.base(for: baseKey) { buildBase() }
+        // A keystroke changes the drafted transaction's rows and no other, so
+        // only its block is recomposed and spliced in (see the cache).
         return cache.composed(structure: structure.finalize(), content: editGeneration,
-                              patch: { previous in recomposeDraft(in: previous, base: base) },
+                              draft: draft?.transactionID,
+                              recompose: { composeRows(base: $0) },
                               build: { composeRows(base: base[...]) })
-    }
-
-    /// A keystroke changes the drafted transaction's rows and no other, so
-    /// only its block is recomposed — from its own base rows — and spliced
-    /// into the previous pass's rows in place of the old block. `nil` when
-    /// there is no draft or its heading is not among the rows.
-    private func recomposeDraft(in previous: [RegisterTableRow],
-                                base: [RegisterBaseRow]) -> [RegisterTableRow]? {
-        guard let txn = draft?.transactionID,
-              let start = base.firstIndex(where: { $0.txn == txn }) else { return nil }
-        var end = start + 1
-        while end < base.count, base[end].txn == txn { end += 1 }
-        return previous.replacingBlock(of: txn, with: composeRows(base: base[start..<end]))
     }
 
     private func composeRows(base: ArraySlice<RegisterBaseRow>) -> [RegisterTableRow] {
@@ -1607,24 +1650,59 @@ extension RegisterTableRow {
     }
 }
 
+/// Where each transaction's block sits in composed rows — its heading and
+/// every row up to the next heading — found in one walk, so a keystroke's
+/// splice is a lookup (R10b).
+struct RegisterBlocks {
+    /// `nil` for a transaction with two headings: one with two legs in the
+    /// focus account has one per split, and under some sorts they are not
+    /// even adjacent. One block cannot stand in for both, so the caller
+    /// composes in full.
+    private var blocks: [GncGUID: Range<Int>?] = [:]
+
+    init(_ rows: [RegisterTableRow]) {
+        var open: (txn: GncGUID, start: Int)?
+        func close(at end: Int) {
+            guard let current = open else { return }
+            blocks[current.txn] = blocks[current.txn] == nil ? current.start..<end : .some(nil)
+        }
+        for (index, row) in rows.enumerated() {
+            guard case .txn(let txn) = row.id else { continue }
+            close(at: index)
+            open = (txn, index)
+        }
+        close(at: rows.count)
+    }
+
+    /// The rows `txn`'s block spans, or `nil` when it has none, or two.
+    func block(of txn: GncGUID) -> Range<Int>? {
+        blocks[txn] ?? nil
+    }
+
+    /// Where each transaction's first run of base rows sits — a transaction's
+    /// base rows are consecutive, one run per leg in the focus account.
+    fileprivate static func firstRuns(of base: [RegisterBaseRow]) -> [GncGUID: Range<Int>] {
+        var runs: [GncGUID: Range<Int>] = [:]
+        var start = 0
+        while start < base.count {
+            let txn = base[start].txn
+            var end = start + 1
+            while end < base.count, base[end].txn == txn { end += 1 }
+            if runs[txn] == nil { runs[txn] = start..<end }
+            start = end
+        }
+        return runs
+    }
+}
+
 extension Array where Element == RegisterTableRow {
     /// `self` with the block that belongs to `txn` — its heading and every
     /// row up to the next heading — replaced by `fresh`, or `nil` when `txn`
-    /// has no heading here. The per-keystroke path of the table's compose.
+    /// has no heading here, or two (see ``RegisterBlocks``).
     func replacingBlock(of txn: GncGUID, with fresh: [RegisterTableRow]) -> [RegisterTableRow]? {
-        let heading = RegisterRowID.txn(txn)
-        guard let start = firstIndex(where: { $0.id == heading }) else { return nil }
-        var end = start + 1
-        while end < count, !self[end].isHeading { end += 1 }
-        // A transaction with two legs in the focus account has two headings
-        // — one per split — and under some sorts they are not even adjacent.
-        // One block cannot stand in for both, so the caller composes in full.
-        guard !self[end...].contains(where: { $0.id == heading }) else { return nil }
-        var out: [RegisterTableRow] = []
-        out.reserveCapacity(count - (end - start) + fresh.count)
-        out.append(contentsOf: self[..<start])
-        out.append(contentsOf: fresh)
-        out.append(contentsOf: self[end...])
+        guard let block = RegisterBlocks(self).block(of: txn) else { return nil }
+        var out = self
+        out.replaceSubrange(block, with: fresh)
         return out
     }
 }

@@ -72,7 +72,7 @@ extension AppModel {
         let customer = Customer(id: id, name: name, address: address,
                                 currency: reportCurrency, terms: terms, taxTable: taxTable,
                                 taxTableOverride: taxTable != nil)
-        editingWholeBook(named: "Add Customer") { book.addCustomer(customer) }
+        editingPostings(named: "Add Customer", business: true) { book.addCustomer(customer) }
         return customer.guid
     }
 
@@ -82,7 +82,7 @@ extension AppModel {
         guard let book else { return nil }
         let vendor = Vendor(id: id, name: name, address: address, currency: reportCurrency,
                             terms: terms, taxTable: taxTable, taxTableOverride: taxTable != nil)
-        editingWholeBook(named: "Add Vendor") { book.addVendor(vendor) }
+        editingPostings(named: "Add Vendor", business: true) { book.addVendor(vendor) }
         return vendor.guid
     }
 
@@ -91,7 +91,7 @@ extension AppModel {
                             address: BusinessAddress = BusinessAddress()) -> GncGUID? {
         guard let book else { return nil }
         let employee = Employee(id: id, username: username, address: address, currency: reportCurrency)
-        editingWholeBook(named: "Add Employee") { book.addEmployee(employee) }
+        editingPostings(named: "Add Employee", business: true) { book.addEmployee(employee) }
         return employee.guid
     }
 
@@ -104,7 +104,7 @@ extension AppModel {
         guard let book, let owner = businessOwner(type: ownerType, id: ownerID),
               owner.type == .customer || owner.type == .vendor else { return nil }
         let job = Job(id: id, name: name, reference: reference, owner: owner)
-        editingWholeBook(named: "Add Job") { book.addJob(job) }
+        editingPostings(named: "Add Job", business: true) { book.addJob(job) }
         return job.guid
     }
 
@@ -115,7 +115,7 @@ extension AppModel {
                             dueDays: Int) -> GncGUID? {
         guard let book else { return nil }
         let term = BillTerm(name: name, kind: kind, dueDays: dueDays)
-        editingWholeBook(named: "Add Billing Term") { book.addBillTerm(term) }
+        editingPostings(named: "Add Billing Term", business: true) { book.addBillTerm(term) }
         return term.guid
     }
 
@@ -124,7 +124,7 @@ extension AppModel {
         guard let book, let account = book.account(with: accountID) else { return nil }
         let table = TaxTable(name: name, entries: [
             TaxTableEntry(account: account, kind: .percentage, amount: percentage)])
-        editingWholeBook(named: "Add Tax Table") { book.addTaxTable(table) }
+        editingPostings(named: "Add Tax Table", business: true) { book.addTaxTable(table) }
         return table.guid
     }
 
@@ -163,7 +163,7 @@ extension AppModel {
         let invoice = Invoice(id: id, kind: kind, isCreditNote: isCreditNote, owner: owner,
                               dateOpened: dateOpened,
                               terms: owner.terms, currency: reportCurrency, entries: entries)
-        editingWholeBook(named: isCreditNote ? "Create Credit Note" : "Create Invoice") {
+        editingPostings(named: isCreditNote ? "Create Credit Note" : "Create Invoice", business: true) {
             book.addInvoice(invoice)
         }
         return invoice.guid
@@ -178,7 +178,7 @@ extension AppModel {
             ?? (invoice.kind == .invoice ? book.defaultReceivable : book.defaultPayable)
         guard let account else { return false }
         var ok = false
-        editingWholeBook(named: "Post Invoice") {
+        editingPostings(named: "Post Invoice", business: true) {
             ok = (try? book.postInvoice(invoice, to: account, postDate: postDate)) != nil
         }
         return ok
@@ -186,7 +186,7 @@ extension AppModel {
 
     public func unpostInvoice(_ invoiceID: GncGUID) {
         guard let book, let invoice = book.invoice(with: invoiceID) else { return }
-        editingWholeBook(named: "Unpost Invoice") { book.unpostInvoice(invoice) }
+        editingPostings(named: "Unpost Invoice", business: true) { book.unpostInvoice(invoice) }
     }
 
     /// The amount still owed on an invoice.
@@ -206,7 +206,7 @@ extension AppModel {
             ? book.defaultReceivable : book.defaultPayable
         guard let posting else { return false }
         var ok = false
-        editingWholeBook(named: "Process Payment") {
+        editingPostings(named: "Process Payment", business: true) {
             ok = (try? book.processPayment(owner: owner, amount: amount, from: bank,
                                            to: posting, on: date)) != nil
         }

@@ -98,9 +98,16 @@ public enum FinancialReports {
     // MARK: Balance Sheet
 
     public static func balanceSheet(_ book: Book, asOf: Date, currency: Commodity) -> BalanceSheet {
+        balanceSheet(book, asOf: asOf, currency: currency, balances: balanceMap(book, from: nil, to: asOf))
+    }
+
+    /// ``balanceSheet(_:asOf:currency:)`` from balances the caller already
+    /// walked for — `book.balancesByAccount(to: asOf)` — so a board that
+    /// needs them for something else too walks the book once.
+    public static func balanceSheet(_ book: Book, asOf: Date, currency: Commodity,
+                                    balances map: [ObjectIdentifier: Decimal]) -> BalanceSheet {
         // Everything below — the three sections, retained earnings, the FX
         // fold — reads this one map: one walk, one conversion per account.
-        let map = balanceMap(book, from: nil, to: asOf)
         let accounts = book.accounts.filter { !$0.isPlaceholder }
 
         // Every figure on this sheet is the sum of *rounded* per-account
@@ -242,15 +249,14 @@ public enum FinancialReports {
     /// this inside its `body`, that was the price of every render, and the bulk
     /// of the wait when opening a book.
     ///
-    /// The saving is that balances accumulate: walk the transactions in date
-    /// order, carry a running total per account, and each date reads off what
-    /// has landed so far. That is one visit per split, plus one conversion per
-    /// account per date — measured at **0.066s** for the same series, and it
-    /// still lands on the same total to the cent.
+    /// The saving is that balances accumulate: each date's balance is the one
+    /// before it plus what happened in between. That is one visit per split,
+    /// plus one conversion per account per date — measured at **0.066s** for
+    /// the same series, and it still lands on the same total to the cent.
     public static func netWorthSeries(_ book: Book, dates: [Date],
                                       currency: Commodity) -> [NetWorthPoint] {
         let sortedDates = dates.sorted()
-        guard !sortedDates.isEmpty else { return [] }
+        guard let lastDate = sortedDates.last else { return [] }
 
         // Every account the series can count, indexed by identity so a split can
         // find its slot without searching.
@@ -263,22 +269,37 @@ public enum FinancialReports {
             slot[ObjectIdentifier(account)] = index
         }
 
-        // The dates only ever move forward, and a balance "as of" a date is the
-        // balance as of the one before it plus what happened in between. So the
-        // book is walked once in date order, carrying the running native balance
-        // of every account, and each date reads off what has accumulated.
-        var running = [Decimal](repeating: 0, count: accounts.count)
-        let ordered = book.transactions.sorted { $0.datePosted < $1.datePosted }
-        var next = 0
-
-        return sortedDates.map { date in
-            while next < ordered.count, ordered[next].datePosted <= date {
-                for split in ordered[next].splits where split.reconcileState != .voided {
-                    if let account = split.account, let index = slot[ObjectIdentifier(account)] {
-                        running[index] += split.quantity
-                    }
+        // A transaction first counts at the first date on or after its own, so
+        // it is filed under that date — found by halving the dozen dates, not
+        // by putting the book in date order — and each date's balance is the
+        // running sum of what was filed up to it. Walking the book in date
+        // order meant sorting it first, for an order the answer does not
+        // depend on: on the reference book, after an edit, the series took
+        // 44ms that way and takes 12ms this way, and the Overview's whole pass
+        // went from 101ms to 67–72ms (R5b; release, quiet machine).
+        var filed = [[Decimal]](repeating: [Decimal](repeating: 0, count: accounts.count),
+                                count: sortedDates.count)
+        for transaction in book.transactions {
+            let posted = transaction.datePosted
+            guard posted <= lastDate else { continue }
+            var low = 0
+            var high = sortedDates.count - 1
+            while low < high {
+                let middle = (low + high) / 2
+                if sortedDates[middle] < posted { low = middle + 1 } else { high = middle }
+            }
+            for split in transaction.splits where split.reconcileState != .voided {
+                if let account = split.account, let index = slot[ObjectIdentifier(account)] {
+                    filed[low][index] += split.quantity
                 }
-                next += 1
+            }
+        }
+
+        var running = [Decimal](repeating: 0, count: accounts.count)
+        return sortedDates.indices.map { position in
+            let date = sortedDates[position]
+            for (index, amount) in filed[position].enumerated() where amount != 0 {
+                running[index] += amount
             }
 
             // Conversion still happens per account per date: a rate moves even

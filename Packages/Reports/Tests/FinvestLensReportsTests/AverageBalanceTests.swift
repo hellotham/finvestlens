@@ -128,3 +128,141 @@ struct AverageBalanceTests {
         #expect(october.profit == dec("200"))
     }
 }
+
+/// The report as it was before it read each account's own legs (17 Oct 2026),
+/// kept as the oracle the faster one must match interval for interval.
+private func referenceAverageBalance(_ book: Book, accounts: [Account], currency: Commodity,
+                                     from: Date, to: Date, step: AverageBalanceStep,
+                                     calendar: Calendar) -> [AverageBalanceInterval] {
+    let fromDay = calendar.startOfDay(for: from)
+    let toDay = calendar.startOfDay(for: to)
+    func value(_ native: Decimal, _ commodity: Commodity, on day: Date) -> Decimal {
+        if native == 0 { return 0 }
+        if commodity == currency { return native }
+        return book.convert(native, from: commodity, to: currency, on: day) ?? 0
+    }
+    struct AccountState {
+        let account: Account
+        var running: Decimal
+        var events: [(day: Date, delta: Decimal)]
+        var cursor: Int = 0
+    }
+    var states: [AccountState] = accounts.map { account in
+        var prior = Decimal(0)
+        var events: [(Date, Decimal)] = []
+        for transaction in book.transactions {
+            let day = calendar.startOfDay(for: transaction.datePosted)
+            for split in transaction.splits
+            where split.account === account && split.reconcileState != .voided {
+                if day < fromDay { prior += split.quantity }
+                else if day <= toDay { events.append((day, split.quantity)) }
+            }
+        }
+        events.sort { $0.0 < $1.0 }
+        return AccountState(account: account, running: prior, events: events)
+    }
+    guard fromDay <= toDay, !states.isEmpty else { return [] }
+    var boundaries: [Date] = []
+    var boundary = fromDay
+    while boundary <= toDay {
+        boundaries.append(boundary)
+        boundary = calendar.date(byAdding: step.components, to: boundary)!
+    }
+    var intervals: [AverageBalanceInterval] = []
+    var boundaryIndex = 0
+    var dailyBalances: [Decimal] = []
+    var flows: [Decimal] = []
+    func closeInterval(start: Date, endExclusive: Date) {
+        let end = calendar.date(byAdding: .day, value: -1, to: endExclusive)!
+        let count = dailyBalances.count
+        let average = count > 0 ? dailyBalances.reduce(0, +) / Decimal(count) : 0
+        let gain = flows.filter { $0 > 0 }.reduce(0, +)
+        let loss = flows.filter { $0 < 0 }.reduce(0, +)
+        intervals.append(AverageBalanceInterval(
+            start: start, end: end, average: average,
+            maximum: currency.round(dailyBalances.max() ?? 0),
+            minimum: currency.round(dailyBalances.min() ?? 0),
+            gain: currency.round(gain), loss: currency.round(-loss),
+            profit: currency.round(gain + loss)))
+        dailyBalances = []
+        flows = []
+    }
+    var day = fromDay
+    while day <= toDay {
+        while boundaryIndex + 1 < boundaries.count, day >= boundaries[boundaryIndex + 1] {
+            closeInterval(start: boundaries[boundaryIndex], endExclusive: boundaries[boundaryIndex + 1])
+            boundaryIndex += 1
+        }
+        for index in states.indices {
+            while states[index].cursor < states[index].events.count,
+                  states[index].events[states[index].cursor].day == day {
+                let delta = states[index].events[states[index].cursor].delta
+                states[index].running += delta
+                flows.append(value(delta, states[index].account.commodity, on: day))
+                states[index].cursor += 1
+            }
+        }
+        var balance = Decimal(0)
+        for state in states { balance += value(state.running, state.account.commodity, on: day) }
+        dailyBalances.append(balance)
+        day = calendar.date(byAdding: .day, value: 1, to: day)!
+    }
+    closeInterval(start: boundaries[boundaryIndex],
+                  endExclusive: calendar.date(byAdding: .day, value: 1, to: toDay)!)
+    return intervals
+}
+
+@Suite("Average balance matches its reference")
+struct AverageBalanceReferenceTests {
+
+    @Test("Several accounts, two currencies, voided legs, a prior balance: every interval as before",
+          arguments: AverageBalanceStep.allCases)
+    func matchesReference(step: AverageBalanceStep) {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")!
+        let book = Book(baseCurrency: .aud)
+        let bank = book.addAccount(Account(name: "Bank", type: .bank, commodity: .aud))
+        let usd = book.addAccount(Account(name: "USD", type: .bank, commodity: .usd))
+        let cash = book.addAccount(Account(name: "Cash", type: .cash, commodity: .aud))
+        let food = book.addAccount(Account(name: "Food", type: .expense, commodity: .aud))
+        let base = Date(timeIntervalSince1970: 1_700_000_000)
+        book.addPrice(Price(commodity: .usd, currency: .aud, date: base, value: Decimal(string: "1.5")!))
+        book.addPrice(Price(commodity: .usd, currency: .aud, date: base.addingTimeInterval(86_400 * 40),
+                            value: Decimal(string: "1.6")!))
+        for index in 0..<90 {
+            let posted = base.addingTimeInterval(Double(index) * 86_400 * 1.3 - 86_400 * 20)
+            let txn = Transaction(currency: .aud, datePosted: posted)
+            let amount = Decimal(index % 9 + 1) * (index % 3 == 0 ? -1 : 1)
+            let account = [bank, usd, cash][index % 3]
+            txn.addSplit(Split(account: account, value: amount, quantity: account === usd ? amount / 2 : amount,
+                               reconcileState: index % 11 == 0 ? .voided : .notReconciled))
+            txn.addSplit(account: food, value: -amount)
+            book.addTransaction(txn)
+        }
+        let from = base, to = base.addingTimeInterval(86_400 * 75)
+        let report = FinancialReports.averageBalance(book, accounts: [bank, usd, cash], currency: .aud,
+                                                     from: from, to: to, step: step, calendar: calendar)
+        let reference = referenceAverageBalance(book, accounts: [bank, usd, cash], currency: .aud,
+                                                from: from, to: to, step: step, calendar: calendar)
+        #expect(report.intervals == reference)
+        #expect(!report.intervals.isEmpty)
+    }
+
+    @Test("All Time starts at the book's first entry, not in the year 1")
+    func allTimeStartsWithTheBook() {
+        let book = Book(baseCurrency: .aud)
+        let bank = book.addAccount(Account(name: "Bank", type: .bank, commodity: .aud))
+        let salary = book.addAccount(Account(name: "Salary", type: .income, commodity: .aud))
+        let first = Date(timeIntervalSince1970: 1_700_000_000)
+        let t = Transaction(currency: .aud, datePosted: first, description: "Pay")
+        t.addSplit(account: bank, value: 100)
+        t.addSplit(account: salary, value: -100)
+        book.addTransaction(t)
+        let report = FinancialReports.averageBalance(book, accounts: [bank], currency: .aud,
+                                                     from: .distantPast,
+                                                     to: first.addingTimeInterval(86_400 * 60),
+                                                     step: .month)
+        #expect(report.intervals.count <= 3)
+        #expect((report.intervals.first?.start ?? .distantPast) >= Calendar.current.startOfDay(for: first))
+    }
+}

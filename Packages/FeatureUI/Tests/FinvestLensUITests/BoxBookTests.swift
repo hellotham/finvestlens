@@ -428,7 +428,7 @@ struct BoxBookTests {
         let local = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
         defer { try? FileManager.default.removeItem(at: local) }
-        model.newBook(at: local)
+        await model.newBook(at: local)
         await model.finishBoxWork(within: .seconds(5))
         let before = box.requests.count
         #expect(model.openBoxFileID == nil)
@@ -922,7 +922,7 @@ struct BoxBookTests {
         let local = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
         defer { try? FileManager.default.removeItem(at: local) }
-        model.newBook(at: local)
+        await model.newBook(at: local)
         let open = try #require(model.documentURL)
 
         box.stallDownloads = .seconds(30)

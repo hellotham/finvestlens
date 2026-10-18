@@ -29,7 +29,7 @@ enum DocumentDialogs {
         panel.allowedContentTypes = [documentType]
         panel.canCreateDirectories = true
         guard panel.runModal() == .OK, let url = panel.url else { return }
-        model.newBook(at: url)
+        Task { await model.newBook(at: url) }
     }
 
     /// File ▸ Open…: pick an existing .finvestlens book.
@@ -91,7 +91,7 @@ enum DocumentDialogs {
         save.canCreateDirectories = true
         guard save.runModal() == .OK, let destination = save.url else { return }
 
-        model.importLedgerBook(from: source, saveAs: destination)
+        Task { await model.importLedgerBook(from: source, saveAs: destination) }
     }
 }
 #endif

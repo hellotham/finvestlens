@@ -85,7 +85,20 @@ extension AppModel {
     /// it asks the transaction directly.
     public func foreignCurrencyCode(ofTransaction id: GncGUID) -> String? {
         guard let txn = book?.transaction(with: id) else { return nil }
-        let derived = transactionCurrency(for: txn.splits.compactMap { $0.account?.guid })
+        return Self.foreignCurrencyCode(of: txn, reportCurrency: reportCurrency)
+    }
+
+    /// ``foreignCurrencyCode(ofTransaction:)`` of a transaction in hand: the
+    /// legs' accounts as they are, not turned into identifiers and looked up
+    /// again one by one — what ``transactionCurrency(for:)`` derives from them.
+    static func foreignCurrencyCode(of txn: Transaction, reportCurrency: Commodity) -> String? {
+        var derived = reportCurrency
+        for split in txn.splits {
+            if let commodity = split.account?.commodity, commodity.namespace == .currency {
+                derived = commodity
+                break
+            }
+        }
         return txn.currency == derived ? nil : txn.currency.mnemonic
     }
 

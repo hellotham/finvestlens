@@ -116,7 +116,7 @@ struct SidebarFooter: View {
     }
 
     private var closeBook: some View {
-        Button("Close Book", systemImage: "xmark.circle") { _ = model.saveAndCloseIfOpen() }
+        Button("Close Book", systemImage: "xmark.circle") { Task { await model.saveAndClose() } }
     }
 }
 #endif

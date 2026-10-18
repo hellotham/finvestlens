@@ -110,6 +110,19 @@ extension AppModel {
     /// Renders the requested slice of the open book to CSV (`FR-XIO-06`).
     public func csvExport(_ kind: CSVExportKind) -> String {
         guard let book else { return "" }
+        return Self.csv(kind, of: book)
+    }
+
+    /// ``csvExport(_:)`` built on a replica, off the main actor (R2e) —
+    /// `nil` when there is no book, or it changed while the export ran.
+    public func csvExportOffMain(_ kind: CSVExportKind) async -> String? {
+        // The accounts are the tree alone, a few hundred rows: built here,
+        // they cost less than the copy of every transaction a replica takes.
+        if kind == .accounts { return book == nil ? nil : csvExport(.accounts) }
+        return await onReplica { Self.csv(kind, of: $0) }
+    }
+
+    private nonisolated static func csv(_ kind: CSVExportKind, of book: Book) -> String {
         switch kind {
         case .accounts:     return CSVExporter.accounts(book)
         case .transactions: return CSVExporter.transactions(book)

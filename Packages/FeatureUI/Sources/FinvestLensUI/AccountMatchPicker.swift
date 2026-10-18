@@ -25,6 +25,10 @@ import FinvestLensEngine
 struct AccountMatchPicker: View {
     let tree: [AccountNode]
     @Binding var selection: Set<GncGUID>
+    /// Nothing ticked means every account, and a ticked account stands for its
+    /// subtree — so a placeholder parent can be ticked too, as the one way to
+    /// say "everything under Expenses" (the transaction report's scope).
+    var emptyMeansAll = false
     @Environment(\.dismiss) private var dismiss
 
     @State private var filter = ""
@@ -34,7 +38,7 @@ struct AccountMatchPicker: View {
     }
 
     private var matches: [AccountNode] {
-        Self.matching(tree, filter: trimmedFilter)
+        Self.matching(tree, filter: trimmedFilter, includingPlaceholders: emptyMeansAll)
     }
 
     /// Filtering flattens: when you have typed "everyday" you want the account, not
@@ -98,14 +102,16 @@ struct AccountMatchPicker: View {
 
     private var summary: String {
         switch selection.count {
-        case 0: String(localized: "No accounts selected")
-        default: String(localized: "\(selection.count) accounts selected")
+        case 0: emptyMeansAll ? String(localized: "All accounts") : String(localized: "No accounts selected")
+        default: emptyMeansAll
+            ? String(localized: "\(selection.count) accounts selected, with their subaccounts")
+            : String(localized: "\(selection.count) accounts selected")
         }
     }
 
     @ViewBuilder
     private func row(_ node: AccountNode, label: String) -> some View {
-        if node.isPlaceholder {
+        if node.isPlaceholder, !emptyMeansAll {
             // Navigable, not selectable.
             Text(node.name)
                 .scaledFont(.body)

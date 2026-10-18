@@ -70,13 +70,20 @@ struct LiveDashboardPerfTests {
                 }
                 if shares != 0 || cost != 0 { expected[account.guid] = (shares, cost) }
             }
-            #expect(pf.holdings.count == expected.count, "a holding appeared or vanished")
-            for holding in pf.holdings {
-                let want = try #require(expected[holding.id], "unexpected holding \(holding.symbol)")
-                #expect(holding.shares == want.shares, "\(holding.symbol) units")
-                #expect(holding.costBasis == model.reportCurrency.round(want.cost),
-                        "\(holding.symbol) cost")
-            }
+            // Counted, never named: a failed expectation prints what it
+            // compared, and these are a real book's holdings and costs.
+            let unexpected = pf.holdings.filter { expected[$0.id] == nil }.count
+            let wrongUnits = pf.holdings.filter { holding in
+                expected[holding.id].map { $0.shares != holding.shares } ?? false
+            }.count
+            let wrongCost = pf.holdings.filter { holding in
+                expected[holding.id].map { model.reportCurrency.round($0.cost) != holding.costBasis } ?? false
+            }.count
+            let sameCount = pf.holdings.count == expected.count
+            #expect(sameCount, "a holding appeared or vanished")
+            #expect(unexpected == 0, "holdings the whole-book scan does not have")
+            #expect(wrongUnits == 0, "holdings whose units differ from the whole-book scan")
+            #expect(wrongCost == 0, "holdings whose cost differs from the whole-book scan")
             print("identity: \(pf.holdings.count) holdings match the whole-book scan")
         }
 
@@ -139,6 +146,145 @@ struct LiveDashboardPerfTests {
 
         Dashboard call costs (sorted by cold time)
         \(lines)
+
+        """)
+    }
+
+    /// What the Overview pays right after an edit — the number the user
+    /// feels: every memo the board reads has just been dropped (R5b; target
+    /// under 100 ms). The edit is a register edit's: one transaction added
+    /// to the busiest bank account, today.
+    @Test("The Overview's pass after an edit")
+    func postEditPass() async throws {
+        guard let perfPath else { return }
+        let source = URL(fileURLWithPath: perfPath)
+        let copy = FileManager.default.temporaryDirectory
+            .appendingPathComponent("fldash-\(UUID().uuidString).finvestlens")
+        try FileManager.default.copyItem(at: source, to: copy)
+        defer {
+            try? FileManager.default.removeItem(at: copy)
+            try? FileManager.default.removeItem(at: URL(fileURLWithPath: copy.path + ".audit.log"))
+        }
+
+        let clock = ContinuousClock()
+        let model = AppModel()
+        try await model.open(at: copy)
+        defer { model.close() }
+        let book = try #require(model.book)
+
+        let todayCap = AppModel.endOfToday()
+        let range = model.resolve(model.period)
+        let asOf = min(range.to, todayCap)
+        var timings: [(String, Duration)] = []
+        func board(record: Bool) {
+            func call(_ name: String, _ body: () -> Void) {
+                let time = clock.measure(body)
+                if record { timings.append((name, time)) }
+            }
+            call("upNextState") { _ = model.upNextState }
+            call("netWorthSeries") { _ = model.netWorthSeries(months: 12, endingAt: asOf) }
+            call("incomeStatement") { _ = model.incomeStatement(from: range.from, to: range.to) }
+            call("categoryBreakdown") { _ = model.categoryBreakdown(from: range.from, to: range.to) }
+            call("portfolio") { _ = model.portfolio(asOf: asOf) }
+            call("balanceSheet") { _ = model.balanceSheet(asOf: asOf) }
+            call("recentJournalHeadings") { _ = model.recentJournalHeadings }
+            call("alerts") { _ = model.alerts() }
+            call("billReminders") { _ = model.billReminders() }
+            call("wellbeingScore") { _ = model.wellbeingScore() }
+            call("aging(receivable)") { _ = model.aging(receivable: true, asOf: todayCap) }
+            if let budget = model.budgets.first {
+                call("budgetActuals") { _ = model.budgetActuals(budget) }
+            }
+        }
+        board(record: false)                         // warm, as a board on screen is
+
+        let bank = try #require(book.accounts
+            .filter { $0.type == .bank && !$0.isWash }
+            .max { book.splits(for: $0).count < book.splits(for: $1).count })
+        let expense = try #require(book.accounts.first { $0.type == .expense && !$0.isPlaceholder })
+        let edit = try clock.measure {
+            _ = try model.addTransaction(date: Date(), description: "Harness", currency: bank.commodity,
+                                         splits: [SplitInput(accountID: bank.guid, value: -1),
+                                                  SplitInput(accountID: expense.guid, value: 1)])
+        }
+        let pass = clock.measure { board(record: true) }
+
+        // The performance card's samples, which a task takes after the pass.
+        var samples = Duration.zero
+        if let pf = model.portfolio(asOf: asOf) {
+            let start = range.from == .distantPast ? asOf.addingTimeInterval(-365 * 86_400) : range.from
+            let basket = pf.holdings.filter { ($0.marketValue ?? 0) > 0 }
+            samples = clock.measure {
+                for step in 0...26 {
+                    let date = start.addingTimeInterval(asOf.timeIntervalSince(start) * Double(step) / 26)
+                    for holding in basket { _ = model.securityUnitPrice(accountID: holding.id, on: date) }
+                }
+            }
+        }
+
+        let width = timings.map(\.0.count).max() ?? 0
+        let lines = timings.sorted { $0.1 > $1.1 }
+            .map { "  \($0.0.padding(toLength: width, withPad: " ", startingAt: 0))  \($0.1)" }
+            .joined(separator: "\n")
+        print("""
+
+        Overview after an edit
+          the edit itself (refresh) : \(edit)
+          the board's pass          : \(pass)
+          performance samples (task): \(samples)
+        \(lines)
+
+        """)
+    }
+
+    /// Up Next's parts, and an edit's, timed one by one after an edit — so
+    /// the next change goes where the time is, not where it is guessed to be.
+    @Test("Where an edit's and Up Next's time goes")
+    func partsAfterAnEdit() async throws {
+        guard let perfPath else { return }
+        let source = URL(fileURLWithPath: perfPath)
+        let copy = FileManager.default.temporaryDirectory
+            .appendingPathComponent("fldash-\(UUID().uuidString).finvestlens")
+        try FileManager.default.copyItem(at: source, to: copy)
+        defer {
+            try? FileManager.default.removeItem(at: copy)
+            try? FileManager.default.removeItem(at: URL(fileURLWithPath: copy.path + ".audit.log"))
+        }
+        let clock = ContinuousClock()
+        let model = AppModel()
+        try await model.open(at: copy)
+        defer { model.close() }
+        let book = try #require(model.book)
+        let bank = try #require(book.accounts
+            .filter { $0.type == .bank && !$0.isWash }
+            .max { book.splits(for: $0).count < book.splits(for: $1).count })
+
+        var parts: [(String, Duration)] = []
+        func part(_ name: String, _ body: () -> Void) { parts.append((name, clock.measure(body))) }
+
+        part("lookup index rebuild") { book.invalidateLookupIndexes(); _ = book.splits(for: bank) }
+        part("balancesByAccount (one walk)") { _ = book.balancesByAccount() }
+        part("book.accounts × 10") { for _ in 0..<10 { _ = book.accounts } }
+        part("newest security price") { _ = book.newestPriceDate { $0.namespace != .currency } }
+        part("uncategorizedCount") { _ = model.uncategorizedCount() }
+        part("reconcile walk (cash accounts)") {
+            var count = 0
+            for account in book.accounts where account.type == .bank || account.type == .credit {
+                for split in book.splits(for: account) where split.transaction != nil { count += 1 }
+            }
+            _ = count
+        }
+        part("refreshAll (.prices: tree only)") { model.refreshAll(scope: .prices) }
+        part("refreshAll (.book, no register)") { model.refreshAll() }
+        model.selectedAccountID = bank.guid
+        part("refreshAll (.book, busiest register)") { model.refreshAll() }
+        part("upNextState (cold)") { _ = model.upNextState }
+
+        let width = parts.map(\.0.count).max() ?? 0
+        print("""
+
+        Parts after an edit
+        \(parts.map { "  \($0.0.padding(toLength: width, withPad: " ", startingAt: 0))  \($0.1)" }.joined(separator: "\n"))
 
         """)
     }

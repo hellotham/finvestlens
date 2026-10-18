@@ -118,3 +118,40 @@ struct MemoInvalidationTests {
         #expect(drawn(Color.appAccent) != drawn(AppAccent.lavender.color))
     }
 }
+
+@Suite("The newest transactions, picked in one pass")
+struct NewestTransactionsTests {
+
+    @Test("The first n of a newest-first sort, a day's transactions in book order")
+    func matchesTheSort() {
+        // Many days with several transactions each, in no order at all.
+        var generator = SystemRandomNumberGenerator()
+        let transactions = (0..<2_000).map { index in
+            Transaction(currency: .aud,
+                        datePosted: Date(timeIntervalSince1970: Double(Int.random(in: 0..<300, using: &generator)) * 86_400),
+                        description: "\(index)")
+        }
+        // And in date order with several a day, the shape a book keeps.
+        let inOrder = transactions.enumerated()
+            .sorted { $0.element.datePosted != $1.element.datePosted
+                        ? $0.element.datePosted < $1.element.datePosted : $0.offset < $1.offset }
+            .map(\.element)
+        for count in [0, 1, 40, 2_000] {
+            let stable = Array(inOrder.enumerated()
+                .sorted { $0.element.datePosted != $1.element.datePosted
+                            ? $0.element.datePosted > $1.element.datePosted : $0.offset < $1.offset }
+                .map(\.element).prefix(count))
+            #expect(AppModel.newest(count, of: inOrder).map(ObjectIdentifier.init) == stable.map(ObjectIdentifier.init))
+        }
+        for count in [0, 1, 40, 1_999, 2_000, 2_500] {
+            let sorted = Array(transactions.sorted { $0.datePosted > $1.datePosted }.prefix(count))
+            let stable = Array(transactions.enumerated()
+                .sorted { $0.element.datePosted != $1.element.datePosted
+                            ? $0.element.datePosted > $1.element.datePosted : $0.offset < $1.offset }
+                .map(\.element).prefix(count))
+            let picked = AppModel.newest(count, of: transactions)
+            #expect(picked.map(ObjectIdentifier.init) == stable.map(ObjectIdentifier.init))
+            #expect(picked.map(ObjectIdentifier.init) == sorted.map(ObjectIdentifier.init))
+        }
+    }
+}

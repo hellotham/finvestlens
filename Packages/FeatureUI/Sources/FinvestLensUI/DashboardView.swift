@@ -49,9 +49,7 @@ extension AppModel {
                 $0.commodity.namespace != .currency && !$0.isPlaceholder
             }
             if hasSecurities {
-                let newest = book.prices.lazy
-                    .filter { $0.commodity.namespace != .currency }
-                    .map(\.date).max()
+                let newest = book.newestPriceDate { $0.namespace != .currency }
                 let days = newest.map {
                     Calendar.current.dateComponents([.day], from: $0, to: today).day ?? 0
                 } ?? Int.max
@@ -59,7 +57,7 @@ extension AppModel {
                 if newest == nil { state.priceAgeDays = nil }
             }
 
-            state.uncategorisedCount = uncategorizedItems().count
+            state.uncategorisedCount = uncategorizedCount()
 
             // Reconcile staleness and this month's import, in one book walk.
             let cashTypes: Set<AccountType> = [.bank, .credit]
@@ -105,10 +103,11 @@ extension AppModel {
             // The forty newest straight from the book — not the whole general
             // ledger built and filtered down, which was 198 ms per revision for
             // a forty-row tile (Performance Review 2, R5).
+            // The forty newest picked in one pass, not a sort of the book
+            // per revision — the book is kept near date order, so sorting it
+            // newest first is a full sort (R5b).
             guard let book else { return [JournalRow]() }
-            return book.transactions
-                .sorted { $0.datePosted > $1.datePosted }
-                .prefix(40)
+            return Self.newest(40, of: book.transactions)
                 .map { txn in
                     JournalRow(id: txn.guid, transactionID: txn.guid, isHeading: true,
                                date: txn.datePosted, text: txn.transactionDescription,
@@ -116,6 +115,93 @@ extension AppModel {
                                notes: txn.notes, hasDocument: txn.documentLink != nil)
                 }
         } ?? []
+    }
+}
+
+/// Everything the Overview's cards read from the book's reports, for one
+/// period on one day, as of one revision of the book (R5b). The board draws
+/// from this: after an edit it goes on drawing the last one while a task
+/// builds the next, so no card builds its report inside the pass that draws
+/// the board — the pass that came straight after an edit used to build them
+/// all at once.
+struct BoardData {
+    struct Key: Hashable {
+        let revision: Int
+        let from: Date
+        let to: Date
+        let day: Date
+    }
+    let key: Key
+    let portfolio: Portfolio?
+    let upNext: UpNextState?
+    let income: IncomeStatement?
+    let breakdown: CategoryBreakdown?
+    /// For the first budget, when there is one.
+    let budgetActuals: [BudgetActual]?
+    let bills: [BillReminder]
+    let wellbeing: WellbeingScore.Result?
+    let receivables: [(name: String, buckets: AgingBuckets)]
+    let netWorth: [NetWorthPoint]
+    let recent: [JournalRow]
+    let sheet: BalanceSheet?
+    let alerts: [FinancialAlert]
+
+    /// Whether this was built for the same period and day — of any revision,
+    /// which is what lets the last one stand in while the next is built.
+    func covers(_ key: Key) -> Bool {
+        self.key.from == key.from && self.key.to == key.to && self.key.day == key.day
+    }
+}
+
+extension AppModel {
+    /// The board's values for `key`, from the report memos — built where they
+    /// are cold, read where they are warm.
+    func boardData(_ key: BoardData.Key) -> BoardData {
+        let asOf = min(key.to, key.day)
+        return BoardData(
+            key: key,
+            portfolio: portfolio(asOf: asOf),
+            upNext: upNextState,
+            income: incomeStatement(from: key.from, to: key.to),
+            breakdown: categoryBreakdown(from: key.from, to: key.to),
+            budgetActuals: budgets.first.map { budgetActuals($0) },
+            bills: billReminders(),
+            wellbeing: wellbeingScore(),
+            receivables: aging(receivable: true, asOf: key.day),
+            netWorth: netWorthSeries(months: 12, endingAt: asOf),
+            recent: recentJournalHeadings,
+            sheet: balanceSheet(asOf: asOf),
+            alerts: alerts())
+    }
+}
+
+extension AppModel {
+    /// The `count` newest of `transactions`, newest first — exactly the first
+    /// `count` of a stable sort by date, newest first (a day's transactions in
+    /// their book order), found in one pass over a buffer of `count`.
+    nonisolated static func newest(_ count: Int,
+                                   of transactions: [FinvestLensEngine.Transaction]) -> [FinvestLensEngine.Transaction] {
+        guard count > 0 else { return [] }
+        var kept: [FinvestLensEngine.Transaction] = []
+        kept.reserveCapacity(count + 1)
+        // From the newest end: the book is kept near date order, so once
+        // `count` are kept nearly every older transaction is turned away by
+        // one comparison. Scanned the other way, each was newer than all kept
+        // and paid a search and an insert.
+        for transaction in transactions.reversed() {
+            let date = transaction.datePosted
+            if kept.count == count, let last = kept.last, date < last.datePosted { continue }
+            // Before every kept one on the same day: those came later in the
+            // book, and a stable newest-first sort puts the earlier first.
+            var low = 0, high = kept.count
+            while low < high {
+                let mid = (low + high) / 2
+                if kept[mid].datePosted > date { low = mid + 1 } else { high = mid }
+            }
+            kept.insert(transaction, at: low)
+            if kept.count > count { kept.removeLast() }
+        }
+        return kept
     }
 }
 
@@ -140,6 +226,22 @@ struct DashboardView: View {
     /// once on open, so a board left on "Last 12 months" stays there.
     /// Per-holding value over the timescale, for the performance area.
     @State private var perfSeries: [PerfPoint] = []
+    /// The board's values as last built (R5b; see ``BoardData``).
+    @State private var shown: BoardData?
+
+    private var boardKey: BoardData.Key {
+        let range = model.resolve(period)
+        return BoardData.Key(revision: model.bookRevision, from: range.from, to: range.to, day: todayCap)
+    }
+
+    /// What the cards draw: the values last built, while they are for this
+    /// period and day — after an edit the task below builds the new ones —
+    /// or, for a first paint or a new period, built here, from the memo.
+    private var data: BoardData {
+        let key = boardKey
+        if let shown, shown.covers(key) { return shown }
+        return model.boardData(key)
+    }
     // The donut's angle selection and the performance chart's hover live in
     // `LocalState` wrappers around their cards, not here: as `@State` on the
     // board every mouse move re-evaluated every card (Performance Review 2, R5).
@@ -258,6 +360,15 @@ struct DashboardView: View {
         .task(id: RangeKey(from: range.from, to: range.to, revision: model.bookRevision)) {
             perfSeries = await computePerformance(range)
         }
+        // A new revision: the board goes on drawing the last values for the
+        // frame it takes to build these, then draws them (R5b).
+        .task(id: boardKey) {
+            let key = boardKey
+            guard shown?.key != key else { return }
+            await Task.yield()
+            guard !Task.isCancelled else { return }
+            shown = model.boardData(key)
+        }
     }
 
     private var period: ReportPeriod { model.period }
@@ -267,7 +378,7 @@ struct DashboardView: View {
     /// screen rather than a column that scrolls.
     private func board(range: (from: Date, to: Date)) -> some View {
         GeometryReader { geo in
-            let portfolio = model.portfolio(asOf: min(range.to, todayCap))
+            let portfolio = data.portfolio
             let plan = layoutPlan(size: geo.size, range: range, portfolio: portfolio)
             VStack(spacing: 12) {
                 // The explicit door out of Overview (`FR-NAV-10`). Selecting a
@@ -328,7 +439,7 @@ struct DashboardView: View {
     /// A state of the board rather than a sheet, so ⌘W does not close the
     /// window and the mode selector keeps saying Overview.
     private func zoomed(_ card: OverviewCard, range: (from: Date, to: Date)) -> some View {
-        let portfolio = model.portfolio(asOf: min(range.to, todayCap))
+        let portfolio = data.portfolio
         return VStack(spacing: 12) {
             HStack {
                 Spacer()
@@ -381,22 +492,22 @@ struct DashboardView: View {
                             portfolio: Portfolio?) -> Bool {
         switch panel {
         case .upNext:
-            return !(model.upNextState?.isEmpty ?? true)
+            return !(data.upNext?.isEmpty ?? true)
         case .netWorth, .composition:
             return !model.accountTree.isEmpty
         case .income:
-            return (model.incomeStatement(from: range.from, to: range.to)?.totalIncome ?? 0) != 0
+            return (data.income?.totalIncome ?? 0) != 0
         case .expenses:
-            return (model.incomeStatement(from: range.from, to: range.to)?.totalExpenses ?? 0) != 0
+            return (data.income?.totalExpenses ?? 0) != 0
         case .savingsRate:
-            return (model.incomeStatement(from: range.from, to: range.to)?.totalIncome ?? 0) > 0
+            return (data.income?.totalIncome ?? 0) > 0
         case .cashflow:
-            if let budget = model.budgets.first { return !model.budgetActuals(budget).isEmpty }
-            return !(model.categoryBreakdown(from: range.from, to: range.to)?.months.isEmpty ?? true)
+            if let actuals = data.budgetActuals { return !actuals.isEmpty }
+            return !(data.breakdown?.months.isEmpty ?? true)
         case .spendingTrend:
-            return (model.categoryBreakdown(from: range.from, to: range.to)?.months.count ?? 0) >= 2
+            return (data.breakdown?.months.count ?? 0) >= 2
         case .topMovers:
-            let statement = model.incomeStatement(from: range.from, to: range.to)
+            let statement = data.income
             return !(statement?.income.isEmpty ?? true) || !(statement?.expenses.isEmpty ?? true)
         case .allocation:
             return (portfolio?.holdings.contains { ($0.marketValue ?? 0) > 0 }) ?? false
@@ -410,12 +521,12 @@ struct DashboardView: View {
             // "Nothing needs attention" is worth a (single-unit) tile.
             return !model.accountTree.isEmpty
         case .bills:
-            return model.billReminders().contains { $0.status != .paid }
+            return data.bills.contains { $0.status != .paid }
         case .accounts:
             return !model.accountTree.isEmpty
         case .wellbeing:
             // Meaningful once the book has recent income to measure against.
-            return model.wellbeingScore() != nil && !model.accountTree.isEmpty
+            return data.wellbeing != nil && !model.accountTree.isEmpty
         case .receivables:
             // Only for a book that actually invoices. A personal book has no
             // receivables and should not be told it is owed nothing.
@@ -528,7 +639,7 @@ struct DashboardView: View {
     /// this reads the same numbers rather than a second opinion about them.
     private var receivablesCard: some View {
         Card("Receivables", systemImage: "tray.and.arrow.down") {
-            let rows = model.aging(receivable: true, asOf: todayCap)
+            let rows = data.receivables
             let code = model.reportCurrency.mnemonic
             let outstanding = rows.reduce(Decimal(0)) { $0 + $1.buckets.total }
             let overdue = rows.reduce(Decimal(0)) {
@@ -619,7 +730,7 @@ struct DashboardView: View {
     /// full arithmetic one click away.
     private var wellbeingCard: some View {
         Card("Wellbeing", systemImage: "heart.text.square") {
-            if let score = model.wellbeingScore() {
+            if let score = data.wellbeing {
                 Button {
                     showingWellbeing = true
                 } label: {
@@ -663,7 +774,7 @@ struct DashboardView: View {
     /// its button, present only while it is actually due.
     private var upNextCard: some View {
         Card("Up Next", systemImage: "checklist") {
-            if let state = model.upNextState {
+            if let state = data.upNext {
                 VStack(alignment: .leading, spacing: 10) {
                     if let days = state.priceAgeDays {
                         UpdatePricesRow(model: model, days: days)
@@ -708,7 +819,7 @@ struct DashboardView: View {
     // MARK: Net worth
 
     private func netWorthCard(asOf: Date) -> some View {
-        let series = model.netWorthSeries(months: 12, endingAt: asOf)
+        let series = data.netWorth
         let current = series.last?.netWorth ?? 0
         return Card("Net Worth", systemImage: "chart.line.uptrend.xyaxis") {
             Text(AmountFormat.string(current, code: code))
@@ -732,14 +843,14 @@ struct DashboardView: View {
     // MARK: Income & Expense treemaps
 
     private func incomeCard(_ range: (from: Date, to: Date)) -> some View {
-        let statement = model.incomeStatement(from: range.from, to: range.to)
+        let statement = data.income
         return treemapCard(title: "Income", systemImage: "arrow.down.circle",
                            lines: statement?.income ?? [], total: statement?.totalIncome ?? 0,
                            empty: "No income in this period.")
     }
 
     private func expensesCard(_ range: (from: Date, to: Date)) -> some View {
-        let statement = model.incomeStatement(from: range.from, to: range.to)
+        let statement = data.income
         return treemapCard(title: "Expenses", systemImage: "arrow.up.circle",
                            lines: statement?.expenses ?? [], total: statement?.totalExpenses ?? 0,
                            empty: "No expenses in this period.")
@@ -778,7 +889,7 @@ struct DashboardView: View {
     @ViewBuilder
     private func cashflowCard(_ range: (from: Date, to: Date)) -> some View {
         if let budget = model.budgets.first {
-            let actuals = model.budgetActuals(budget)
+            let actuals = (data.budgetActuals ?? [])
             Card("Cashflow vs Budget", systemImage: "chart.bar.doc.horizontal") {
                 if actuals.isEmpty {
                     Text("No budget lines set.").scaledFont(.callout).foregroundStyle(.secondary)
@@ -798,7 +909,7 @@ struct DashboardView: View {
                 }
             }
         } else {
-            let breakdown = model.categoryBreakdown(from: range.from, to: range.to)
+            let breakdown = data.breakdown
             Card("Cashflow", systemImage: "arrow.up.arrow.down") {
                 if let months = breakdown?.months, !months.isEmpty {
                     Chart {
@@ -1134,7 +1245,7 @@ struct DashboardView: View {
     // MARK: Savings rate
 
     private func savingsRateCard(_ range: (from: Date, to: Date)) -> some View {
-        let statement = model.incomeStatement(from: range.from, to: range.to)
+        let statement = data.income
         let income = statement?.totalIncome ?? 0
         let net = statement?.netIncome ?? 0
         let rate = income > 0 ? asDouble(net) / asDouble(income) : 0
@@ -1160,7 +1271,7 @@ struct DashboardView: View {
     // MARK: Spending trend
 
     private func spendingTrendCard(_ range: (from: Date, to: Date)) -> some View {
-        let months = model.categoryBreakdown(from: range.from, to: range.to)?.months ?? []
+        let months = data.breakdown?.months ?? []
         let average = months.isEmpty ? Decimal(0)
             : months.reduce(Decimal(0)) { $0 + $1.expenses } / Decimal(months.count)
         return Card("Spending Trend", systemImage: "chart.xyaxis.line") {
@@ -1191,7 +1302,7 @@ struct DashboardView: View {
     // MARK: Top movers
 
     private func topMoversCard(_ range: (from: Date, to: Date)) -> some View {
-        let statement = model.incomeStatement(from: range.from, to: range.to)
+        let statement = data.income
         let income = (statement?.income ?? []).sorted { $0.amount > $1.amount }.prefix(3)
         let expenses = (statement?.expenses ?? []).sorted { $0.amount > $1.amount }.prefix(4)
         return Card("Top Movers", systemImage: "arrow.up.arrow.down.circle") {
@@ -1272,7 +1383,7 @@ struct DashboardView: View {
             GeometryReader { geo in
                 let rowHeight = 26 * typeScale
                 let budget = max(3, Int(geo.size.height / rowHeight))
-                let recent = model.recentJournalHeadings.prefix(budget)
+                let recent = data.recent.prefix(budget)
                 VStack(alignment: .leading, spacing: 6) {
                     if recent.isEmpty {
                         Text("No transactions yet.").scaledFont(.callout).foregroundStyle(.secondary)
@@ -1296,7 +1407,7 @@ struct DashboardView: View {
     // MARK: Net worth composition
 
     private func compositionCard(asOf: Date) -> some View {
-        let sheet = model.balanceSheet(asOf: asOf)
+        let sheet = data.sheet
         return Card("Net Worth Composition", systemImage: "chart.bar.fill") {
             if let sheet {
                 let rows: [(String, Decimal, Color)] = [
@@ -1324,7 +1435,7 @@ struct DashboardView: View {
     // MARK: Alerts
 
     private var alertsCard: some View {
-        let alerts = model.alerts()
+        let alerts = data.alerts
         return Card("Alerts", systemImage: "bell.badge") {
             // Price targets fire here but are *set* on a holding — link the
             // two so the card is a door, not just a lamp (6.5).
@@ -1390,7 +1501,7 @@ struct DashboardView: View {
     // MARK: Bills
 
     private var billsCard: some View {
-        let bills = model.billReminders().filter { $0.status != .paid }.prefix(5)
+        let bills = data.bills.filter { $0.status != .paid }.prefix(5)
         return Card("Upcoming Bills", systemImage: "calendar") {
             if bills.isEmpty {
                 Text("No upcoming bills.").scaledFont(.callout).foregroundStyle(.secondary)

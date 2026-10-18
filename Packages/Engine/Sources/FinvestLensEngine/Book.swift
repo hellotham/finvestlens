@@ -114,9 +114,42 @@ public final class Book {
         return account
     }
 
-    /// Looks up an account by GUID.
+    /// Looks up an account by GUID — any account in the tree, never the root.
+    ///
+    /// From an index, not by walking: the walk built `rootAccount.descendants`
+    /// — a fresh array per node — and searched it, about 100 µs a call on the
+    /// reference book's 559 accounts, and the Overview's performance card asks
+    /// 864 times a pass (86 ms, Performance Review R5b). The tree changes
+    /// under the book's feet (accounts are added and moved on each other), so
+    /// a hit is checked against it — still in the tree, by its parents — and
+    /// a miss, or a hit that has left the tree, rebuilds the index once. An
+    /// account moved within the tree is still the same object, so it stays.
     public func account(with guid: GncGUID) -> Account? {
-        accounts.first { $0.guid == guid }
+        if let hit = accountIndex?[guid], isInTree(hit) { return hit }
+        rebuildAccountIndex()
+        return accountIndex?[guid]
+    }
+
+    private func isInTree(_ account: Account) -> Bool {
+        guard account !== rootAccount else { return false }
+        var node = account
+        while let parent = node.parent { node = parent }
+        return node === rootAccount
+    }
+
+    /// Pre-order, as `descendants` lists them, so that of two accounts with
+    /// one GUID (a damaged book) the one the walk found first still wins.
+    private func rebuildAccountIndex() {
+        var index: [GncGUID: Account] = [:]
+        index.reserveCapacity(accountIndex?.count ?? 64)
+        func visit(_ account: Account) {
+            for child in account.children {
+                if index[child.guid] == nil { index[child.guid] = child }
+                visit(child)
+            }
+        }
+        visit(rootAccount)
+        accountIndex = index
     }
 
     // MARK: Commodities
@@ -175,6 +208,7 @@ public final class Book {
         prices.append(price)
         indexInsert(price)
         priceChangeLog?.append(.added(price))
+        unsavedPrices?.added(price.guid)
         return price
     }
 
@@ -236,6 +270,7 @@ public final class Book {
         }
         prices = newPrices
         invalidatePriceIndex()
+        unsavedPrices = nil         // the next save writes them all
     }
 
     /// Removes a price by GUID.
@@ -248,7 +283,7 @@ public final class Book {
     @discardableResult
     public func removePrices(where predicate: (Price) -> Bool) -> Int {
         let before = prices.count
-        if pairIndex == nil, priceChangeLog == nil {
+        if pairIndex == nil, priceChangeLog == nil, unsavedPrices == nil {
             prices.removeAll(where: predicate)
         } else {
             // One pass: the removed rows are collected as they go, for the
@@ -262,6 +297,7 @@ public final class Book {
             guard !removed.isEmpty else { return 0 }
             indexRemove(removed)
             priceChangeLog?.append(contentsOf: removed.map(PriceChange.removed))
+            for price in removed { unsavedPrices?.removed(price.guid) }
         }
         return before - prices.count
     }
@@ -437,6 +473,19 @@ public final class Book {
         return bucket[cut - 1]
     }
 
+    /// The date of the newest price of any commodity `include` accepts — one
+    /// look per commodity in the index, where a pass over `prices` copied
+    /// every row (164k on the reference book) to keep one date.
+    public func newestPriceDate(where include: (Commodity) -> Bool) -> Date? {
+        buildIndexIfNeeded()
+        var newest: Date?
+        for (commodity, bucket) in commodityIndex ?? [:] where include(commodity) {
+            guard let date = bucket.last?.date else { continue }
+            if newest.map({ date > $0 }) ?? true { newest = date }
+        }
+        return newest
+    }
+
     /// The most recent price of `commodity` in `currency` on or before `date`
     /// (or the latest overall when `date` is `nil`).
     public func latestPrice(of commodity: Commodity, in currency: Commodity,
@@ -588,20 +637,77 @@ public final class Book {
 
     // MARK: Transactions
 
-    /// Adds a transaction to the book.
+    /// Adds a transaction to the book, last in its order.
+    ///
+    /// Built lookup indexes are kept, not dropped: the transaction is the
+    /// book's last, so its legs go last in every account's list — where a
+    /// rebuild would file them. Dropping them made the first lookup after
+    /// every edit rebuild all three for the whole book (25 ms on the
+    /// reference book, P5.4).
     @discardableResult
     public func addTransaction(_ transaction: Transaction) -> Transaction {
         registerCommodity(transaction.currency)
+        transaction.owner = self
+        transaction.bookOrder = nextBookOrder
+        nextBookOrder += 1
         transactions.append(transaction)
-        invalidateLookupIndexes()
+        noteChanged(transaction.splits)
+        unsavedTransactions?.insert(transaction.guid)
+        if indexesBuilt { indexInsert(transaction) }
         return transaction
     }
 
-    /// Removes a transaction (and detaches its splits).
+    /// Removes a transaction (and detaches its splits), taking its legs out
+    /// of built indexes rather than dropping them.
     public func removeTransaction(_ transaction: Transaction) {
         transactions.removeAll { $0 === transaction }
+        if transaction.owner === self { transaction.owner = nil }
+        noteChanged(transaction.splits)
+        unsavedTransactions?.insert(transaction.guid)
+        if indexesBuilt { indexRemove(transaction) }
         for split in transaction.splits { split.transaction = nil }
-        invalidateLookupIndexes()
+    }
+
+    /// Brings built lookup indexes up to date with a transaction edited in
+    /// place — legs added, removed, moved to another account — instead of
+    /// dropping them (P5.4). The book cannot see a leg change on its
+    /// transaction, so whoever edited it says so. `previous` is the legs as
+    /// they were before the edit (an undo snapshot's copy holds them): their
+    /// GUIDs and accounts are where the index still files the old ones.
+    public func reindex(_ transaction: Transaction, previous: [Split]) {
+        noteChanged(previous)
+        noteChanged(transaction.splits)
+        unsavedTransactions?.insert(transaction.guid)
+        guard indexesBuilt, transactionIndex?[transaction.guid] === transaction else { return }
+        let legs = previous + transaction.splits
+        // The objects filed under the legs' GUIDs, by identity: a pass over an
+        // account's legs that hashed each one's GUID, and loaded its weak
+        // transaction, cost seconds when an edit re-filed two thousand
+        // transactions in one busy account — a pointer compares in a cycle.
+        var filed = Set<ObjectIdentifier>()
+        var accounts = Set<ObjectIdentifier>()
+        for leg in legs {
+            if let account = leg.account { accounts.insert(ObjectIdentifier(account)) }
+            guard let split = splitIndex?[leg.guid],
+                  split.transaction === transaction || split.transaction == nil else { continue }
+            filed.insert(ObjectIdentifier(split))
+            splitIndex?.removeValue(forKey: leg.guid)
+        }
+        for account in accounts {
+            splitsByAccount?[account]?.removeAll { filed.contains(ObjectIdentifier($0)) }
+        }
+        indexInsert(transaction)
+    }
+
+    /// Puts back a transaction ``removeTransaction(_:)`` took out — the object
+    /// itself, its splits linked to it again — so whatever pointed at it (an
+    /// invoice's posting, a lot's members) points at the book's own again.
+    /// An undo's primitive: a copy put back would leave those pointing at
+    /// objects no longer in the book.
+    public func restoreTransaction(_ transaction: Transaction) {
+        guard !transactions.contains(where: { $0 === transaction }) else { return }
+        for split in transaction.splits { split.transaction = transaction }
+        addTransaction(transaction)
     }
 
     // MARK: GUID lookup indexes
@@ -613,39 +719,180 @@ public final class Book {
     // book cannot observe, so a miss (or a stale hit — an indexed split that
     // has been detached) rebuilds once per generation; the app additionally
     // invalidates after every edit.
+    private var accountIndex: [GncGUID: Account]?
     private var transactionIndex: [GncGUID: Transaction]?
     private var splitIndex: [GncGUID: Split]?
     /// Splits bucketed by the account they post to, in transaction order.
     private var splitsByAccount: [ObjectIdentifier: [Split]]?
+    /// Every account the split index knows of, splits or none — so asking
+    /// after an account with no splits is an answer, not a miss. A miss
+    /// rebuilds the whole index, and the Overview's count of uncategorised
+    /// legs asked after an empty Imbalance account on every revision.
+    private var indexedAccounts: Set<ObjectIdentifier> = []
     private var lookupRetriedAfterMiss = false
+    private var nextBookOrder = 0
 
-    /// Drops the GUID lookup indexes. Called by the book's own transaction
-    /// add/remove, and by the app after any edit (splits can change on a
-    /// transaction without the book seeing it).
+    /// What the next save has to write (``takeUnsaved()``): `nil` — the
+    /// state of a book nobody has marked persisted, or one changed in a way
+    /// it could not follow — means everything.
+    fileprivate var unsavedTransactions: Set<GncGUID>?
+    fileprivate var unsavedPrices: UnsavedPrices?
+    fileprivate var persistedOrderCeiling = 0
+
+    /// The accounts whose splits changed since ``takeChangedAccounts()``
+    /// last emptied this; `nil` when the book cannot say — nothing has asked
+    /// yet, or the indexes were dropped — which means any of them.
+    private var changedAccounts: [ObjectIdentifier: Account]?
+
+    private var indexesBuilt: Bool {
+        transactionIndex != nil && splitIndex != nil && splitsByAccount != nil
+    }
+
+    /// Drops the GUID lookup indexes. Called by the app after an edit that
+    /// does not say what it changed (splits can change on a transaction
+    /// without the book seeing it); an edit that does keeps them, through
+    /// ``reindex(_:previous:)``.
     public func invalidateLookupIndexes() {
+        dropLookupIndexes()
+        // Something changed legs without saying which: the next save writes
+        // every transaction.
+        unsavedTransactions = nil
+    }
+
+    /// Drops the GUID lookup indexes, to be built again on the next lookup,
+    /// and which accounts changed — but not what is unsaved, which every
+    /// reported edit goes on recording. For an edit of so many transactions
+    /// that re-filing them one at a time costs more than one rebuild (25 ms
+    /// on the reference book), and for a book just read from its file, where
+    /// nothing is unsaved to forget.
+    public func dropLookupIndexes() {
         transactionIndex = nil
         splitIndex = nil
         splitsByAccount = nil
+        indexedAccounts = []
         lookupRetriedAfterMiss = false
+        changedAccounts = nil
+    }
+
+    /// The accounts whose splits changed since the last call — or `nil` when
+    /// the book cannot say which, meaning any (the first call, or after the
+    /// indexes were dropped). An account tree that keeps its balances asks
+    /// this to recompute only those accounts, as GnuCash recomputes only an
+    /// account marked `balance_dirty` (`xaccAccountRecomputeBalance`).
+    public func takeChangedAccounts() -> [Account]? {
+        defer { changedAccounts = [:] }
+        return changedAccounts.map { Array($0.values) }
+    }
+
+    /// A transaction this book holds was changed in place, by whatever code:
+    /// the next save writes it, and the accounts named — those whose balance
+    /// the change can move — are recomputed. The edit wrappers say the same
+    /// through ``reindex(_:previous:)``; this is what makes a change nobody
+    /// reported a change the file still gets.
+    func noteEdited(_ transaction: Transaction, accounts: [Account?] = []) {
+        unsavedTransactions?.insert(transaction.guid)
+        guard changedAccounts != nil else { return }
+        for case let account? in accounts { changedAccounts?[ObjectIdentifier(account)] = account }
+    }
+
+    private func noteChanged(_ splits: [Split]) {
+        guard changedAccounts != nil else { return }
+        for split in splits {
+            if let account = split.account { changedAccounts?[ObjectIdentifier(account)] = account }
+        }
+    }
+
+    /// Files a transaction's legs: each at its place in its account's list —
+    /// after the legs of every transaction before it in the book's order,
+    /// which for one just added is the end. A leg already detached from its
+    /// transaction in a list means something changed unreported, and the
+    /// index cannot be trusted: it goes, to be rebuilt.
+    private func indexInsert(_ transaction: Transaction) {
+        transactionIndex?[transaction.guid] = transaction
+        let order = transaction.bookOrder
+        for split in transaction.splits {
+            splitIndex?[split.guid] = split
+            guard let account = split.account else { continue }
+            let key = ObjectIdentifier(account)
+            indexedAccounts.insert(key)
+            let list = splitsByAccount?[key] ?? []
+            // The common case — the newest transaction — without a search.
+            if let last = list.last, let lastOrder = last.transaction?.bookOrder, lastOrder <= order {
+                splitsByAccount?[key, default: []].append(split)
+                continue
+            }
+            var low = 0, high = list.count
+            while low < high {
+                let mid = (low + high) / 2
+                guard let other = list[mid].transaction else {
+                    invalidateLookupIndexes()
+                    return
+                }
+                if other.bookOrder <= order { low = mid + 1 } else { high = mid }
+            }
+            splitsByAccount?[key, default: []].insert(split, at: low)
+        }
+    }
+
+    private func indexRemove(_ transaction: Transaction) {
+        if transactionIndex?[transaction.guid] === transaction {
+            transactionIndex?.removeValue(forKey: transaction.guid)
+        }
+        for split in transaction.splits {
+            if splitIndex?[split.guid] === split { splitIndex?.removeValue(forKey: split.guid) }
+            if let account = split.account {
+                splitsByAccount?[ObjectIdentifier(account)]?.removeAll { $0 === split }
+            }
+        }
     }
 
     private func buildLookupIndexesIfNeeded() {
-        guard transactionIndex == nil || splitIndex == nil || splitsByAccount == nil else { return }
+        guard !indexesBuilt else { return }
+        let built = freshLookupIndexes()
+        transactionIndex = built.transactions
+        splitIndex = built.splits
+        splitsByAccount = built.byAccount
+        indexedAccounts = built.accounts
+    }
+
+    private func freshLookupIndexes() -> (transactions: [GncGUID: Transaction], splits: [GncGUID: Split],
+                                          byAccount: [ObjectIdentifier: [Split]],
+                                          accounts: Set<ObjectIdentifier>) {
         var txns = [GncGUID: Transaction](minimumCapacity: transactions.count)
         var splits = [GncGUID: Split](minimumCapacity: transactions.count * 2)
         var byAccount: [ObjectIdentifier: [Split]] = [:]
+        var known: Set<ObjectIdentifier> = [ObjectIdentifier(rootAccount)]
+        for account in accounts { known.insert(ObjectIdentifier(account)) }
         for transaction in transactions {
             txns[transaction.guid] = transaction
             for split in transaction.splits {
                 splits[split.guid] = split
                 if let account = split.account {
                     byAccount[ObjectIdentifier(account), default: []].append(split)
+                    known.insert(ObjectIdentifier(account))
                 }
             }
         }
-        transactionIndex = txns
-        splitIndex = splits
-        splitsByAccount = byAccount
+        return (txns, splits, byAccount, known)
+    }
+
+    /// Whether the indexes kept up to date edit by edit are exactly the ones
+    /// a rebuild would make: the same objects under the same keys, every
+    /// account's legs in the same order. A check, for tests and the app's
+    /// verification switch; unbuilt indexes agree.
+    public func lookupIndexesMatchRebuild() -> Bool {
+        guard indexesBuilt, let transactionIndex, let splitIndex, let splitsByAccount else { return true }
+        let fresh = freshLookupIndexes()
+        guard fresh.transactions.count == transactionIndex.count,
+              fresh.transactions.allSatisfy({ transactionIndex[$0.key] === $0.value }),
+              fresh.splits.count == splitIndex.count,
+              fresh.splits.allSatisfy({ splitIndex[$0.key] === $0.value }) else { return false }
+        for (account, list) in fresh.byAccount {
+            let kept = splitsByAccount[account] ?? []
+            guard kept.count == list.count, zip(kept, list).allSatisfy({ $0 === $1 }) else { return false }
+        }
+        // And nothing filed under an account the rebuild has no legs for.
+        return splitsByAccount.allSatisfy { fresh.byAccount[$0.key] != nil || $0.value.isEmpty }
     }
 
     /// A miss can mean "genuinely absent" or "index built before this object
@@ -704,15 +951,28 @@ public final class Book {
     /// change cost basis.
     public func splits(for account: Account) -> [Split] {
         buildLookupIndexesIfNeeded()
-        if let hit = splitsByAccount?[ObjectIdentifier(account)] { return hit }
-        // A miss is either "no splits" or "index predates this account"; the
-        // same one-rebuild-per-generation rule the GUID lookups use tells them
-        // apart without letting an empty account rebuild on every call.
+        let key = ObjectIdentifier(account)
+        if let hit = splitsByAccount?[key] { return hit }
+        // An account the index knows of with nothing filed has no splits.
+        if indexedAccounts.contains(key) { return [] }
+        // A miss is otherwise "index predates this account"; the same
+        // one-rebuild-per-generation rule the GUID lookups use.
         guard rebuildOnceAfterMiss() else { return [] }
-        return splitsByAccount?[ObjectIdentifier(account)] ?? []
+        return splitsByAccount?[key] ?? []
     }
 
     // MARK: Balances
+
+    /// What ``balancesByAccount(filter:from:to:excludingClosing:)`` holds for
+    /// one account with no window — its legs' quantities, voided ones left
+    /// out — summed from the account's own list of legs instead of a walk of
+    /// the whole book: GnuCash's `xaccAccountRecomputeBalance`, which walks
+    /// one account's splits when that account alone is marked dirty
+    /// (`libgnucash/engine/Account.cpp`). The same legs in the same order, so
+    /// the same total.
+    public func quantityTotal(of account: Account, filter: BalanceFilter = .all) -> Decimal {
+        splits(for: account).reduce(Decimal(0)) { Self.matches($1, filter) ? $0 + $1.quantity : $0 }
+    }
 
     /// Whether a split should be counted at a given reconcile filter.
     /// Voided splits never count toward a balance.
@@ -759,6 +1019,35 @@ public final class Book {
         return Money(total, account.commodity)
     }
 
+    /// ``balancesByAccount(filter:from:to:excludingClosing:)`` for several
+    /// windows in one walk — the same totals, each window's map as if asked
+    /// alone. A walk of the book is cache misses more than arithmetic, so
+    /// three windows asked together cost about one.
+    public func balancesByAccount(windows: [(from: Date?, to: Date?)], filter: BalanceFilter = .all,
+                                  excludingClosing: Bool = false) -> [[ObjectIdentifier: Decimal]] {
+        var totals = Array(repeating: [ObjectIdentifier: Decimal](), count: windows.count)
+        // Outside every window is the common case — a year's windows over a
+        // book of decades — so it is tested before the slot lookup that
+        // finds a closing entry, as the one-window walk below does.
+        let earliest = windows.contains { $0.from == nil } ? nil : windows.compactMap(\.from).min()
+        let latest = windows.contains { $0.to == nil } ? nil : windows.compactMap(\.to).max()
+        for transaction in transactions {
+            let posted = transaction.datePosted
+            if let earliest, posted < earliest { continue }
+            if let latest, posted > latest { continue }
+            if excludingClosing, FindTest.isClosing(transaction) { continue }
+            for (index, window) in windows.enumerated() {
+                if let from = window.from, posted < from { continue }
+                if let to = window.to, posted > to { continue }
+                for split in transaction.splits {
+                    guard let account = split.account, Book.matches(split, filter) else { continue }
+                    totals[index][ObjectIdentifier(account), default: 0] += split.quantity
+                }
+            }
+        }
+        return totals
+    }
+
     /// Every account's own balance, in one pass over the splits.
     ///
     /// ``balance(of:filter:includingDescendants:)`` walks the whole book per
@@ -802,4 +1091,348 @@ public enum BalanceFilter: Sendable {
     case cleared
     /// Reconciled splits only.
     case reconciled
+}
+
+// MARK: - Replica
+
+extension Book {
+
+    /// A copy of the whole book that shares no object with it: every account,
+    /// transaction, split, lot and business object is new, with the same
+    /// guids, values, slots and order, and every reference between them is
+    /// pointed at the copy's own objects. Prices, commodities and frames are
+    /// values, so those are copied as they stand.
+    ///
+    /// The `Book` is a graph of classes edited on one actor, so no other
+    /// thread may read it — but nothing else holds a replica, so a replica
+    /// can be handed to another thread whole and read there while the
+    /// original goes on being edited. That is how the work that only reads
+    /// the book — an export, a report, an import's matching — leaves the main
+    /// actor: taking the copy is the part that stays, and it is a fraction of
+    /// any of them.
+    public func replica() -> BookReplica {
+        var accountCopies: [ObjectIdentifier: Account] = [:]
+        func copy(_ account: Account) -> Account {
+            Account(guid: account.guid, name: account.name, type: account.type,
+                    commodity: account.commodity, code: account.code,
+                    description: account.accountDescription, notes: account.notes,
+                    isPlaceholder: account.isPlaceholder, isHidden: account.isHidden,
+                    kvp: account.kvp)
+        }
+
+        // The tree, breadth-first: originals and their copies in two lists
+        // at the same positions.
+        let root = copy(rootAccount)
+        accountCopies[ObjectIdentifier(rootAccount)] = root
+        var originals: [Account] = [rootAccount]
+        var copies: [Account] = [root]
+        var next = 0
+        while next < originals.count {
+            let parentCopy = copies[next]
+            for child in originals[next].children {
+                let childCopy = copy(child)
+                parentCopy.addChild(childCopy)
+                accountCopies[ObjectIdentifier(child)] = childCopy
+                originals.append(child)
+                copies.append(childCopy)
+            }
+            next += 1
+        }
+        // An account no longer in the tree that something still points at is
+        // copied too, outside the tree, as it is in the original — under its
+        // own parent, which a subtree taken out of the tree keeps: its full
+        // name, which the Ledger and CSV exports write, is read through them.
+        // (Out of the tree all the way up: `removeChild` clears the parent.)
+        // Held by the replica, since a parent is weak.
+        var detached: [Account] = []
+        func account(_ original: Account) -> Account {
+            if let known = accountCopies[ObjectIdentifier(original)] { return known }
+            let made = copy(original)
+            accountCopies[ObjectIdentifier(original)] = made
+            detached.append(made)
+            if let parent = original.parent { account(parent).addChild(made) }
+            return made
+        }
+
+        let book = Book(guid: guid, rootAccount: root, kvp: kvp)
+        book.commodities = commodities
+        book.prices = prices
+        // The price index too, when it is built: values, so the copy is free
+        // until either side changes, where a replica left to build its own
+        // bucketed and sorted every price (0.35 s on the reference book) for
+        // each report built off the main actor — and counted it in the time
+        // that decides whether the next one goes there.
+        book.pairIndex = pairIndex
+        book.commodityIndex = commodityIndex
+        book.nextBookOrder = nextBookOrder
+
+        var transactionCopies: [ObjectIdentifier: Transaction] = [:]
+        var splitCopies: [ObjectIdentifier: Split] = [:]
+        func copy(_ split: Split) -> Split {
+            let made = Split(guid: split.guid, account: split.account.map(account),
+                             value: split.value, quantity: split.quantity,
+                             reconcileState: split.reconcileState, reconcileDate: split.reconcileDate,
+                             memo: split.memo, action: split.action, kvp: split.kvp)
+            splitCopies[ObjectIdentifier(split)] = made
+            return made
+        }
+        func copy(_ transaction: Transaction) -> Transaction {
+            let made = Transaction(guid: transaction.guid, currency: transaction.currency,
+                                   datePosted: transaction.datePosted, dateEntered: transaction.dateEntered,
+                                   number: transaction.number, description: transaction.transactionDescription,
+                                   notes: transaction.notes, kvp: transaction.kvp)
+            for split in transaction.splits { made.addSplit(copy(split)) }
+            made.bookOrder = transaction.bookOrder
+            transactionCopies[ObjectIdentifier(transaction)] = made
+            return made
+        }
+        book.transactions = transactions.map(copy)
+        func split(_ original: Split) -> Split {
+            splitCopies[ObjectIdentifier(original)] ?? copy(original)
+        }
+        func transaction(_ original: Transaction) -> Transaction {
+            transactionCopies[ObjectIdentifier(original)] ?? copy(original)
+        }
+
+        var lotCopies: [ObjectIdentifier: Lot] = [:]
+        book.lots = lots.map { lot in
+            let made = Lot(guid: lot.guid, account: lot.account.map(account), title: lot.title,
+                           notes: lot.notes, isClosed: lot.isClosed, kvp: lot.kvp)
+            for member in lot.splits { made.add(split(member)) }
+            lotCopies[ObjectIdentifier(lot)] = made
+            return made
+        }
+        func lot(_ original: Lot) -> Lot {
+            if let known = lotCopies[ObjectIdentifier(original)] { return known }
+            let made = Lot(guid: original.guid, account: original.account.map(account),
+                           title: original.title, notes: original.notes,
+                           isClosed: original.isClosed, kvp: original.kvp)
+            for member in original.splits { made.add(split(member)) }
+            lotCopies[ObjectIdentifier(original)] = made
+            return made
+        }
+
+        var termCopies: [ObjectIdentifier: BillTerm] = [:]
+        func term(_ original: BillTerm) -> BillTerm {
+            if let known = termCopies[ObjectIdentifier(original)] { return known }
+            let made = BillTerm(guid: original.guid, name: original.name,
+                                termDescription: original.termDescription, kind: original.kind,
+                                dueDays: original.dueDays, discountDays: original.discountDays,
+                                cutoff: original.cutoff, discountPercent: original.discountPercent,
+                                active: original.active)
+            termCopies[ObjectIdentifier(original)] = made
+            return made
+        }
+        book.billTerms = billTerms.map(term)
+
+        var tableCopies: [ObjectIdentifier: TaxTable] = [:]
+        func table(_ original: TaxTable) -> TaxTable {
+            if let known = tableCopies[ObjectIdentifier(original)] { return known }
+            let made = TaxTable(guid: original.guid, name: original.name,
+                                entries: original.entries.map {
+                                    TaxTableEntry(account: account($0.account), kind: $0.kind, amount: $0.amount)
+                                },
+                                active: original.active)
+            tableCopies[ObjectIdentifier(original)] = made
+            return made
+        }
+        book.taxTables = taxTables.map(table)
+
+        var customerCopies: [ObjectIdentifier: Customer] = [:]
+        func customer(_ original: Customer) -> Customer {
+            if let known = customerCopies[ObjectIdentifier(original)] { return known }
+            let made = Customer(guid: original.guid, id: original.id, name: original.name,
+                                address: original.address, notes: original.notes,
+                                active: original.active, currency: original.currency,
+                                terms: original.terms.map(term), taxTable: original.taxTable.map(table),
+                                taxTableOverride: original.taxTableOverride,
+                                taxIncluded: original.taxIncluded,
+                                discountPercent: original.discountPercent,
+                                creditLimit: original.creditLimit)
+            customerCopies[ObjectIdentifier(original)] = made
+            return made
+        }
+        var vendorCopies: [ObjectIdentifier: Vendor] = [:]
+        func vendor(_ original: Vendor) -> Vendor {
+            if let known = vendorCopies[ObjectIdentifier(original)] { return known }
+            let made = Vendor(guid: original.guid, id: original.id, name: original.name,
+                              address: original.address, notes: original.notes,
+                              active: original.active, currency: original.currency,
+                              terms: original.terms.map(term), taxTable: original.taxTable.map(table),
+                              taxTableOverride: original.taxTableOverride,
+                              taxIncluded: original.taxIncluded)
+            vendorCopies[ObjectIdentifier(original)] = made
+            return made
+        }
+        var employeeCopies: [ObjectIdentifier: Employee] = [:]
+        func employee(_ original: Employee) -> Employee {
+            if let known = employeeCopies[ObjectIdentifier(original)] { return known }
+            let made = Employee(guid: original.guid, id: original.id, username: original.username,
+                                address: original.address, notes: original.notes,
+                                active: original.active, currency: original.currency,
+                                hourlyRate: original.hourlyRate,
+                                creditAccount: original.creditAccount.map(account))
+            employeeCopies[ObjectIdentifier(original)] = made
+            return made
+        }
+        var jobCopies: [ObjectIdentifier: Job] = [:]
+        func job(_ original: Job) -> Job {
+            if let known = jobCopies[ObjectIdentifier(original)] { return known }
+            let made = Job(guid: original.guid, id: original.id, name: original.name,
+                           reference: original.reference, active: original.active,
+                           owner: owner(original.owner))
+            jobCopies[ObjectIdentifier(original)] = made
+            return made
+        }
+        func owner(_ original: BusinessOwner) -> BusinessOwner {
+            switch original {
+            case .customer(let party): .customer(customer(party))
+            case .vendor(let party): .vendor(vendor(party))
+            case .employee(let party): .employee(employee(party))
+            case .job(let party): .job(job(party))
+            }
+        }
+        book.customers = customers.map(customer)
+        book.vendors = vendors.map(vendor)
+        book.employees = employees.map(employee)
+        book.jobs = jobs.map(job)
+
+        book.invoices = invoices.map { invoice in
+            let made = Invoice(guid: invoice.guid, id: invoice.id, kind: invoice.kind,
+                               isCreditNote: invoice.isCreditNote, owner: owner(invoice.owner),
+                               dateOpened: invoice.dateOpened, datePosted: invoice.datePosted,
+                               dueDate: invoice.dueDate, terms: invoice.terms.map(term),
+                               billingID: invoice.billingID, notes: invoice.notes,
+                               currency: invoice.currency,
+                               entries: invoice.entries.map { entry in
+                                   InvoiceEntry(guid: entry.guid, date: entry.date, entered: entry.entered,
+                                                entryDescription: entry.entryDescription,
+                                                action: entry.action, account: entry.account.map(account),
+                                                quantity: entry.quantity, price: entry.price,
+                                                discount: entry.discount, discountType: entry.discountType,
+                                                discountHow: entry.discountHow, taxable: entry.taxable,
+                                                taxIncluded: entry.taxIncluded,
+                                                taxTable: entry.taxTable.map(table))
+                               },
+                               active: invoice.active, kvp: invoice.kvp)
+            made.postedAccount = invoice.postedAccount.map(account)
+            made.postedTransaction = invoice.postedTransaction.map(transaction)
+            made.postedLot = invoice.postedLot.map(lot)
+            return made
+        }
+        return BookReplica(book: book, detached: detached)
+    }
+}
+
+/// A ``Book/replica()``: a book nothing else holds, so it may cross to one
+/// other thread and be read there. Hand it to one consumer, not two — a book
+/// builds its lookup indexes lazily, on first use, so two readers of the same
+/// replica would race on building them.
+///
+/// `@unchecked` because the compiler cannot follow the copy far enough to see
+/// that nothing in it is shared with the original; `BookReplicaTests` checks
+/// that instead, object by object.
+public struct BookReplica: @unchecked Sendable {
+    public let book: Book
+    /// Copies of accounts outside the tree, kept alive for the ones under
+    /// them, whose parent links are weak.
+    let detached: [Account]
+}
+
+// MARK: - What the next save has to write
+
+extension Book {
+
+    /// Starts keeping track of what changes, from a book exactly as its file
+    /// holds it — just read, or just written whole. Until this is called, and
+    /// again after any change the book could not follow, the next save
+    /// writes everything (P10b).
+    public func markPersisted() {
+        unsavedTransactions = []
+        unsavedPrices = UnsavedPrices()
+        persistedOrderCeiling = nextBookOrder
+    }
+
+    /// What has changed since the last save, for an incremental one — and from
+    /// now on, nothing has. `nil` parts mean "everything". Give it back with
+    /// ``restoreUnsaved(_:)`` if the save it was taken for fails.
+    public func takeUnsaved() -> UnsavedChanges {
+        let taken = UnsavedChanges(transactions: unsavedTransactions, prices: unsavedPrices,
+                                   orderCeiling: persistedOrderCeiling)
+        markPersisted()
+        return taken
+    }
+
+    /// Puts back what a failed save took, joined with what changed since.
+    public func restoreUnsaved(_ taken: UnsavedChanges) {
+        if let since = unsavedTransactions, let earlier = taken.transactions {
+            unsavedTransactions = since.union(earlier)
+        } else {
+            unsavedTransactions = nil
+        }
+        if let since = unsavedPrices, let earlier = taken.prices {
+            unsavedPrices = earlier.followed(by: since)
+        } else {
+            unsavedPrices = nil
+        }
+        persistedOrderCeiling = min(persistedOrderCeiling, taken.orderCeiling)
+    }
+}
+
+/// What changed since a book was last saved (``Book/takeUnsaved()``).
+public struct UnsavedChanges: Sendable {
+    /// Every transaction added, removed, or edited in place — `nil`: all.
+    public let transactions: Set<GncGUID>?
+    /// The prices added and removed — `nil`: all.
+    public let prices: UnsavedPrices?
+    /// The book order at the last save. A transaction ordered at or past it
+    /// was added since — at the end of the book, so at the end of the file;
+    /// one before it is where the file has it, and is rewritten in place.
+    public let orderCeiling: Int
+}
+
+/// The prices a save has to write. Every price added since the last save is
+/// at the end of the book's prices, in the order added (removals keep the
+/// order of the rest), so they are its last ``added`` prices — written at the
+/// end of the file, as the file's order is what decides which of a day's
+/// prices is the latest. ``removed`` are prices the file has and the book no
+/// longer does, or has again, re-added at the end.
+public struct UnsavedPrices: Sendable, Equatable {
+    /// Every addition, in order. An entry counts while it is its GUID's
+    /// latest and has not been removed since — ``live`` says which.
+    private var log: [GncGUID] = []
+    private var live: [GncGUID: Int] = [:]
+    public private(set) var removed: Set<GncGUID> = []
+
+    /// The prices added since, in the order they were added.
+    public var added: [GncGUID] {
+        log.indices.compactMap { live[log[$0]] == $0 ? log[$0] : nil }
+    }
+
+    mutating func added(_ guid: GncGUID) {
+        live[guid] = log.count
+        log.append(guid)
+    }
+
+    mutating func removed(_ guid: GncGUID) {
+        // The entry stays in the log and stops counting. Finding and cutting
+        // it out of an array made undoing a large price import — every price
+        // removed in turn — quadratic.
+        live.removeValue(forKey: guid)
+        // Whether or not it was added since, the file may hold it: delete it
+        // there. Deleting a row that is not there is nothing.
+        removed.insert(guid)
+    }
+
+    /// These changes, then `later`'s.
+    func followed(by later: UnsavedPrices) -> UnsavedPrices {
+        var joined = self
+        for guid in later.removed { joined.removed(guid) }
+        for guid in later.added { joined.added(guid) }
+        return joined
+    }
+
+    public static func == (lhs: UnsavedPrices, rhs: UnsavedPrices) -> Bool {
+        lhs.added == rhs.added && lhs.removed == rhs.removed
+    }
 }

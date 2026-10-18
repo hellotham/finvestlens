@@ -45,10 +45,11 @@ struct LiveReportCatalogueTests {
         // build without error.
         let mustHaveContent: Set<ReportKind> = [
             .accountSummary, .netWorth, .cashFlow, .incomeExpense, .averageBalance,
-            .transactions, .reconcile, .spendingInsights,
+            .reconcile, .spendingInsights,
             .portfolio, .investmentLots, .capitalGains,
         ]
 
+        var timings: [(String, Duration, Duration)] = []
         for kind in ReportKind.allCases where kind.usesScaffold {
             // The statement kinds render through the statement machinery, not
             // the scaffold builder — covered by StatementTests.
@@ -56,8 +57,31 @@ struct LiveReportCatalogueTests {
                 || kind == .equityStatement || kind == .trialBalance { continue }
 
             let configuration = kind.defaultConfiguration(for: model)
-            let document = model.reportDocument(for: configuration)
-            if mustHaveContent.contains(kind) {
+            // Cold — each report's first build after an edit, which is what a
+            // person opening it waits for (P3.3) — and warm, from the memo.
+            model.refreshAll(scope: .prices)
+            var document: ReportDocument?
+            let cold = ContinuousClock().measure { document = model.reportDocument(for: configuration) }
+            let warm = ContinuousClock().measure { _ = model.reportDocument(for: configuration) }
+            timings.append((kind.rawValue, cold, warm))
+            if kind == .transactions {
+                // Every account by default (build 4), one section each with
+                // postings in the window — so an empty window is an empty
+                // report, and only that may be.
+                let built = try #require(document, "transactions built no document")
+                let (from, to) = model.resolve(configuration.period)
+                let inWindow = model.book?.transactions
+                    .filter { $0.datePosted >= from && $0.datePosted <= to }.count ?? 0
+                #expect(!built.sections.isEmpty || inWindow == 0,
+                        "transactions: \(inWindow) transactions in the window, no section")
+                var lastYear = configuration
+                lastYear.period = .previousFinancialYear
+                let year = try #require(model.reportDocument(for: lastYear))
+                #expect(!year.sections.isEmpty, "transactions: nothing in the previous financial year")
+                let rows = year.sections.reduce(0) { $0 + $1.rows.count }
+                print("📊 Transactions: \(built.sections.count) sections (\(inWindow) transactions in the default window); "
+                      + "previous FY \(year.sections.count) sections, \(rows) rows")
+            } else if mustHaveContent.contains(kind) {
                 let built = try #require(document, "\(kind.rawValue) built no document")
                 #expect(!built.isEmpty, "\(kind.rawValue) produced an empty document")
                 #expect(!built.periodLabel.isEmpty)
@@ -78,5 +102,15 @@ struct LiveReportCatalogueTests {
             model.forecastDocument(accountID: $0, points: model.cashFlowForecast(accountID: $0))
         }
         print("📊 Forecast: \(forecast == nil ? "no upcoming activity (ok)" : "built")")
+
+        let width = timings.map(\.0.count).max() ?? 0
+        print("""
+
+        Report builds, cold after a price-scoped refresh (memos dropped), then warm
+        \(timings.sorted { $0.1 > $1.1 }.map {
+            "  \($0.0.padding(toLength: width, withPad: " ", startingAt: 0))  cold \($0.1)  warm \($0.2)"
+        }.joined(separator: "\n"))
+
+        """)
     }
 }

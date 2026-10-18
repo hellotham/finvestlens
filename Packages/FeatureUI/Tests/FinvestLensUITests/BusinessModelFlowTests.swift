@@ -63,8 +63,8 @@ struct BusinessModelFlowTests {
         #expect(aging.first?.buckets.total == dec("50"))
     }
 
-    @Test("The whole-book GnuCash-XML snapshot (used by undo) preserves business")
-    func wholeBookSnapshotRoundTrips() throws {
+    @Test("The GnuCash-XML export preserves the business graph")
+    func exportPreservesBusiness() throws {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
@@ -78,7 +78,6 @@ struct BusinessModelFlowTests {
             lines: [.init(accountID: sales, price: dec("100"))]))
         #expect(model.postInvoice(invoice, to: ar))
 
-        // This is exactly what whole-book undo snapshots and restores.
         let snapshot = try #require(model.gnuCashExportData())
         let restored = try FinvestLensInterchange.GnuCashXMLImporter.importBook(from: snapshot).book
         #expect(restored.customers.first?.name == "Acme")

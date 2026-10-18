@@ -292,4 +292,42 @@ struct StatementTests {
         let closing = try #require(f.model.balanceSheet(asOf: to))
         #expect(section.totalAmounts[0] == closing.totalAssets - closing.totalLiabilities)
     }
+
+    @Test("A small caption shows its whole subtree on the face, every level")
+    func smallCaptionEveryLevel() throws {
+        let url = tempURL()
+        let model = AppModel()
+        try model.newDocument(at: url)
+        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        let book = try #require(model.book)
+        func add(_ name: String, _ type: AccountType, under parent: Account) -> Account {
+            let account = Account(name: name, type: type, commodity: .aud)
+            parent.addChild(account)
+            return account
+        }
+        let cash = add("Cash", .bank, under: add("Assets", .asset, under: book.rootAccount))
+        let expenses = add("Expenses", .expense, under: book.rootAccount)
+        let household = add("Household", .expense, under: expenses)
+        let rent = add("Rent", .expense, under: household)
+        let utilities = add("Utilities", .expense, under: household)
+        let power = add("Power", .expense, under: utilities)
+        let water = add("Water", .expense, under: utilities)
+        let stamps = add("Stamps", .expense, under: expenses)
+        model.refreshAll()
+        for (account, amount) in [(rent, Decimal(2000)), (power, 300), (water, 100), (stamps, 5)] {
+            _ = try model.addTransaction(date: Date(timeIntervalSince1970: 1_750_000_000), description: "Bill",
+                                         currency: .aud, splits: [SplitInput(accountID: cash.guid, value: -amount),
+                                                                  SplitInput(accountID: account.guid, value: amount)])
+        }
+        let statement = try #require(model.incomeStatementStatement(from: .distantPast, to: .now,
+                                                                    periodLabel: "All time"))
+        let section = try #require(statement.sections.first { $0.title == "Expenses" })
+        let face = section.items.map { "\($0.depth) \($0.caption)" }
+        // Power and Water, two levels under the caption, were shown nowhere.
+        #expect(face.contains("2 Power"))
+        #expect(face.contains("2 Water"))
+        #expect(face.contains("1 Utilities"))
+        // The section still ties: captions, not their children, sum to it.
+        #expect(sum(section.items, column: 0) == section.totalAmounts[0])
+    }
 }

@@ -38,7 +38,7 @@ struct ReportDocumentsTests {
             SplitInput(accountID: food, value: dec("8"))])
 
         let doc = try #require(model.transactionsDocument(
-            accountID: bank, from: Date(timeIntervalSince1970: 0),
+            accountIDs: [bank], from: Date(timeIntervalSince1970: 0),
             to: Date(timeIntervalSince1970: 10_000)))
         #expect(doc.title == "Transactions — Bank")
         #expect(doc.sections.first?.rows.count == 1)

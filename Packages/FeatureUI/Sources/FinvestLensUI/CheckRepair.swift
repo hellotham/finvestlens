@@ -81,11 +81,28 @@ extension AppModel {
     /// and reports what was done.
     public func applyCleanup() {
         guard let book else { return }
-        // One `editingWholeBook` around the whole scrub, so the repairs undo as
-        // a single action however many transactions they touched — and because
-        // the scrub also files orphans under new accounts.
+        // One edit around the whole scrub, so the repairs undo as a single
+        // action however many transactions they touch. They touch exactly the
+        // transactions the check names — the empties it removes, the ones
+        // holding orphan splits, the unbalanced ones it posts a residual to —
+        // and the Imbalance/Orphan accounts it creates, which the edit records
+        // as new; it used to snapshot the whole book instead (P9d).
+        var touched: [GncGUID] = []
+        var seen = Set<GncGUID>()
+        for issue in Scrub.check(book) {
+            let id: GncGUID?
+            switch issue {
+            case let .emptyTransaction(transaction), let .unbalancedTransaction(transaction, _):
+                id = transaction
+            case let .orphanSplit(split):
+                id = book.split(with: split)?.transaction?.guid
+            case .degenerateTransaction, .implausibleDate:
+                id = nil
+            }
+            if let id, seen.insert(id).inserted { touched.append(id) }
+        }
         var cleaned: Scrub.CleanupSummary?
-        editingWholeBook(named: "Repair Book") {
+        editing(accounts: [], transactions: touched, named: "Repair Book") {
             cleaned = Scrub.clean(book)
         }
         guard let summary = cleaned else { return }

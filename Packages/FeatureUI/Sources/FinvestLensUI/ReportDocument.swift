@@ -52,7 +52,11 @@ struct ReportDocumentRow: Identifiable {
 
 /// A titled table with an optional ruled total.
 struct ReportDocumentSection: Identifiable {
-    var id: String { title }
+    /// The title, unless the section says otherwise: the Transactions
+    /// report's sections are accounts, whose full names need not be unique,
+    /// and two sections with one identity in a lazy stack drew one of them
+    /// as a blank gap.
+    var id: String { identity ?? title }
     var title: String
     var rows: [ReportDocumentRow]
     var total: (label: String, amount: Decimal)? = nil
@@ -62,6 +66,11 @@ struct ReportDocumentSection: Identifiable {
     var columns: [String]? = nil
     /// A ruled total across the comparative columns.
     var columnTotals: (label: String, amounts: [Decimal?])? = nil
+    /// The section's own currency, where it is not the document's — each
+    /// account of a transaction report prints in its own.
+    var currencyCode: String? = nil
+    /// An identity other than the title (``id``).
+    var identity: String? = nil
 }
 
 /// The chart a report carries, when it carries one.
@@ -128,13 +137,16 @@ struct ReportDocumentView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
+            // Lazy: a transaction report over the whole book is hundreds of
+            // sections and tens of thousands of rows, and only the screenful in
+            // view is built.
+            LazyVStack(alignment: .leading, spacing: 20) {
                 header
                 if !document.kpis.isEmpty { kpiRow }
                 if !document.summary.isEmpty { summaryBlock }
                 if let chart = document.chart { chartView(chart) }
                 ForEach(document.sections) { section in
-                    ReportTableView(section: section, code: document.currencyCode)
+                    ReportTableView(section: section, code: section.currencyCode ?? document.currencyCode)
                 }
                 notes
             }
@@ -358,7 +370,11 @@ struct ReportTableView: View {
                 .padding(.bottom, 6)
             Divider()
             if let columns = section.columns {
-                comparativeGrid(columns)
+                if section.rows.count > Self.gridLimit {
+                    longColumns(columns)
+                } else {
+                    comparativeGrid(columns)
+                }
             } else {
                 singleGrid
             }
@@ -412,6 +428,68 @@ struct ReportTableView: View {
             }
         }
     }
+
+    /// Past this many rows a section is drawn lazily, in fixed columns: a
+    /// `Grid` measures every row to size its columns, which for one busy
+    /// account's year of postings is thousands of rows built at once.
+    static let gridLimit = 120
+
+    /// A long section's rows, built as they scroll into view.
+    private func longColumns(_ columns: [String]) -> some View {
+        LazyVStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 16) {
+                Spacer()
+                ForEach(Array(columns.enumerated()), id: \.offset) { _, header in
+                    Text(header).frame(width: amountWidth, alignment: .trailing)
+                }
+            }
+            .scaledFont(.caption)
+            .foregroundStyle(.secondary)
+            .padding(.vertical, 4)
+            ForEach(section.rows.indices, id: \.self) { index in
+                let row = section.rows[index]
+                HStack(spacing: 16) {
+                    Text(row.label)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .padding(.leading, CGFloat(row.depth) * 16)
+                        .foregroundStyle(row.depth > 0 ? .secondary : .primary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    ForEach(0..<(row.amounts?.count ?? 0), id: \.self) { column in
+                        amountText(row.amounts?[column] ?? nil)
+                            .lineLimit(1)
+                            .frame(width: amountWidth, alignment: .trailing)
+                    }
+                }
+                .scaledFont(.body)
+                .padding(.vertical, 5)
+                .background(index.isMultiple(of: 2) ? Color.clear : Color.primary.opacity(0.03))
+            }
+            if let totals = section.columnTotals {
+                HStack(spacing: 16) {
+                    Text(totals.label).fontWeight(.bold)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    ForEach(totals.amounts.indices, id: \.self) { column in
+                        amountText(totals.amounts[column]).fontWeight(.bold)
+                            .lineLimit(1)
+                            .frame(width: amountWidth, alignment: .trailing)
+                    }
+                }
+                .scaledFont(.body)
+                .padding(.vertical, 6)
+                .overlay(alignment: .top) { Divider() }
+            }
+        }
+    }
+
+    /// One amount column of a long section: wide enough for a negative
+    /// seven-figure amount in a foreign currency's code ("-USD 1,234,567.89"
+    /// in bold measures 133 pt at 13 pt), at the current text size — Dynamic
+    /// Type on iPhone and iPad, the app's own Text Size on the Mac, which no
+    /// `@ScaledMetric` follows.
+    @ScaledMetric(relativeTo: .body) private var amountBase: CGFloat = 140
+    @Environment(\.appFontScale) private var appFontScale
+    private var amountWidth: CGFloat { amountBase * appFontScale }
 
     /// One period per column, amounts right-aligned under each header.
     private func comparativeGrid(_ columns: [String]) -> some View {
@@ -492,7 +570,7 @@ extension ReportDocument {
                                              amounts: totals.amounts))
                 }
                 sections.append(PrintableSection(heading: section.title, rows: rows,
-                                                 columns: columns))
+                                                 columns: columns, code: section.currencyCode))
                 continue
             }
             var rows = section.rows.map {
@@ -502,11 +580,19 @@ extension ReportDocument {
             if let total = section.total {
                 rows.append(PrintableRow(label: total.label, amount: total.amount, bold: true))
             }
-            sections.append(PrintableSection(heading: section.title, rows: rows))
+            sections.append(PrintableSection(heading: section.title, rows: rows,
+                                             code: section.currencyCode))
         }
         return PrintableStatement(title: title,
                                   subtitle: "\(periodLabel) · \(currencyCode)",
                                   code: currencyCode,
                                   sections: sections)
+    }
+
+    /// The printable under the masthead's entity line (the book's name).
+    func printable(entity: String) -> PrintableStatement {
+        var printable = self.printable
+        printable.entity = entity
+        return printable
     }
 }

@@ -231,23 +231,35 @@ extension AppModel {
     /// are returned — used to scope Auto-Categorise to the register selection.
     public func uncategorizedItems(limitedTo transactions: Set<GncGUID>? = nil) -> [UncategorizedItem] {
         guard let book else { return [] }
-        let holders = book.accounts.filter(\.isWash)
-        return holders.flatMap { holder in
-            book.splits(for: holder).compactMap { split -> UncategorizedItem? in
-                guard let transaction = split.transaction else { return nil }
-                if let transactions, !transactions.contains(transaction.guid) { return nil }
-                return UncategorizedItem(
-                    id: UUID(),
-                    splitID: split.guid,
-                    transactionID: transaction.guid,
-                    date: transaction.datePosted,
-                    transactionDescription: transaction.transactionDescription,
-                    amount: split.value,
-                    currencyCode: transaction.currency.mnemonic
-                )
-            }
+        return uncategorizedLegs(of: book).compactMap { split, transaction -> UncategorizedItem? in
+            if let transactions, !transactions.contains(transaction.guid) { return nil }
+            return UncategorizedItem(
+                id: UUID(),
+                splitID: split.guid,
+                transactionID: transaction.guid,
+                date: transaction.datePosted,
+                transactionDescription: transaction.transactionDescription,
+                amount: split.value,
+                currencyCode: transaction.currency.mnemonic
+            )
         }
         .sorted { $0.date < $1.date }
+    }
+
+    /// How many ``uncategorizedItems(limitedTo:)`` there are, without making
+    /// them — the Up Next card wants the number, on every revision.
+    public func uncategorizedCount() -> Int {
+        guard let book else { return 0 }
+        return uncategorizedLegs(of: book).count
+    }
+
+    /// Every leg posted to an Imbalance or Orphan account, with its
+    /// transaction: chosen here once, so the number the Up Next card shows is
+    /// the number of rows the sheet it opens lists.
+    private func uncategorizedLegs(of book: Book) -> [(split: Split, transaction: FinvestLensEngine.Transaction)] {
+        book.accounts.filter(\.isWash).flatMap { holder in
+            book.splits(for: holder).compactMap { split in split.transaction.map { (split, $0) } }
+        }
     }
 
     /// Model-suggested categories for uncategorised items, keyed by item ID.

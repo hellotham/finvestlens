@@ -58,6 +58,26 @@ your own choice of where the Apple Intelligence features run.
   book opens, rather than the app opening with no window.
 - **iPhone and iPad save when you leave the app.** iOS can end an app in
   the background without warning; the book is saved as you switch away.
+- **Search keeps up with your typing, and its results are a register.** A
+  keystroke searches a large book in a few milliseconds, and what it finds
+  shows as All Transactions narrowed to the matches, which you edit as you
+  would any register — the way GnuCash's Find opens its results. Void or
+  Delete over a selection takes every selected transaction, as one Undo.
+- **Reports in full.** Income & Expense breaks every category down into its
+  subcategories, every level; Cash Flow and the Account Summary show every
+  level of your accounts, each parent with its subtotal; and on the income
+  statement and balance sheet a small group shows all of its accounts.
+- **The Transactions report covers every account** until you choose some,
+  and an account you choose brings its subaccounts with it; a security's
+  postings show in its units. The account pickers scroll through every match.
+- **Sidebar clicks land.** On the Mac, a click that moved the pointer a
+  little could select nothing; accounts are now dragged by a grip at the
+  end of the row.
+- **Accounts opens faster on the Mac** — in under a third of the time on a
+  large book, and faster again the next time.
+- **Autosave works wherever the book is.** It could fail with "you don't
+  have permission" in a folder the app had not been given; it no longer
+  needs the folder.
 
 ### Requirements
 

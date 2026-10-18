@@ -262,8 +262,34 @@ extension AppModel {
         // not cash movements — they take the Stock-Assistant path, not the cash
         // matcher, so they never post to the wrong account here.
         let cash = staged.filter { !$0.isInvestment }
-        var results = ImportMatcher.match(cash, into: account, book: book)
+        return applyingRules(to: ImportMatcher.match(cash, into: account, book: book))
+    }
 
+    /// ``matchStaged(_:intoAccountID:)`` with the matching off the main actor
+    /// (P6b). The matcher reads the whole book — every transaction, for the
+    /// transfers a statement completes — so it reads a replica, and only the
+    /// copy is taken here. The rules and heuristics after it stay: they are
+    /// the model's, and quick. What it finds is checked again when the rows
+    /// are imported (a matched split must still exist, a transfer's leg must
+    /// still be waiting), as it always was between Preview and Import.
+    public func matchStagedOffMain(_ staged: [StagedTransaction],
+                                   intoAccountID id: GncGUID) async -> [MatchResult] {
+        guard let book, book.account(with: id) != nil else { return [] }
+        let cash = staged.filter { !$0.isInvestment }
+        let replica = book.replica()
+        let results = await Task.detached(priority: .userInitiated) {
+            guard let account = replica.book.account(with: id) else { return [MatchResult]() }
+            return ImportMatcher.match(cash, into: account, book: replica.book)
+        }.value
+        // The book this was asked of may have closed while the matcher ran.
+        guard self.book === book else { return [] }
+        return applyingRules(to: results)
+    }
+
+    /// Categorisation rules over the matcher's history-based suggestions
+    /// (`FR-RULE-01`), then the merchant heuristics where neither had one.
+    private func applyingRules(to matched: [MatchResult]) -> [MatchResult] {
+        var results = matched
         let groups = ruleGroups
         for index in results.indices {
             // A detected transfer counterpart outranks rules and heuristics:
