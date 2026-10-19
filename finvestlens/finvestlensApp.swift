@@ -31,9 +31,10 @@ import FinvestLensUI
 #if os(macOS)
 import AppKit
 
-/// Saves the open book (and releases its lock) on quit, so ⌘Q never loses
-/// data and never leaves a stale lock behind. If the save fails, quitting is
-/// cancelled so the error alert is seen instead of the data being lost.
+/// Saves the open book (and releases its lock) on quit — ⌘Q, or closing the
+/// last window — so quitting never loses data and never leaves a stale lock
+/// behind. If the save fails, quitting is cancelled so the error alert is
+/// seen instead of the data being lost.
 final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Saves and closes the open book; `false` when the save failed.
     var saveAndClose: (() async -> Bool)?
@@ -51,6 +52,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Task { @MainActor in
             guard await saveAndClose() else {
                 NSApp.reply(toApplicationShouldTerminate: false)
+                Self.showAWindowIfNoneIsVisible()
                 return
             }
             if self.pendingWorkBeforeQuit?() == true, let finish = self.finishWorkBeforeQuit {
@@ -58,12 +60,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 // Anything opened during the wait is saved and closed too.
                 guard await saveAndClose() else {
                     NSApp.reply(toApplicationShouldTerminate: false)
+                    Self.showAWindowIfNoneIsVisible()
                     return
                 }
             }
             NSApp.reply(toApplicationShouldTerminate: true)
         }
         return .terminateLater
+    }
+
+    /// Closing the last window quits, through ``applicationShouldTerminate(_:)``
+    /// — the book saved, closed and its lock released, as ⌘Q does. Left
+    /// running with no window, the app went on holding the book: the lock
+    /// kept its heartbeat, so every other Mac the book syncs to found it open
+    /// while this one looked closed (19 Oct 2026: "there should not be a lock
+    /// if the app has terminated gracefully"). AppKit asks once the last
+    /// window has gone, panels aside, and `true` sends the quit through
+    /// `applicationShouldTerminate(_:)`.
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
+
+    /// A quit that the last window's closing started has nowhere to show why
+    /// it stopped: a failed save is reported in the window, and there is
+    /// none. Asking the app to reopen, as a click on its Dock icon does,
+    /// brings one back to show it — with the book still open and unsaved.
+    private static func showAWindowIfNoneIsVisible() {
+        guard !NSApp.windows.contains(where: \.isVisible) else { return }
+        NSWorkspace.shared.openApplication(at: Bundle.main.bundleURL,
+                                           configuration: NSWorkspace.OpenConfiguration())
     }
 }
 #endif

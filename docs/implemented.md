@@ -5324,3 +5324,35 @@ main actor; it counts the days now (`ReportWarmTests`); and the phone's
 results toolbar carried Show in Register and Set Reconcile State, which read
 a selection its list never makes, so could never be used — they are gone from
 it, and each row's menu has Show in Register.
+
+## A lock with no app behind it (19 Oct 2026, build 6)
+
+Reported the morning build 5 was uploaded: "I don't understand why there is a
+lock — the app is not running … there should not be a lock if the app has
+terminated gracefully."
+
+- **What left it.** A development copy had the book open when TestFlight
+  installed 1.2 at 08:25. RunningBoard ended every running copy of the bundle
+  ID — exit reason namespace `runningboard(15)`, a kill
+  (`terminate_with_reason`), which no process can intercept. The copy's last
+  entry in the log is a heartbeat write; nothing released.
+- **Graceful exits, checked one by one.** ⌘Q saves, closes and releases
+  (`AppDelegate.applicationShouldTerminate` → `discard()`). `SIGTERM`
+  releases through `LockReaper` — proved in a throwaway sandboxed app built
+  from the shipped `FileLock.swift`, opened on a copy of the demo book: the
+  lock was there, then `SIGTERM`, then it was gone; an unsandboxed copy the
+  same. Closing the last window did **not** end the app: it went on running
+  in the Dock with the book open, its lock refreshed every 25 s, so every
+  other Mac the book syncs to saw it open while this one looked closed. It
+  now quits through the same path (`applicationShouldTerminateAfterLastWindowClosed`);
+  on the real book, the close button pressed, the app was gone in about a
+  second and the lock with it. A save that fails on the way reopens a window
+  to say so.
+- **A kill, seen from another machine.** The lock's own Mac already cleared
+  it at the next open (a dead pid there). Another Mac cannot see that pid, so
+  it asked. A lock now records whether its session had anything unsaved
+  (`unsaved`, written at once when that changes), and one that had nothing
+  and has been silent for half an hour is cleared by any machine without
+  asking — the owner's choice of the two put to them. With work unsaved, or a
+  lock from before the field, it still asks. Four new tests, each run against
+  its rule undone and failed (`PersistenceTests`).

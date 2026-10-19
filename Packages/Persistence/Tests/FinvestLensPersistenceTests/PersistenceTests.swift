@@ -339,6 +339,91 @@ struct FileLockTests {
         created.discard()
     }
 
+    /// A holder that could not release — killed by an update that replaced
+    /// the app under an open book, as happened on 19 Oct 2026 — seen from
+    /// another Mac: quiet past the limit, having said it had nothing unsaved.
+    /// The open just proceeds, and the lock is ours.
+    @Test("Quiet half an hour with nothing unsaved, another Mac's lock opens without asking")
+    func quietCleanLockOpens() throws {
+        let url = tempURL()
+        defer { try? FileManager.default.removeItem(at: url) }
+        try FinvestLensDocument.create(at: url).discard()
+        let quiet = Date(timeIntervalSinceNow: -(FileLock.quietBreakAfter + 60))
+        let gone = LockHolder(host: "another-mac.local", user: "them", instanceID: UUID().uuidString,
+                              pid: 4242, acquiredAt: quiet, heartbeatAt: quiet,
+                              machineID: "another-machine-entirely", unsaved: false)
+        let lock = try plant(gone, beside: url)
+        defer { try? FileManager.default.removeItem(at: lock.lockURL) }
+
+        let reopened = try FinvestLensDocument.open(at: url)
+        #expect(lock.currentHolder()?.pid == getpid(), "the lock is ours now")
+        reopened.discard()
+    }
+
+    /// The three conditions are all needed: work unsaved, a holder heard from
+    /// within the limit, or a lock from before holders said — each still asks,
+    /// and leaves the lock exactly as it was.
+    @Test("With work unsaved, quiet less than the limit, or a lock that does not say, it still asks")
+    func quietRuleNeedsAllThree() throws {
+        let url = tempURL()
+        defer { try? FileManager.default.removeItem(at: url) }
+        try FinvestLensDocument.create(at: url).discard()
+        let quiet = Date(timeIntervalSinceNow: -(FileLock.quietBreakAfter + 60))
+        let recent = Date(timeIntervalSinceNow: -(FileLock.quietBreakAfter - 60))
+        func holder(_ heartbeat: Date, unsaved: Bool?) -> LockHolder {
+            LockHolder(host: "another-mac.local", user: "them", instanceID: UUID().uuidString,
+                       pid: 4242, acquiredAt: heartbeat, heartbeatAt: heartbeat,
+                       machineID: "another-machine-entirely", unsaved: unsaved)
+        }
+        for held in [holder(quiet, unsaved: true), holder(recent, unsaved: false), holder(quiet, unsaved: nil)] {
+            let lock = try plant(held, beside: url)
+            #expect(throws: FileLock.LockError.self) { _ = try FinvestLensDocument.open(at: url) }
+            #expect(lock.currentHolder() == held, "and the lock is left exactly as it was")
+            try FileManager.default.removeItem(at: lock.lockURL)
+        }
+    }
+
+    /// The flag is only as good as its timing: an edit made and the lid then
+    /// closed inside one heartbeat must still read as unsaved elsewhere.
+    @Test("The lock says whether the session has work unsaved, as soon as that changes")
+    func lockCarriesUnsavedState() throws {
+        let url = tempURL()
+        defer { try? FileManager.default.removeItem(at: url) }
+        let document = try FinvestLensDocument.create(at: url)
+        defer { document.discard() }
+        let lock = FileLock(documentURL: url)
+        #expect(lock.currentHolder()?.unsaved == false)
+        document.markDirty()
+        #expect(lock.currentHolder()?.unsaved == true, "written at the edit, not at the next heartbeat")
+        try document.save()
+        #expect(lock.currentHolder()?.unsaved == false)
+        // A lock written before holders said still decodes, and says nothing.
+        let legacy = Data(#"{"host":"h","user":"u","instanceID":"i","pid":7,"acquiredAt":0,"heartbeatAt":0}"#.utf8)
+        #expect(try JSONDecoder().decode(LockHolder.self, from: legacy).unsaved == nil)
+    }
+
+    /// Writing the flag can be the moment a takeover is found; the person
+    /// still hears of it, at the heartbeat the app reports from.
+    @Test("A takeover found when the unsaved state is written is reported at the next heartbeat")
+    func takeoverFoundBetweenHeartbeatsIsReported() throws {
+        let url = tempURL()
+        defer { try? FileManager.default.removeItem(at: url) }
+        let document = try FinvestLensDocument.create(at: url)
+        defer { document.discard() }
+        let lock = FileLock(documentURL: url)
+        defer { try? FileManager.default.removeItem(at: lock.lockURL) }
+        let usurper = LockHolder(host: "another-mac.local", user: "them", instanceID: UUID().uuidString,
+                                 pid: 4242, acquiredAt: Date(), heartbeatAt: Date(),
+                                 machineID: "another-machine-entirely", unsaved: false)
+        try JSONEncoder().encode(usurper).write(to: lock.lockURL, options: .atomic)
+
+        document.markDirty()   // writes the lock — and finds it taken
+        #expect(document.advisoryLockHeld == false)
+        #expect(document.heartbeat() == usurper)
+        #expect(document.heartbeat() == nil, "reported once")
+        #expect(lock.currentHolder() == usurper, "and the new holder's lock is left alone")
+    }
+
     @Test("A stale lock is detected and can be broken")
     func staleBreaking() throws {
         let doc = tempURL()

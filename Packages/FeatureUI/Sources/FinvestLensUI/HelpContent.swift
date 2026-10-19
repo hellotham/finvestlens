@@ -274,8 +274,12 @@ public enum HelpBook {
             .heading("Sharing a book across machines"),
             .text("""
                 A book can live on a NAS or shared folder. FinvestLens takes a lock while \
-                it is open so a second machine cannot overwrite your work; if the app \
-                behind a lock has gone away, you can break the lock and open anyway.
+                it is open so a second machine cannot overwrite your work, and gives it up \
+                when you close the book or quit — on the Mac, closing the last window quits. \
+                If FinvestLens was stopped before it could let go, by an update or a crash, \
+                the same machine clears the lock the next time it opens the book; another \
+                machine clears it once it has been quiet for half an hour with nothing \
+                unsaved, and otherwise lets you break the lock and open anyway.
                 """),
             .heading("Books on Box"),
             .text("""

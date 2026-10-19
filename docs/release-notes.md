@@ -75,6 +75,10 @@ your own choice of where the Apple Intelligence features run.
   end of the row.
 - **Accounts opens faster on the Mac** — in under a third of the time on a
   large book, and faster again the next time.
+- **No lock left behind.** Closing the last window now quits FinvestLens,
+  saving the book and releasing it for your other Macs. If FinvestLens is
+  stopped without warning — by an update or a crash — with nothing unsaved,
+  another Mac opens the book without asking after half an hour.
 - **Autosave works wherever the book is.** It could fail with "you don't
   have permission" in a folder the app had not been given; it no longer
   needs the folder.

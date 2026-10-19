@@ -12903,49 +12903,49 @@
         }
       }
     },
-    "A book can live on a NAS or shared folder. FinvestLens takes a lock while it is open so a second machine cannot overwrite your work; if the app behind a lock has gone away, you can break the lock and open anyway.": {
+    "A book can live on a NAS or shared folder. FinvestLens takes a lock while it is open so a second machine cannot overwrite your work, and gives it up when you close the book or quit — on the Mac, closing the last window quits. If FinvestLens was stopped before it could let go, by an update or a crash, the same machine clears the lock the next time it opens the book; another machine clears it once it has been quiet for half an hour with nothing unsaved, and otherwise lets you break the lock and open anyway.": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ein Buch kann auf einem NAS oder in einem freigegebenen Ordner liegen. FinvestLens setzt beim Öffnen eine Sperre, damit ein zweiter Rechner Ihre Arbeit nicht überschreibt; ist die App hinter einer Sperre verschwunden, können Sie die Sperre aufheben und trotzdem öffnen."
+            "value": "Ein Buch kann auf einem NAS oder in einem freigegebenen Ordner liegen. FinvestLens setzt beim Öffnen eine Sperre, damit ein zweiter Rechner Ihre Arbeit nicht überschreibt, und gibt sie frei, wenn Sie das Buch schließen oder die App beenden – auf dem Mac beendet das Schließen des letzten Fensters die App. Wurde FinvestLens durch ein Update oder einen Absturz beendet, bevor es die Sperre freigeben konnte, hebt derselbe Rechner sie beim nächsten Öffnen des Buchs auf; ein anderer Rechner hebt sie selbst auf, wenn sie seit einer halben Stunde nicht mehr aktualisiert wurde und nichts ungesichert war – andernfalls können Sie die Sperre aufheben und trotzdem öffnen."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Un libro puede estar en un NAS o en una carpeta compartida. FinvestLens toma un bloqueo mientras está abierto para que otro equipo no sobrescriba tu trabajo; si la app tras un bloqueo ya no está, puedes forzarlo y abrir igualmente."
+            "value": "Un libro puede estar en un NAS o en una carpeta compartida. FinvestLens toma un bloqueo mientras está abierto para que otro equipo no sobrescriba tu trabajo, y lo libera cuando cierras el libro o sales de la app; en el Mac, cerrar la última ventana cierra la app. Si FinvestLens se detuvo antes de poder liberarlo, por una actualización o un fallo, el mismo equipo quita el bloqueo la próxima vez que abre el libro; otro equipo lo quita por sí solo cuando lleva media hora sin actualizarse y no había nada sin guardar, y si no, te deja forzarlo y abrir igualmente."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Un livre peut résider sur un NAS ou un dossier partagé. FinvestLens pose un verrou pendant qu’il est ouvert afin qu’une autre machine n’écrase pas votre travail ; si l’app à l’origine du verrou a disparu, vous pouvez forcer le verrou et ouvrir quand même."
+            "value": "Un livre peut résider sur un NAS ou un dossier partagé. FinvestLens pose un verrou pendant qu’il est ouvert afin qu’une autre machine n’écrase pas votre travail, et le libère quand vous fermez le livre ou quittez l’app ; sur Mac, fermer la dernière fenêtre quitte l’app. Si FinvestLens a été arrêté avant de pouvoir le libérer, par une mise à jour ou un plantage, la même machine retire le verrou la prochaine fois qu’elle ouvre le livre ; une autre machine le retire d’elle-même lorsqu’il n’a pas été mis à jour depuis une demi-heure et que rien n’était non enregistré, et sinon vous permet de forcer le verrou et d’ouvrir quand même."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Un libro può risiedere su un NAS o in una cartella condivisa. FinvestLens applica un blocco mentre è aperto, così un altro computer non può sovrascrivere il tuo lavoro; se l’app dietro il blocco non c’è più, puoi rimuoverlo e aprire ugualmente."
+            "value": "Un libro può risiedere su un NAS o in una cartella condivisa. FinvestLens applica un blocco mentre è aperto, così un altro computer non può sovrascrivere il tuo lavoro, e lo rilascia quando chiudi il libro o esci dall’app; sul Mac, chiudere l’ultima finestra fa uscire dall’app. Se FinvestLens è stato interrotto prima di poterlo rilasciare, da un aggiornamento o da un arresto anomalo, lo stesso computer rimuove il blocco la volta successiva che apre il libro; un altro computer lo rimuove da sé quando non viene aggiornato da mezz’ora e non c’erano modifiche non salvate, altrimenti puoi rimuoverlo e aprire ugualmente."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "帳簿は NAS や共有フォルダに置けます。FinvestLens は開いている間ロックをかけ、別のマシンが作業を上書きしないようにします。ロックをかけたアプリがすでに終了している場合は、ロックを解除して開くこともできます。"
+            "value": "帳簿は NAS や共有フォルダに置けます。FinvestLens は開いている間ロックをかけ、別のマシンが作業を上書きしないようにします。ロックは帳簿を閉じるかアプリを終了すると解除されます（Mac では最後のウインドウを閉じるとアプリが終了します）。アップデートやクラッシュでロックを解除する前に FinvestLens が止まった場合は、同じマシンで次に帳簿を開いたときにロックが外れます。別のマシンでは、未保存の変更がないまま 30 分間更新されていないロックは自動的に外れ、それ以外の場合はロックを解除して開くこともできます。"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Um livro pode ficar em um NAS ou pasta compartilhada. O FinvestLens aplica um bloqueio enquanto está aberto para que outra máquina não sobrescreva seu trabalho; se o app por trás do bloqueio não existe mais, você pode quebrá-lo e abrir mesmo assim."
+            "value": "Um livro pode ficar em um NAS ou pasta compartilhada. O FinvestLens aplica um bloqueio enquanto está aberto para que outra máquina não sobrescreva seu trabalho, e o libera quando você fecha o livro ou sai do app — no Mac, fechar a última janela encerra o app. Se o FinvestLens foi interrompido antes de liberá-lo, por uma atualização ou uma falha, a mesma máquina remove o bloqueio na próxima vez que abrir o livro; outra máquina o remove sozinha quando ele está há meia hora sem atualização e não havia nada por salvar, e caso contrário permite que você o quebre e abra mesmo assim."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "账簿可以存放在 NAS 或共享文件夹中。打开期间 FinvestLens 会加锁，以免其他机器覆盖你的工作；若持锁的 App 已不存在，你可以强制解锁并照常打开。"
+            "value": "账簿可以存放在 NAS 或共享文件夹中。打开期间 FinvestLens 会加锁，以免其他机器覆盖你的工作；关闭账簿或退出 App 时会解锁——在 Mac 上，关闭最后一个窗口即会退出 App。如果 FinvestLens 因更新或崩溃在解锁前被终止，同一台机器下次打开该账簿时会自动解锁；在其他机器上，若锁已半小时未更新且没有未保存的更改，会自动解除，否则你可以强制解锁并照常打开。"
           }
         }
       }

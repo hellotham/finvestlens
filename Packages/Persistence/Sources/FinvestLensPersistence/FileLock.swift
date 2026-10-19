@@ -27,9 +27,16 @@ public struct LockHolder: Codable, Equatable, Sendable {
     /// Absent from a lock written before 12 Oct 2026, which is then known
     /// only by its host name.
     public var machineID: String?
+    /// Whether the session holding the lock had work not yet saved, as it
+    /// last wrote the lock. `false` lets any machine clear the lock once its
+    /// holder has gone quiet (``FileLock/canBreakAfterQuiet(_:now:)``).
+    /// Absent from a lock written before 19 Oct 2026, which is then taken to
+    /// have had some.
+    public var unsaved: Bool?
 
     public init(host: String, user: String, instanceID: String, pid: Int32,
-                acquiredAt: Date, heartbeatAt: Date, machineID: String? = nil) {
+                acquiredAt: Date, heartbeatAt: Date, machineID: String? = nil,
+                unsaved: Bool? = nil) {
         self.host = host
         self.user = user
         self.instanceID = instanceID
@@ -37,6 +44,7 @@ public struct LockHolder: Codable, Equatable, Sendable {
         self.acquiredAt = acquiredAt
         self.heartbeatAt = heartbeatAt
         self.machineID = machineID
+        self.unsaved = unsaved
     }
 }
 
@@ -376,6 +384,35 @@ public final class FileLock {
         return isProvablyDead(holder)
     }
 
+    /// How long a holder with nothing unsaved must have been silent before
+    /// any machine clears its lock without asking. Half an hour, not
+    /// ``staleAfter``: a heartbeat can cross Box late, and a holder that is
+    /// merely out of touch must not read as gone.
+    public static let quietBreakAfter: TimeInterval = 30 * 60
+
+    /// A lock any machine may clear **without asking**: its holder said it
+    /// had nothing unsaved and has written nothing for ``quietBreakAfter``.
+    ///
+    /// The case is a holder that could not release — killed by an update
+    /// that replaced the app under an open book, a crash, a Mac that slept
+    /// and stayed asleep. Its own machine clears it at the next open by pid
+    /// (``canBreakWithoutAsking(_:)``); another machine cannot see that pid,
+    /// and asking there "break the lock?" of a holder with nothing to lose
+    /// left the book shut on every other Mac until its own came back
+    /// (19 Oct 2026; the owner chose this rule). One that was only asleep
+    /// finds the lock taken when it wakes (``FileLock/LockError/lockLost(_:)``)
+    /// and its saves refuse a file that changed. A lock from before holders
+    /// said, or one with work unsaved, is still put to the person.
+    public static func canBreakAfterQuiet(_ holder: LockHolder, now: Date = Date()) -> Bool {
+        holder.unsaved == false && now.timeIntervalSince(holder.heartbeatAt) > quietBreakAfter
+    }
+
+    /// Whether this session has work not yet saved — written into the lock
+    /// (``LockHolder/unsaved``) at every acquire and heartbeat, so another
+    /// machine can tell a quiet holder with nothing to lose from one with
+    /// work in hand. Set by the document.
+    public var hasUnsavedWork = false
+
     /// Acquires the lock, throwing ``LockError/alreadyLocked(_:)`` if another
     /// live holder has it.
     public func acquire(now: Date = Date()) throws {
@@ -509,7 +546,8 @@ public final class FileLock {
             pid: ProcessInfo.processInfo.processIdentifier,
             acquiredAt: now,
             heartbeatAt: now,
-            machineID: MachineIdentity.current
+            machineID: MachineIdentity.current,
+            unsaved: hasUnsavedWork
         )
     }
 }

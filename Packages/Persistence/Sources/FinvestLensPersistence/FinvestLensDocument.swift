@@ -68,8 +68,13 @@ public final class FinvestLensDocument {
     /// What the load had to default (open-what-you-can, NFR-05) — surfaced
     /// as a warning toast by the app layer.
     public var loadWarnings: LoadWarnings? { store.lastLoadWarnings }
-    /// Whether there are unsaved changes.
-    public var hasUnsavedChanges: Bool
+    /// Whether there are unsaved changes. Each change of it is written into
+    /// the lock at once (``lockStateChanged()``), so a machine judging the
+    /// lock reads where this session stands, not where it stood a heartbeat
+    /// ago — the edit just made and the lid then closed included.
+    public var hasUnsavedChanges: Bool {
+        didSet { if hasUnsavedChanges != oldValue { lockStateChanged() } }
+    }
 
     private let lock: FileLock
     /// `false` when the sibling `.lock` file could not be created — e.g. an
@@ -110,6 +115,7 @@ public final class FinvestLensDocument {
         self.fileURL = fileURL
         self.book = book
         self.lock = lock
+        lock.hasUnsavedWork = dirty
         self.advisoryLockHeld = lockHeld
         self.workingCopyURL = workingCopyURL
         self.store = store
@@ -157,6 +163,14 @@ public final class FinvestLensDocument {
                 // it was asked before there was a window to ask it in.
                 if FileLock.canBreakWithoutAsking(holder) {
                     FileLock.log.notice("breaking \(lock.lockURL.lastPathComponent, privacy: .public): its holder on this machine (pid \(holder.pid)) is gone")
+                    try lock.breakLock(heldBy: holder)
+                    return true
+                }
+                // From anywhere, quiet for half an hour with nothing unsaved:
+                // killed by an update, crashed, or asleep and staying so, it
+                // has nothing to lose (``FileLock/canBreakAfterQuiet(_:now:)``).
+                if FileLock.canBreakAfterQuiet(holder) {
+                    FileLock.log.notice("breaking \(lock.lockURL.lastPathComponent, privacy: .public): its holder had nothing unsaved and has been quiet past the limit")
                     try lock.breakLock(heldBy: holder)
                     return true
                 }
@@ -599,6 +613,10 @@ public final class FinvestLensDocument {
     /// warn the user. Returns `nil` while the lock is still ours.
     @discardableResult
     public func heartbeat() -> LockHolder? {
+        if let usurper = lockLostTo {
+            lockLostTo = nil
+            return usurper
+        }
         guard advisoryLockHeld else { return nil }
         do {
             try lock.refreshHeartbeat()
@@ -609,6 +627,16 @@ public final class FinvestLensDocument {
         } catch {
             return nil
         }
+    }
+
+    /// A takeover found by a write between heartbeats, kept for the next
+    /// ``heartbeat()`` — the one the app reports to the person.
+    private var lockLostTo: LockHolder?
+
+    /// Writes the session's unsaved state into the lock now.
+    private func lockStateChanged() {
+        lock.hasUnsavedWork = hasUnsavedChanges
+        if let usurper = heartbeat() { lockLostTo = usurper }
     }
 
     // MARK: External changes / sync (`FR-PLT-02`)
