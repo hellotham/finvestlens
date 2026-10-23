@@ -42,9 +42,37 @@ match `MARKETING_VERSION`; the build number is what TestFlight keys on.
 
 ## Archive and upload
 
+```bash
+scripts/upload-app-store.sh          # both platforms; or `macos` / `ios`
+```
+
+It archives each platform and uploads it with the team's **App Store Connect
+API key** — the `.p8` in `~/.appstoreconnect/private_keys`, App Manager role
+— rather than the Apple ID signed into Xcode. Xcode lost that account after
+uploads twice on 19 Oct 2026: the upload refreshed the token, the next
+`xcodebuild` logged "Invalid credentials in keychain … missing
+Xcode-Username" and dropped the account, and the upload after it failed with
+"Failed to Use Accounts". The key's ID comes from its file name, the issuer ID
+from `ASC_ISSUER_ID` or `~/.appstoreconnect/issuer_id`; neither is kept in
+this repository, which is public. Logs go to `build/archive-<platform>.log`
+and `build/upload-<platform>.log`.
+
+The Mac upload also needs a **Mac Installer Distribution** certificate, with
+its private key, in this Mac's keychain (Xcode ▸ Settings ▸ Accounts ▸ the
+team ▸ Manage Certificates ▸ + ▸ Mac Installer Distribution, once). Signed
+in to Xcode as an Admin, the installer package was signed with Apple's
+cloud-managed certificate; an App Manager key is refused that — "You haven't
+been given access to cloud-managed distribution certificates" (checked
+24 Oct 2026, when the iOS export with the key succeeded and validated with
+"No errors" while the Mac export stopped there). Apple's own answer is a
+local certificate: Xcode "will cloud sign … if … a local signing certificate
+is not found" (*Cloud-managed certificates*, Apple Developer Account help).
+
 Both exports use `destination: upload`, so the export step *is* the upload;
 the build appears in App Store Connect ▸ TestFlight once Apple has processed
-it (minutes), and the same build is attached to a version for review.
+it (minutes), and the same build is attached to a version for review. The
+script runs these, with `-authenticationKeyPath`, `-authenticationKeyID` and
+`-authenticationKeyIssuerID` added to each:
 
 ```bash
 # macOS
@@ -66,9 +94,10 @@ xcodebuild -exportArchive -archivePath build/FinvestLens-iOS.xcarchive \
   -allowProvisioningUpdates
 ```
 
-`build/` is ignored by git. The upload uses the Apple ID signed into Xcode
-(info@hellotham.com — see the Apple Developer account note in the
-maintainer's memory, not the session's own address).
+`build/` is ignored by git. Run by hand without the key flags, they use the
+Apple ID signed into Xcode instead (info@hellotham.com — see the Apple
+Developer account note in the maintainer's memory, not the session's own
+address).
 
 ## After the upload
 
