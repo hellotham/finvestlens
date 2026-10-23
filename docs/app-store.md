@@ -152,6 +152,15 @@ platform). Never a real book, never `imports/`.
   Actions menu, and asserts along the way: a step it cannot take fails the
   test. Before that a sheet it could not close left every later step to
   skip in silence, and the tour "passed" having toured half the app.
+- **iPhone Duo** — its own tab since Xcode 27.1: the outer display
+  1398×2034 px (2034×1398 landscape), the inner 2007×2853 (2853×2007).
+  Optional for now, and they put an "optimized for iPhone Duo" badge on the
+  product page; Apple's *Screenshot specifications*: "Starting in April 2027,
+  screenshots will be required for any app using the iOS 27.1 SDK or later"
+  — which is every build since 27.1. The iPhone Duo simulator boots folded,
+  at the outer size. The inner display needs Device Hub's open control:
+  neither `simctl` nor XCTest can set a pose (checked 24 Oct 2026), so the
+  open set is captured by hand there.
 - **Uploading** — version page ▸ *App Previews and Screenshots* ▸ device
   tab; each zone's file input takes the whole set (under 10 MB a call) and
   saves itself; thumbnails keep upload order, so name files `01-…`. There is

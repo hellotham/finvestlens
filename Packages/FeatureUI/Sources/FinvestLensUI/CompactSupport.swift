@@ -11,17 +11,15 @@
 //
 
 import SwiftUI
-#if canImport(UIKit)
-import UIKit
-#endif
 
 extension EnvironmentValues {
-    /// `true` under `CompactShell` — the phone, or an iPad window narrowed to
-    /// a compact width. Set once at the app's root (`finvestLensShell()`), on
-    /// the outside of every sheet and importer, so a sheet presented from
-    /// anywhere sees it too. Views read this rather than the size class: a
-    /// Max-size phone turned sideways reports a regular width, and a shell
-    /// that swapped on rotation would tear down whatever was being typed.
+    /// `true` under `CompactShell` — a phone, folded or held either way, or an
+    /// iPad window narrowed to a compact width. Set once at the app's root
+    /// (`finvestLensShell()`), on the outside of every sheet and importer, so
+    /// a sheet presented from anywhere sees it too. Views read this rather
+    /// than a size class: a Max-size phone turned sideways reports a regular
+    /// width, and a shell that swapped on rotation would tear down whatever
+    /// was being typed.
     @Entry var isCompactShell = false
 }
 
@@ -36,12 +34,20 @@ public extension View {
 private struct ShellEnvironment: ViewModifier {
     #if os(iOS)
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
     #endif
 
-    /// The phone always; an iPad only while its window is compact.
+    /// The regular shell only where there is room both ways: an iPad, or
+    /// iPhone Duo open — Apple: "On the inner display, your app should look
+    /// like a natural extension of its iPad layout" (*Three steps to make your
+    /// app shine on iPhone Duo*). It was `idiom == .phone ||` compact width,
+    /// which kept the open Duo on the phone shell stretched across it. A
+    /// phone held sideways, a Max-size one included, has a compact *height*,
+    /// so it keeps the compact shell and never swaps on rotation; asked as
+    /// `== .regular`, an absent size class takes the narrow branch.
     private var compact: Bool {
         #if os(iOS)
-        UIDevice.current.userInterfaceIdiom == .phone || horizontalSizeClass == .compact
+        !(horizontalSizeClass == .regular && verticalSizeClass == .regular)
         #else
         false
         #endif
@@ -71,13 +77,61 @@ private struct WindowFloor: ViewModifier {
     let minWidth: CGFloat?
     let minHeight: CGFloat?
 
-    /// One `frame` either way — a branch here would give everything under
+    /// One layout either way — a branch here would give everything under
     /// every floor a new identity when an iPad window crosses the compact
     /// threshold, and whatever was typed in an open sheet would go with it.
     func body(content: Content) -> some View {
+        #if os(iOS)
+        FloorLayout(minWidth: compact ? nil : minWidth, minHeight: compact ? nil : minHeight) { content }
+        #else
         content.frame(minWidth: compact ? nil : minWidth, minHeight: compact ? nil : minHeight)
+        #endif
     }
 }
+
+#if os(iOS)
+/// A floor that never lays content out wider, or taller, than it is offered.
+///
+/// On the Mac the floor is a window's minimum size, which the window obeys.
+/// On iOS the system sizes the container — a sheet, a column, iPhone Duo's
+/// inner display at 669 points across in portrait, narrower than any iPad —
+/// and a floor above the room offered does not grow it: `.frame(minWidth:)`
+/// laid the content out at the floor and the edges were cut off. Floors of
+/// 700 to 980 points meet that display as soon as it is in the regular
+/// shell. So here the floor is the lesser of itself and the offer; a query
+/// for the floor itself (no offer, or none yet) still gets the whole floor,
+/// as `.frame(minWidth:)` gave it.
+private struct FloorLayout: Layout {
+    let minWidth: CGFloat?
+    let minHeight: CGFloat?
+
+    private func floor(_ minimum: CGFloat?, offered: CGFloat?) -> CGFloat? {
+        guard let minimum else { return nil }
+        guard let offered, offered > 0, offered.isFinite else { return minimum }
+        return min(minimum, offered)
+    }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        guard let subview = subviews.first else { return .zero }
+        let width = floor(minWidth, offered: proposal.width)
+        let height = floor(minHeight, offered: proposal.height)
+        // Offer at least the floor, as `.frame(minWidth:)` does — which, the
+        // floor being no more than a real offer, is the offer itself. No offer
+        // stays no offer, also as it does.
+        let offer = ProposedViewSize(width: proposal.width.map { max($0, width ?? 0) },
+                                     height: proposal.height.map { max($0, height ?? 0) })
+        var size = subview.sizeThatFits(offer)
+        if let width { size.width = max(size.width, width) }
+        if let height { size.height = max(size.height, height) }
+        return size
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        subviews.first?.place(at: CGPoint(x: bounds.midX, y: bounds.midY), anchor: .center,
+                              proposal: ProposedViewSize(width: bounds.width, height: bounds.height))
+    }
+}
+#endif
 
 /// A `NavigationStack` for a destination that needs one to hang a toolbar
 /// from — in the split view's detail column, or as a sheet — and nothing at

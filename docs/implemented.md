@@ -5367,3 +5367,39 @@ work at its start (`AppModel.replicaWorkWillStart`, `nil` in the app; the
 tests' `ReplicaGate`) until the close or the edit is made. The old form, given
 300 ms of load before the close, failed as CI did; the gated form, given the
 same, passed.
+
+## iPhone Duo (24 Oct 2026, Xcode 27.1)
+
+Asked: "Ensure app builds for iPhone Duo. Do research on the web first."
+Apple's guidance first. Built with the iOS 27.1 SDK, an app fills the whole
+display, toolbars and tab bars standing "vertically below the status bar"
+(*Three steps to make your app shine on iPhone Duo*). The outer display is
+compact wide, the inner one regular both ways, where "your app should look
+like a natural extension of its iPad layout". Layout must come from size
+classes, never idiom, orientation or the main screen (Tech Talk *Prepare your
+app for iPhone Duo*; Xcode's own App Resizability skill, exported with
+`xcrun agent skills export`).
+
+- **It builds** with Xcode 27.1 (27A9275) and the iOS 27.1 SDK for the
+  iPhone Duo simulator, with no warning about the main screen, orientation
+  or idiom. Apple's three prerequisites pass: a generated launch screen, all
+  four iPad orientations, no `UIRequiresFullScreen`. CI runs the same Xcode.
+- **On the outer display** (466×678 pt) it runs on the synthetic book in the
+  compact shell: the toolbar and tab bar stand vertically down the right
+  edge under the status bar, and the Dashboard fits what is left.
+- **The shell was chosen by idiom** — `UIDevice.current.userInterfaceIdiom ==
+  .phone || horizontalSizeClass == .compact` — so the open Duo would have had
+  the phone shell stretched across 669×951 pt. It is chosen by room now: the
+  regular shell only where both size classes are regular. A phone held
+  sideways, a Max-size one included, has a compact height, so it keeps the
+  compact shell and never swaps on rotation — the reason the idiom was there.
+- **A floor on iOS no longer exceeds the room offered.** The regular shell
+  applies floors of 700 to 980 pt (the transaction editor, Find, Help, Smart
+  Import, the Financial Review), and on iOS the container is the system's: a
+  floor wider than it laid the content out wider and cut the edges off. The
+  open Duo is 669 pt across in portrait, narrower than any iPad. On iOS
+  `FloorLayout` takes the lesser of the floor and the offer; the Mac's window
+  floors are as they were.
+- **Not seen yet: the open pose.** Neither `simctl` nor XCTest can set a
+  pose; only Device Hub's open control can. The regular shell and the floors
+  on the inner display need a look there.
