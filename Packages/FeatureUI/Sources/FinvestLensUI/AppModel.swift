@@ -603,7 +603,9 @@ public final class AppModel {
             guard !Task.isCancelled, let book, (peekReport(request.key) as Value?) == nil else { return }
             let revision = derivedRevision
             let replica = book.replica()
+            let pause = replicaWorkWillStart
             let (value, took) = await Task.detached(priority: .userInitiated) {
+                await pause?()
                 let start = ContinuousClock.now
                 let value = request.build(replica.book)
                 return (value, ContinuousClock.now - start)
@@ -1984,6 +1986,13 @@ public final class AppModel {
     /// How long each kind of report last took to build, and over how much of
     /// the book (``warm(_:)``). They describe one book: ``close()`` empties it.
     @ObservationIgnored var reportBuildTimes: [String: ReportBuildTime] = [:]
+    /// Awaited off the main actor by work on a replica — an export, the
+    /// import matcher, a report warmed before it is asked for — once the
+    /// replica is taken and before the work starts; `nil` in the app. A test
+    /// parks the work there to land a close or an edit "meanwhile" for
+    /// certain: one `Task.yield()` could not promise it, and with tests
+    /// running in parallel the work finished first (CI, 19 Oct 2026).
+    @ObservationIgnored var replicaWorkWillStart: (@Sendable () async -> Void)?
     /// The register settings the journal caches were built under.
     @ObservationIgnored var journalSettings: JournalSettings?
 
@@ -2939,7 +2948,11 @@ public final class AppModel {
     func onReplica<Value: Sendable>(_ work: @escaping @Sendable (Book) -> Value) async -> Value? {
         guard let book else { return nil }
         let replica = book.replica()
-        let value = await Task.detached(priority: .userInitiated) { work(replica.book) }.value
+        let pause = replicaWorkWillStart
+        let value = await Task.detached(priority: .userInitiated) {
+            await pause?()
+            return work(replica.book)
+        }.value
         guard self.book === book else { return nil }
         return value
     }

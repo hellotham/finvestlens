@@ -277,7 +277,9 @@ extension AppModel {
         guard let book, book.account(with: id) != nil else { return [] }
         let cash = staged.filter { !$0.isInvestment }
         let replica = book.replica()
+        let pause = replicaWorkWillStart
         let results = await Task.detached(priority: .userInitiated) {
+            await pause?()
             guard let account = replica.book.account(with: id) else { return [MatchResult]() }
             return ImportMatcher.match(cash, into: account, book: replica.book)
         }.value

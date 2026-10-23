@@ -64,12 +64,15 @@ struct ExportOffMainTests {
         try model.newDocument(at: url)
         defer { try? FileManager.default.removeItem(at: url) }
         _ = try #require(model.addAccount(name: "Bank", type: .bank))
-        // The build waits for the main actor to come back to it, which this
-        // test holds until the book has closed.
+        // Both builds have their replicas and neither has started when the
+        // book closes — held there, not hoped for with a `Task.yield()`.
+        let gate = ReplicaGate()
+        model.replicaWorkWillStart = { await gate.arrive() }
         let export = Task { await model.ledgerExportTextOffMain() }
         let csv = Task { await model.csvExportOffMain(.transactions) }
-        await Task.yield()
+        await gate.waitForArrivals(2)
         model.close()
+        await gate.open()
         #expect(await export.value == nil)
         #expect(await csv.value == nil)
     }

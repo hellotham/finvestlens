@@ -97,11 +97,15 @@ struct ImportMatchOffMainTests {
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let rows = [StagedTransaction(date: Date(), amount: dec("-1"), payee: "X")]
 
+        let gate = ReplicaGate()
+        model.replicaWorkWillStart = { await gate.arrive() }
         let pending = Task { await model.matchStagedOffMain(rows, intoAccountID: bank) }
-        // Let it take its replica and set off, so the close lands while it
-        // matches — not before it starts, which never reached the check.
-        await Task.yield()
+        // It has its replica and has not matched, so the close lands while it
+        // matches — not before it starts, which never reached the check, nor
+        // after it finished, which one `Task.yield()` could not rule out.
+        await gate.waitForArrivals(1)
         model.close()
+        await gate.open()
         #expect(await pending.value.isEmpty)
     }
 }

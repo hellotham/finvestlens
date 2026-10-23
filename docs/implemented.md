@@ -5356,3 +5356,14 @@ terminated gracefully."
   asking — the owner's choice of the two put to them. With work unsaved, or a
   lock from before the field, it still asks. Four new tests, each run against
   its rule undone and failed (`PersistenceTests`).
+
+CI on build 6 failed one test, "A book closed while the matcher runs gives
+nothing to show". The app was right and the test was not: it made the close
+land "while the matcher runs" with one `Task.yield()`, and with tests running
+in parallel on the one main actor, the one-row matcher finished first — the
+book still open, its result rightly kept. Two more tests leaned on the same
+yield (an export, a report warmed while an edit lands). All three now hold the
+work at its start (`AppModel.replicaWorkWillStart`, `nil` in the app; the
+tests' `ReplicaGate`) until the close or the edit is made. The old form, given
+300 ms of load before the close, failed as CI did; the gated form, given the
+same, passed.

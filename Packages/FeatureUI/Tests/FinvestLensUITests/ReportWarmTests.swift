@@ -72,15 +72,18 @@ struct ReportWarmTests {
         let request = model.averageBalanceRequest(accountIDs: scope, from: from, to: to, step: .month)
 
         let revision = model.bookRevision
+        let gate = ReplicaGate()
+        model.replicaWorkWillStart = { await gate.arrive() }
         let warming = Task { await model.warm(request) }
-        // Let it take its replica and set off; the edit lands while it builds
-        // (its continuation needs the main actor, which this holds). The edit
+        // It has its replica and has not built, so the edit lands while it
+        // builds — held there, not hoped for with a `Task.yield()`. The edit
         // moves the very balances the report averages.
-        await Task.yield()
+        await gate.waitForArrivals(1)
         #expect(model.bookRevision == revision)
         _ = try model.addTransaction(date: from.addingTimeInterval(86_400 * 10), description: "Meanwhile",
                                      currency: .aud, splits: [SplitInput(accountID: bank, value: -500),
                                                               SplitInput(accountID: rent, value: 500)])
+        await gate.open()
         await warming.value
         // Built again after the edit, so what the memo holds is the book as it
         // now stands — not the build the edit overtook.
