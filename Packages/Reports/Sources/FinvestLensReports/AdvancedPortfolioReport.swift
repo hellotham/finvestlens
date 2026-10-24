@@ -77,12 +77,19 @@ public extension FinancialReports {
 
     /// Values every security account using the lot engine for cost basis and the
     /// price DB (with an FX hop for foreign securities) for market value.
+    ///
+    /// `includeClosed` keeps positions sold out of — their realised gain and
+    /// income still count — where `false` reports only what is held (the
+    /// Portfolio report's default, as the Investments hub hides them;
+    /// `FR-INV-24`). Reported on build 7: "No toggle to show closed positions
+    /// in investment tab and reports."
     static func advancedPortfolio(
         _ book: Book,
         currency: Commodity,
         asOf: Date = Date(),
         method: CostBasisMethod = .fifo,
-        feeTreatment: FeeTreatment = .ignore
+        feeTreatment: FeeTreatment = .ignore,
+        includeClosed: Bool = true
     ) -> AdvancedPortfolio {
         struct Raw {
             let account: Account
@@ -131,7 +138,12 @@ public extension FinancialReports {
             let basis = book.costBasis(for: account, asOf: asOf, method: method, feeTreatment: feeTreatment,
                                        currencyFraction: currency.smallestFraction)
             let shares = basis.remainingQuantity
-            guard shares != 0 || basis.totalRealizedGain != 0 else { continue }
+            // Closed: nothing held. With closed positions in, any history at
+            // all keeps the row — money in, a gain, income — so a position
+            // sold at cost still shows its dividends.
+            let hasHistory = shares != 0 || basis.totalRealizedGain != 0
+                || basis.remainingCostBasis + basis.totalCostBasis != 0
+            guard includeClosed ? hasHistory : shares != 0 else { continue }
 
             let cost = currency.round(basis.remainingCostBasis)
             // Money In = cost of all acquisitions = cost of held shares + cost

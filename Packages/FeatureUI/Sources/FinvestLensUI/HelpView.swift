@@ -59,6 +59,8 @@ public struct HelpView: View {
                     }
                 }
             }
+            // A selection list takes no text selection — see `ModeSidebar`.
+            .textSelection(.disabled)
             .searchable(text: $search, prompt: Text("Search help"))
             .navigationTitle("FinvestLens Help")
             .navigationSplitViewColumnWidth(min: 220, ideal: 250)

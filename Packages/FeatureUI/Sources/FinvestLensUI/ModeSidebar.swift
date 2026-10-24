@@ -376,6 +376,15 @@ struct ModeSidebar: View {
                 }
             }
         }
+        // **No text selection in a selection list.** The app makes static text
+        // selectable everywhere (`AppearanceModifier`), and on the Mac a
+        // selectable `Text` takes the mouse-down for a text selection — so a
+        // click on a row's name or balance selected no row, and only the gap
+        // between them did. Reported on build 4 and again on build 7 ("have
+        // to click on blank space"); the build-4 fix, the drag grip, was real
+        // but not this. Proven in a harness: with text selection on, clicks
+        // on the text selected 0 of 22 rows; with it off here, every one.
+        .textSelection(.disabled)
         // A fresh list per mode. Even with sections namespaced, one mode's
         // rows and another's are different vocabularies — an account tree
         // against a list of budgets — and diffing between them is how remnants

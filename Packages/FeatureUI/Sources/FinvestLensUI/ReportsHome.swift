@@ -42,6 +42,7 @@ public enum ReportKind: String, CaseIterable, Identifiable, Codable, Sendable {
     case investmentLots = "Investment Lots"
     case priceScatter = "Price Scatter"
     case capitalGains = "Capital Gains"
+    case investmentReturn = "Investment Return"
     case receivableAging = "Receivable Aging"
     case payableAging = "Payable Aging"
     case customerSummary = "Customer Summary"
@@ -74,6 +75,7 @@ public enum ReportKind: String, CaseIterable, Identifiable, Codable, Sendable {
         case .investmentLots: String(localized: "Investment Lots")
         case .priceScatter: String(localized: "Price Scatter")
         case .capitalGains: String(localized: "Capital Gains")
+        case .investmentReturn: String(localized: "Investment Return")
         case .receivableAging: String(localized: "Receivable Aging")
         case .payableAging: String(localized: "Payable Aging")
         case .customerSummary: String(localized: "Customer Summary")
@@ -118,7 +120,7 @@ public enum ReportKind: String, CaseIterable, Identifiable, Codable, Sendable {
             .statements
         case .averageBalance, .transactions, .reconcile, .forecast, .spendingInsights:
             .activity
-        case .portfolio, .investmentLots, .priceScatter, .capitalGains:
+        case .portfolio, .investmentLots, .priceScatter, .capitalGains, .investmentReturn:
             .investments
         case .receivableAging, .payableAging, .customerSummary,
              .vendorSummary, .employeeSummary, .jobSummary:
@@ -142,7 +144,7 @@ public enum ReportKind: String, CaseIterable, Identifiable, Codable, Sendable {
         switch self {
         case .balanceSheet, .trialBalance, .accountSummary, .receivableAging,
              .payableAging, .customerSummary, .vendorSummary, .employeeSummary,
-             .jobSummary, .reconcile, .portfolio, .investmentLots: true
+             .jobSummary, .reconcile, .portfolio, .investmentLots, .investmentReturn: true
         default: false
         }
     }
@@ -157,7 +159,13 @@ public enum ReportKind: String, CaseIterable, Identifiable, Codable, Sendable {
     /// Reports whose figures depend on the cost-basis method and fee treatment.
     var usesInvestmentOptions: Bool {
         self == .portfolio || self == .investmentLots || self == .capitalGains
+            || self == .investmentReturn
     }
+    /// Reports that can leave out positions sold out of (`FR-INV-24`).
+    var usesClosedPositions: Bool { self == .portfolio || self == .investmentReturn }
+    /// Whether such a report includes them unless told otherwise: a return is
+    /// history, so the Investment Return report does; a valuation is not.
+    var includesClosedByDefault: Bool { self == .investmentReturn }
     /// Whether the report takes an interval size (the average-balance report).
     var usesStep: Bool { self == .averageBalance }
 
@@ -180,6 +188,7 @@ public enum ReportKind: String, CaseIterable, Identifiable, Codable, Sendable {
         case .investmentLots: "shippingbox"
         case .priceScatter: "chart.dots.scatter"
         case .capitalGains: "percent"
+        case .investmentReturn: "sum"
         case .receivableAging: "person.crop.circle.badge.clock"
         case .payableAging: "building.2.crop.circle.badge.clock"
         case .customerSummary: "person.2.badge.gearshape"
@@ -208,6 +217,7 @@ public enum ReportKind: String, CaseIterable, Identifiable, Codable, Sendable {
         case .investmentLots: String(localized: "Purchase lots and cost basis")
         case .priceScatter: String(localized: "Price history for a security")
         case .capitalGains: String(localized: "Realised gains by disposal")
+        case .investmentReturn: String(localized: "Capital gain, dividends and franking credits, by security")
         case .receivableAging: String(localized: "What customers owe, by how overdue")
         case .payableAging: String(localized: "What you owe vendors, by how overdue")
         case .customerSummary: String(localized: "Sales and receivables by customer")
@@ -807,6 +817,15 @@ struct ReportScreen: View {
                 }
                 .pickerStyle(.menu)
                 .fixedSize()
+            }
+            if kind?.usesClosedPositions == true, let kind {
+                // Reported on build 7: "No toggle to show closed positions
+                // in investment tab and reports."
+                Toggle("Closed positions", isOn: Binding(
+                    get: { configuration.includeClosed ?? kind.includesClosedByDefault },
+                    set: { configuration.includeClosed = $0 }))
+                .fixedSize()
+                .help("Include positions you have sold out of")
             }
             if kind?.usesStep == true {
                 Picker("Interval", selection: Binding(

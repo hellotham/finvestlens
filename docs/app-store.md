@@ -122,8 +122,9 @@ platform). Never a real book, never `imports/`.
   `screencapture -l<windowID> -o -x` — 2560×1600 on a Retina display, one of
   the accepted Mac sizes. ⌘1…⌘7 switch modes; to select a sidebar row from
   a script use the accessibility API (`set selected of row N of outline 1 …`
-  in System Events) — a synthetic click toggles chevrons and presses cards
-  but never selects a row.
+  in System Events) — a synthetic click toggled chevrons and pressed cards
+  but never selected a row. That was the app-wide text selection taking the
+  click (fixed 25 Oct 2026); a click on a row selects it now.
 - **iPad and iPhone** — `finvestlensUITests/ScreenshotTests` drives a
   simulator and writes full-resolution PNGs. Nothing is seeded into the
   simulator: the test opens a private copy of the book and hands the app its

@@ -46,7 +46,7 @@ struct LiveReportCatalogueTests {
         let mustHaveContent: Set<ReportKind> = [
             .accountSummary, .netWorth, .cashFlow, .incomeExpense, .averageBalance,
             .reconcile, .spendingInsights,
-            .portfolio, .investmentLots, .capitalGains,
+            .portfolio, .investmentLots, .capitalGains, .investmentReturn,
         ]
 
         var timings: [(String, Duration, Duration)] = []

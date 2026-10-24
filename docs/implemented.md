@@ -5403,3 +5403,50 @@ app for iPhone Duo*; Xcode's own App Resizability skill, exported with
 - **Not seen yet: the open pose.** Neither `simctl` nor XCTest can set a
   pose; only Device Hub's open control can. The regular shell and the floors
   on the inner display need a look there.
+
+## Build 7, as tested (25 Oct 2026)
+
+Three reports from testing build 7 on the Mac.
+
+- **"Very hard to click on an item in left sidebar. Clicking on text does
+  not work, have to click on blank space."** The build-4 report again, after
+  the build-4 fix. That fix was real but not this: `.onDrag` on a whole row
+  does swallow a jittered click, and the drag grip cured that, but the
+  sidebar still would not select on its text. The cause is the app-wide
+  `.textSelection(.enabled)` (`AppearanceModifier`): on the Mac a selectable
+  `Text` takes the mouse-down for a text selection, so a click on a row's
+  name or balance selected no row and only the empty gap did. The earlier
+  lab had hosted the root view *without* the appearance modifier, which is
+  why it passed. Rebuilt with it and clicking the real sidebar on the demo
+  book (`sidebarlab2`): with the modifier, 1 of 6 rows could be selected
+  even by a plain click on its gap, and on that row a click on the name
+  selected nothing; without the modifier, 6 of 6 at every position. With
+  `.textSelection(.disabled)` on the sidebar's list, 6 of 6 at the start of
+  the name, along it, the gap and the balance, with and without a 3-pt hand
+  movement. The same guard is on the four other lists a person chooses from
+  on the Mac — Help's topics, New Security's listings, the Box browser, and
+  Find Account. Text stays selectable everywhere else, which is what the
+  app-wide setting was for.
+- **"No toggle to show closed positions in investment tab and reports."**
+  There was one, at the bottom of the More menu (`FR-INV-24`). Investments
+  now says so where the positions would be — a row under the holdings with
+  the count hidden and Show; the Closed positions heading carries Hide — and
+  the Portfolio report has a Closed positions switch, off by default as the
+  hub is. `advancedPortfolio` takes `includeClosed`: every position with any
+  history, or only what is held; the hub, a security's page and the review
+  decks read the whole history.
+- **"No report to show total investment return (capital gain plus dividends
+  plus franking credits)."** The **Investment Return** report
+  (`FR-RPT-02b`): per security and in total, realised plus unrealised gain
+  from the lot engine, dividends, and franking credits, against money in,
+  closed positions included unless switched off. Income is attributed two
+  ways and each transaction counted once: GnuCash's — the income splits of a
+  transaction that touches the holding, the zero-unit link leg its advanced
+  portfolio relies on (`advanced-portfolio.scm`, `trans-income`) — and by
+  name, an income account that is or sits under one named for the security,
+  the shape the book's own dividend transactions use (Dividends ▸ TICKER ▸
+  Franked / Unfranked / Imputation Credit), which never touch the holding;
+  "imputation" or "franking" in the account's name makes it a credit.
+  `InvestmentReturnTests` records a dividend each way and once both ways, a
+  closed position in and out, an unpriced holding, and income in a currency
+  with no rate.

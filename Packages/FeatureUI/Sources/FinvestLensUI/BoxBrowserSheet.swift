@@ -158,6 +158,8 @@ private struct BoxFolderPage: View {
                 }
             }
         }
+        // A selection list takes no text selection — see `ModeSidebar`.
+        .textSelection(.disabled)
         // Double-click on the Mac, a tap on iPhone and iPad: into a folder,
         // or open a book.
         .contextMenu(forSelectionType: String.self) { ids in

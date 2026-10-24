@@ -70,11 +70,19 @@ your own choice of where the Apple Intelligence features run.
 - **The Transactions report covers every account** until you choose some,
   and an account you choose brings its subaccounts with it; a security's
   postings show in its units. The account pickers scroll through every match.
-- **Sidebar clicks land.** On the Mac, a click that moved the pointer a
-  little could select nothing; accounts are now dragged by a grip at the
+- **Sidebar clicks land.** On the Mac, clicking an account's name or balance
+  could select nothing — only the gap between them worked. The sidebar, and
+  every other list you choose from, no longer offers its text for copying,
+  which is what was taking the click. Accounts are dragged by a grip at the
   end of the row.
 - **Accounts opens faster on the Mac** — in under a third of the time on a
   large book, and faster again the next time.
+- **Investment Return**, a new report: each security's capital gain,
+  dividends and franking credits, and all three together against the money
+  you put in — closed positions included.
+- **Closed positions, where you look for them.** Investments says how many
+  are hidden, with Show beside it; the Portfolio and Investment Return
+  reports have a Closed positions switch.
 - **No lock left behind.** Closing the last window now quits FinvestLens,
   saving the book and releasing it for your other Macs. If FinvestLens is
   stopped without warning — by an update or a crash — with nothing unsaved,

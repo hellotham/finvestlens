@@ -73,7 +73,9 @@ extension AppModel {
                 ?? postableAccounts.first?.id else { return }
             await warm(reconcileReportRequest(accountID: account, asOf: to))
         case .portfolio where !securityCommodities.isEmpty:
-            await warm(advancedPortfolioRequest(asOf: to))
+            await warm(advancedPortfolioRequest(asOf: to, includeClosed: configuration.includeClosed ?? false))
+        case .investmentReturn where !securityCommodities.isEmpty:
+            await warm(investmentReturnRequest(asOf: to, includeClosed: configuration.includeClosed ?? true))
         case .investmentLots where !securityCommodities.isEmpty:
             await warm(investmentLotsRequest(asOf: to))
         case .capitalGains where !securityCommodities.isEmpty:
@@ -480,7 +482,9 @@ extension AppModel {
                 ?? postableAccounts.first?.id else { return nil }
             return reconcileDocument(accountID: account, asOf: to)
         case .portfolio:
-            return portfolioDocument(asOf: to)
+            return portfolioDocument(asOf: to, includeClosed: configuration.includeClosed ?? false)
+        case .investmentReturn:
+            return investmentReturnDocument(asOf: to, includeClosed: configuration.includeClosed ?? true)
         case .investmentLots:
             return investmentLotsDocument(asOf: to)
         case .capitalGains:

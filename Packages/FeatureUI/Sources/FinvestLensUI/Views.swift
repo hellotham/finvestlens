@@ -2470,6 +2470,8 @@ struct FindAccountSheet: View {
                         .tag(node.id)
                     }
                 }
+                // A selection list takes no text selection — see `ModeSidebar`.
+                .textSelection(.disabled)
                 .contextMenu(forSelectionType: GncGUID.self) { _ in } primaryAction: { ids in
                     selection = ids.first
                     show()

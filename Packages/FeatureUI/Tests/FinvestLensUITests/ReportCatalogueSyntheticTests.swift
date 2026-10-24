@@ -77,7 +77,7 @@ struct ReportCatalogueSyntheticTests {
             .balanceSheet, .incomeStatement, .equityStatement, .trialBalance,
             .accountSummary, .netWorth, .cashFlow, .incomeExpense, .averageBalance,
             .transactions, .reconcile, .spendingInsights,
-            .portfolio, .investmentLots, .capitalGains,
+            .portfolio, .investmentLots, .capitalGains, .investmentReturn,
             .receivableAging, .customerSummary,
         ]
 

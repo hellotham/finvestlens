@@ -105,6 +105,8 @@ struct NewSecuritySheet: View {
             )) { result in
                 row(result).tag(result.id)
             }
+            // A selection list takes no text selection — see `ModeSidebar`.
+            .textSelection(.disabled)
             .listStyle(.inset)
         }
     }

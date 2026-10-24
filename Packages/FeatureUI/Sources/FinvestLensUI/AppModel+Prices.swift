@@ -211,19 +211,41 @@ extension AppModel {
 
     /// The advanced portfolio (cost basis, avg cost, unrealized/realized gain,
     /// allocation) under the selected cost-basis method (`FR-RPT-02a`).
-    public func advancedPortfolio(asOf: Date = Date()) -> AdvancedPortfolio? {
+    ///
+    /// Every position by default, sold out of or not — the hub, a security's
+    /// page and the review decks read the whole history; the Portfolio
+    /// report asks for what is held unless its Closed positions switch is on.
+    public func advancedPortfolio(asOf: Date = Date(), includeClosed: Bool = true) -> AdvancedPortfolio? {
         guard !securityCommodities.isEmpty else { return nil }
-        return report(advancedPortfolioRequest(asOf: asOf))
+        return report(advancedPortfolioRequest(asOf: asOf, includeClosed: includeClosed))
     }
 
-    func advancedPortfolioRequest(asOf: Date) -> ReportRequest<AdvancedPortfolio> {
+    func advancedPortfolioRequest(asOf: Date, includeClosed: Bool = true) -> ReportRequest<AdvancedPortfolio> {
         // "As of now" quantises to end-of-day: a live Date() key would defeat
         // the memo (one entry per call), and holdings don't move mid-day here.
         let cap = min(asOf, Self.endOfToday())
         let currency = reportCurrency, method = costBasisMethod, fees = feeTreatment
-        return ReportRequest(key: "apf:\(cap.timeIntervalSinceReferenceDate):\(method.rawValue):\(fees.rawValue)") { book in
+        return ReportRequest(key: "apf:\(cap.timeIntervalSinceReferenceDate):\(method.rawValue):\(fees.rawValue):\(includeClosed)") { book in
             FinancialReports.advancedPortfolio(book, currency: currency, asOf: cap,
-                                               method: method, feeTreatment: fees)
+                                               method: method, feeTreatment: fees,
+                                               includeClosed: includeClosed)
+        }
+    }
+
+    /// Every security's capital gain, dividends and franking credits to a
+    /// date, against the money put in (`FR-RPT-02b`).
+    public func investmentReturn(asOf: Date = Date(), includeClosed: Bool = true) -> InvestmentReturnReport? {
+        guard !securityCommodities.isEmpty else { return nil }
+        return report(investmentReturnRequest(asOf: asOf, includeClosed: includeClosed))
+    }
+
+    func investmentReturnRequest(asOf: Date, includeClosed: Bool) -> ReportRequest<InvestmentReturnReport> {
+        let cap = min(asOf, Self.endOfToday())
+        let currency = reportCurrency, method = costBasisMethod, fees = feeTreatment
+        return ReportRequest(key: "iret:\(cap.timeIntervalSinceReferenceDate):\(method.rawValue):\(fees.rawValue):\(includeClosed)") { book in
+            FinancialReports.investmentReturn(book, currency: currency, asOf: cap,
+                                              method: method, feeTreatment: fees,
+                                              includeClosed: includeClosed)
         }
     }
 

@@ -33,16 +33,21 @@ public struct ReportConfiguration: Codable, Hashable, Sendable {
     /// How many prior periods to show alongside the selected one as columns,
     /// for the comparative statements (0 or nil = a single period).
     public var comparePeriods: Int?
+    /// Whether positions sold out of are reported, for the investment reports
+    /// that can leave them out (`nil` = the kind's default).
+    public var includeClosed: Bool?
 
     public init(kind: String, period: ReportPeriod,
                 accountIDs: Set<GncGUID>? = nil, depth: Int? = nil,
-                step: AverageBalanceStep? = nil, comparePeriods: Int? = nil) {
+                step: AverageBalanceStep? = nil, comparePeriods: Int? = nil,
+                includeClosed: Bool? = nil) {
         self.kind = kind
         self.period = period
         self.accountIDs = accountIDs
         self.depth = depth
         self.step = step
         self.comparePeriods = comparePeriods
+        self.includeClosed = includeClosed
     }
 }
 

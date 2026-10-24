@@ -389,6 +389,53 @@
       "extractionState": "manual",
       "shouldTranslate": false
     },
+    "%@  closed": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@  geschlossen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@  cerrada"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@  clôturée"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@  chiusa"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@  クローズ済み"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@  encerrada"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@  已平仓"
+          }
+        }
+      }
+    },
     "%@  ·  Built %@": {
       "extractionState": "manual",
       "localizations": {
@@ -6127,6 +6174,53 @@
         }
       }
     },
+    "%lld hidden": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld ausgeblendet"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld ocultas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld masquées"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld nascoste"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 件非表示"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld ocultas"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已隐藏 %lld 个"
+          }
+        }
+      }
+    },
     "%lld holdings are more than a trading week behind": {
       "extractionState": "manual",
       "localizations": {
@@ -10796,55 +10890,49 @@
         }
       }
     },
-    "**Closed positions** are hidden. Show them from **More ▸ Show Closed Positions**; their history is always kept for capital gains.": {
+    "**Closed positions** are hidden: a row under the holdings says how many, with **Show**; hide them again from their heading or **More ▸ Show Closed Positions**. Their history is always kept for capital gains, and the Portfolio and Investment Return reports have a Closed positions switch of their own.": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "**Geschlossene Positionen** sind ausgeblendet. Über **Mehr ▸ Geschlossene Positionen anzeigen** einblenden; ihre Historie bleibt für die Gewinnermittlung stets erhalten."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "**Closed positions** are hidden. Show them from **More ▸ Show Closed Positions**; their history is always kept for capital gains."
+            "value": "**Geschlossene Positionen** sind ausgeblendet: Eine Zeile unter den Positionen nennt ihre Zahl, mit **Anzeigen**; über ihre Überschrift oder **Mehr ▸ Geschlossene Positionen anzeigen** blenden Sie sie wieder aus. Ihre Historie bleibt für die Gewinnermittlung stets erhalten, und die Berichte Portfolio und Anlagerendite haben einen eigenen Schalter „Geschlossene Positionen“."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Las **posiciones cerradas** están ocultas. Muéstralas desde **Más ▸ Mostrar posiciones cerradas**; su historial se conserva siempre para las plusvalías."
+            "value": "Las **posiciones cerradas** están ocultas: una fila bajo las posiciones indica cuántas hay, con **Mostrar**; vuelve a ocultarlas desde su encabezado o desde **Más ▸ Mostrar posiciones cerradas**. Su historial se conserva siempre para las plusvalías, y los informes Cartera y Rentabilidad de las inversiones tienen su propio interruptor «Posiciones cerradas»."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Les **positions clôturées** sont masquées. Affichez-les via **Plus ▸ Afficher les positions clôturées** ; leur historique est toujours conservé pour les plus-values."
+            "value": "Les **positions clôturées** sont masquées : une ligne sous les positions en indique le nombre, avec **Afficher** ; masquez-les de nouveau depuis leur en-tête ou via **Plus ▸ Afficher les positions clôturées**. Leur historique est toujours conservé pour les plus-values, et les rapports Portefeuille et Rendement des placements ont leur propre commutateur « Positions clôturées »."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Le **posizioni chiuse** sono nascoste. Mostrale da **Altro ▸ Mostra posizioni chiuse**; la loro storia è sempre conservata per le plusvalenze."
+            "value": "Le **posizioni chiuse** sono nascoste: una riga sotto le posizioni ne indica il numero, con **Mostra**; nascondile di nuovo dalla loro intestazione o da **Altro ▸ Mostra posizioni chiuse**. La loro storia è sempre conservata per le plusvalenze, e i resoconti Portafoglio e Rendimento degli investimenti hanno un proprio interruttore «Posizioni chiuse»."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "**クローズ済みポジション**は非表示です。**その他 ▸ クローズ済みポジションを表示** で表示できます。譲渡損益のため履歴は常に保持されます。"
+            "value": "**クローズ済みポジション**は非表示です。保有一覧の下の行に件数と**表示**が示され、見出しの「非表示」または**その他 ▸ クローズ済みポジションを表示**で再び隠せます。譲渡損益のため履歴は常に保持され、ポートフォリオと投資リターンのレポートにはそれぞれ「クローズ済みポジション」の切り替えがあります。"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "**Posições encerradas** ficam ocultas. Mostre-as em **Mais ▸ Mostrar posições encerradas**; o histórico é sempre mantido para ganhos de capital."
+            "value": "**Posições encerradas** ficam ocultas: uma linha abaixo das posições diz quantas são, com **Mostrar**; oculte-as de novo pelo título delas ou em **Mais ▸ Mostrar posições encerradas**. O histórico é sempre mantido para ganhos de capital, e os relatórios Carteira e Retorno dos investimentos têm sua própria chave “Posições encerradas”."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "**已平仓头寸**默认隐藏。可从**更多 ▸ 显示已平仓头寸**打开；其历史始终保留以供资本利得使用。"
+            "value": "**已平仓头寸**默认隐藏：持仓下方的一行会显示数量并提供**显示**；可从其标题或**更多 ▸ 显示已平仓头寸**再次隐藏。其历史始终保留以供资本利得使用，投资组合和投资回报报表各自带有“已平仓头寸”开关。"
           }
         }
       }
@@ -11221,6 +11309,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "**没有对应宣派的收入**通常是特别股息，有时是日期或证券填错。"
+          }
+        }
+      }
+    },
+    "**Investment Return**, in Reports, adds up each security's capital gain, dividends and franking credits against the money you put in — closed positions included.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Anlagerendite** unter Berichte zählt je Wertpapier Veräußerungsgewinn, Dividenden und Steuergutschriften zusammen und setzt sie ins Verhältnis zum eingesetzten Geld – geschlossene Positionen eingeschlossen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Rentabilidad de las inversiones**, en Informes, suma la plusvalía, los dividendos y los créditos fiscales de cada valor frente al dinero aportado, posiciones cerradas incluidas."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Rendement des placements**, dans Rapports, additionne pour chaque titre la plus-value, les dividendes et les crédits d’impôt par rapport aux apports — positions clôturées comprises."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Rendimento degli investimenti**, in Resoconti, somma per ciascun titolo plusvalenza, dividendi e crediti d’imposta rispetto al denaro investito, posizioni chiuse comprese."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "レポートの**投資リターン**は、証券ごとのキャピタルゲイン、配当、フランキングクレジットを合計し、投入資金と比較します。クローズ済みポジションも含まれます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Retorno dos investimentos**, em Relatórios, soma o ganho de capital, os dividendos e os créditos fiscais de cada título frente ao dinheiro aportado — posições encerradas incluídas."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "报表中的**投资回报**会汇总每只证券的资本利得、股息与已缴税抵免，并与投入资金相比较——包含已平仓头寸。"
           }
         }
       }
@@ -21937,6 +22072,53 @@
         }
       }
     },
+    "All securities": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Wertpapiere"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todos los valores"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tous les titres"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tutti i titoli"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全証券"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todos os títulos"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全部证券"
+          }
+        }
+      }
+    },
     "Allocate %@ → goal “%@”": {
       "extractionState": "manual",
       "localizations": {
@@ -30669,6 +30851,53 @@
         }
       }
     },
+    "By security": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Je Wertpapier"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Por valor"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Par titre"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Per titolo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "証券別"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Por título"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按证券"
+          }
+        }
+      }
+    },
     "By week": {
       "extractionState": "manual",
       "localizations": {
@@ -30900,6 +31129,147 @@
           "stringUnit": {
             "state": "translated",
             "value": "无法结转：没有 %1$@ → %2$@ 的汇率。"
+          }
+        }
+      }
+    },
+    "Capital gain": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Veräußerungsgewinn"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plusvalía"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plus-value"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plusvalenza"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キャピタルゲイン"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ganho de capital"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "资本利得"
+          }
+        }
+      }
+    },
+    "Capital gain is the realised gain on every disposal plus the unrealised gain on what is still held, at its latest price. Dividends and franking credits are the income the book records against each security — in a transaction that touches the holding, or under an income account named for it.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Veräußerungsgewinn ist der realisierte Gewinn aus jedem Verkauf plus der nicht realisierte Gewinn des noch gehaltenen Bestands zum letzten Kurs. Dividenden und Steuergutschriften sind die Erträge, die das Buch dem jeweiligen Wertpapier zuordnet – in einer Buchung, die die Position berührt, oder unter einem nach ihm benannten Ertragskonto."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La plusvalía es la ganancia realizada en cada venta más la ganancia no realizada de lo que aún se mantiene, al último precio. Los dividendos y los créditos fiscales son los ingresos que el libro registra para cada valor: en una transacción que toca la posición o bajo una cuenta de ingresos con su nombre."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La plus-value est le gain réalisé sur chaque cession plus le gain latent sur ce qui est encore détenu, au dernier cours. Les dividendes et les crédits d’impôt sont les revenus que le livre enregistre pour chaque titre : dans une transaction qui touche la position, ou sous un compte de revenus portant son nom."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La plusvalenza è il guadagno realizzato su ogni cessione più quello non realizzato su ciò che è ancora in portafoglio, all’ultimo prezzo. Dividendi e crediti d’imposta sono i redditi che il libro registra per ciascun titolo: in una transazione che tocca la posizione o sotto un conto di reddito che porta il suo nome."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キャピタルゲインは、各売却の実現損益と、保有中の分の最新価格による含み損益の合計です。配当とフランキングクレジットは、帳簿が各証券に対して記録した収益で、ポジションに関わる取引、またはその証券の名前を付けた収益科目から集計します。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O ganho de capital é o ganho realizado em cada venda mais o ganho não realizado do que ainda está em carteira, ao último preço. Dividendos e créditos fiscais são as receitas que o livro registra para cada título: em uma transação que toca a posição ou em uma conta de receita com o nome dele."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "资本利得为每次处置的已实现收益，加上仍持有部分按最新价格计算的未实现收益。股息与已缴税抵免是账簿记录在各证券名下的收入：来自涉及该持仓的交易，或以其命名的收入科目。"
+          }
+        }
+      }
+    },
+    "Capital gain, dividends and franking credits, by security": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Veräußerungsgewinn, Dividenden und Steuergutschriften je Wertpapier"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plusvalía, dividendos y créditos fiscales por valor"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plus-value, dividendes et crédits d’impôt, par titre"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plusvalenza, dividendi e crediti d’imposta per titolo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "証券ごとのキャピタルゲイン、配当、フランキングクレジット"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ganho de capital, dividendos e créditos fiscais, por título"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按证券列示的资本利得、股息与已缴税抵免"
           }
         }
       }
@@ -62667,6 +63037,53 @@
         }
       }
     },
+    "Franking": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gutschriften"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Créd. fiscales"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crédits d’impôt"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crediti"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フランキング"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Créd. fiscais"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "税收抵免"
+          }
+        }
+      }
+    },
     "Franking (imputation) credits": {
       "extractionState": "manual",
       "localizations": {
@@ -65681,6 +66098,100 @@
         }
       }
     },
+    "Hide": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ausblenden"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ocultar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Masquer"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nascondi"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "非表示"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ocultar"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "隐藏"
+          }
+        }
+      }
+    },
+    "Hide Closed Positions": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geschlossene Positionen ausblenden"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ocultar posiciones cerradas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Masquer les positions clôturées"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nascondi posizioni chiuse"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "クローズ済みポジションを非表示"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ocultar posições encerradas"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "隐藏已平仓头寸"
+          }
+        }
+      }
+    },
     "Hide Details": {
       "extractionState": "manual",
       "localizations": {
@@ -67209,6 +67720,53 @@
         }
       }
     },
+    "Include positions you have sold out of": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Positionen einbeziehen, die Sie vollständig verkauft haben"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Incluir las posiciones que has vendido por completo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inclure les positions que vous avez entièrement vendues"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Includi le posizioni che hai venduto del tutto"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "売却済みのポジションを含める"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Incluir as posições que você já vendeu por completo"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "包含已全部卖出的头寸"
+          }
+        }
+      }
+    },
     "Includes %@": {
       "extractionState": "manual",
       "localizations": {
@@ -67820,6 +68378,53 @@
         }
       }
     },
+    "Incomplete: income in %@ is not included, because no exchange rate to %@ was available on its dates.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unvollständig: Erträge in %1$@ sind nicht enthalten, weil an den betreffenden Tagen kein Wechselkurs zu %2$@ vorlag."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Incompleto: los ingresos en %1$@ no se incluyen porque no había tipo de cambio a %2$@ en sus fechas."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Incomplet : les revenus en %1$@ ne sont pas inclus, faute de taux de change vers %2$@ à leurs dates."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Incompleto: i redditi in %1$@ non sono inclusi perché alle loro date non era disponibile un tasso di cambio verso %2$@."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不完全: %1$@ 建ての収益は、その日付に %2$@ への為替レートがなかったため含まれていません。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Incompleto: as receitas em %1$@ não estão incluídas porque não havia taxa de câmbio para %2$@ nas datas."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不完整：以 %1$@ 计的收入未计入，因为其日期没有兑换为 %2$@ 的汇率。"
+          }
+        }
+      }
+    },
     "Index": {
       "extractionState": "manual",
       "localizations": {
@@ -68145,6 +68750,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "投资批次"
+          }
+        }
+      }
+    },
+    "Investment Return": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anlagerendite"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rentabilidad de las inversiones"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rendement des placements"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rendimento degli investimenti"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "投資リターン"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retorno dos investimentos"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "投资回报"
           }
         }
       }
@@ -77706,6 +78358,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "在其科目的账簿中打开所选结果"
+          }
+        }
+      }
+    },
+    "Positions sold out of are included.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vollständig verkaufte Positionen sind einbezogen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se incluyen las posiciones vendidas por completo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les positions entièrement vendues sont incluses."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le posizioni vendute del tutto sono incluse."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "売却済みのポジションを含みます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "As posições vendidas por completo estão incluídas."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已包含已全部卖出的头寸。"
           }
         }
       }
@@ -97288,6 +97987,53 @@
         }
       }
     },
+    "Positions sold out of are left out; turn on Closed positions to include them.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vollständig verkaufte Positionen bleiben außen vor; schalten Sie „Geschlossene Positionen“ ein, um sie einzubeziehen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Las posiciones vendidas por completo se omiten; activa «Posiciones cerradas» para incluirlas."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les positions entièrement vendues sont exclues ; activez « Positions clôturées » pour les inclure."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le posizioni vendute del tutto sono escluse; attiva «Posizioni chiuse» per includerle."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "売却済みのポジションは除外されています。含めるには「クローズ済みポジション」をオンにしてください。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "As posições vendidas por completo ficam de fora; ative “Posições encerradas” para incluí-las."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已全部卖出的头寸未计入；开启“已平仓头寸”即可包含。"
+          }
+        }
+      }
+    },
     "Positive months": {
       "extractionState": "manual",
       "localizations": {
@@ -112272,6 +113018,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "投入资金回报"
+          }
+        }
+      }
+    },
+    "Return on money in: %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rendite auf eingesetztes Geld: %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rentabilidad sobre el dinero aportado: %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rendement sur les apports : %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rendimento sul denaro investito: %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "投入資金に対するリターン: %@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retorno sobre o dinheiro aportado: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "投入资金回报率：%@"
           }
         }
       }
@@ -137279,6 +138072,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "取消过账发票"
+          }
+        }
+      }
+    },
+    "Unpriced: %@ — no price on the date, so their unrealised gain is left out.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ohne Kurs: %@ – kein Kurs zum Stichtag, daher bleibt der nicht realisierte Gewinn außen vor."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sin precio: %@ — no hay precio en la fecha, así que su ganancia no realizada se omite."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sans cours : %@ — aucun cours à cette date, leur gain latent est donc exclu."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Senza prezzo: %@ — nessun prezzo alla data, quindi il guadagno non realizzato è escluso."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "価格なし: %@ — 基準日の価格がないため、含み損益は除外されています。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sem preço: %@ — não há preço na data, então o ganho não realizado fica de fora."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无价格：%@ — 该日期没有价格，因此其未实现收益未计入。"
           }
         }
       }

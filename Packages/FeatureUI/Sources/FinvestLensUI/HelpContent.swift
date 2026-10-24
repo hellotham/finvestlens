@@ -594,7 +594,8 @@ public enum HelpBook {
                 "**A break in the line means missing prices** — it is never drawn through days that have none. What counts as a break scales with the period, so a week's absence shows over a month and not over five years.",
                 "Heights are *not* comparable between rows. Each chart uses its own scale, because two securities' prices have no common measure.",
                 "**Valued by hand** collects securities no price service covers, such as super funds. They are not failures; enter their prices from **More ▸ Enter a Price…**, and set how often you expect a new figure with **Valuation Cadence…** on the row — quarterly by default, so a fund is not called stale every Tuesday the market trades.",
-                "**Closed positions** are hidden. Show them from **More ▸ Show Closed Positions**; their history is always kept for capital gains.",
+                "**Closed positions** are hidden: a row under the holdings says how many, with **Show**; hide them again from their heading or **More ▸ Show Closed Positions**. Their history is always kept for capital gains, and the Portfolio and Investment Return reports have a Closed positions switch of their own.",
+                "**Investment Return**, in Reports, adds up each security's capital gain, dividends and franking credits against the money you put in — closed positions included.",
             ]),
             .heading("One security's page"),
             .text("""

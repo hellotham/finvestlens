@@ -168,8 +168,8 @@ extension AppModel {
 
     // MARK: Portfolio (FR-RPT-02)
 
-    func portfolioDocument(asOf: Date = Date()) -> ReportDocument? {
-        guard let portfolio = advancedPortfolio(asOf: asOf) else { return nil }
+    func portfolioDocument(asOf: Date = Date(), includeClosed: Bool = false) -> ReportDocument? {
+        guard let portfolio = advancedPortfolio(asOf: asOf, includeClosed: includeClosed) else { return nil }
         let code = portfolio.currencyCode
         let rows = portfolio.holdings.map { h -> ReportDocumentRow in
             let detail = h.income != 0
@@ -197,7 +197,70 @@ extension AppModel {
             kpis: kpis, chart: slices.count > 1 ? .allocation(slices) : nil,
             sections: [ReportDocumentSection(title: String(localized: "Holdings"), rows: rows,
                                              total: (String(localized: "Market value"), portfolio.totalValue))],
-            notes: [String(localized: "Securities valued at their most recent price; unpriced holdings show zero value.")],
+            notes: [String(localized: "Securities valued at their most recent price; unpriced holdings show zero value."),
+                    closedPositionsNote(included: includeClosed)],
+            facts: nil)
+    }
+
+    /// Which way the report's Closed positions switch is set, on its face.
+    private func closedPositionsNote(included: Bool) -> String {
+        included
+            ? String(localized: "Positions sold out of are included.")
+            : String(localized: "Positions sold out of are left out; turn on Closed positions to include them.")
+    }
+
+    // MARK: Investment return (FR-RPT-02b)
+
+    /// Capital gain, dividends and franking credits by security, and together
+    /// against the money put in. Asked for on build 7: "No report to show
+    /// total investment return (capital gain plus dividends plus franking
+    /// credits)."
+    func investmentReturnDocument(asOf: Date = Date(), includeClosed: Bool = true) -> ReportDocument? {
+        guard let report = investmentReturn(asOf: asOf, includeClosed: includeClosed) else { return nil }
+        let code = report.currencyCode
+        let rows = report.lines.map { line -> ReportDocumentRow in
+            let label = line.isClosed
+                ? String(localized: "\(line.symbol)  closed")
+                : String(localized: "\(line.symbol)  \(line.units.formatted()) sh")
+            return ReportDocumentRow(label: label,
+                                     amounts: [line.capitalGain, line.dividends, line.frankingCredits,
+                                               line.totalReturn])
+        }
+        var summary: [String] = []
+        if let fraction = report.totalReturnFraction {
+            let percent = fraction.formatted(.percent.precision(.fractionLength(1)))
+            summary.append(String(localized: "Return on money in: \(percent)"))
+        }
+        var notes = [
+            String(localized: "Capital gain is the realised gain on every disposal plus the unrealised gain on what is still held, at its latest price. Dividends and franking credits are the income the book records against each security — in a transaction that touches the holding, or under an income account named for it."),
+            String(localized: "\(report.method.displayName) cost basis"),
+            closedPositionsNote(included: includeClosed),
+        ]
+        if !report.unpricedSymbols.isEmpty {
+            let symbols = report.unpricedSymbols.joined(separator: ", ")
+            notes.append(String(localized: "Unpriced: \(symbols) — no price on the date, so their unrealised gain is left out."))
+        }
+        if !report.unconvertedCurrencyCodes.isEmpty {
+            let codes = report.unconvertedCurrencyCodes.joined(separator: ", ")
+            notes.append(String(localized: "Incomplete: income in \(codes) is not included, because no exchange rate to \(code) was available on its dates."))
+        }
+        return ReportDocument(
+            title: String(localized: "Investment Return"),
+            periodLabel: String(localized: "As of \(shortDate(asOf))"), currencyCode: code,
+            kpis: [ReportKPI(label: String(localized: "Total return"), amount: report.totalReturn, signed: true),
+                   ReportKPI(label: String(localized: "Capital gain"), amount: report.totalCapitalGain, signed: true),
+                   ReportKPI(label: String(localized: "Dividends"), amount: report.totalDividends),
+                   ReportKPI(label: String(localized: "Franking credits"), amount: report.totalFranking),
+                   ReportKPI(label: String(localized: "Money in"), amount: report.totalMoneyIn)],
+            summary: summary, chart: nil,
+            sections: rows.isEmpty ? [] : [ReportDocumentSection(
+                title: String(localized: "By security"), rows: rows,
+                columns: [String(localized: "Capital gain"), String(localized: "Dividends"),
+                          String(localized: "Franking"), String(localized: "Total")],
+                columnTotals: (String(localized: "All securities"),
+                               [report.totalCapitalGain, report.totalDividends, report.totalFranking,
+                                report.totalReturn]))],
+            notes: notes,
             facts: nil)
     }
 

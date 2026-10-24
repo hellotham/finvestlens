@@ -340,7 +340,39 @@ struct InvestmentsView: View {
                                 .foregroundStyle(.secondary)
                                 .accessibilityLabel("Sparklines cover \(model.sparkRange.label)")
                         }
+                        // The way back, where the positions are; the More
+                        // menu's toggle is the other.
+                        if group == .closed {
+                            Spacer()
+                            Button("Hide") { model.showsClosedPositions = false }
+                                .buttonStyle(.borderless)
+                                .accessibilityLabel("Hide Closed Positions")
+                        }
                     }
+                }
+            }
+        }
+        // Closed positions are hidden by default (`FR-INV-24`), and the one
+        // way to reveal them sat at the bottom of the More menu — reported on
+        // build 7 as "no toggle to show closed positions". The count and the
+        // control now sit where the rows would be.
+        let closedCount = rows.filter { $0.group == .closed }.count
+        if closedCount > 0, !model.showsClosedPositions {
+            Section {
+                HStack {
+                    Image(systemName: "flag.checkered")
+                        .foregroundStyle(.secondary)
+                        .accessibilityHidden(true)
+                    Text("Closed positions")
+                    Text("\(closedCount) hidden")
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Button("Show") {
+                        model.showsClosedPositions = true
+                        expanded.insert(.closed)
+                    }
+                    .buttonStyle(.borderless)
+                    .accessibilityLabel("Show Closed Positions")
                 }
             }
         }
