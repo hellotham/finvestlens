@@ -272,7 +272,7 @@ extension AppModel {
             return .security(String(raw.dropFirst("security:".count)))
         }
         if raw.hasPrefix("report:") {
-            return ReportKind(rawValue: String(raw.dropFirst("report:".count)))
+            return ReportKind(stored: String(raw.dropFirst("report:".count)))
                 .map(SidebarSelection.report)
         }
         if raw.hasPrefix("overviewView:") {

@@ -40,9 +40,13 @@ public enum ReportKind: String, CaseIterable, Identifiable, Codable, Sendable {
     case spendingInsights = "Spending Insights"
     case portfolio = "Portfolio"
     case investmentLots = "Investment Lots"
-    case priceScatter = "Price Scatter"
+    case priceScatter = "Price History"
     case capitalGains = "Capital Gains"
     case investmentReturn = "Investment Return"
+    case income = "Income"
+    case historicalCost = "Historical Cost"
+    case multiPeriodReturn = "Returns by Period"
+    case drawdown = "Drawdown"
     case receivableAging = "Receivable Aging"
     case payableAging = "Payable Aging"
     case customerSummary = "Customer Summary"
@@ -73,9 +77,13 @@ public enum ReportKind: String, CaseIterable, Identifiable, Codable, Sendable {
         case .spendingInsights: String(localized: "Spending Insights")
         case .portfolio: String(localized: "Portfolio")
         case .investmentLots: String(localized: "Investment Lots")
-        case .priceScatter: String(localized: "Price Scatter")
+        case .priceScatter: String(localized: "Price History")
         case .capitalGains: String(localized: "Capital Gains")
         case .investmentReturn: String(localized: "Investment Return")
+        case .income: String(localized: "Income")
+        case .historicalCost: String(localized: "Historical Cost")
+        case .multiPeriodReturn: String(localized: "Returns by Period")
+        case .drawdown: String(localized: "Drawdown")
         case .receivableAging: String(localized: "Receivable Aging")
         case .payableAging: String(localized: "Payable Aging")
         case .customerSummary: String(localized: "Customer Summary")
@@ -85,10 +93,23 @@ public enum ReportKind: String, CaseIterable, Identifiable, Codable, Sendable {
         }
     }
 
+    /// A stored kind, by its name — or by the name it had before it was
+    /// renamed, so a favourite, a tab or a recent saved as "Price Scatter"
+    /// still opens as Price History.
+    init?(stored: String) {
+        if let kind = ReportKind(rawValue: stored) {
+            self = kind
+        } else if stored == "Price Scatter" {
+            self = .priceScatter
+        } else {
+            return nil
+        }
+    }
+
     /// The name of a stored kind — or the stored text itself, for a kind a
     /// later version wrote and this one does not know.
     static func title(of stored: String) -> String {
-        ReportKind(rawValue: stored)?.title ?? stored
+        ReportKind(stored: stored)?.title ?? stored
     }
 
     enum Group: String, CaseIterable, Identifiable {
@@ -120,7 +141,8 @@ public enum ReportKind: String, CaseIterable, Identifiable, Codable, Sendable {
             .statements
         case .averageBalance, .transactions, .reconcile, .forecast, .spendingInsights:
             .activity
-        case .portfolio, .investmentLots, .priceScatter, .capitalGains, .investmentReturn:
+        case .portfolio, .investmentLots, .priceScatter, .capitalGains, .investmentReturn,
+             .income, .historicalCost, .multiPeriodReturn, .drawdown:
             .investments
         case .receivableAging, .payableAging, .customerSummary,
              .vendorSummary, .employeeSummary, .jobSummary:
@@ -165,26 +187,55 @@ public enum ReportKind: String, CaseIterable, Identifiable, Codable, Sendable {
         emptyScopeIsEveryAccount
             ? String(localized: "All accounts") : String(localized: "Bank & cash accounts")
     }
-    /// Reports over exactly one account (a reconciliation).
-    var usesSingleAccount: Bool { self == .reconcile }
-    /// The investment reports, which share one set of controls: the
-    /// cost-basis method and fee treatment, a portfolio filter, and the
-    /// Closed positions switch (`FR-RPT-04`). Asked for on build 8: "all the
-    /// investment reports should be filterable by portfolio, financial year,
-    /// open/close toggle etc. They need to be consistent."
+    /// Reports over exactly one account: a reconciliation, a forecast.
+    var usesSingleAccount: Bool { self == .reconcile || self == .forecast }
+    /// Reports with a period: every document, and the price explorer, whose
+    /// range the window's period is. The forecast projects from today.
+    var usesPeriod: Bool { usesScaffold || usesPriceHistoryOptions }
+    /// The forecast's horizon, in months.
+    var usesHorizon: Bool { self == .forecast }
+    /// What the Closed positions switch does on this report, for its help.
+    var closedPositionsHelp: String {
+        switch self {
+        case .investmentLots: String(localized: "List the parcels already sold, with what they fetched")
+        case .capitalGains: String(localized: "Show the whole history of every position sold out of by the period’s end")
+        default: String(localized: "Include positions you have sold out of")
+        }
+    }
+    /// The investment reports whose figures the cost-basis method and fee
+    /// treatment decide — every one that reads the lot engine (`FR-RPT-04`).
+    /// Asked for on build 8: "all the investment reports should be
+    /// filterable by portfolio, financial year, open/close toggle etc. They
+    /// need to be consistent."
     var usesInvestmentOptions: Bool {
-        self == .portfolio || self == .investmentLots || self == .capitalGains
-            || self == .investmentReturn
+        switch self {
+        case .portfolio, .investmentLots, .capitalGains, .investmentReturn, .historicalCost,
+             .multiPeriodReturn: true
+        default: false
+        }
     }
     /// Reports narrowed to one portfolio — the account above a set of
-    /// security accounts.
-    var usesPortfolioFilter: Bool { usesInvestmentOptions }
-    /// Reports that can leave out positions sold out of (`FR-INV-24`).
-    var usesClosedPositions: Bool { usesInvestmentOptions }
-    /// Whether such a report includes them unless told otherwise: a gain or a
-    /// return is history, so Capital Gains and Investment Return do; a
-    /// valuation of what is held — Portfolio, Investment Lots — does not.
-    var includesClosedByDefault: Bool { self == .capitalGains || self == .investmentReturn }
+    /// security accounts: every investment report, the two tools' included.
+    var usesPortfolioFilter: Bool { group == .investments }
+    /// Reports that can leave out positions sold out of (`FR-INV-24`). Lots
+    /// reads the switch as "parcels already sold"; Capital Gains as "every
+    /// position closed by the period's end, with its whole history".
+    var usesClosedPositions: Bool {
+        switch self {
+        case .portfolio, .investmentLots, .capitalGains, .investmentReturn, .multiPeriodReturn: true
+        default: false
+        }
+    }
+    /// Whether such a report includes them unless told otherwise: a return
+    /// is history, so Investment Return and Returns by Period do; a
+    /// valuation of what is held — Portfolio, Investment Lots — does not,
+    /// and Capital Gains shows the period's events alone until asked for
+    /// the closed positions' history.
+    var includesClosedByDefault: Bool { self == .investmentReturn || self == .multiPeriodReturn }
+    /// Returns by Period takes how many financial years to lay side by side.
+    var usesPeriodCount: Bool { self == .multiPeriodReturn }
+    /// Price History takes a security, a benchmark and the income switch.
+    var usesPriceHistoryOptions: Bool { self == .priceScatter }
     /// Whether the report takes an interval size (the average-balance report).
     var usesStep: Bool { self == .averageBalance }
 
@@ -208,6 +259,10 @@ public enum ReportKind: String, CaseIterable, Identifiable, Codable, Sendable {
         case .priceScatter: "chart.dots.scatter"
         case .capitalGains: "percent"
         case .investmentReturn: "sum"
+        case .income: "banknote"
+        case .historicalCost: "book.closed"
+        case .multiPeriodReturn: "calendar.badge.clock"
+        case .drawdown: "arrow.down.right.circle"
         case .receivableAging: "person.crop.circle.badge.clock"
         case .payableAging: "building.2.crop.circle.badge.clock"
         case .customerSummary: "person.2.badge.gearshape"
@@ -234,9 +289,13 @@ public enum ReportKind: String, CaseIterable, Identifiable, Codable, Sendable {
         case .spendingInsights: String(localized: "This period against the last, in plain language")
         case .portfolio: String(localized: "Holdings, allocation, and value")
         case .investmentLots: String(localized: "Purchase lots and cost basis")
-        case .priceScatter: String(localized: "Price history for a security")
-        case .capitalGains: String(localized: "Realised gains by disposal")
-        case .investmentReturn: String(localized: "Capital gain, dividends and franking credits, by security")
+        case .priceScatter: String(localized: "One security’s prices, trends, your trades and a benchmark")
+        case .capitalGains: String(localized: "Every parcel sold, assessed as the tax return wants it")
+        case .investmentReturn: String(localized: "Total return since purchase: capital gain, dividends and franking, with the history")
+        case .income: String(localized: "Dividends, distributions and interest by payment and holding")
+        case .historicalCost: String(localized: "Opening and closing balances at cost, with market value")
+        case .multiPeriodReturn: String(localized: "Each holding’s return in each financial year, side by side")
+        case .drawdown: String(localized: "Each holding’s worst fall against its return")
         case .receivableAging: String(localized: "What customers owe, by how overdue")
         case .payableAging: String(localized: "What you owe vendors, by how overdue")
         case .customerSummary: String(localized: "Sales and receivables by customer")
@@ -258,7 +317,9 @@ public enum ReportKind: String, CaseIterable, Identifiable, Codable, Sendable {
                             // Every level (`nil`): asked for on build 4 — "All reports
                             // should display max indentation depth."
                             depth: nil,
-                            step: usesStep ? .month : nil)
+                            step: usesStep ? .month : nil,
+                            // Three financial years side by side, to start.
+                            comparePeriods: usesPeriodCount ? 2 : nil)
     }
 }
 
@@ -280,7 +341,7 @@ enum ReportRecents {
     static func load() -> [ReportKind] {
         (UserDefaults.standard.string(forKey: key) ?? "")
             .split(separator: "|")
-            .compactMap { ReportKind(rawValue: String($0)) }
+            .compactMap { ReportKind(stored: String($0)) }
     }
 }
 
@@ -289,7 +350,7 @@ struct ReportsHome: View {
     @Bindable var model: AppModel
     @State private var openConfiguration: ReportConfiguration? {
         didSet {
-            if let raw = openConfiguration?.kind, let kind = ReportKind(rawValue: raw) {
+            if let raw = openConfiguration?.kind, let kind = ReportKind(stored: raw) {
                 ReportRecents.record(kind)
             }
         }
@@ -313,11 +374,14 @@ struct ReportsHome: View {
                 .id(configuration)
             } else {
                 ReportGallery(model: model) { configuration in
+                    // A favourite carries its own period; the window follows
+                    // it, so the selector and the report agree.
+                    if configuration.period != model.period { model.period = configuration.period }
                     openConfiguration = configuration
                     // Keep the sidebar in step with the gallery: opening a
                     // report from either place must leave both saying the same
                     // thing.
-                    if let kind = ReportKind(rawValue: configuration.kind) {
+                    if let kind = ReportKind(stored: configuration.kind) {
                         model.navigate(to: .report(kind))
                     }
                 }
@@ -344,10 +408,11 @@ struct ReportsHome: View {
     private func applySelection() {
         switch model.sidebarSelection {
         case .report(let kind):
-            guard ReportKind(rawValue: openConfiguration?.kind ?? "") != kind else { return }
+            guard ReportKind(stored: openConfiguration?.kind ?? "") != kind else { return }
             openConfiguration = kind.defaultConfiguration(for: model)
         case .savedReport(let id):
             guard let saved = model.savedReports.first(where: { $0.id == id }) else { return }
+            if saved.configuration.period != model.period { model.period = saved.configuration.period }
             openConfiguration = saved.configuration
         case .reports:
             openConfiguration = nil
@@ -373,7 +438,7 @@ struct ReportGallery: View {
     /// Reads through @AppStorage so a new recent re-renders the row.
     @AppStorage(ReportRecents.key) private var recentsRaw = ""
     private var recents: [ReportKind] {
-        recentsRaw.split(separator: "|").compactMap { ReportKind(rawValue: String($0)) }
+        recentsRaw.split(separator: "|").compactMap { ReportKind(stored: String($0)) }
     }
 
     var body: some View {
@@ -715,7 +780,7 @@ struct ReportScreen: View {
     @State private var pdfDocument: PDFReportDocument?
     @State private var computeFinished = false
 
-    private var kind: ReportKind? { ReportKind(rawValue: configuration.kind) }
+    private var kind: ReportKind? { ReportKind(stored: configuration.kind) }
 
     /// Everything the document is computed from: the configuration, and the
     /// two investment settings that live on the model rather than in it.
@@ -725,9 +790,14 @@ struct ReportScreen: View {
         var configuration: ReportConfiguration
         var method: CostBasisMethod
         var fees: FeeTreatment
+        /// The tax settings Capital Gains and Lots assess under — who the
+        /// gains are for, residency, the CPI table — changed in Planning ▸
+        /// Tax while a report is open.
+        var tax: Int
     }
     private var computeKey: ComputeKey {
-        ComputeKey(configuration: configuration, method: model.costBasisMethod, fees: model.feeTreatment)
+        ComputeKey(configuration: configuration, method: model.costBasisMethod, fees: model.feeTreatment,
+                   tax: model.taxSettingsRevision)
     }
     /// The report's name as the reader sees it — on the progress line, as a
     /// favourite's first name, and as the PDF's.
@@ -819,13 +889,34 @@ struct ReportScreen: View {
 
     private var parameterControls: some View {
         HStack(spacing: 12) {
-            if kind?.usesScaffold == true {
+            if kind?.usesPeriod == true {
                 // The window's period, not a second copy. Two selectors were
                 // on screen at once — the toolbar's and this — showing
                 // different values and not tracking each other, which is
                 // exactly the "which period am I looking at?" the phase set out
                 // to answer once (`FR-NAV-11`).
                 PeriodSelector(model: model, period: $model.period)
+            }
+            if kind?.usesPeriodCount == true {
+                // How many financial years Returns by Period lays side by side.
+                let shown = (configuration.comparePeriods ?? 2) + 1
+                Stepper(value: Binding(
+                    get: { shown },
+                    set: { configuration.comparePeriods = max(0, $0 - 1) }), in: 1...10) {
+                    Text("Years: \(shown)")
+                }
+                .fixedSize()
+                .help("How many financial years to lay side by side")
+            }
+            if kind?.usesHorizon == true {
+                let months = configuration.horizonMonths ?? 6
+                Stepper(value: Binding(
+                    get: { months },
+                    set: { configuration.horizonMonths = $0 == 6 ? nil : $0 }), in: 1...36) {
+                    Text("Months: \(months)")
+                }
+                .fixedSize()
+                .help("How far ahead to project")
             }
             if kind?.usesDepth == true {
                 // Up to the book's own deepest level, which is "All" — the
@@ -847,11 +938,14 @@ struct ReportScreen: View {
                 AccountScopeButton(model: model, accountIDs: $configuration.accountIDs,
                                    emptyLabel: kind.emptyScopeLabel)
             }
-            if kind?.usesSingleAccount == true {
+            if let kind, kind.usesSingleAccount {
                 AccountField(nodes: model.postableAccounts, selection: Binding(
-                    get: { configuration.accountIDs?.first ?? model.selectedAccountID },
+                    get: { model.singleAccount(for: configuration, kind: kind) },
                     set: { configuration.accountIDs = $0.map { [$0] } }))
                     .frame(maxWidth: 320)
+            }
+            if kind?.usesPriceHistoryOptions == true {
+                PriceHistoryControls(model: model, configuration: $configuration)
             }
             if kind?.usesPortfolioFilter == true {
                 // Every portfolio, closed ones too: the Closed positions
@@ -893,7 +987,7 @@ struct ReportScreen: View {
                     get: { configuration.includeClosed ?? kind.includesClosedByDefault },
                     set: { configuration.includeClosed = $0 }))
                 .fixedSize()
-                .help("Include positions you have sold out of")
+                .help(kind.closedPositionsHelp)
             }
             if kind?.usesStep == true {
                 Picker("Interval", selection: Binding(
@@ -921,7 +1015,10 @@ struct ReportScreen: View {
         // builders that bypass the memo cache).
         if isStatementKind {
             Group {
-                if let statement {
+                if let statement, statement.sections.allSatisfy({ $0.items.isEmpty }), let kind {
+                    ContentUnavailableView("Nothing to report", systemImage: kind.icon,
+                                           description: Text(emptyReason(kind)))
+                } else if let statement {
                     StatementView(statement: statement)
                 } else {
                     ProgressView("Preparing \(kindTitle)…")
@@ -959,8 +1056,8 @@ struct ReportScreen: View {
     @ViewBuilder
     private var legacyContent: some View {
         switch kind {
-        case .forecast: ForecastView(model: model)
-        case .priceScatter: PriceScatterView(model: model)
+        case .forecast: ForecastView(model: model, configuration: $configuration)
+        case .priceScatter: PriceHistoryView(model: model, configuration: $configuration)
         default:
             ContentUnavailableView("Unknown report", systemImage: "questionmark",
                                    description: Text("This favourite was saved by a newer version."))
@@ -982,6 +1079,14 @@ struct ReportScreen: View {
     /// Why a report can be empty, in the report's own terms.
     private func emptyReason(_ kind: ReportKind) -> String {
         if kind.usesSingleAccount { return String(localized: "Choose an account above.") }
+        switch kind {
+        case .capitalGains: return String(localized: "No parcels were sold in this period.")
+        case .income: return String(localized: "No investment income was recorded in this period.")
+        case .portfolio, .investmentLots:
+            return String(localized: "Nothing is held on the date. Turn on Closed positions to see what was.")
+        case .drawdown: return String(localized: "No held security has prices in this period.")
+        default: break
+        }
         switch kind.group {
         case .business: return String(localized: "No business activity to report for this period.")
         case .investments: return String(localized: "No security accounts or activity to report.")

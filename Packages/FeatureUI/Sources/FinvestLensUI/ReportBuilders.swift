@@ -53,6 +53,43 @@ extension AppModel {
         configuration.portfolioID.flatMap { book?.account(with: $0) != nil ? $0 : nil }
     }
 
+    /// The period's dates for a kind. A point-in-time report reads the
+    /// period's end, capped at today: a valuation "as of" a day still to come
+    /// can only be today's, and the current financial year ends in the
+    /// future for most of the year.
+    func resolvedWindow(for configuration: ReportConfiguration, kind: ReportKind) -> (from: Date, to: Date) {
+        let (from, to) = resolve(configuration.period)
+        return (from, kind.isAsOf ? min(to, Self.endOfToday()) : to)
+    }
+
+    /// The account a reconciliation or forecast reports on: the one the
+    /// configuration names, else the register's, else the first that can
+    /// take postings (forecast: the first asset account).
+    func singleAccount(for configuration: ReportConfiguration, kind: ReportKind) -> GncGUID? {
+        if let chosen = configuration.accountIDs?.first, book?.account(with: chosen) != nil { return chosen }
+        if kind == .forecast { return defaultForecastAccountID }
+        return selectedAccountID ?? postableAccounts.first?.id
+    }
+
+    /// The financial years Returns by Period lays side by side: the one the
+    /// chosen period ends in and `comparePeriods` before it, oldest first.
+    func multiPeriodWindows(_ configuration: ReportConfiguration) -> [(label: String, from: Date, to: Date)] {
+        let count = max(1, (configuration.comparePeriods ?? 2) + 1)
+        let (_, end) = resolve(configuration.period)
+        let anchor = min(end, Self.endOfToday())
+        var (from, to) = ReportPeriod.currentFinancialYear.resolve(
+            financialYearStartMonth: financialYearStartMonth, today: anchor)
+        let calendar = Calendar.current
+        var windows: [(label: String, from: Date, to: Date)] = []
+        for _ in 0..<count {
+            windows.append((comparisonLabel(from: from, to: to, stride: DateComponents(year: 1)), from, to))
+            guard let earlierFrom = calendar.date(byAdding: .year, value: -1, to: from),
+                  let earlierTo = calendar.date(byAdding: .year, value: -1, to: to) else { break }
+            (from, to) = (earlierFrom, earlierTo)
+        }
+        return windows.reversed()
+    }
+
     /// Net worth at each month end across a window — the chart the dashboard
     /// draws, generalised to any period.
     func netWorthPoints(from: Date, to: Date) -> [NetWorthPoint] {
@@ -85,17 +122,16 @@ extension AppModel {
     /// only assembles the document here (P3.3). The account and period are
     /// resolved exactly as the document resolves them.
     func warmReports(for configuration: ReportConfiguration) async {
-        guard book != nil, let kind = ReportKind(rawValue: configuration.kind),
+        guard book != nil, let kind = ReportKind(stored: configuration.kind),
               kind.usesScaffold else { return }
-        let (from, to) = resolve(configuration.period)
+        let (from, to) = resolvedWindow(for: configuration, kind: kind)
         let includeClosed = configuration.includeClosed ?? kind.includesClosedByDefault
         let portfolioID = portfolioFilter(configuration)
         switch kind {
         case .transactions:
             await warm(transactionsReportRequest(accountIDs: chosenAccounts(configuration), from: from, to: to))
         case .reconcile:
-            guard let account = configuration.accountIDs?.first ?? selectedAccountID
-                ?? postableAccounts.first?.id else { return }
+            guard let account = singleAccount(for: configuration, kind: kind) else { return }
             await warm(reconcileReportRequest(accountID: account, asOf: to))
         case .portfolio where !securityCommodities.isEmpty:
             await warm(advancedPortfolioRequest(asOf: to, includeClosed: includeClosed,
@@ -109,6 +145,15 @@ extension AppModel {
         case .capitalGains where !securityCommodities.isEmpty:
             await warm(capitalGainsRequest(from: from, to: to, includeClosed: includeClosed,
                                            portfolioID: portfolioID))
+        case .income where !securityCommodities.isEmpty:
+            await warm(incomeReportRequest(from: from, to: to, portfolioID: portfolioID))
+        case .historicalCost where !securityCommodities.isEmpty:
+            await warm(historicalCostRequest(from: from, to: to, portfolioID: portfolioID))
+        case .multiPeriodReturn where !securityCommodities.isEmpty:
+            await warm(multiPeriodRequest(periods: multiPeriodWindows(configuration).map { (from: $0.from, to: $0.to) },
+                                          includeClosed: includeClosed, portfolioID: portfolioID))
+        case .drawdown where !securityCommodities.isEmpty:
+            await warm(drawdownRequest(from: from, to: to, portfolioID: portfolioID))
         case .averageBalance:
             let scope = accountScope(for: configuration)
             guard !scope.isEmpty else { return }
@@ -122,10 +167,10 @@ extension AppModel {
     /// Builds the document for a scaffold report, or `nil` for kinds that keep
     /// interactive views (or a book that is not open).
     func reportDocument(for configuration: ReportConfiguration) -> ReportDocument? {
-        guard book != nil, let kind = ReportKind(rawValue: configuration.kind),
+        guard book != nil, let kind = ReportKind(stored: configuration.kind),
               kind.usesScaffold else { return nil }
 
-        let (from, to) = resolve(configuration.period)
+        let (from, to) = resolvedWindow(for: configuration, kind: kind)
         let asOfLabel = String(localized: "As of \(AppDateFormat.current.full(to))")
         let periodLabel = kind.isAsOf ? asOfLabel : label(for: configuration.period)
         let includeClosed = configuration.includeClosed ?? kind.includesClosedByDefault
@@ -509,8 +554,7 @@ extension AppModel {
         case .transactions:
             return transactionsDocument(accountIDs: chosenAccounts(configuration), from: from, to: to)
         case .reconcile:
-            guard let account = configuration.accountIDs?.first ?? selectedAccountID
-                ?? postableAccounts.first?.id else { return nil }
+            guard let account = singleAccount(for: configuration, kind: kind) else { return nil }
             return reconcileDocument(accountID: account, asOf: to)
         case .portfolio:
             return portfolioDocument(asOf: to, includeClosed: includeClosed,
@@ -526,6 +570,15 @@ extension AppModel {
             return capitalGainsDocument(from: from, to: to, periodLabel: periodLabel,
                                         includeClosed: includeClosed,
                                         portfolioID: portfolioID)
+        case .income:
+            return incomeDocument(from: from, to: to, periodLabel: periodLabel, portfolioID: portfolioID)
+        case .historicalCost:
+            return historicalCostDocument(from: from, to: to, periodLabel: periodLabel, portfolioID: portfolioID)
+        case .multiPeriodReturn:
+            return multiPeriodReturnDocument(periods: multiPeriodWindows(configuration),
+                                             includeClosed: includeClosed, portfolioID: portfolioID)
+        case .drawdown:
+            return drawdownDocument(from: from, to: to, periodLabel: periodLabel, portfolioID: portfolioID)
         default:
             return nil
         }

@@ -640,6 +640,8 @@ struct TaxEstimateView: View {
 
     @State private var period: ReportPeriod = .currentFinancialYear
     @State private var showRates = false
+    @State private var fetchingCPI = false
+    @State private var cpiError: String?
 
     private var code: String { model.reportCurrency.mnemonic }
 
@@ -691,6 +693,7 @@ struct TaxEstimateView: View {
                         slice.tax)
                 }
                 row("Levy (\(percent(model.currentTaxSettings().levyRate)))", result.levy)
+                if result.minimumTaxTopUp != 0 { row("30% minimum tax on post-2027 gains", result.minimumTaxTopUp) }
                 if result.frankingCredits != 0 { row("Franking credits", -result.frankingCredits) }
                 if result.withheld != 0 { row("Tax withheld", -result.withheld) }
                 LabeledContent(result.balance >= 0 ? "Estimated owing" : "Estimated refund") {
@@ -699,6 +702,10 @@ struct TaxEstimateView: View {
                         .fontWeight(.bold)
                         .foregroundStyle(result.balance >= 0 ? Color.primary : .green)
                 }
+            }
+
+            Section("Capital gains") {
+                capitalGainsSettings
             }
 
             Section {
@@ -733,6 +740,61 @@ struct TaxEstimateView: View {
                 .scaledFont(.caption)
                 .foregroundStyle(.secondary)
         }
+    }
+
+    /// Who the capital gains are assessed for, and the CPI the 2027 reform's
+    /// indexation reads — what the Capital Gains report's ATO assessment
+    /// turns on.
+    @ViewBuilder
+    private var capitalGainsSettings: some View {
+        let settings = model.currentTaxSettings()
+        Picker("Taxpayer", selection: Binding(
+            get: { settings.cgtEntity },
+            set: { entity in
+                var changed = settings
+                changed.cgtEntity = entity
+                changed.longTermDiscount = entity.discountFraction
+                model.updateTaxSettings(changed)
+            })) {
+            ForEach(CGTEntity.allCases, id: \.self) { entity in
+                Text(model.entityLabel(entity)).tag(entity)
+            }
+        }
+        .help("Sets the CGT discount — 50% for an individual or trust, a third for a super fund, none for a company — and whether the 2027 reform indexes your gains")
+        Toggle("Foreign or temporary resident", isOn: Binding(
+            get: { settings.foreignResident },
+            set: { var changed = settings; changed.foreignResident = $0; model.updateTaxSettings(changed) }))
+            .help("No CGT discount and no indexation")
+        Toggle("Receiving income support", isOn: Binding(
+            get: { settings.incomeSupportRecipient },
+            set: { var changed = settings; changed.incomeSupportRecipient = $0; model.updateTaxSettings(changed) }))
+            .help("Outside the reform’s 30% minimum tax on gains accrued after 1 July 2027")
+        LabeledContent("Consumer price index") {
+            HStack(spacing: 8) {
+                if let latest = settings.latestCPIQuarter {
+                    Text("\(settings.cpiQuarters.count) quarters, to \(latest)")
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text("Not loaded").foregroundStyle(.secondary)
+                }
+                Button(fetchingCPI ? "Fetching…" : "Fetch from the RBA") {
+                    fetchingCPI = true
+                    cpiError = nil
+                    Task {
+                        defer { fetchingCPI = false }
+                        do { try await model.fetchCPI() } catch { cpiError = error.localizedDescription }
+                    }
+                }
+                .disabled(fetchingCPI)
+                .help("Downloads the all-groups CPI by quarter from the Reserve Bank’s table G1 (rba.gov.au); indexation under the 2027 reform reads it")
+            }
+        }
+        if let cpiError {
+            Text(cpiError).scaledFont(.caption).foregroundStyle(.red)
+        }
+        Text("From 1 July 2027 a gain accrued after that day is indexed by CPI instead of discounted, a parcel owned across the day is split at its value on 30 June 2027, and the post-2027 part is taxed at no less than 30%. The Capital Gains report applies these to each parcel sold.")
+            .scaledFont(.caption2)
+            .foregroundStyle(.tertiary)
     }
 
     private func row(_ label: LocalizedStringKey, _ value: Decimal) -> some View {

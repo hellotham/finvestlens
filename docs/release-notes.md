@@ -45,6 +45,31 @@ your own choice of where the Apple Intelligence features run.
   messages, undo names, toasts, Siri's phrases and the starter chart of
   accounts are now translated too, in all eight languages.
 
+- **Investment reports rebuilt.** Nine reports on one history of every
+  security — every buy, sell, dividend, credit, distribution and split —
+  laid out the same way: by portfolio, then security, with the parcels or
+  the history beneath, and every date, count and rate a column of its own.
+  **Capital Gains** is now the report a tax return is prepared from: each
+  parcel sold with its acquisition and sale dates, cost base, proceeds, gain,
+  days held and the ATO's treatment, and the year's net capital gain by the
+  ATO's steps — including, from 1 July 2027, the reform's CPI indexation,
+  the split of a parcel owned across that day, and the 30% minimum tax.
+  Who the gains are assessed for and the CPI table live under Planning ▸ Tax,
+  with a button that fetches the index from the Reserve Bank. **Investment
+  Return** is total return since you bought — never a figure cut to the
+  period — with each security's history under it, the period's own
+  contribution beside the total, and a money-weighted annualised rate
+  (XIRR). New: **Income**, **Historical Cost**, **Returns by Period** and
+  **Drawdown**. Closed positions on Capital Gains now means the whole history
+  of every position sold out of by the period's end.
+- **Price History, readable.** One security at a time over the window's
+  period, with quick ranges from a month to all time: the 50- and 200-day
+  averages and their crosses, the RSI, your buys and sells with your average
+  cost, the range's high, low, change, volatility and largest fall, a
+  benchmark drawn alongside — a cash rate you set or any other priced
+  security or index — and the price with the income it paid against the
+  price alone. The PDF carries the statistics and the month-end closes.
+
 ### Better
 
 - **Saving doesn't freeze the window.** The write to the book's file — seconds

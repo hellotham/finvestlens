@@ -29,7 +29,9 @@ public enum TaxEstimate {
     }
 
     /// The editable model: brackets plus the flat levy and the long-term
-    /// capital-gains discount share.
+    /// capital-gains discount share — and, for the Capital Gains report's
+    /// ATO assessment, who the taxpayer is and the CPI series the reform's
+    /// indexation reads.
     public struct Settings: Codable, Sendable, Equatable {
         public var brackets: [Bracket]
         /// A flat levy on taxable income (Medicare levy: 0.02). The real levy
@@ -38,11 +40,46 @@ public enum TaxEstimate {
         public var levyRate: Decimal
         /// The share of long-term gains excluded (AU CGT discount: 0.5).
         public var longTermDiscount: Decimal
+        /// Who made the gains: sets the discount share and whether the 2027
+        /// reform indexes (`CGTEntity`).
+        public var cgtEntity: CGTEntity
+        /// A foreign or temporary resident gets neither the discount nor the
+        /// reform's indexation.
+        public var foreignResident: Bool
+        /// Income-support recipients are outside the reform's minimum tax.
+        public var incomeSupportRecipient: Bool
+        /// The consumer price index, all groups, Australia, by quarter
+        /// (`"2026-Q2"`) — RBA statistical table G1, series GCPIAG. Any
+        /// consistent series serves: indexation is a ratio of two readings.
+        public var cpiQuarters: [String: Double]
 
-        public init(brackets: [Bracket], levyRate: Decimal, longTermDiscount: Decimal) {
+        public init(brackets: [Bracket], levyRate: Decimal, longTermDiscount: Decimal,
+                    cgtEntity: CGTEntity = .individual, foreignResident: Bool = false,
+                    incomeSupportRecipient: Bool = false, cpiQuarters: [String: Double] = [:]) {
             self.brackets = brackets.sorted { $0.over < $1.over }
             self.levyRate = levyRate
             self.longTermDiscount = longTermDiscount
+            self.cgtEntity = cgtEntity
+            self.foreignResident = foreignResident
+            self.incomeSupportRecipient = incomeSupportRecipient
+            self.cpiQuarters = cpiQuarters
+        }
+
+        private enum CodingKeys: String, CodingKey {
+            case brackets, levyRate, longTermDiscount, cgtEntity, foreignResident, incomeSupportRecipient, cpiQuarters
+        }
+
+        /// A book saved before the CGT fields existed decodes with their
+        /// defaults rather than losing its rate table.
+        public init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            self.init(brackets: try container.decode([Bracket].self, forKey: .brackets),
+                      levyRate: try container.decode(Decimal.self, forKey: .levyRate),
+                      longTermDiscount: try container.decode(Decimal.self, forKey: .longTermDiscount),
+                      cgtEntity: try container.decodeIfPresent(CGTEntity.self, forKey: .cgtEntity) ?? .individual,
+                      foreignResident: try container.decodeIfPresent(Bool.self, forKey: .foreignResident) ?? false,
+                      incomeSupportRecipient: try container.decodeIfPresent(Bool.self, forKey: .incomeSupportRecipient) ?? false,
+                      cpiQuarters: try container.decodeIfPresent([String: Double].self, forKey: .cpiQuarters) ?? [:])
         }
 
         /// Australian resident rates for the financial year **ending** in
@@ -63,6 +100,37 @@ public enum TaxEstimate {
                 Bracket(over: 190_000, rate: Decimal(string: "0.45")!),
             ], levyRate: Decimal(string: "0.02")!, longTermDiscount: Decimal(string: "0.5")!)
         }
+
+        /// The CPI quarter a date falls in, as the series is keyed: the
+        /// calendar quarter, in UTC — a quarter's reading stands for every
+        /// day in it, so a 10:59Z price date and a midday posting agree.
+        public static func cpiQuarterKey(_ date: Date) -> String {
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = TimeZone(identifier: "UTC")!
+            let components = calendar.dateComponents([.year, .month], from: date)
+            return "\(components.year ?? 0)-Q\(((components.month ?? 1) - 1) / 3 + 1)"
+        }
+
+        /// The series as the CGT rules read it: a reading for a date, by its
+        /// quarter, or `nil` where the table has none.
+        public var cpiLookup: @Sendable (Date) -> Double? {
+            let table = cpiQuarters
+            return { table[Settings.cpiQuarterKey($0)] }
+        }
+
+        /// A fingerprint of the series for memo keys: two tables with the
+        /// same readings share it, and one edited reading changes it.
+        public var cpiRevision: Int {
+            var hasher = Hasher()
+            for (key, value) in cpiQuarters.sorted(by: { $0.key < $1.key }) {
+                hasher.combine(key)
+                hasher.combine(value)
+            }
+            return hasher.finalize()
+        }
+
+        /// The latest quarter the table holds, for the settings screen.
+        public var latestCPIQuarter: String? { cpiQuarters.keys.max() }
     }
 
     /// One source line feeding the estimate (an account and its FY total).
@@ -106,14 +174,35 @@ public enum TaxEstimate {
         public let levy: Decimal
         public let frankingCredits: Decimal
         public let withheld: Decimal
+        /// The reform's top-up on gains accrued after 1 July 2027: what
+        /// lifts the tax on them to the 30% minimum where the marginal rate
+        /// is lower; zero before the reform, for income-support recipients,
+        /// and when the marginal rate already reaches 30%.
+        public let minimumTaxTopUp: Decimal
         /// Positive = estimated amount owing, negative = estimated refund.
         public let balance: Decimal
+    }
+
+    /// The reform's top-up for `gain` taxed at `marginalRate`: InvestaLens,
+    /// `minimumTaxTopUp`: "(MINIMUM_TAX_RATE − marginalRateOnGain) ×
+    /// minTaxCapitalGain", nothing for income-support recipients or where
+    /// the rate already meets the minimum.
+    public static func minimumTaxTopUp(gain: Decimal, marginalRate: Decimal,
+                                       incomeSupportRecipient: Bool = false) -> Decimal {
+        guard !incomeSupportRecipient, gain > 0, marginalRate < CapitalGainsTaxRules.minimumTaxRate else { return 0 }
+        return roundCents((CapitalGainsTaxRules.minimumTaxRate - marginalRate) * gain)
+    }
+
+    /// The rate the last dollar of `taxable` bears under `settings`.
+    public static func marginalRate(at taxable: Decimal, settings: Settings) -> Decimal {
+        settings.brackets.sorted { $0.over < $1.over }.last { taxable > $0.over }?.rate ?? 0
     }
 
     public static func estimate(income: [Line], deductions: [Line],
                                 shortTermGains: Decimal = 0,
                                 longTermGains: Decimal = 0,
                                 otherGains: Decimal = 0,
+                                minimumTaxGain: Decimal = 0,
                                 frankingCredits: Decimal = 0,
                                 withheld: Decimal = 0,
                                 settings: Settings) -> Result {
@@ -142,6 +231,10 @@ public enum TaxEstimate {
         }
         let baseTax = bracketTaxes.reduce(0) { $0 + $1.tax }
         let levy = roundCents(taxable * settings.levyRate)
+        // The post-2027 part of the net gain is taxed at no less than 30%.
+        let topUp = minimumTaxTopUp(gain: min(max(minimumTaxGain, 0), netGains),
+                                    marginalRate: marginalRate(at: taxable, settings: settings),
+                                    incomeSupportRecipient: settings.incomeSupportRecipient)
 
         return Result(income: income, deductions: deductions,
                       assessableIncome: assessable, totalDeductions: deductible,
@@ -150,7 +243,8 @@ public enum TaxEstimate {
                       taxableIncome: taxable, bracketTaxes: bracketTaxes,
                       baseTax: baseTax, levy: levy,
                       frankingCredits: frankingCredits, withheld: withheld,
-                      balance: baseTax + levy - frankingCredits - withheld)
+                      minimumTaxTopUp: topUp,
+                      balance: baseTax + levy + topUp - frankingCredits - withheld)
     }
 
     private static func roundCents(_ value: Decimal) -> Decimal {

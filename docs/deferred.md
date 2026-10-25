@@ -43,6 +43,11 @@ Common workflows partly built; each is a bounded piece of work.
 
 | Item | FR / Phase | Notes |
 |---|---|---|
+| Report currency options | FR-RPT-04 / P4 | Every report prints in the book's report currency (Settings ▸ Reports). A per-report currency picker would need every memo key, document and PDF to carry it; not asked for in three months of dogfooding. Recorded 25 Oct 2026. |
+| Cost-basis method and fees in a favourite | FR-RPT-04 / P11 | They stay app-wide settings, not part of a saved report — the owner's decision, 25 Oct 2026 ("Leave as is"): one method for the book is what a tax position needs, and a favourite that silently switched it would mislead. |
+| Investment Review deck and FY Pack on the shared history | FR-RPT-06 / P11 | The decks and the Financial Year Pack's Dividends & Franking summary still read `DividendBreakdown` over their own period; the new `InvestmentHistory` classifies the same income the same way, so the figures agree, but the surfaces were not re-plumbed in the 25 Oct 2026 rebuild. Partial: shared classification, separate call. |
+| Dead statement builders | FR-RPT-01 / P6 | `AppModel+Statements` still carries the pre-redesign Portfolio / Lots / Capital Gains statement builders that nothing calls since the documents took over; left in place pending a decision to delete (25 Oct 2026). |
+| Sharesight's Future Income, Calendar and Contribution Analysis | FR-RPT-02 / P11 | Reviewed against Sharesight's catalogue on 25 Oct 2026 and not built: Future Income needs announced dividends the book does not hold; Calendar is a layout of the Income report by month; Contribution Analysis is the Investment Return's per-security share of the total, already readable from the table. |
 | Rule actions tail | FR-RULE-01 / P4 | **link-to-bill shipped 24 Jul 2026** (a rule stamps the payment with the schedule's GUID; bill reminders match it exactly before falling back to the name heuristic). Remaining, both left by judgement: **convert-type** (fuzzy in a double-entry model) and **set-budget** (budgets here are per-account planned amounts — a rule "assigning a budget" to a transaction has no coherent target; recorded 25 Jul 2026). |
 
 ## 3 — Apple Intelligence import caveats (monitor)

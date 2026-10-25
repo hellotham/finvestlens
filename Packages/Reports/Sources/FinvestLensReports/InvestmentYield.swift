@@ -50,6 +50,14 @@ public enum InvestmentYield {
     public static let daysPerYear = 365.25
 
     /// Years between two dates, by whole calendar days; never negative.
+    /// Whether a span is long enough to annualise. A return over less than
+    /// a year is not annualised (GIPS), and a year here is 365 whole calendar
+    /// days — the day count the money-weighted rate itself divides by — so a
+    /// parcel sold on its first anniversary gets a rate.
+    public static func isAnnualisable(from start: Date, to end: Date) -> Bool {
+        wholeCalendarDays(from: start, to: end) >= 365
+    }
+
     public static func years(from start: Date, to end: Date) -> Double {
         Double(max(0, wholeCalendarDays(from: start, to: end))) / daysPerYear
     }
@@ -94,11 +102,18 @@ public enum InvestmentYield {
 extension FinancialReports {
 
     /// The security accounts a report covers: every one in the book, or
-    /// those directly under the portfolio `portfolioID` names.
-    static func securityAccounts(_ book: Book, inPortfolio portfolioID: GncGUID?) -> [Account] {
+    /// those anywhere under the portfolio `portfolioID` names — a broker's
+    /// sub-folders are still its portfolio.
+    public static func securityAccounts(_ book: Book, inPortfolio portfolioID: GncGUID?) -> [Account] {
         book.accounts.filter { account in
-            account.type.isSecurityType && !account.isPlaceholder
-                && (portfolioID == nil || account.parent?.guid == portfolioID)
+            guard account.type.isSecurityType, !account.isPlaceholder else { return false }
+            guard let portfolioID else { return true }
+            var ancestor = account.parent
+            while let current = ancestor, !current.isRoot {
+                if current.guid == portfolioID { return true }
+                ancestor = current.parent
+            }
+            return false
         }
     }
 

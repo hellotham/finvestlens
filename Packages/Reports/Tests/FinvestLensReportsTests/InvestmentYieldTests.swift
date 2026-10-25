@@ -2,9 +2,10 @@
 //  InvestmentYieldTests.swift
 //  FinvestLens — Reports
 //
-//  The one yield the investment reports print, and the portfolio filter they
-//  share: a gain as a simple annual rate on what the parcels cost, over the
-//  cost-weighted time they were held.
+//  The simple annual rate the report documents still pool parcels by, and the
+//  portfolio filter and rate the investment reports share: an annualised
+//  return is the money-weighted rate of a holding's dated flows (XIRR), and
+//  nothing under a year is annualised.
 //
 //  Copyright (C) 2026 Christine Tham
 //  SPDX-License-Identifier: GPL-3.0-or-later
@@ -25,6 +26,13 @@ struct InvestmentYieldTests {
     func years() {
         #expect(InvestmentYield.years(from: day(0), to: day(730)) == 730 / 365.25)
         #expect(InvestmentYield.years(from: day(10), to: day(0)) == 0)
+    }
+
+    @Test("A span annualises from 365 whole days — the day a parcel turns one")
+    func annualisable() {
+        #expect(InvestmentYield.isAnnualisable(from: day(0), to: day(365)))
+        #expect(!InvestmentYield.isAnnualisable(from: day(0), to: day(364)))
+        #expect(!InvestmentYield.isAnnualisable(from: day(365), to: day(0)))
     }
 
     @Test("Holding time is weighted by cost")
@@ -123,15 +131,27 @@ struct InvestmentPortfolioFilterTests {
         #expect(returnB.lines.map(\.symbol) == ["BHP"])
     }
 
-    @Test("Capital Gains leaves out a position sold out of when closed positions are off")
+    @Test("Capital Gains files a sale by its disposal date; closed positions add the history of what is sold out")
     func capitalGainsClosed() {
         let f = fixture()
-        let with = FinancialReports.capitalGains(f.book, currency: .aud, to: day(800))
-        #expect(with.lines.map(\.symbol).sorted() == ["BHP", "CBA"])
-        #expect(with.lines.first { $0.symbol == "BHP" }?.positionClosed == true)
-        #expect(with.lines.first { $0.symbol == "CBA" }?.positionClosed == false)
-        let without = FinancialReports.capitalGains(f.book, currency: .aud, to: day(800), includeClosed: false)
-        #expect(without.lines.map(\.symbol) == ["CBA"])
+        // Every sale in the period, whether or not the position is closed.
+        let all = FinancialReports.capitalGains(f.book, currency: .aud, to: day(800))
+        #expect(all.lines.map(\.symbol).sorted() == ["BHP", "CBA"])
+        #expect(all.lines.first { $0.symbol == "BHP" }?.positionClosed == true)
+        #expect(all.lines.first { $0.symbol == "CBA" }?.positionClosed == false)
+        #expect(all.lines.allSatisfy { $0.inPeriod })
+        // A period after both sales holds no CGT event …
+        let late = FinancialReports.capitalGains(f.book, currency: .aud, from: day(740), to: day(800))
+        #expect(late.lines.isEmpty)
+        // … but with closed positions on, BHP — sold out of by the period's
+        // end — brings its whole history, marked as outside the period; CBA,
+        // still held, does not.
+        let closed = FinancialReports.capitalGains(f.book, currency: .aud, from: day(740), to: day(800),
+                                                   includeClosed: true)
+        #expect(closed.lines.map(\.symbol) == ["BHP"])
+        #expect(closed.lines.first?.inPeriod == false)
+        #expect(closed.periodLines.isEmpty)
+        #expect(closed.totalGain == 0 && closed.net.netCapitalGain == 0, "history parcels never enter the period's totals")
     }
 
     @Test("Investment Lots lists sold parcels, with proceeds and realised gain, only when asked")
@@ -147,41 +167,44 @@ struct InvestmentPortfolioFilterTests {
         #expect(bhp.proceeds == dec("250"))
         #expect(bhp.realizedGain == dec("50"))
         #expect(bhp.value == dec("250") && bhp.gain == dec("50"))
-        // $50 on $200 over two years: 12.5% a year.
-        #expect(abs((bhp.yieldPerAnnum ?? 0) - 50.0 / 200 / (730 / 365.25)) < 1e-9)
+        #expect(bhp.longTerm == true)
+        // $200 to $250 over two years: the compound rate is √1.25 − 1.
+        #expect(abs((bhp.annualisedReturn ?? 0) - (pow(1.25, 0.5) - 1)) < 1e-6)
     }
 
-    @Test("A disposal's yield is its gain on its cost over its holding time")
-    func capitalGainYield() throws {
+    @Test("A disposal's annualised return is the compound rate from its cost to its proceeds")
+    func capitalGainRate() throws {
         let f = fixture()
         let report = FinancialReports.capitalGains(f.book, currency: .aud, to: day(800))
         let cba = try #require(report.lines.first { $0.symbol == "CBA" })
-        // 4 sold for 60, cost 40: gain 20 on 40 over one year = 50% a year.
+        // 4 sold for 60, cost 40, on the first anniversary: 50% a year.
         #expect(cba.gain == dec("20"))
-        #expect(abs((cba.yieldPerAnnum ?? 0) - 20.0 / 40 / (365 / 365.25)) < 1e-9)
+        #expect(cba.acquisitionDate == day(0) && cba.disposalDate == day(365))
+        #expect(cba.quantity == 4 && cba.costBasis == dec("40") && cba.proceeds == dec("60"))
+        #expect(abs((cba.annualisedReturn ?? 0) - 0.5) < 1e-6)
     }
 
-    @Test("A holding's yield is its total gain on money in over the cost-weighted years held")
-    func portfolioYield() throws {
+    @Test("A holding's annualised return is the money-weighted rate of its flows and its value")
+    func portfolioRate() throws {
         let f = fixture()
         let report = FinancialReports.advancedPortfolio(f.book, currency: .aud, asOf: day(730))
         let cba = try #require(report.holdings.first { $0.symbol == "CBA" })
-        // Held: 6 @ $10 = $60 for 730 days; sold: 4 @ $10 = $40 for 365 days.
-        // Weighted years = (60 × 2 + 40 × 1) / 100 = 1.6. Gain: unrealised 12
-        // + realised 20 = 32 on 100 → 32% over 1.6 years = 20% a year.
+        #expect(cba.firstAcquisition == day(0))
         let years = try #require(cba.heldYears)
-        #expect(abs(years - (60 * 730 + 40 * 365) / 100.0 / 365.25) < 1e-9)
+        #expect(abs(years - 730 / 365.25) < 1e-9)
         #expect(cba.totalGain == dec("32"))
-        #expect(abs((cba.yieldPerAnnum ?? 0) - 0.32 / years) < 1e-9)
+        // −100 on day 0, +60 on day 365 and 6 × $12 = 72 on day 730:
+        // 100 = 60/(1+r) + 72/(1+r)², so 1/(1+r) = 5/6 and r is 20%.
+        #expect(abs((cba.annualisedReturn ?? 0) - 0.2) < 1e-6)
     }
 
-    @Test("Investment Return over a period counts that period's disposals, income and price move")
+    @Test("Investment Return is cumulative to the period's end, with the period's own contribution beside it")
     func periodReturn() throws {
         let f = fixture()
         // Mark CBA at its purchase price on day 0 — as a book does, recording
         // a price on each trade — at $11 on day 100, and $12 on day 700 (the
         // fixture's). A date is valued at the price *nearest* it, GnuCash's
-        // way, so without the day-0 price day 59 would read $11 too.
+        // way, so without the day-0 price day 39 would read $11 too.
         f.book.addPrice(Price(commodity: security("CBA"), currency: .aud, date: day(0), value: dec("10")))
         f.book.addPrice(Price(commodity: security("CBA"), currency: .aud, date: day(100), value: dec("11")))
         // A dividend inside the window and one before it.
@@ -192,35 +215,47 @@ struct InvestmentPortfolioFilterTests {
             txn.addSplit(account: income, value: -dec(amount))
             f.book.addTransaction(txn)
         }
-        // Days 200–800: the sale on day 365 (gain 20), the $7 dividend, and the
-        // unrealised move on what is held: at day 199, 10 held @ $11 vs cost 100
-        // = 10; at day 800, 6 held @ $12 vs cost 60 = 12 → +2.
+        // Days 200–800. The line is the whole holding to day 800: the sale on
+        // day 365 (gain 20), both dividends (12), and 6 held @ $12 against
+        // their cost of 60 (12) — 44 on the 100 put in. The period's
+        // contribution is that total less the total the day before the period
+        // began: at day 199, 10 held @ $11 (10) plus the $5 dividend, 15 — so 29.
         let report = FinancialReports.investmentReturn(f.book, currency: .aud, from: day(200), to: day(800))
         let cba = try #require(report.lines.first { $0.symbol == "CBA" })
         #expect(cba.realizedGain == dec("20"))
-        #expect(cba.dividends == dec("7"))
-        #expect(cba.unrealizedGain == dec("2"))
-        #expect(cba.totalReturn == dec("29"))
-        // Money in: what is held at the end (60) plus what was sold in the period (40).
-        #expect(cba.moneyIn == dec("100"))
-        // BHP: bought before, sold in the window → in, as a closed position.
+        #expect(cba.dividends == dec("12"))
+        #expect(cba.unrealizedGain == dec("12"))
+        #expect(cba.totalReturn == dec("44"))
+        #expect(cba.moneyIn == dec("100") && cba.moneyOut == dec("60"))
+        #expect(cba.periodReturn == dec("29"))
+        #expect(cba.firstAcquisition == day(0))
+        let heldYears = try #require(cba.heldYears)
+        #expect(abs(heldYears - 800 / 365.25) < 1e-9)
+        #expect(cba.history.events.map(\.kind) == [.buy, .otherIncome, .sell, .otherIncome])
+        // Moving the period's start changes nothing in the total.
+        let later = FinancialReports.investmentReturn(f.book, currency: .aud, from: day(400), to: day(800))
+        #expect(later.lines.first { $0.symbol == "CBA" }?.totalReturn == dec("44"))
+        // BHP: sold out inside the window, a closed position with no price
+        // list — its total is its realised gain, and with no opening mark its
+        // period contribution is unknown rather than guessed.
         let bhp = try #require(report.lines.first { $0.symbol == "BHP" })
-        #expect(bhp.isClosed && bhp.realizedGain == dec("50"))
-        // Years inside the window: held parcel 600 days, sold parcel 165 days
-        // (day 200 → 365), weighted by cost 60 and 40.
-        let years = try #require(cba.heldYears)
-        #expect(abs(years - (60 * 600 + 40 * 165) / 100.0 / 365.25) < 1e-9)
+        #expect(bhp.isClosed && bhp.realizedGain == dec("50") && bhp.totalReturn == dec("50"))
+        #expect(bhp.periodReturn == nil)
+        #expect(report.totalPeriodReturn == dec("29"))
 
-        // A window before anything happened to CBA but its purchase: no sale,
-        // no income, just the price move from $10 at its start to $11 → 10.
-        // (Its start, day 39, is nearer the day-0 price than the day-100 one.)
+        // Days 40–150: the total to day 150 is the $5 dividend and 10 @ $11
+        // against 100 (15); at day 39 the mark was $10 (nearer the day-0
+        // price than the day-100 one), so the period's contribution is the
+        // price move alone, 10.
         let early = FinancialReports.investmentReturn(f.book, currency: .aud, from: day(40), to: day(150))
         let earlyCBA = try #require(early.lines.first { $0.symbol == "CBA" })
-        #expect(earlyCBA.realizedGain == 0 && earlyCBA.dividends == 0)
+        #expect(earlyCBA.realizedGain == 0 && earlyCBA.dividends == dec("5"))
         #expect(earlyCBA.unrealizedGain == dec("10"))
-        // All time is the lifetime figure: both dividends, the sale, the mark.
+        #expect(earlyCBA.periodReturn == dec("10"))
+        // All time is the lifetime figure, with no period figure beside it.
         let lifetime = FinancialReports.investmentReturn(f.book, currency: .aud, to: day(800))
         let lifeCBA = try #require(lifetime.lines.first { $0.symbol == "CBA" })
         #expect(lifeCBA.dividends == dec("12") && lifeCBA.realizedGain == dec("20") && lifeCBA.unrealizedGain == dec("12"))
+        #expect(lifeCBA.periodReturn == nil && lifetime.totalPeriodReturn == nil)
     }
 }

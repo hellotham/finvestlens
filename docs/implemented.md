@@ -5554,3 +5554,94 @@ period-bound).
   `simctl terminate` strands the scratch book's lock (the unsigned simulator
   build has no identity to break it) — recorded in `docs/app-store.md`.
 
+## Investment reports rebuilt (25 Oct 2026, build 11)
+
+The owner's review of build 10, verbatim where it matters: "the capital
+gains and total return reports are not useful. They are missing key features
+like acquisition date, consideration, etc. This is required in a report. When
+filtering capital gains, you must filter by disposal date falling within the
+period, but the acquisition date cannot be filtered out … Total return means
+total return — you are cheating by simplifying the calculations … Price
+History is not usable … Review all the investment report, not just the ones I
+mentioned … Most of the things I have asked you have already been implemented
+in investalens." Research first, as instructed: the ATO's "How to calculate
+your CGT", "CGT discount" and "Capital gains tax reform" (13 Oct 2026),
+Sharesight's report catalogue and its performance method, Microsoft's XIRR
+definition, GnuCash's advanced-portfolio and lots reports, Apple's Stocks
+ranges, Fidelity on moving averages and StockCharts on RSI — and InvestaLens
+(same owner, MIT), whose `cgt-2027.ts`, `indexation.ts`, performance and
+chart code were opened and ported where this app lacked them.
+
+- **One history under every report.** `InvestmentHistory` (Reports) turns a
+  security account into dated events — buy, sell, franked and unfranked
+  dividend, franking credit, distribution, interest, other income, return of
+  capital, split — each converted to the report currency on its day, with
+  the parcel a sale consumed (acquisition date, cost base, gain). Income is
+  attributed once, by the holding's zero-unit leg or an income account named
+  for the security, and classed by the account's own name (franked /
+  unfranked / credit) or its parents (distribution / interest). Every
+  investment report reads it, so the figures agree with each other.
+- **Capital Gains as a tax return wants it.** A row per parcel sold —
+  acquired, sold, units, cost base, proceeds, gain, days held, the ATO
+  treatment, the assessable gain — under its security, by portfolio; a CGT
+  event is filed by its disposal date and keeps its acquisition date however
+  early. The year's net capital gain follows the ATO's steps
+  (`CapitalGainsTaxRules`, tested against the page's own Rhi example: 70,000
+  − 4,500 → 32,750). From 1 July 2027 the reform: CPI indexation of the
+  post-reform gain (factor to three decimals, never below one; losses
+  nominal), the split of a parcel owned across the day at its value on
+  30 June 2027 or — with no price — by the days held each side (InvestaLens's
+  apportionment), the whole-ownership twelve-month test, pre-CGT parcels
+  taxed only after the day, the Bill's loss ordering once an indexed slice is
+  present, and the post-2027 part of the net gain surfaced for the 30%
+  minimum tax, which `TaxEstimate` now tops up. A parcel bought before
+  21 September 1999 takes the frozen indexation method where it assesses
+  less. Entity (individual / trust / super fund / company), residency, income
+  support and the CPI table are tax settings under Planning ▸ Tax; **Fetch
+  from the RBA** reads table G1 (`RBAStatistics`, Quotes). **Closed positions**
+  on this report now means the owner's choice: every position sold out of by
+  the period's end, with its whole history, marked and kept out of the totals.
+- **Investment Return means total return.** Cumulative from the first
+  purchase to the period's end — realised, unrealised at the nearest price,
+  dividends, franking credits — with money in and out, return on money in,
+  and **Annualised**, the money-weighted rate (`MoneyWeightedReturn`, Excel's
+  XIRR to 1e-6 on Microsoft's example, never under 365 days). Each
+  security's history follows the tables. A bounded period adds **This
+  period**, the contribution (total at the end less total the day before the
+  start), as its own column and summary line. The build-10 period figure is
+  gone.
+- **Portfolio, Lots, and four new reports.** Portfolio gains acquired, units,
+  price, total gain and the annualised rate; Lots gains acquired and sold
+  dates, price, the ATO twelve-month flag and an unrealised-CGT estimate in
+  its summary. New: **Income** (Sharesight's Taxable Income), **Historical
+  Cost**, **Returns by Period** (financial years side by side, a Years
+  stepper) and **Drawdown** (largest fall, peak to trough to recovery, return
+  over drawdown). Every table is typed cells (`ReportCell`: date, units,
+  money, percent, text) under named columns — the PDF prints the same cells,
+  dates left-aligned — and the documents carry bar and stacked-bar charts.
+  Wide tables get a wider reading measure.
+- **Price History, as a chart is read.** One security over the window's
+  period, quick ranges 1M–All that set the same period, SMA 50/200 with
+  golden and death crosses, RSI(14), buys and sells with the average cost
+  line, a statistics strip, a line of readings, **Price + income** against
+  price alone, and a **benchmark** (a cash rate compounding daily, or any
+  priced commodity) rebased with the holding to 100. `PriceAnalytics`
+  (Reports) holds the arithmetic, tested by hand. The PDF has the statistics,
+  trades, income and month-end closes. The old all-securities scatter is gone;
+  the kind's stored name becomes "Price History", with the old name still
+  decoded.
+- **Consistency, from the audit.** A valuation's as-of date is capped at
+  today; a favourite's period is restored into the window; the forecast takes
+  its account and a Months horizon from the parameter bar; reconciliation and
+  forecast share one account resolver; the Closed positions switch's help
+  says what it means on each report; each empty report says why in its own
+  terms; a statement with nothing in it says so; a portfolio filter covers
+  the portfolio's whole subtree; the new kinds are warmed off the main actor
+  like the others.
+- **Tests.** Reports: 284 in 50 suites (XIRR against Microsoft's example,
+  the ATO's worked example, the reform's slices and the apportionment,
+  frozen indexation, the Bill's netting, the shared-history reports, price
+  analytics). FeatureUI: `ReportFilterTests` rewritten to the new shape —
+  typed columns, the CGT parcel rows and assessment, closed-position
+  semantics, cumulative return with history, periods side by side, cost
+  reconciliation. Quotes: the RBA table parser on a captured slice.

@@ -154,20 +154,109 @@ extension AppModel {
     /// method (`FR-RPT-03`) — every security's, or one portfolio's, with or
     /// without the positions sold out of entirely.
     public func capitalGains(from: Date = .distantPast, to: Date = .distantFuture,
-                             includeClosed: Bool = true, portfolioID: GncGUID? = nil) -> CapitalGainsReport? {
+                             includeClosed: Bool = false, portfolioID: GncGUID? = nil) -> CapitalGainsReport? {
         guard !securityCommodities.isEmpty else { return nil }
         return report(capitalGainsRequest(from: from, to: to, includeClosed: includeClosed,
                                           portfolioID: portfolioID))
     }
 
-    func capitalGainsRequest(from: Date, to: Date, includeClosed: Bool = true,
+    func capitalGainsRequest(from: Date, to: Date, includeClosed: Bool = false,
                              portfolioID: GncGUID? = nil) -> ReportRequest<CapitalGainsReport> {
         let currency = reportCurrency, method = costBasisMethod, fees = feeTreatment
-        return ReportRequest(key: "cg:\(from.timeIntervalSinceReferenceDate):\(to.timeIntervalSinceReferenceDate):\(method.rawValue):\(fees.rawValue):\(includeClosed):\(Self.portfolioKey(portfolioID))") { book in
+        let tax = currentTaxSettings()
+        let entity = tax.cgtEntity
+        let foreign = tax.foreignResident
+        let cpi = tax.cpiLookup
+        let calendar = Calendar.current
+        return ReportRequest(key: "cg:\(from.timeIntervalSinceReferenceDate):\(to.timeIntervalSinceReferenceDate):\(method.rawValue):\(fees.rawValue):\(includeClosed):\(Self.portfolioKey(portfolioID)):\(entity.rawValue):\(foreign):\(tax.cpiRevision)") { book in
             FinancialReports.capitalGains(book, currency: currency, from: from, to: to,
                                           method: method, feeTreatment: fees,
-                                          includeClosed: includeClosed, portfolioID: portfolioID)
+                                          includeClosed: includeClosed, portfolioID: portfolioID,
+                                          entity: entity, foreignResident: foreign, cpi: cpi, calendar: calendar)
         }
+    }
+
+    /// The year's income by payment and holding (`FR-RPT-02b`, the Income report).
+    public func incomeReport(from: Date, to: Date, portfolioID: GncGUID? = nil) -> IncomeReport? {
+        guard !securityCommodities.isEmpty else { return nil }
+        return report(incomeReportRequest(from: from, to: to, portfolioID: portfolioID))
+    }
+
+    func incomeReportRequest(from: Date, to: Date, portfolioID: GncGUID? = nil) -> ReportRequest<IncomeReport> {
+        let currency = reportCurrency
+        return ReportRequest(key: "income:\(from.timeIntervalSinceReferenceDate):\(to.timeIntervalSinceReferenceDate):\(Self.portfolioKey(portfolioID))") { book in
+            FinancialReports.incomeReport(book, currency: currency, from: from, to: to, portfolioID: portfolioID)
+        }
+    }
+
+    /// Opening and closing balances at cost over a period.
+    public func historicalCost(from: Date, to: Date, portfolioID: GncGUID? = nil) -> HistoricalCostReport? {
+        guard !securityCommodities.isEmpty else { return nil }
+        return report(historicalCostRequest(from: from, to: to, portfolioID: portfolioID))
+    }
+
+    func historicalCostRequest(from: Date, to: Date, portfolioID: GncGUID? = nil) -> ReportRequest<HistoricalCostReport> {
+        let currency = reportCurrency, method = costBasisMethod, fees = feeTreatment
+        let cap = min(to, Self.endOfToday())
+        return ReportRequest(key: "hcost:\(from.timeIntervalSinceReferenceDate):\(cap.timeIntervalSinceReferenceDate):\(method.rawValue):\(fees.rawValue):\(Self.portfolioKey(portfolioID))") { book in
+            FinancialReports.historicalCost(book, currency: currency, from: from, to: cap,
+                                            method: method, feeTreatment: fees, portfolioID: portfolioID)
+        }
+    }
+
+    /// Returns in each of `periods`, side by side.
+    public func multiPeriodReturns(periods: [(from: Date, to: Date)], includeClosed: Bool = true,
+                                   portfolioID: GncGUID? = nil) -> MultiPeriodReturnReport? {
+        guard !securityCommodities.isEmpty, !periods.isEmpty else { return nil }
+        return report(multiPeriodRequest(periods: periods, includeClosed: includeClosed, portfolioID: portfolioID))
+    }
+
+    func multiPeriodRequest(periods: [(from: Date, to: Date)], includeClosed: Bool,
+                            portfolioID: GncGUID? = nil) -> ReportRequest<MultiPeriodReturnReport> {
+        let currency = reportCurrency, method = costBasisMethod, fees = feeTreatment
+        let capped = periods.map { (from: $0.from, to: min($0.to, Self.endOfToday())) }
+        let key = capped.map { "\($0.from.timeIntervalSinceReferenceDate)-\($0.to.timeIntervalSinceReferenceDate)" }
+            .joined(separator: ",")
+        return ReportRequest(key: "mperiod:\(key):\(method.rawValue):\(fees.rawValue):\(includeClosed):\(Self.portfolioKey(portfolioID))") { book in
+            FinancialReports.multiPeriodReturns(book, currency: currency, periods: capped, method: method,
+                                                feeTreatment: fees, includeClosed: includeClosed,
+                                                portfolioID: portfolioID)
+        }
+    }
+
+    /// Each held security's worst fall against its return over a period.
+    public func drawdownRisk(from: Date, to: Date, portfolioID: GncGUID? = nil) -> DrawdownReport? {
+        guard !securityCommodities.isEmpty else { return nil }
+        return report(drawdownRequest(from: from, to: to, portfolioID: portfolioID))
+    }
+
+    func drawdownRequest(from: Date, to: Date, portfolioID: GncGUID? = nil) -> ReportRequest<DrawdownReport> {
+        let currency = reportCurrency
+        let cap = min(to, Self.endOfToday())
+        return ReportRequest(key: "ddown:\(from.timeIntervalSinceReferenceDate):\(cap.timeIntervalSinceReferenceDate):\(Self.portfolioKey(portfolioID))") { book in
+            FinancialReports.drawdownRisk(book, currency: currency, from: from, to: cap, portfolioID: portfolioID)
+        }
+    }
+
+    /// What the open parcels would be assessed at if sold on the date —
+    /// the Lots report's unrealised-CGT estimate, under the book's tax
+    /// settings.
+    func unrealisedCapitalGains(_ lots: [LotDetail], asOf: Date) -> UnrealisedCapitalGains? {
+        guard let book else { return nil }
+        let tax = currentTaxSettings()
+        let currency = reportCurrency
+        let reformEve = FinancialReports.instantBefore(CapitalGainsTaxRules.reformDate)
+        return FinancialReports.unrealisedCapitalGains(
+            lots, asOf: asOf, entity: tax.cgtEntity, foreignResident: tax.foreignResident,
+            valueBefore2027: { lot in
+                guard let acquired = lot.acquisitionDate, acquired < CapitalGainsTaxRules.reformDate,
+                      asOf >= CapitalGainsTaxRules.reformDate,
+                      let account = book.account(with: lot.accountID),
+                      let unit = book.securityUnitValue(account.commodity, in: currency, on: reformEve)
+                else { return nil }
+                return currency.round(lot.quantity * unit)
+            },
+            cpi: tax.cpiLookup)
     }
 
     /// A portfolio filter's part of a memo key: the account, or every one.
@@ -255,6 +344,28 @@ extension AppModel {
                                               portfolioID: portfolioID))
     }
 
+    /// One security's price history over a range, with the holding's own
+    /// trades and income — the holding under `portfolioID`, when one is
+    /// chosen — and a benchmark to read it against.
+    public func priceHistory(commodity: Commodity, from: Date, to: Date,
+                             benchmark: PriceBenchmark? = nil, portfolioID: GncGUID? = nil) -> PriceHistoryReport? {
+        guard let book else { return nil }
+        let cap = min(to, Self.endOfToday())
+        let currency = reportCurrency, method = costBasisMethod, fees = feeTreatment
+        let benchmarkKey: String = switch benchmark {
+        case .cashRate(let rate)?: "cash:\(rate)"
+        case .commodity(let other)?: "\(other.namespace)|\(other.mnemonic)"
+        case nil: "none"
+        }
+        let key = "phist:\(commodity.namespace)|\(commodity.mnemonic):\(from.timeIntervalSinceReferenceDate):\(cap.timeIntervalSinceReferenceDate):\(benchmarkKey):\(method.rawValue):\(fees.rawValue):\(Self.portfolioKey(portfolioID))"
+        return cachedReport(key) {
+            let account = FinancialReports.securityAccounts(book, inPortfolio: portfolioID).first { $0.commodity == commodity }
+            return FinancialReports.priceHistory(book, commodity: commodity, account: account, currency: currency,
+                                                 from: from, to: cap, benchmark: benchmark,
+                                                 method: method, feeTreatment: fees)
+        }
+    }
+
     func investmentReturnRequest(from: Date, to: Date, includeClosed: Bool,
                                  portfolioID: GncGUID? = nil) -> ReportRequest<InvestmentReturnReport> {
         let cap = min(to, Self.endOfToday())
@@ -300,29 +411,13 @@ extension AppModel {
             ?? start.addingTimeInterval(86_400)
     }
 
-    /// One dot on the price-history scatter — `id` derives from the symbol and
-    /// observation date, so identities are stable across renders and Charts
-    /// can diff instead of rebuilding every mark.
-    public struct PriceScatterPoint: Identifiable, Sendable {
-        public let id: String
-        public let symbol: String
-        public let date: Date
-        public let price: Double
-    }
-
-    /// Every security price as a scatter point, memoised per revision —
-    /// building this in the view was O(securities × prices) per body pass.
-    public func priceScatterPoints() -> [PriceScatterPoint] {
-        cachedReport("priceScatter") {
-            securitiesWithPriceHistory.flatMap { commodity in
-                priceHistory(for: commodity).map {
-                    PriceScatterPoint(
-                        id: "\(commodity.mnemonic):\($0.date.timeIntervalSinceReferenceDate)",
-                        symbol: commodity.mnemonic, date: $0.date,
-                        price: NSDecimalNumber(decimal: $0.value).doubleValue)
-                }
-            }
-        } ?? []
+    /// The priced securities Price History can show: every one, or those
+    /// held in the security accounts under `portfolioID`.
+    func pricedSecurities(inPortfolio portfolioID: GncGUID?) -> [Commodity] {
+        let priced = securitiesWithPriceHistory
+        guard let portfolioID, let book else { return priced }
+        let held = Set(FinancialReports.securityAccounts(book, inPortfolio: portfolioID).map(\.commodity))
+        return priced.filter { held.contains($0) }
     }
 
     /// Securities that have at least one recorded price (candidates for the

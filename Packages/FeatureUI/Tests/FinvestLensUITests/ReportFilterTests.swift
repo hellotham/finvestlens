@@ -41,6 +41,8 @@ struct ReportFilterTests {
         let brokerA, brokerB, cba, bhp: GncGUID
         let october: ReportPeriod       // 1–31 Oct 2025: the purchases, no sale
         let both: ReportPeriod          // 1 Oct – 30 Nov 2025: everything
+        let late: ReportPeriod          // 16–30 Nov 2025: after both sales
+        let utc: Calendar
 
         func close() { model.close(); try? FileManager.default.removeItem(at: url) }
     }
@@ -96,7 +98,9 @@ struct ReportFilterTests {
                        salary: salary, groceries: groceries,
                        brokerA: brokerA, brokerB: brokerB, cba: cba, bhp: bhp,
                        october: .custom(from: date(10, 1), to: date(10, 31)),
-                       both: .custom(from: date(10, 1), to: date(11, 30)))
+                       both: .custom(from: date(10, 1), to: date(11, 30)),
+                       late: .custom(from: date(11, 16), to: date(11, 30)),
+                       utc: calendar)
     }
 
     private func document(_ f: Fixture, _ kind: ReportKind, period: ReportPeriod? = nil,
@@ -180,12 +184,13 @@ struct ReportFilterTests {
         let octoberPostings = try document(f, .transactions, period: f.october, accountIDs: [f.everyday])
         let allPostings = try document(f, .transactions, accountIDs: [f.everyday])
         #expect((octoberPostings.sections.first?.rows.count ?? 0) < (allPostings.sections.first?.rows.count ?? 0))
-        // No sale in October: no realised gain to report; both months, two.
+        // No sale in October: no CGT event to report; both months, two.
         let octoberGains = try document(f, .capitalGains, period: f.october)
         #expect(octoberGains.sections.isEmpty)
-        #expect(kpi(octoberGains, "Total realised") == 0)
+        #expect(kpi(octoberGains, "Gain (loss)") == 0)
         let gains = try document(f, .capitalGains)
-        #expect(kpi(gains, "Total realised") == dec("130"))     // CBA 100 (FIFO) + BHP 30
+        #expect(kpi(gains, "Gain (loss)") == dec("130"))     // CBA 100 (FIFO) + BHP 30
+        #expect(kpi(gains, "Net capital gain") == dec("130"), "both held under a year: no discount")
         #expect(gains.periodLabel == f.model.label(for: f.both))
         // Investment Return is a period report too. October has the
         // purchases, no sale and no dividend; its capital gain is the
@@ -222,26 +227,87 @@ struct ReportFilterTests {
 
     // MARK: The investment reports' shared controls
 
+    private func day(_ f: Fixture, _ month: Int, _ day: Int) -> Date {
+        f.utc.date(from: DateComponents(year: 2025, month: month, day: day, hour: 12))!
+    }
+
     @Test("Every investment report has a portfolio section per portfolio, and the filter keeps one")
     func portfolioFilter() throws {
         let f = try fixture(); defer { f.close() }
-        for kind in [ReportKind.portfolio, .investmentLots, .capitalGains, .investmentReturn] {
+        for kind in [ReportKind.portfolio, .investmentLots, .capitalGains, .investmentReturn,
+                     .historicalCost, .multiPeriodReturn] {
             let all = try document(f, kind, includeClosed: true)
-            #expect(all.sections.map(\.title) == ["Broker A", "Broker B", "All portfolios"],
+            #expect(Array(all.sections.map(\.title).prefix(3)) == ["Broker A", "Broker B", "All portfolios"],
                     Comment(rawValue: "\(kind.rawValue): \(all.sections.map(\.title))"))
             let onlyB = try document(f, kind, includeClosed: true, portfolioID: f.brokerB)
-            #expect(onlyB.sections.map(\.title) == ["Broker B"], Comment(rawValue: kind.rawValue))
+            #expect(onlyB.sections.first?.title == "Broker B", Comment(rawValue: kind.rawValue))
+            #expect(onlyB.sections.contains { $0.title == "All portfolios" } == false, Comment(rawValue: kind.rawValue))
             #expect(onlyB.sections.first?.rows.first?.label.hasPrefix("BHP") == true, Comment(rawValue: kind.rawValue))
-            // The portfolio's own total under its rows, the yield last.
+            // Typed cells under named columns, the portfolio's total beneath.
             let section = try #require(onlyB.sections.first)
-            #expect(section.columns?.last == "Yield p.a.", Comment(rawValue: kind.rawValue))
-            #expect(section.columnFormats?.last == .percent, Comment(rawValue: kind.rawValue))
-            #expect(section.columnTotals?.label == "Total", Comment(rawValue: kind.rawValue))
+            let columns = try #require(section.columns)
+            #expect(section.rows.allSatisfy { $0.cells?.count == columns.count }, Comment(rawValue: kind.rawValue))
+            #expect(section.cellTotals?.label == "Total", Comment(rawValue: kind.rawValue))
+            #expect(section.cellTotals?.cells.count == columns.count, Comment(rawValue: kind.rawValue))
             #expect(onlyB.notes.contains { $0.contains("Broker B") }, Comment(rawValue: kind.rawValue))
         }
+        // Income and Drawdown have something to say only of CBA: the
+        // dividend, and the prices in the period.
+        let income = try document(f, .income)
+        #expect(income.sections.first?.title == "Broker A")
+        #expect(kpi(income, "Cash income") == dec("7"))
+        #expect(try document(f, .income, portfolioID: f.brokerA).sections.first?.title == "Broker A")
+        #expect(f.model.reportDocument(for: ReportConfiguration(kind: ReportKind.income.rawValue, period: f.both,
+                                                                 portfolioID: f.brokerB))?.isEmpty == true)
+        let drawdown = try document(f, .drawdown)
+        #expect(drawdown.sections.first?.title == "Broker A")
+        #expect(drawdown.sections.first?.rows.first?.label == "CBA")
     }
 
-    @Test("Closed positions switch on and off on every investment report, each with its own default")
+    @Test("Every investment report prints dates as dates and units as units, never folded into a label")
+    func typedColumns() throws {
+        let f = try fixture(); defer { f.close() }
+        let portfolio = try document(f, .portfolio)
+        let cba = try #require(portfolio.sections.first { $0.title == "Broker A" }?.rows.first)
+        #expect(cba.label == "CBA")
+        #expect(cba.cells?[0] == .date(day(f, 10, 5)))          // first acquisition
+        #expect(cba.cells?[1] == .units(15))
+        #expect(cba.cells?[2] == .money(25))                    // the 20 Nov price
+        #expect(portfolio.sections.first?.columns?.first == "Acquired")
+        let lots = try document(f, .investmentLots)
+        let parcels = try #require(lots.sections.first { $0.title == "Broker A" }).rows.filter { $0.depth == 1 }
+        #expect(parcels.count == 2)
+        #expect(parcels.first?.cells?[0] == .date(day(f, 10, 5)))
+        #expect(parcels.first?.cells?[1] == .units(5))           // five of the first ten remain
+        #expect(parcels.first?.label == "Parcel")
+        #expect(lots.summary.contains { $0.contains("If every open parcel were sold") })
+    }
+
+    @Test("Capital Gains lists every parcel sold with acquisition and sale dates, cost base, proceeds, held and treatment")
+    func capitalGainsParcels() throws {
+        let f = try fixture(); defer { f.close() }
+        let gains = try document(f, .capitalGains)
+        #expect(gains.sections.first?.columns == ["Acquired", "Sold", "Units", "Cost base", "Proceeds", "Gain (loss)",
+                                                  "Held", "Treatment", "Assessable"])
+        let cba = try #require(gains.sections.first { $0.title == "Broker A" })
+        let security = try #require(cba.rows.first)
+        #expect(security.label == "CBA" && security.depth == 0)
+        #expect(security.cells?[2] == .units(5) && security.cells?[3] == .money(50)
+                && security.cells?[4] == .money(150) && security.cells?[5] == .money(100))
+        let parcel = try #require(cba.rows.dropFirst().first)
+        #expect(parcel.depth == 1)
+        #expect(parcel.cells?[0] == .date(day(f, 10, 5)) && parcel.cells?[1] == .date(day(f, 11, 10)))
+        #expect(parcel.cells?[6] == .text("36 d"))
+        #expect(parcel.cells?[7] == .text("Short"))
+        // The ATO's net gain, worked over the period's parcels.
+        let assessment = try #require(gains.sections.first { $0.title.hasPrefix("Net capital gain") })
+        #expect(assessment.total?.amount == dec("130"))
+        #expect(assessment.rows.first?.label == "Capital gains" && assessment.rows.first?.amount == dec("130"))
+        #expect(gains.chart != nil)
+        #expect(gains.notes.contains { $0.contains("filed by the day the parcel was sold") })
+    }
+
+    @Test("Closed positions switch on and off on every investment report, each with its own meaning")
     func closedPositions() throws {
         let f = try fixture(); defer { f.close() }
         func mentionsBHP(_ document: ReportDocument) -> Bool {
@@ -252,17 +318,31 @@ struct ReportFilterTests {
         #expect(mentionsBHP(try document(f, .portfolio, includeClosed: true)))
         #expect(!mentionsBHP(try document(f, .investmentLots)))
         #expect(mentionsBHP(try document(f, .investmentLots, includeClosed: true)))
-        // A gain and a return are history, so they include it unless asked.
-        #expect(mentionsBHP(try document(f, .capitalGains)))
-        #expect(!mentionsBHP(try document(f, .capitalGains, includeClosed: false)))
-        #expect(kpi(try document(f, .capitalGains, includeClosed: false), "Total realised") == dec("100"))
+        // A return is history, so it includes a closed position unless asked.
         #expect(mentionsBHP(try document(f, .investmentReturn)))
         #expect(!mentionsBHP(try document(f, .investmentReturn, includeClosed: false)))
+        // Capital Gains files a sale by its date: BHP's November sale is in
+        // the period whichever way the switch is set …
+        #expect(mentionsBHP(try document(f, .capitalGains)))
+        #expect(mentionsBHP(try document(f, .capitalGains, includeClosed: false)))
+        // … and a period after both sales holds no CGT event, until Closed
+        // positions brings the whole history of what was sold out of by its
+        // end — BHP, not the still-held CBA — marked as history and kept out
+        // of the totals.
+        let late = try document(f, .capitalGains, period: f.late)
+        #expect(late.sections.isEmpty)
+        let history = try document(f, .capitalGains, period: f.late, includeClosed: true)
+        #expect(mentionsBHP(history))
+        #expect(!history.sections.contains { $0.title == "Broker A" })
+        #expect(kpi(history, "Gain (loss)") == 0)
+        let parcel = try #require(history.sections.first?.rows.dropFirst().first)
+        #expect(parcel.cells?[7].string(code: "AUD").contains("history") == true)
         // The lots report with closed parcels lists CBA's sold five under it.
         let lots = try document(f, .investmentLots, includeClosed: true)
         let cbaRows = try #require(lots.sections.first { $0.title == "Broker A" }).rows
         #expect(cbaRows.filter { $0.depth == 1 }.count == 3)        // two held lots, one sold parcel
-        #expect(cbaRows.contains { $0.depth == 1 && $0.label.hasPrefix("sold") })
+        #expect(cbaRows.contains { $0.depth == 1 && $0.label == "Sold parcel" })
+        #expect(lots.sections.first?.columns?.contains("Sold") == true)
         #expect(kpi(lots, "Realised") == dec("130"))
     }
 
@@ -274,27 +354,66 @@ struct ReportFilterTests {
         f.model.costBasisMethod = .lifo
         let lifo = try document(f, .capitalGains)
         // FIFO sells the $10 lot (gain 100 on CBA); LIFO the $20 lot (gain 50).
-        #expect(kpi(fifo, "Total realised") == dec("130"))
-        #expect(kpi(lifo, "Total realised") == dec("80"))
+        #expect(kpi(fifo, "Gain (loss)") == dec("130"))
+        #expect(kpi(lifo, "Gain (loss)") == dec("80"))
         #expect(fifo.notes.contains { $0.contains(CostBasisMethod.fifo.displayName) })
         #expect(lifo.notes.contains { $0.contains(CostBasisMethod.lifo.displayName) })
     }
 
-    @Test("Securities and portfolios are in order of gain, largest first, with a yield on every row")
-    func ordering() throws {
+    @Test("Investment Return is cumulative, ordered by total return, with each security's history beneath")
+    func investmentReturn() throws {
         let f = try fixture(); defer { f.close() }
         let report = try document(f, .investmentReturn)
         // Broker A (CBA: 100 realised + 125 unrealised + 7 dividend) outranks
         // Broker B (BHP: 30) in the closing table of portfolios.
         let portfolios = try #require(report.sections.first { $0.title == "All portfolios" })
         #expect(portfolios.rows.map(\.label) == ["Broker A", "Broker B"])
-        #expect(portfolios.rows.first?.amounts?.last.flatMap { $0 } != nil)
-        #expect(portfolios.columnTotals?.amounts.count == portfolios.columns?.count)
-        // Capital Gains puts each disposal under its security, in date order.
-        let gains = try document(f, .capitalGains)
-        let cba = try #require(gains.sections.first { $0.title == "Broker A" })
-        #expect(cba.rows.first?.label == "CBA  5 sh sold")
-        #expect(cba.rows.dropFirst().allSatisfy { $0.depth == 1 && $0.label.hasPrefix("sold") })
-        #expect(cba.rows.first?.amounts?.prefix(3).map { $0 } == [dec("150"), dec("50"), dec("100")])
+        #expect(portfolios.rows.first?.cells?.count == portfolios.columns?.count)
+        #expect(portfolios.cellTotals?.cells.count == portfolios.columns?.count)
+        // The period is bounded, so the period's contribution is a column.
+        #expect(portfolios.columns?.last == "This period")
+        let cba = try #require(report.sections.first { $0.title == "Broker A" }?.rows.first)
+        #expect(cba.cells?[0] == .date(day(f, 10, 5)))           // acquired
+        #expect(cba.cells?[1] == .money(300) && cba.cells?[2] == .money(150))   // money in, out
+        #expect(cba.cells?[7] == .money(232))                    // 100 + 125 + 7
+        // Everything happened inside the period, so its contribution is the whole.
+        #expect(cba.cells?.last == .money(232))
+        // The history: four events, dated and named.
+        let history = try #require(report.sections.first { $0.title == "CBA history" })
+        #expect(history.columns?.first == "Date")
+        #expect(history.rows.map { $0.cells?[1] } == [.text("Buy"), .text("Buy"), .text("Income"), .text("Sell")])
+        #expect(history.rows.last?.cells?[5] == .money(100))     // the sale's realised gain
+        #expect(report.chart != nil)
+        #expect(report.summary.contains { $0.hasPrefix("Return on money in") })
+        // Over all time the same totals, and no period column.
+        let lifetime = try document(f, .investmentReturn, period: .allTime)
+        #expect(kpi(lifetime, "Total return") == kpi(report, "Total return"))
+        #expect(lifetime.sections.first?.columns?.last == "Annualised")
+    }
+
+    @Test("Returns by Period lays financial years side by side, and the stepper sets how many")
+    func multiPeriod() throws {
+        let f = try fixture(); defer { f.close() }
+        let three = try document(f, .multiPeriodReturn)
+        #expect(three.sections.first?.columns?.count == 3 + 2)   // three FYs, total, annualised
+        #expect(three.sections.first?.columns?[2] == "FY 2025–26")
+        let one = try #require(f.model.reportDocument(for: ReportConfiguration(
+            kind: ReportKind.multiPeriodReturn.rawValue, period: f.both, comparePeriods: 0)))
+        #expect(one.sections.first?.columns?.count == 1 + 2)
+        // Everything happened in FY 2025–26, so that column carries the whole return.
+        let cba = try #require(one.sections.first { $0.title == "Broker A" }?.rows.first)
+        #expect(cba.cells?[0] == .money(232) && cba.cells?[1] == .money(232))
+    }
+
+    @Test("Historical Cost reconciles the period's cost movement")
+    func historicalCost() throws {
+        let f = try fixture(); defer { f.close() }
+        let report = try document(f, .historicalCost)
+        let cba = try #require(report.sections.first { $0.title == "Broker A" }?.rows.first)
+        // Nothing held before October; 300 bought, the $10 lot's 50 sold out at cost; 250 left, worth 375.
+        #expect(cba.cells?[0] == .units(0) && cba.cells?[1] == .money(0))
+        #expect(cba.cells?[2] == .money(300) && cba.cells?[3] == .money(-50))
+        #expect(cba.cells?[5] == .units(15) && cba.cells?[6] == .money(250) && cba.cells?[7] == .money(375))
+        #expect(kpi(report, "Closing cost") == dec("250"))     // BHP closed at zero
     }
 }

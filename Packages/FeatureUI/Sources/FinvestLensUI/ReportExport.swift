@@ -17,8 +17,9 @@ struct PrintableRow: Identifiable {
     let label: String
     let amount: Decimal
     var bold = false
-    /// Per-column amounts (a `nil` renders blank); overrides `amount` when set.
-    var amounts: [Decimal?]?
+    /// Per-column cells (an empty one renders blank); overrides `amount`
+    /// when set.
+    var cells: [ReportCell]?
 }
 
 /// A titled group of printable rows, optionally with period column headers.
@@ -30,14 +31,8 @@ struct PrintableSection: Identifiable {
     /// The section's own currency, where it differs from the statement's —
     /// a transaction report's foreign account.
     var code: String?
-    /// How each column prints; `nil`, or a missing entry, is money.
-    var columnFormats: [ReportColumnFormat]?
-
-    /// How column `column` prints.
-    func format(_ column: Int) -> ReportColumnFormat {
-        guard let columnFormats, column < columnFormats.count else { return .amount }
-        return columnFormats[column]
-    }
+    /// The columns that read from the left — dates and words.
+    var leadingColumns: Set<Int> = []
 }
 
 /// A clean, VStack-based statement layout for PDF rendering (avoids List/Table
@@ -88,18 +83,18 @@ struct PrintableStatement: View {
             Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 3) {
                 GridRow {
                     Text("")
-                    ForEach(Array(columns.enumerated()), id: \.offset) { _, header in
+                    ForEach(Array(columns.enumerated()), id: \.offset) { column, header in
                         Text(header).font(.caption).foregroundStyle(.secondary)
-                            .gridColumnAlignment(.trailing)
+                            .gridColumnAlignment(section.leadingColumns.contains(column) ? .leading : .trailing)
                     }
                 }
                 ForEach(section.rows) { row in
                     GridRow {
                         Text(row.label).fontWeight(row.bold ? .bold : .regular)
-                        ForEach(Array((row.amounts ?? []).enumerated()), id: \.offset) { column, amount in
-                            Text(amount.map { section.format(column).string($0, code: section.code ?? code) } ?? "")
+                        ForEach(Array((row.cells ?? []).enumerated()), id: \.offset) { column, cell in
+                            Text(cell.string(code: section.code ?? code))
                                 .fontWeight(row.bold ? .bold : .regular)
-                                .gridColumnAlignment(.trailing)
+                                .gridColumnAlignment(section.leadingColumns.contains(column) ? .leading : .trailing)
                         }
                     }
                 }
@@ -133,7 +128,7 @@ extension PrintableStatement {
                 rest = rest.dropFirst(chunk.count)
                 pages[pages.count - 1].append(PrintableSection(heading: section.heading, rows: Array(chunk),
                                                                columns: section.columns, code: section.code,
-                                                               columnFormats: section.columnFormats))
+                                                               leadingColumns: section.leadingColumns))
                 used += chunk.count + 1
             } while !rest.isEmpty
         }

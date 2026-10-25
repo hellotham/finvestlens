@@ -14,6 +14,7 @@
 import Foundation
 import FinvestLensEngine
 import FinvestLensReports
+import FinvestLensQuotes
 
 // MARK: - Stored models (book KVP)
 
@@ -276,10 +277,33 @@ extension AppModel {
         return TaxEstimate.Settings.australian(financialYearEnding: year)
     }
 
+    /// A fingerprint of what the capital-gains assessment reads from the tax
+    /// settings, for a report screen's recompute key.
+    var taxSettingsRevision: Int {
+        let settings = currentTaxSettings()
+        var hasher = Hasher()
+        hasher.combine(settings.cgtEntity)
+        hasher.combine(settings.foreignResident)
+        hasher.combine(settings.incomeSupportRecipient)
+        hasher.combine(settings.cpiRevision)
+        return hasher.finalize()
+    }
+
     public func updateTaxSettings(_ settings: TaxEstimate.Settings?) {
         guard settings != taxSettings else { return }
         taxSettings = settings
         commitKvpCollections(named: "Change Tax Settings")
+    }
+
+    /// Fetches the consumer price index from the Reserve Bank's table G1
+    /// and keeps it in the book's tax settings, for the capital-gains
+    /// indexation. The readings replace the table; a quarter the RBA has
+    /// revised takes its new value.
+    public func fetchCPI() async throws {
+        let readings = try await RBAStatistics.fetchCPI()
+        var settings = currentTaxSettings()
+        settings.cpiQuarters.merge(readings) { _, new in new }
+        updateTaxSettings(settings)
     }
 
     /// Which side of the estimate a tax-tagged account feeds. Withholding
@@ -341,6 +365,7 @@ extension AppModel {
             shortTermGains: gains?.shortTermGain ?? 0,
             longTermGains: gains?.longTermGain ?? 0,
             otherGains: gains?.otherGain ?? 0,
+            minimumTaxGain: gains?.net.minimumTaxGain ?? 0,
             frankingCredits: franking, withheld: withheld,
             settings: currentTaxSettings())
     }

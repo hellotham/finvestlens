@@ -2,10 +2,11 @@
 //  AppModel+ReportDocuments.swift
 //  FinvestLens — FeatureUI
 //
-//  Printable ``ReportDocument`` builders for the interactive reports
-//  (`FR-RPT-05`). Each keeps its live view; these give the same figures a
-//  static, paginated form so the report scaffold's PDF export covers them too.
-//  One builder per report, from the report type the view already computes.
+//  ``ReportDocument`` builders (`FR-RPT-05`): the investment reports, the
+//  transactions and reconciliation reports, Spending Insights, and the
+//  printable forms of the two interactive tools. One builder per report,
+//  from the report type the model computes; the screen and the PDF draw
+//  the same value.
 //
 //  Copyright (C) 2026 Christine Tham
 //  SPDX-License-Identifier: GPL-3.0-or-later
@@ -168,101 +169,127 @@ extension AppModel {
 
     // MARK: Investment reports (FR-RPT-02, FR-RPT-02b, FR-RPT-03)
     //
-    // Four reports, one shape. Asked for on build 8: "by portfolio, then
+    // Nine reports, one shape. Asked for on build 8: "by portfolio, then
     // security … filtering by portfolio, open/close toggle, and sorted by
-    // decreasing gain … an equivalent yield per annum based on original
-    // purchase price … all the investment reports should be filterable by
+    // decreasing gain … all the investment reports should be filterable by
     // portfolio, financial year, open/close toggle etc. They need to be
-    // consistent." Each is a section per portfolio with its securities in
-    // order of gain, largest first, and the portfolio's total under them; more
-    // than one portfolio closes with a table of the portfolios themselves.
-    // Every table ends in the same Yield p.a. column (`InvestmentYield`), and
-    // the notes say which way each switch is set.
+    // consistent." And on build 10: "They are missing key features like
+    // acquisition date, consideration, etc. This is required in a report."
+    // So every column is a typed cell — a date, a count of units, money, a
+    // rate — never words folded into a label. Each report is a section per
+    // portfolio with its securities in order of the figure the report is
+    // about, largest first, the parcels or history beneath, and the
+    // portfolio's total under them; more than one portfolio closes with a
+    // table of the portfolios themselves. The notes say which way each
+    // switch is set and what every column is.
 
-    /// One security as an investment report lays it out: its row, the parcels
-    /// under it, and what its portfolio's total is summed from.
+    /// One security as an investment report lays it out: its row, the rows
+    /// under it, and what it is ranked by.
     private struct InvestmentRow {
         var portfolio: PortfolioRef?
-        /// The gain the rows are ordered by.
-        var gain: Decimal
+        /// The figure the rows are ordered by, largest first.
+        var rank: Decimal
         var label: String
-        /// The money columns; `nil` prints blank (an unpriced holding).
-        var amounts: [Decimal?]
-        var yield: Double?
-        /// The yield's ingredients, for the totals' own yield.
-        var yieldItem: (gain: Decimal, cost: Decimal, years: Double?)
-        /// Parcels under the security, each already carrying its yield column.
+        var cells: [ReportCell]
+        /// Parcels or events under the security, indented.
         var detail: [ReportDocumentRow] = []
     }
 
     /// The sections of an investment report over `rows`: one per portfolio,
-    /// its securities in order of gain, largest first, and its total under
+    /// its securities in order of rank, largest first, and its total under
     /// them; then, with more than one portfolio, the portfolios themselves in
-    /// the same order. `columns` are the money columns; the yield is added.
-    private func investmentSections(_ rows: [InvestmentRow], columns: [String]) -> [ReportDocumentSection] {
-        let allColumns = columns + [String(localized: "Yield p.a.")]
-        let formats = columns.map { _ in ReportColumnFormat.amount } + [.percent]
-        func total(_ members: [InvestmentRow]) -> (amounts: [Decimal?], gain: Decimal, yield: Double?) {
-            var sums = Array(repeating: Decimal(0), count: columns.count)
-            for member in members {
-                for (column, amount) in member.amounts.enumerated() where column < sums.count {
-                    sums[column] += amount ?? 0
-                }
-            }
-            return (sums.map { Optional($0) }, members.reduce(0) { $0 + $1.gain },
-                    InvestmentYield.combined(members.map(\.yieldItem)))
-        }
-        func yieldColumn(_ yield: Double?) -> Decimal? { yield.map { Decimal($0) } }
-
+    /// the same order. `total` gives a group's total row from its members.
+    private func investmentSections(_ rows: [InvestmentRow], columns: [String],
+                                    total: ([InvestmentRow]) -> [ReportCell]) -> [ReportDocumentSection] {
         var byPortfolio: [GncGUID?: [InvestmentRow]] = [:]
         for row in rows { byPortfolio[row.portfolio?.id, default: []].append(row) }
         let portfolios = byPortfolio.map { id, members in
-            (id: id, name: members.first?.portfolio?.name, members: members, total: total(members))
+            (id: id, name: members.first?.portfolio?.name, members: members,
+             rank: members.reduce(Decimal(0)) { $0 + $1.rank })
         }.sorted { lhs, rhs in
-            // By gain, largest first; securities with no portfolio last.
+            // By rank, largest first; securities with no portfolio last.
             if (lhs.id == nil) != (rhs.id == nil) { return rhs.id == nil }
-            if lhs.total.gain != rhs.total.gain { return lhs.total.gain > rhs.total.gain }
+            if lhs.rank != rhs.rank { return lhs.rank > rhs.rank }
             return (lhs.name ?? "") < (rhs.name ?? "")
         }
-
         var sections = portfolios.map { portfolio -> ReportDocumentSection in
-            let ordered = portfolio.members.sorted { $0.gain > $1.gain }
+            let ordered = portfolio.members.sorted { $0.rank > $1.rank }
             return ReportDocumentSection(
                 title: portfolio.name ?? String(localized: "No portfolio"),
-                rows: ordered.flatMap { member in
-                    [ReportDocumentRow(label: member.label,
-                                       amounts: member.amounts + [yieldColumn(member.yield)])]
-                        + member.detail
-                },
-                columns: allColumns,
-                columnTotals: (String(localized: "Total"),
-                               portfolio.total.amounts + [yieldColumn(portfolio.total.yield)]),
-                columnFormats: formats,
+                rows: ordered.flatMap { [ReportDocumentRow(label: $0.label, cells: $0.cells)] + $0.detail },
+                columns: columns,
+                cellTotals: (String(localized: "Total"), total(portfolio.members)),
                 identity: "portfolio:\(portfolio.id?.hexString ?? "none")")
         }
         if portfolios.count > 1 {
-            let grand = total(rows)
             sections.append(ReportDocumentSection(
                 title: String(localized: "All portfolios"),
                 rows: portfolios.map {
-                    ReportDocumentRow(label: $0.name ?? String(localized: "No portfolio"),
-                                      amounts: $0.total.amounts + [yieldColumn($0.total.yield)])
+                    ReportDocumentRow(label: $0.name ?? String(localized: "No portfolio"), cells: total($0.members))
                 },
-                columns: allColumns,
-                columnTotals: (String(localized: "Total"), grand.amounts + [yieldColumn(grand.yield)]),
-                columnFormats: formats))
+                columns: columns,
+                cellTotals: (String(localized: "Total"), total(rows))))
         }
         return sections
     }
 
-    /// "CBA  120 sh", or "CBA  closed" for a position sold out of.
-    private func securityLabel(_ symbol: String, units: Decimal) -> String {
-        units == 0
-            ? String(localized: "\(symbol)  closed")
-            : String(localized: "\(symbol)  \(units.formatted()) sh")
+    /// A group's total row: money and unit columns summed over the members
+    /// that have them, every other column blank.
+    private func summedCells(_ members: [InvestmentRow], columns: Int) -> [ReportCell] {
+        (0..<columns).map { column in
+            var money: Decimal?
+            var units: Decimal?
+            for member in members where column < member.cells.count {
+                switch member.cells[column] {
+                case .money(let value?): money = (money ?? 0) + value
+                case .units(let value?): units = (units ?? 0) + value
+                default: break
+                }
+            }
+            if let money { return .money(money) }
+            if let units { return .units(units) }
+            return .text("")
+        }
     }
 
-    /// Which way the report's Closed positions switch is set, on its face.
+    private func percentCell(_ rate: Double?) -> ReportCell { .percent(rate.map { Decimal($0) }) }
+
+    /// "2.3 y", or "140 d" under a year.
+    private func heldLabel(days: Int?) -> String {
+        guard let days else { return "" }
+        if days < 365 { return String(localized: "\(days) d") }
+        let years = (Double(days) / 365.25).formatted(.number.precision(.fractionLength(1)))
+        return String(localized: "\(years) y")
+    }
+
+    /// What an event is, for the history tables.
+    private func eventLabel(_ kind: InvestmentEvent.Kind) -> String {
+        switch kind {
+        case .buy: String(localized: "Buy")
+        case .sell: String(localized: "Sell")
+        case .dividendFranked: String(localized: "Franked dividend")
+        case .dividendUnfranked: String(localized: "Unfranked dividend")
+        case .frankingCredit: String(localized: "Franking credit")
+        case .distribution: String(localized: "Distribution")
+        case .interest: String(localized: "Interest")
+        case .otherIncome: String(localized: "Income")
+        case .returnOfCapital: String(localized: "Return of capital")
+        case .split: String(localized: "Split")
+        }
+    }
+
+    /// Who the gains are assessed for, as the notes say it.
+    func entityLabel(_ entity: CGTEntity) -> String {
+        switch entity {
+        case .individual: String(localized: "Individual")
+        case .trust: String(localized: "Trust")
+        case .superFund: String(localized: "Super fund")
+        case .company: String(localized: "Company")
+        }
+    }
+
+    /// Which way the report's Closed positions switch is set, on its face,
+    /// in the words that switch means for this report.
     private func closedPositionsNote(included: Bool) -> String {
         included
             ? String(localized: "Positions sold out of are included.")
@@ -277,33 +304,57 @@ extension AppModel {
         return String(localized: "Every portfolio; choose one above to narrow the report.")
     }
 
-    /// What the Yield p.a. column is and how the rows are ordered — the same
-    /// words on all four reports.
-    private var investmentYieldNote: String {
-        String(localized: "Yield p.a. is the gain as a simple annual rate on what the parcels cost — gain ÷ cost ÷ years held, the years weighted by cost — so holdings of different ages read alike. Securities and portfolios are in order of gain, largest first.")
+    /// What the annualised column is — the same words on every report that
+    /// prints one.
+    private var annualisedNote: String {
+        String(localized: "Annualised is the money-weighted rate of return: the yearly rate at which the dated money in, money out and income, with what is held valued on the date, discount to zero (Excel’s XIRR). Nothing under a year old is annualised.")
     }
 
     private func methodNote(_ method: CostBasisMethod) -> String {
         String(localized: "\(method.displayName) cost basis")
     }
 
+    private func unpricedNote(_ symbols: [String]) -> String? {
+        guard !symbols.isEmpty else { return nil }
+        let list = symbols.joined(separator: ", ")
+        return String(localized: "Unpriced: \(list) — no price on the date, so no value or unrealised gain is shown for them, and the totals leave them out.")
+    }
+
+    private func unconvertedNote(_ codes: [String], code: String) -> String? {
+        guard !codes.isEmpty else { return nil }
+        let list = codes.joined(separator: ", ")
+        return String(localized: "Incomplete: amounts in \(list) are not included, because no exchange rate to \(code) was available on their dates.")
+    }
+
+    /// The top securities by the size of a figure, for a chart's bars.
+    private func topBars(_ items: [(label: String, value: Decimal)], limit: Int = 12) -> [(label: String, value: Decimal)] {
+        Array(items.sorted { $0.value.magnitude > $1.value.magnitude }.prefix(limit))
+            .sorted { $0.value > $1.value }
+    }
+
     // MARK: Portfolio (FR-RPT-02)
 
     /// What is held, valued, with its lifetime gain in GnuCash's advanced-
-    /// portfolio columns — cost, value, unrealised, realised, income — by
-    /// portfolio and security.
+    /// portfolio columns — units, price, cost, value, unrealised, realised,
+    /// income, total gain, and the money-weighted rate — by portfolio and
+    /// security.
     func portfolioDocument(asOf: Date = Date(), includeClosed: Bool = false,
                            portfolioID: GncGUID? = nil) -> ReportDocument? {
         guard let portfolio = advancedPortfolio(asOf: asOf, includeClosed: includeClosed,
                                                 portfolioID: portfolioID) else { return nil }
         let code = portfolio.currencyCode
+        let columns = [String(localized: "Acquired"), String(localized: "Units"), String(localized: "Price"),
+                       String(localized: "Cost"), String(localized: "Value"), String(localized: "Unrealised"),
+                       String(localized: "Realised"), String(localized: "Income"), String(localized: "Total gain"),
+                       String(localized: "Annualised")]
         let rows = portfolio.holdings.map { holding in
-            InvestmentRow(portfolio: holding.portfolio, gain: holding.totalGain,
-                          label: securityLabel(holding.symbol, units: holding.shares),
-                          amounts: [holding.costBasis, holding.marketValue, holding.unrealizedGain,
-                                    holding.realizedGain, holding.income],
-                          yield: holding.yieldPerAnnum,
-                          yieldItem: (holding.totalGain, holding.moneyIn, holding.heldYears))
+            InvestmentRow(portfolio: holding.portfolio, rank: holding.totalGain,
+                          label: holding.isClosed ? String(localized: "\(holding.symbol) (closed)") : holding.symbol,
+                          cells: [.date(holding.firstAcquisition), .units(holding.shares), .money(holding.price),
+                                  .money(holding.costBasis), .money(holding.marketValue),
+                                  .money(holding.unrealizedGain), .money(holding.realizedGain),
+                                  .money(holding.income), .money(holding.totalGain),
+                                  percentCell(holding.annualisedReturn)])
         }
         var kpis = [ReportKPI(label: String(localized: "Cost basis"), amount: portfolio.totalCost),
                     ReportKPI(label: String(localized: "Market value"), amount: portfolio.totalValue),
@@ -314,6 +365,15 @@ extension AppModel {
         if portfolio.totalIncome != 0 {
             kpis.append(ReportKPI(label: String(localized: "Income"), amount: portfolio.totalIncome))
         }
+        var summary: [String] = []
+        if let fraction = portfolio.totalReturnFraction {
+            let percent = fraction.formatted(.percent.precision(.fractionLength(1)))
+            summary.append(String(localized: "Total gain on money in: \(percent)"))
+        }
+        if let rate = portfolio.annualisedReturn {
+            let percent = rate.formatted(.percent.precision(.fractionLength(1)))
+            summary.append(String(localized: "Annualised, money-weighted: \(percent) a year"))
+        }
         // The allocation donut: the largest holdings by value, the tail rolled
         // into "Other" so the legend stays legible.
         let valued = portfolio.holdings
@@ -323,62 +383,136 @@ extension AppModel {
         let tail = valued.dropFirst(9).reduce(Decimal(0)) { $0 + $1.1 }
         if tail > 0 { slices.append((label: String(localized: "Other"), value: tail)) }
 
+        var notes = [String(localized: "Securities valued at the price nearest the date. Realised gain and income are since the first purchase; total gain is unrealised plus realised plus income. Securities and portfolios are in order of total gain, largest first."),
+                     methodNote(portfolio.method),
+                     closedPositionsNote(included: includeClosed),
+                     portfolioNote(portfolioID),
+                     annualisedNote]
+        if let note = unpricedNote(portfolio.unpricedSymbols) { notes.append(note) }
+        if let note = unconvertedNote(portfolio.unconvertedCurrencyCodes, code: code) { notes.append(note) }
         return ReportDocument(
             title: String(localized: "Portfolio"), periodLabel: String(localized: "As of \(shortDate(asOf))"), currencyCode: code,
-            kpis: kpis, chart: slices.count > 1 ? .allocation(slices) : nil,
-            sections: rows.isEmpty ? [] : investmentSections(rows, columns: [
-                String(localized: "Cost"), String(localized: "Value"), String(localized: "Unrealised"),
-                String(localized: "Realised"), String(localized: "Income")]),
-            notes: [String(localized: "Securities valued at their most recent price; unpriced holdings show zero value. Realised gain and income are since the first purchase."),
-                    methodNote(portfolio.method),
-                    closedPositionsNote(included: includeClosed),
-                    portfolioNote(portfolioID),
-                    investmentYieldNote],
+            kpis: kpis, summary: summary, chart: slices.count > 1 ? .allocation(slices) : nil,
+            sections: rows.isEmpty ? [] : investmentSections(rows, columns: columns) { members in
+                var cells = summedCells(members, columns: columns.count)
+                cells[0] = .text(""); cells[2] = .text("")   // dates and prices do not add
+                return cells
+            },
+            notes: notes,
             facts: nil)
     }
 
     // MARK: Investment return (FR-RPT-02b)
 
-    /// Capital gain, dividends and franking credits over the period, by
-    /// portfolio and security, and together against the money put in. Asked
-    /// for on build 7: "No report to show total investment return (capital
-    /// gain plus dividends plus franking credits)."
+    /// Every security's total return since it was first bought — realised
+    /// and unrealised gain, dividends and franking credits — to the period's
+    /// end, with the history that produced it, by portfolio; and, for a
+    /// bounded period, the period's own contribution beside the total. Asked
+    /// for on build 10: "Total return means total return … you need to show
+    /// acquisition history, and total return up till end of filtered period."
     func investmentReturnDocument(from: Date, to: Date, periodLabel: String, includeClosed: Bool = true,
                                   portfolioID: GncGUID? = nil) -> ReportDocument? {
         guard let report = investmentReturn(from: from, to: to, includeClosed: includeClosed,
                                             portfolioID: portfolioID) else { return nil }
         let code = report.currencyCode
-        let rows = report.lines.map { line in
-            InvestmentRow(portfolio: line.portfolio, gain: line.totalReturn,
-                          label: securityLabel(line.symbol, units: line.units),
-                          amounts: [line.capitalGain, line.dividends, line.frankingCredits, line.totalReturn],
-                          yield: line.yieldPerAnnum,
-                          yieldItem: (line.totalReturn, line.moneyIn, line.heldYears))
+        let bounded = from != .distantPast
+        var columns = [String(localized: "Acquired"), String(localized: "Money in"), String(localized: "Money out"),
+                       String(localized: "Realised"), String(localized: "Unrealised"), String(localized: "Dividends"),
+                       String(localized: "Franking"), String(localized: "Total return"), String(localized: "Return"),
+                       String(localized: "Annualised")]
+        if bounded { columns.append(String(localized: "This period")) }
+
+        var rates: [GncGUID?: Double?] = [:]
+        let rows = report.lines.map { line -> InvestmentRow in
+            var cells: [ReportCell] = [
+                .date(line.firstAcquisition), .money(line.moneyIn), .money(line.moneyOut),
+                .money(line.realizedGain), .money(line.unrealizedGain), .money(line.dividends),
+                .money(line.frankingCredits), .money(line.totalReturn), percentCell(line.returnOnMoneyIn),
+                percentCell(line.annualisedReturn)]
+            if bounded { cells.append(.money(line.periodReturn)) }
+            return InvestmentRow(portfolio: line.portfolio, rank: line.totalReturn,
+                                 label: line.isClosed ? String(localized: "\(line.symbol) (closed)") : line.symbol,
+                                 cells: cells)
         }
+        // A portfolio's own rate: every member's flows together.
+        var byPortfolio: [GncGUID?: [InvestmentReturnLine]] = [:]
+        for line in report.lines { byPortfolio[line.portfolio?.id, default: []].append(line) }
+        for (id, lines) in byPortfolio {
+            let flows = lines.compactMap { $0.history.cashFlows(valuedAt: to) }
+            guard flows.count == lines.count else { rates[id] = .some(nil); continue }
+            let dated = flows.flatMap { $0 }.map { DatedCashFlow(date: $0.date, amount: $0.amount) }
+            if let first = dated.map(\.date).min(), InvestmentYield.isAnnualisable(from: first, to: to) {
+                rates[id] = .some(MoneyWeightedReturn.rate(of: dated))
+            } else {
+                rates[id] = .some(nil)
+            }
+        }
+        func total(_ members: [InvestmentRow]) -> [ReportCell] {
+            var cells = summedCells(members, columns: columns.count)
+            cells[0] = .text("")
+            let moneyIn = members.reduce(Decimal(0)) { $0 + (($1.cells[1].money) ?? 0) }
+            let totalReturn = members.reduce(Decimal(0)) { $0 + (($1.cells[7].money) ?? 0) }
+            cells[8] = .percent(moneyIn != 0 ? totalReturn / moneyIn : nil)
+            let portfolios = Set(members.map { $0.portfolio?.id })
+            if portfolios.count == 1, let id = portfolios.first {
+                cells[9] = percentCell(rates[id] ?? nil)
+            } else {
+                cells[9] = percentCell(report.annualisedReturn)
+            }
+            return cells
+        }
+
+        // The history under each security: every event, dated.
+        let historyColumns = [String(localized: "Date"), String(localized: "Event"), String(localized: "Units"),
+                              String(localized: "Amount"), String(localized: "Fee"), String(localized: "Gain")]
+        let histories = report.lines.map { line -> ReportDocumentSection in
+            ReportDocumentSection(
+                title: String(localized: "\(line.symbol) history"),
+                rows: line.history.events.map { event in
+                    ReportDocumentRow(label: event.description, cells: [
+                        .date(event.date), .text(eventLabel(event.kind)), .units(event.units),
+                        .money(event.converted ? event.amount : nil), .money(event.fee != 0 ? event.fee : nil),
+                        .money(event.realizedGain)])
+                },
+                columns: historyColumns,
+                identity: "history:\(line.id.hexString)")
+        }
+
         var summary: [String] = []
         if let fraction = report.totalReturnFraction {
             let percent = fraction.formatted(.percent.precision(.fractionLength(1)))
             summary.append(String(localized: "Return on money in: \(percent)"))
         }
-        if let yield = report.yieldPerAnnum {
-            let percent = yield.formatted(.percent.precision(.fractionLength(1)))
-            summary.append(String(localized: "Yield per annum: \(percent)"))
+        if let rate = report.annualisedReturn {
+            let percent = rate.formatted(.percent.precision(.fractionLength(1)))
+            summary.append(String(localized: "Annualised, money-weighted: \(percent) a year"))
         }
+        if bounded, let period = report.totalPeriodReturn {
+            summary.append(String(localized: "This period’s contribution: \(AmountFormat.string(period, code: code))"))
+        }
+        let bars = topBars(report.lines.map { ($0.symbol, $0.totalReturn) })
+        let chart: ReportDocumentChart? = bars.isEmpty ? nil : .stackedBars(
+            series: [String(localized: "Realised"), String(localized: "Unrealised"),
+                     String(localized: "Dividends"), String(localized: "Franking")],
+            bars: bars.compactMap { bar in
+                report.lines.first { $0.symbol == bar.label }.map {
+                    (label: $0.symbol, values: [$0.realizedGain, $0.unrealizedGain ?? 0, $0.dividends, $0.frankingCredits])
+                }
+            })
+
         var notes = [
-            String(localized: "Capital gain is the realised gain on the period’s disposals plus the move over the period in the unrealised gain on what is held, at the prices on its first and last days. Dividends and franking credits are the income the book records against each security in the period — in a transaction that touches the holding, or under an income account named for it. Over All Time, that is the return since the first purchase."),
+            String(localized: "Total return is everything a holding has earned since its first purchase, to the period’s end: the realised gain on every sale, the unrealised gain on what is held at the price nearest the date, and the dividends, distributions, interest and franking credits the book records against it — in a transaction that touches the holding, or under an income account named for it, each counted once. The period’s start changes none of it."),
+            bounded
+                ? String(localized: "This period is the period’s contribution: the total return at its end less the total return the day before it began. It is blank where a holding had no price on either day.")
+                : String(localized: "Choose a period to see each holding’s contribution over it beside the total."),
+            String(localized: "Return is total return over money in. Securities and portfolios are in order of total return, largest first; each security’s history follows the tables."),
             methodNote(report.method),
             closedPositionsNote(included: includeClosed),
             portfolioNote(portfolioID),
-            investmentYieldNote,
+            annualisedNote,
         ]
-        if !report.unpricedSymbols.isEmpty {
-            let symbols = report.unpricedSymbols.joined(separator: ", ")
-            notes.append(String(localized: "Unpriced: \(symbols) — no price on the date, so their unrealised gain is left out."))
-        }
-        if !report.unconvertedCurrencyCodes.isEmpty {
-            let codes = report.unconvertedCurrencyCodes.joined(separator: ", ")
-            notes.append(String(localized: "Incomplete: income in \(codes) is not included, because no exchange rate to \(code) was available on its dates."))
-        }
+        if let note = unpricedNote(report.unpricedSymbols) { notes.append(note) }
+        if let note = unconvertedNote(report.unconvertedCurrencyCodes, code: code) { notes.append(note) }
         return ReportDocument(
             title: String(localized: "Investment Return"),
             periodLabel: periodLabel, currencyCode: code,
@@ -387,24 +521,38 @@ extension AppModel {
                    ReportKPI(label: String(localized: "Dividends"), amount: report.totalDividends),
                    ReportKPI(label: String(localized: "Franking credits"), amount: report.totalFranking),
                    ReportKPI(label: String(localized: "Money in"), amount: report.totalMoneyIn)],
-            summary: summary, chart: nil,
-            sections: rows.isEmpty ? [] : investmentSections(rows, columns: [
-                String(localized: "Capital gain"), String(localized: "Dividends"),
-                String(localized: "Franking"), String(localized: "Total")]),
+            summary: summary, chart: chart,
+            sections: rows.isEmpty ? [] : investmentSections(rows, columns: columns, total: total) + histories,
             notes: notes,
             facts: nil)
     }
 
     // MARK: Investment lots (FR-RPT-02)
 
-    /// Every parcel under its security, by portfolio: what is held, at the
-    /// price on the date — and, with Closed positions on, what has been sold,
-    /// at what it fetched.
+    /// Every parcel under its security, by portfolio: when it was acquired,
+    /// what it cost, what it is worth at the price on the date, whether it
+    /// has been owned twelve months — and, with Closed positions on, the
+    /// parcels already sold, at what they fetched. The summary says what the
+    /// open parcels would be assessed at if sold on the date (Sharesight’s
+    /// unrealised CGT: "a forecasting tool only").
     func investmentLotsDocument(asOf: Date = Date(), includeClosed: Bool = false,
                                 portfolioID: GncGUID? = nil) -> ReportDocument? {
         let lots = investmentLots(asOf: asOf, includeClosed: includeClosed, portfolioID: portfolioID)
         guard !lots.isEmpty else { return nil }
         let code = reportCurrency.mnemonic
+        var columns = [String(localized: "Acquired")]
+        if includeClosed { columns.append(String(localized: "Sold")) }
+        columns += [String(localized: "Units"), String(localized: "Cost"), String(localized: "Price"),
+                    String(localized: "Value"), String(localized: "Gain (loss)"), String(localized: "Annualised"),
+                    String(localized: "Held 12 mo")]
+        func cells(acquired: Date?, sold: Date?, units: Decimal, cost: Decimal, price: Decimal?, value: Decimal?,
+                   gain: Decimal?, rate: Double?, term: Bool?) -> [ReportCell] {
+            var cells: [ReportCell] = [.date(acquired)]
+            if includeClosed { cells.append(.date(sold)) }
+            cells += [.units(units), .money(cost), .money(price), .money(value), .money(gain), percentCell(rate),
+                      .text(term.map { $0 ? String(localized: "Yes") : String(localized: "No") } ?? "")]
+            return cells
+        }
 
         var byAccount: [GncGUID: [LotDetail]] = [:]
         var accounts: [GncGUID] = []
@@ -414,29 +562,28 @@ extension AppModel {
         }
         let rows = accounts.map { accountID -> InvestmentRow in
             let parcels = byAccount[accountID]!
-            let units = parcels.filter { !$0.isClosed }.reduce(Decimal(0)) { $0 + $1.quantity }
+            let open = parcels.filter { !$0.isClosed }
+            let units = open.reduce(Decimal(0)) { $0 + $1.quantity }
             let cost = parcels.reduce(Decimal(0)) { $0 + $1.costBasis }
             // One unpriced parcel and the security has no value or gain to
             // show — a part would read as the whole.
             let priced = parcels.allSatisfy { $0.gain != nil }
             let value: Decimal? = priced ? parcels.reduce(Decimal(0)) { $0 + ($1.value ?? 0) } : nil
             let gain: Decimal? = priced ? parcels.reduce(Decimal(0)) { $0 + ($1.gain ?? 0) } : nil
-            let years = InvestmentYield.weightedYears(parcels.compactMap { parcel in
-                parcel.heldYears.map { HeldParcel(cost: parcel.costBasis, years: $0) }
-            })
             let detail = parcels.sorted(by: lotOrder).map { lot in
-                ReportDocumentRow(label: lotLabel(lot), depth: 1,
-                                  amounts: [lot.costBasis, lot.value, lot.gain,
-                                            lot.yieldPerAnnum.map { Decimal($0) }])
+                ReportDocumentRow(
+                    label: lot.isClosed ? String(localized: "Sold parcel") : String(localized: "Parcel"), depth: 1,
+                    cells: cells(acquired: lot.acquisitionDate, sold: lot.disposalDate, units: lot.quantity,
+                                 cost: lot.costBasis, price: lot.price, value: lot.value, gain: lot.gain,
+                                 rate: lot.annualisedReturn, term: lot.longTerm))
             }
-            // An unpriced security has no gain to annualise, and lends the
-            // portfolio's yield neither its cost nor a gain of nothing.
+            let first = parcels.compactMap(\.acquisitionDate).min()
             return InvestmentRow(
-                portfolio: parcels[0].portfolio, gain: gain ?? 0,
-                label: securityLabel(parcels[0].symbol, units: units),
-                amounts: [cost, value, gain],
-                yield: gain.flatMap { InvestmentYield.annualised(gain: $0, cost: cost, years: years) },
-                yieldItem: priced ? (gain ?? 0, cost, years) : (0, 0, nil), detail: detail)
+                portfolio: parcels[0].portfolio, rank: gain ?? 0,
+                label: units == 0 ? String(localized: "\(parcels[0].symbol) (closed)") : parcels[0].symbol,
+                cells: cells(acquired: first, sold: nil, units: units, cost: cost, price: open.first?.price,
+                             value: value, gain: gain, rate: nil, term: nil),
+                detail: detail)
         }
 
         let open = lots.filter { !$0.isClosed }
@@ -451,18 +598,34 @@ extension AppModel {
             kpis.append(ReportKPI(label: String(localized: "Realised"),
                                   amount: sold.reduce(0) { $0 + ($1.realizedGain ?? 0) }, signed: true))
         }
+        var summary: [String] = []
+        if let estimate = unrealisedCapitalGains(lots, asOf: asOf), !open.isEmpty {
+            summary.append(String(localized: "If every open parcel were sold on the date: gains on parcels held twelve months \(AmountFormat.string(estimate.longTermGains, code: code)), on parcels held less \(AmountFormat.string(estimate.shortTermGains, code: code)), losses \(AmountFormat.string(estimate.losses, code: code))."))
+            summary.append(String(localized: "Estimated net capital gain (\(entityLabel(estimate.entity)), losses offset, discount applied): \(AmountFormat.string(estimate.net.netCapitalGain, code: code))."))
+        }
+        let unpriced = Set(open.filter { $0.marketValue == nil }.map(\.symbol)).sorted()
+        var notes = [String(localized: "A parcel still held is valued at the price nearest the date; a parcel sold, at what it fetched. Held 12 mo is the ATO’s test — the day bought and the day sold both excluded — so a Yes would be discounted (or, after 1 July 2027, indexed) if sold on the date. Securities are in order of gain, largest first, their parcels oldest first."),
+                     methodNote(costBasisMethod),
+                     includeClosed
+                         ? String(localized: "Parcels already sold are listed with what they fetched and their realised gain.")
+                         : String(localized: "Parcels already sold are left out; turn on Closed positions to list them with their realised gain."),
+                     portfolioNote(portfolioID),
+                     annualisedNote]
+        if costBasisMethod == .average {
+            notes.append(String(localized: "Average cost pools the parcels, so a pooled parcel has no acquisition date of its own and no twelve-month test; choose FIFO or LIFO to see each parcel."))
+        }
+        if let note = unpricedNote(unpriced) { notes.append(note) }
         return ReportDocument(
             title: String(localized: "Investment Lots"), periodLabel: String(localized: "As of \(shortDate(asOf))"), currencyCode: code,
-            kpis: kpis, chart: nil,
-            sections: investmentSections(rows, columns: [
-                String(localized: "Cost"), String(localized: "Value"), String(localized: "Gain")]),
-            notes: [String(localized: "A parcel still held is valued at the price on the date; a parcel sold, at what it fetched."),
-                    methodNote(costBasisMethod),
-                    includeClosed
-                        ? String(localized: "Parcels already sold are listed with their realised gain.")
-                        : String(localized: "Parcels already sold are left out; turn on Closed positions to list them with their realised gain."),
-                    portfolioNote(portfolioID),
-                    investmentYieldNote],
+            kpis: kpis, summary: summary, chart: nil,
+            sections: investmentSections(rows, columns: columns) { members in
+                var cells = summedCells(members, columns: columns.count)
+                cells[0] = .text("")
+                if includeClosed { cells[1] = .text("") }
+                cells[includeClosed ? 4 : 3] = .text("")   // prices do not add
+                return cells
+            },
+            notes: notes,
             facts: nil)
     }
 
@@ -473,31 +636,22 @@ extension AppModel {
             < (b.acquisitionDate ?? .distantPast, b.disposalDate ?? .distantPast)
     }
 
-    /// "acquired 12 Mar 2024 · 100 sh"; for a parcel sold, "sold 3 Jun 2025 ·
-    /// 100 sh, acquired 12 Mar 2024"; a pooled lot has no date of its own.
-    private func lotLabel(_ lot: LotDetail) -> String {
-        let units = lot.quantity.formatted()
-        switch (lot.disposalDate, lot.acquisitionDate) {
-        case (let sold?, let acquired?):
-            return String(localized: "sold \(shortDate(sold)) · \(units) sh, acquired \(shortDate(acquired))")
-        case (let sold?, nil):
-            return String(localized: "sold \(shortDate(sold)) · \(units) sh")
-        case (nil, let acquired?):
-            return String(localized: "acquired \(shortDate(acquired)) · \(units) sh")
-        case (nil, nil):
-            return String(localized: "pooled · \(units) sh")
-        }
-    }
-
     // MARK: Capital gains (FR-RPT-03)
 
-    /// Realised gains over the period, by portfolio and security, each
-    /// disposal under its security.
+    /// The capital-gains report a tax return is prepared from: every parcel
+    /// sold in the period — when acquired and sold, units, cost base,
+    /// proceeds, gain, how long held, and how the ATO treats it — under its
+    /// security, by portfolio; the year’s net capital gain by the ATO’s
+    /// method; and, with Closed positions on, the whole history of every
+    /// position sold out of by the period’s end.
     func capitalGainsDocument(from: Date = .distantPast, to: Date = .distantFuture, periodLabel: String,
-                              includeClosed: Bool = true, portfolioID: GncGUID? = nil) -> ReportDocument? {
+                              includeClosed: Bool = false, portfolioID: GncGUID? = nil) -> ReportDocument? {
         guard let report = capitalGains(from: from, to: to, includeClosed: includeClosed,
                                         portfolioID: portfolioID) else { return nil }
         let code = report.currencyCode
+        let columns = [String(localized: "Acquired"), String(localized: "Sold"), String(localized: "Units"),
+                       String(localized: "Cost base"), String(localized: "Proceeds"), String(localized: "Gain (loss)"),
+                       String(localized: "Held"), String(localized: "Treatment"), String(localized: "Assessable")]
 
         var byAccount: [GncGUID: [CapitalGainLine]] = [:]
         var accounts: [GncGUID] = []
@@ -507,66 +661,127 @@ extension AppModel {
         }
         let rows = accounts.map { accountID -> InvestmentRow in
             let lines = byAccount[accountID]!
-            let sold = lines.reduce(Decimal(0)) { $0 + $1.quantity }
-            let proceeds = lines.reduce(Decimal(0)) { $0 + $1.proceeds }
-            let cost = lines.reduce(Decimal(0)) { $0 + $1.costBasis }
-            let gain = lines.reduce(Decimal(0)) { $0 + $1.gain }
-            let years = InvestmentYield.weightedYears(lines.compactMap { line in
-                line.heldYears.map { HeldParcel(cost: line.costBasis, years: $0) }
-            })
+            let period = lines.filter(\.inPeriod)
             let detail = lines.sorted { $0.disposalDate < $1.disposalDate }.map { line in
-                ReportDocumentRow(label: disposalLabel(line), depth: 1,
-                                  amounts: [line.proceeds, line.costBasis, line.gain,
-                                            line.yieldPerAnnum.map { Decimal($0) }])
+                ReportDocumentRow(label: line.description, depth: 1, cells: [
+                    .date(line.acquisitionDate), .date(line.disposalDate), .units(line.quantity),
+                    .money(line.costBasis), .money(line.proceeds), .money(line.gain),
+                    .text(heldLabel(days: line.holdingDays)), .text(treatmentLabel(line)),
+                    .money(line.inPeriod ? assessable(line) : nil)])
             }
+            // The security's row totals the period's parcels; history parcels
+            // belong to other years' returns and stay out of every total.
             return InvestmentRow(
-                portfolio: lines[0].portfolio, gain: gain,
-                label: String(localized: "\(lines[0].symbol)  \(sold.formatted()) sh sold"),
-                amounts: [proceeds, cost, gain],
-                yield: InvestmentYield.annualised(gain: gain, cost: cost, years: years),
-                yieldItem: (gain, cost, years), detail: detail)
+                portfolio: lines[0].portfolio, rank: period.reduce(0) { $0 + $1.gain },
+                label: lines[0].symbol,
+                cells: [.date(nil), .date(nil), .units(period.reduce(0) { $0 + $1.quantity }),
+                        .money(period.reduce(0) { $0 + $1.costBasis }), .money(period.reduce(0) { $0 + $1.proceeds }),
+                        .money(period.reduce(0) { $0 + $1.gain }), .text(""), .text(""),
+                        .money(period.reduce(0) { $0 + assessable($1) })],
+                detail: detail)
         }
 
+        let net = report.net
+        var assessment: [ReportDocumentRow] = [
+            ReportDocumentRow(label: String(localized: "Capital gains"), amount: net.grossGains),
+            ReportDocumentRow(label: String(localized: "Capital losses"), amount: -net.losses),
+        ]
+        if net.discountableGains > 0 {
+            assessment.append(ReportDocumentRow(label: String(localized: "Gains eligible for the discount, after losses"),
+                                                amount: net.discountableGains))
+            let percent = report.entity.discountFraction.formatted(.percent.precision(.fractionLength(0...1)))
+            assessment.append(ReportDocumentRow(label: String(localized: "CGT discount (\(percent))"),
+                                                amount: -net.discountApplied))
+        }
+        if net.minimumTaxGain > 0 {
+            assessment.append(ReportDocumentRow(label: String(localized: "Of which accrued after 1 July 2027 (30% minimum tax)"),
+                                                amount: net.minimumTaxGain))
+        }
+        if net.lossCarriedForward > 0 {
+            assessment.append(ReportDocumentRow(label: String(localized: "Net capital loss carried forward"),
+                                                amount: net.lossCarriedForward))
+        }
+        let assessmentSection = ReportDocumentSection(
+            title: String(localized: "Net capital gain — \(entityLabel(report.entity))"),
+            rows: assessment,
+            total: (String(localized: "Net capital gain"), net.netCapitalGain))
+
+        let bars = topBars(rows.map { ($0.label, $0.rank) })
+        var notes = capitalGainsNotes(report) + [
+            String(localized: "A CGT event is filed by the day the parcel was sold; its acquisition date is kept however early. Cost base and proceeds are the parcel’s, in the report currency; Held counts whole days. Treatment is the ATO’s: Discount for a parcel owned at least twelve months (the day bought and the day sold excluded), Short for one owned less, Loss for a sale below cost, Exempt for a pre-20 September 1985 purchase, Indexed where the cost base was raised by CPI — the 1999 method on a parcel bought before 21 September 1999 when that assesses less, and from 1 July 2027 the reform’s indexation. Assessable is each parcel’s gain as it enters the year’s net capital gain, before losses and the discount."),
+            String(localized: "The net capital gain follows the ATO’s steps: losses — this year’s — come off the gains, from those not eligible for the discount first; the discount applies to what is left of the eligible gains. It is worked over the period’s parcels alone."),
+            methodNote(report.method),
+            includeClosed
+                ? String(localized: "Closed positions: every position sold out of by the period’s end is shown with its whole history; parcels sold outside the period are marked history and stay out of the totals.")
+                : String(localized: "Parcels sold in the period only; turn on Closed positions to see the whole history of every position sold out of by the period’s end."),
+            portfolioNote(portfolioID),
+            String(localized: "Securities and portfolios are in order of gain, largest first; parcels oldest sale first."),
+        ]
+        if report.transitionalCount > 0 {
+            notes.append(String(localized: "Parcels owned across 1 July 2027 are split as the reform splits them: the gain to the asset’s value just before that day under the old rules, the gain after it with that value as the cost base, indexed by CPI. A parcel with no price dated 30 June 2027 is split by the days held each side instead (apportionment), until a price is recorded."))
+        }
+        if !report.transitionalValueMissingSymbols.isEmpty {
+            let list = report.transitionalValueMissingSymbols.joined(separator: ", ")
+            notes.append(String(localized: "Apportioned for want of a 30 June 2027 price: \(list). Record one under Prices to use the market-value method."))
+        }
+        if report.unindexedCount > 0 {
+            notes.append(String(localized: "\(report.unindexedCount) post-2027 gain(s) could not be indexed: the CPI table has no reading for a quarter they need. Update it under Planning ▸ Tax."))
+        }
+        if report.lines.contains(where: { $0.acquisitionDate == nil && $0.inPeriod }) {
+            notes.append(String(localized: "Pooled: under average cost a parcel has no acquisition date, so its term cannot be settled and it is assessed in full; choose FIFO or LIFO to apply the twelve-month test."))
+        }
+        if report.foreignResident {
+            notes.append(String(localized: "Assessed for a foreign or temporary resident: no discount and no indexation."))
+        }
+        notes.append(annualisedNote)
         return ReportDocument(
             title: String(localized: "Capital Gains"),
             periodLabel: periodLabel,
             currencyCode: code,
-            kpis: [ReportKPI(label: String(localized: "Short-term"), amount: report.shortTermGain, signed: true),
-                   ReportKPI(label: String(localized: "Long-term"), amount: report.longTermGain, signed: true),
-                   ReportKPI(label: String(localized: "Total realised"), amount: report.totalGain, signed: true)],
-            chart: nil,
-            sections: rows.isEmpty ? [] : investmentSections(rows, columns: [
-                String(localized: "Proceeds"), String(localized: "Cost"), String(localized: "Gain")]),
-            notes: capitalGainsNotes(report) + [
-                methodNote(report.method),
-                includeClosed
-                    ? String(localized: "Gains on positions sold out of entirely are included.")
-                    : String(localized: "Gains on positions sold out of entirely are left out; turn on Closed positions to include them."),
-                portfolioNote(portfolioID),
-                investmentYieldNote],
+            kpis: [ReportKPI(label: String(localized: "Proceeds"), amount: report.totalProceeds),
+                   ReportKPI(label: String(localized: "Cost base"), amount: report.totalCostBasis),
+                   ReportKPI(label: String(localized: "Gain (loss)"), amount: report.totalGain, signed: true),
+                   ReportKPI(label: String(localized: "Net capital gain"), amount: net.netCapitalGain, signed: true)],
+            summary: [
+                String(localized: "Held over twelve months: \(AmountFormat.string(report.longTermGain, code: code)); under: \(AmountFormat.string(report.shortTermGain, code: code))\(report.otherGain != 0 ? String(localized: "; undetermined: \(AmountFormat.string(report.otherGain, code: code))") : "")."),
+            ],
+            chart: bars.isEmpty ? nil : .bars(bars),
+            sections: (rows.isEmpty ? [] : investmentSections(rows, columns: columns) { members in
+                var cells = summedCells(members, columns: columns.count)
+                cells[0] = .text(""); cells[1] = .text("")
+                return cells
+            }) + (report.periodLines.isEmpty ? [] : [assessmentSection]),
+            notes: notes,
             facts: nil)
     }
 
-    /// "sold 3 Jun 2025 · 100 sh, acquired 12 Mar 2024 (LT)". LT and ST: held
-    /// over a year, or not — the abbreviations a tax return uses, and a phrase
-    /// each so each language has its own.
-    private func disposalLabel(_ line: CapitalGainLine) -> String {
-        let units = line.quantity.formatted()
-        let sold = shortDate(line.disposalDate)
-        switch (line.longTerm, line.acquisitionDate.map(shortDate)) {
-        case (true?, let acquired?):
-            return String(localized: "sold \(sold) · \(units) sh, acquired \(acquired) (LT)")
-        case (false?, let acquired?):
-            return String(localized: "sold \(sold) · \(units) sh, acquired \(acquired) (ST)")
-        case (nil, let acquired?):
-            return String(localized: "sold \(sold) · \(units) sh, acquired \(acquired)")
-        case (true?, nil):
-            return String(localized: "sold \(sold) · \(units) sh (LT)")
-        case (false?, nil):
-            return String(localized: "sold \(sold) · \(units) sh (ST)")
-        case (nil, nil):
-            return String(localized: "sold \(sold) · \(units) sh")
+    /// A parcel’s gain as it enters the net capital gain: its slices summed,
+    /// the exempt one aside.
+    private func assessable(_ line: CapitalGainLine) -> Decimal {
+        line.components.filter { $0.treatment != .exempt }.reduce(0) { $0 + $1.gain }
+    }
+
+    /// The ATO treatment of a parcel, in a word or two.
+    private func treatmentLabel(_ line: CapitalGainLine) -> String {
+        var text: String
+        if line.gain < 0 {
+            text = String(localized: "Capital loss")
+        } else if line.acquisitionDate == nil {
+            text = String(localized: "Pooled")
+        } else {
+            text = line.components.map { component -> String in
+                switch component.treatment {
+                case .discount: String(localized: "Discount")
+                case .indexation: component.indexed ? String(localized: "Indexed") : String(localized: "Unindexed")
+                case .frozenIndexation: String(localized: "Indexed (1999)")
+                case .exempt: String(localized: "Exempt")
+                case .other: line.longTerm == false ? String(localized: "Short") : String(localized: "Full")
+                }
+            }.joined(separator: " + ")
         }
+        if line.transitionMethod == .apportionment { text = String(localized: "\(text), apportioned") }
+        if !line.inPeriod { text = String(localized: "\(text) · history") }
+        return text
     }
 
     /// What the capital-gains report cannot vouch for, said out loud.
@@ -580,7 +795,7 @@ extension AppModel {
     /// to be visible on its face.
     private func capitalGainsNotes(_ report: CapitalGainsReport) -> [String] {
         var notes: [String] = []
-        if report.lines.isEmpty { notes.append(String(localized: "No realised gains in this period.")) }
+        if report.periodLines.isEmpty { notes.append(String(localized: "No parcels were sold in this period.")) }
         if !report.unconvertedCurrencyCodes.isEmpty {
             let codes = report.unconvertedCurrencyCodes.joined(separator: ", ")
             notes.append(String(localized: """
@@ -592,36 +807,293 @@ extension AppModel {
         return notes
     }
 
-    // MARK: Price history (FR-RPT — Price Scatter)
+    // MARK: Income (FR-RPT-02b — Income)
 
-    /// Memoised on the book revision, the report currency and the date order
-    /// its rows are written in: the Price History toolbar asks for it on
-    /// every pass of its body, and a key without the date order kept the old
-    /// dates after Settings ▸ Dates changed (17 October review).
-    func priceHistoryDocument() -> ReportDocument? {
-        cachedReport("pricehistorydoc:\(reportCurrency.mnemonic):\(AppDateFormat.current.order.rawValue)") {
-            buildPriceHistoryDocument()
+    /// The period’s investment income by holding — franked and unfranked
+    /// dividends, franking credits, distributions, interest — and every
+    /// payment under it (Sharesight’s Taxable Income report).
+    func incomeDocument(from: Date, to: Date, periodLabel: String, portfolioID: GncGUID? = nil) -> ReportDocument? {
+        guard let report = incomeReport(from: from, to: to, portfolioID: portfolioID) else { return nil }
+        let code = report.currencyCode
+        let columns = [String(localized: "Franked"), String(localized: "Unfranked"), String(localized: "Franking credits"),
+                       String(localized: "Distributions"), String(localized: "Interest"), String(localized: "Other"),
+                       String(localized: "Cash"), String(localized: "Grossed up")]
+        let paymentColumns = [String(localized: "Date"), String(localized: "Kind"), String(localized: "Amount")]
+        let rows = report.lines.map { line in
+            InvestmentRow(portfolio: line.portfolio, rank: line.grossedUp, label: line.symbol,
+                          cells: [.money(line.franked), .money(line.unfranked), .money(line.frankingCredits),
+                                  .money(line.distributions), .money(line.interest), .money(line.other),
+                                  .money(line.cash), .money(line.grossedUp)])
         }
+        let payments = report.lines.map { line in
+            ReportDocumentSection(
+                title: String(localized: "\(line.symbol) payments"),
+                rows: line.payments.sorted { $0.date < $1.date }.map { payment in
+                    ReportDocumentRow(label: payment.isForeign ? String(localized: "\(payment.description) (foreign)") : payment.description,
+                                      cells: [.date(payment.date), .text(eventLabel(payment.kind)), .money(payment.amount)])
+                },
+                columns: paymentColumns,
+                identity: "payments:\(line.id.hexString)")
+        }
+        var notes = [
+            String(localized: "Income the book records against each security in the period — in a transaction that touches the holding, or under an income account named for it. Franked, unfranked and franking credits come from the income account’s own name; distributions and interest from its parents; anything else is Other. Cash is what was paid; grossed up adds the franking credits, as a tax return does."),
+            portfolioNote(portfolioID),
+            String(localized: "Holdings are in order of grossed-up income, largest first; each holding’s payments follow the tables."),
+        ]
+        if report.totalForeign != 0 {
+            notes.append(String(localized: "Foreign income in the period: \(AmountFormat.string(report.totalForeign, code: code)), converted on the day it was paid."))
+        }
+        if let note = unconvertedNote(report.unconvertedCurrencyCodes, code: code) { notes.append(note) }
+        return ReportDocument(
+            title: String(localized: "Income"), periodLabel: periodLabel, currencyCode: code,
+            // No payments, no figures: the screen then says there is nothing
+            // to report rather than showing three zeros.
+            kpis: rows.isEmpty ? [] : [
+                ReportKPI(label: String(localized: "Cash income"), amount: report.totalCash),
+                ReportKPI(label: String(localized: "Franking credits"), amount: report.totalFrankingCredits),
+                ReportKPI(label: String(localized: "Grossed up"), amount: report.totalGrossedUp)],
+            chart: nil,
+            sections: rows.isEmpty ? [] : investmentSections(rows, columns: columns) { summedCells($0, columns: columns.count) } + payments,
+            notes: notes,
+            facts: nil)
     }
 
-    private func buildPriceHistoryDocument() -> ReportDocument? {
-        let securities = securitiesWithPriceHistory
-        guard !securities.isEmpty else { return nil }
-        let code = reportCurrency.mnemonic
-        let rows = securities.compactMap { commodity -> ReportDocumentRow? in
-            let history = priceHistory(for: commodity).sorted { $0.date < $1.date }
-            guard let latest = history.last else { return nil }
-            return ReportDocumentRow(
-                label: String(localized: "\(commodity.mnemonic)  \(history.count) prices, latest \(shortDate(latest.date))"),
-                amount: latest.value)
+    // MARK: Historical cost (FR-RPT-02 — Historical Cost)
+
+    /// Each holding’s balance at cost at the period’s start and end, and the
+    /// purchases, sales and adjustments between (Sharesight’s Historical Cost
+    /// report), with the market value beside the closing cost.
+    func historicalCostDocument(from: Date, to: Date, periodLabel: String, portfolioID: GncGUID? = nil) -> ReportDocument? {
+        guard let report = historicalCost(from: from, to: to, portfolioID: portfolioID) else { return nil }
+        let code = report.currencyCode
+        let columns = [String(localized: "Opening units"), String(localized: "Opening cost"), String(localized: "Purchases"),
+                       String(localized: "Cost of sales"), String(localized: "Adjustments"), String(localized: "Closing units"),
+                       String(localized: "Closing cost"), String(localized: "Closing value")]
+        let rows = report.lines.map { line in
+            InvestmentRow(portfolio: line.portfolio, rank: line.closingCost, label: line.symbol,
+                          cells: [.units(line.openingUnits), .money(line.openingCost), .money(line.purchases),
+                                  .money(-line.costOfSales), .money(line.adjustments), .units(line.closingUnits),
+                                  .money(line.closingCost), .money(line.closingValue)])
         }
-        guard !rows.isEmpty else { return nil }
+        var notes = [
+            String(localized: "Opening cost is the cost base of what was held the day before the period began; purchases add, the cost of sales takes the sold parcels out at their cost, adjustments are returns of capital and the like. Opening plus purchases less cost of sales plus adjustments reconciles to closing cost. Holdings are in order of closing cost, largest first."),
+            methodNote(report.method),
+            portfolioNote(portfolioID),
+        ]
+        if report.lines.contains(where: { !$0.reconciles }) {
+            notes.append(String(localized: "A row whose movement does not reconcile to its closing cost is one whose parcels changed hands in a currency with no rate on the day; the figures shown are what could be converted."))
+        }
+        if let note = unpricedNote(report.unpricedSymbols) { notes.append(note) }
+        if let note = unconvertedNote(report.unconvertedCurrencyCodes, code: code) { notes.append(note) }
         return ReportDocument(
-            title: String(localized: "Price History"), periodLabel: String(localized: "Latest prices"), currencyCode: code,
-            kpis: [], chart: nil,
-            sections: [ReportDocumentSection(title: String(localized: "Securities"), rows: rows)],
-            notes: [String(localized: "The interactive report plots every price over time; this lists each security’s latest price.")],
+            title: String(localized: "Historical Cost"), periodLabel: periodLabel, currencyCode: code,
+            kpis: [ReportKPI(label: String(localized: "Opening cost"), amount: report.totalOpeningCost),
+                   ReportKPI(label: String(localized: "Purchases"), amount: report.totalPurchases),
+                   ReportKPI(label: String(localized: "Cost of sales"), amount: report.totalCostOfSales),
+                   ReportKPI(label: String(localized: "Closing cost"), amount: report.totalClosingCost),
+                   ReportKPI(label: String(localized: "Closing value"), amount: report.totalClosingValue)],
+            chart: nil,
+            sections: rows.isEmpty ? [] : investmentSections(rows, columns: columns) { summedCells($0, columns: columns.count) },
+            notes: notes,
             facts: nil)
+    }
+
+    // MARK: Returns by period (FR-RPT-02b — Returns by Period)
+
+    /// Each holding’s contribution in each of several periods, side by side,
+    /// with its total return and annualised rate (Sharesight’s Multi-Period
+    /// report).
+    func multiPeriodReturnDocument(periods: [(label: String, from: Date, to: Date)], includeClosed: Bool = true,
+                                   portfolioID: GncGUID? = nil) -> ReportDocument? {
+        guard !periods.isEmpty,
+              let report = multiPeriodReturns(periods: periods.map { (from: $0.from, to: $0.to) },
+                                              includeClosed: includeClosed, portfolioID: portfolioID)
+        else { return nil }
+        let code = report.currencyCode
+        let columns = periods.map(\.label) + [String(localized: "Total return"), String(localized: "Annualised")]
+        let rows = report.lines.map { line in
+            InvestmentRow(portfolio: line.portfolio, rank: line.totalReturn, label: line.symbol,
+                          cells: line.periodReturns.map { ReportCell.money($0) }
+                              + [.money(line.totalReturn), percentCell(line.annualisedReturn)])
+        }
+        let last = periods.last.map { $0.to } ?? Date()
+        let first = periods.first.map { $0.from } ?? last
+        let bars = topBars(report.lines.map { ($0.symbol, $0.totalReturn) })
+        let chart: ReportDocumentChart? = bars.isEmpty ? nil : .stackedBars(
+            series: periods.map(\.label),
+            bars: bars.compactMap { bar in
+                report.lines.first { $0.symbol == bar.label }.map { (label: $0.symbol, values: $0.periodReturns.map { $0 ?? 0 }) }
+            })
+        return ReportDocument(
+            title: String(localized: "Returns by Period"),
+            periodLabel: String(localized: "\(shortDate(first)) – \(shortDate(last))"), currencyCode: code,
+            kpis: [ReportKPI(label: String(localized: "Total return"), amount: report.totalReturn, signed: true)]
+                + zip(periods, report.periodTotals).suffix(3).map { ReportKPI(label: $0.label, amount: $1 ?? 0, signed: true) },
+            chart: chart,
+            sections: rows.isEmpty ? [] : investmentSections(rows, columns: columns) { members in
+                var cells = summedCells(members, columns: columns.count)
+                cells[columns.count - 1] = .text("")
+                return cells
+            },
+            notes: [
+                String(localized: "Each period’s figure is the holding’s contribution over it: its total return at the period’s end less its total return the day before the period began — realised and unrealised gain, dividends and franking credits. A blank is a period the holding had no price at one end of. Total return and the annualised rate are since the first purchase, to the last period’s end."),
+                String(localized: "The periods are financial years ending with the chosen period’s; the stepper sets how many."),
+                methodNote(costBasisMethod),
+                closedPositionsNote(included: includeClosed),
+                portfolioNote(portfolioID),
+                annualisedNote,
+            ],
+            facts: nil)
+    }
+
+    // MARK: Drawdown (FR-RPT-02 — Drawdown)
+
+    /// Each held security’s worst fall over the period against its return
+    /// (Sharesight’s Drawdown Risk report): how far it fell from a peak, when,
+    /// and whether it has recovered.
+    func drawdownDocument(from: Date, to: Date, periodLabel: String, portfolioID: GncGUID? = nil) -> ReportDocument? {
+        guard let report = drawdownRisk(from: from, to: to, portfolioID: portfolioID) else { return nil }
+        let code = report.currencyCode
+        let columns = [String(localized: "Value"), String(localized: "Return"), String(localized: "Max drawdown"),
+                       String(localized: "Peak"), String(localized: "Trough"), String(localized: "Recovered"),
+                       String(localized: "Return ÷ drawdown")]
+        let rows = report.lines.map { line in
+            InvestmentRow(portfolio: line.portfolio,
+                          rank: Decimal(-(line.drawdown?.fraction ?? 0)),
+                          label: line.symbol,
+                          cells: [.money(line.marketValue), percentCell(line.returnFraction),
+                                  percentCell(line.drawdown.map { $0.fraction }),
+                                  .date(line.drawdown?.peakDate), .date(line.drawdown?.troughDate),
+                                  .text(line.drawdown.map { $0.recoveredDate.map { shortDate($0) } ?? String(localized: "Not yet") } ?? ""),
+                                  .text(line.romad.map { $0.formatted(.number.precision(.fractionLength(2))) } ?? "")])
+        }
+        return ReportDocument(
+            title: String(localized: "Drawdown"), periodLabel: periodLabel, currencyCode: code,
+            kpis: [], chart: nil,
+            sections: rows.isEmpty ? [] : investmentSections(rows, columns: columns) { members in
+                var cells = summedCells(members, columns: columns.count)
+                for column in 1..<columns.count { cells[column] = .text("") }
+                return cells
+            },
+            notes: [
+                String(localized: "Max drawdown is the largest fall from a peak to a later trough in the security’s price over the period, with the dates and the day the price regained its peak, if it has. Return is the price change over the period; return ÷ drawdown is Sharesight’s return over maximum drawdown, the return earned per unit of the worst fall. Securities are in order of drawdown, worst first."),
+                portfolioNote(portfolioID),
+                String(localized: "Only securities held at the period’s end, with prices in the period, appear."),
+            ],
+            facts: nil)
+    }
+
+    // MARK: Price history (FR-RPT — Price History)
+
+    /// The Price History report, printable: the range’s statistics, the
+    /// trades and income in it, and the month-end closes.
+    func priceHistoryDocument(commodity: Commodity, from: Date, to: Date, periodLabel: String,
+                              benchmark: PriceBenchmark? = nil, portfolioID: GncGUID? = nil) -> ReportDocument? {
+        guard let report = priceHistory(commodity: commodity, from: from, to: to, benchmark: benchmark,
+                                        portfolioID: portfolioID),
+              let summary = report.summary else { return nil }
+        let code = report.currencyCode
+        func percent(_ value: Double?) -> String {
+            value.map { $0.formatted(.percent.precision(.fractionLength(1))) } ?? ""
+        }
+        var stats = [
+            ReportDocumentRow(label: String(localized: "First price (\(shortDate(summary.first.date)))"), amount: summary.first.value),
+            ReportDocumentRow(label: String(localized: "Last price (\(shortDate(summary.last.date)))"), amount: summary.last.value),
+            ReportDocumentRow(label: String(localized: "Change (\(percent(summary.changeFraction)))"), amount: summary.change),
+            ReportDocumentRow(label: String(localized: "High (\(shortDate(summary.high.date)))"), amount: summary.high.value),
+            ReportDocumentRow(label: String(localized: "Low (\(shortDate(summary.low.date)))"), amount: summary.low.value),
+        ]
+        if let high = report.fiftyTwoWeekHigh, let low = report.fiftyTwoWeekLow {
+            stats.append(ReportDocumentRow(label: String(localized: "52-week high (\(shortDate(high.date)))"), amount: high.value))
+            stats.append(ReportDocumentRow(label: String(localized: "52-week low (\(shortDate(low.date)))"), amount: low.value))
+        }
+        if let average = report.averageCost, report.unitsHeld > 0 {
+            stats.append(ReportDocumentRow(label: String(localized: "Average cost of \(report.unitsHeld.formatted()) units held"), amount: average))
+        }
+        var readings: [String] = []
+        if report.priceWithIncome != report.series, let withIncome = report.priceWithIncomeChangeFraction {
+            readings.append(String(localized: "With the income paid per unit added: \(percent(withIncome)) over the range, against \(percent(summary.changeFraction)) on price alone."))
+        }
+        if let label = report.benchmarkLabel ?? report.benchmark.map({ _ in String(localized: "cash") }),
+           let change = report.benchmarkChangeFraction {
+            readings.append(String(localized: "Benchmark \(label): \(percent(change)) over the range."))
+        }
+        if let volatility = report.volatility {
+            readings.append(String(localized: "Annualised volatility: \(percent(volatility))."))
+        }
+        if let drawdown = report.drawdown {
+            let recovered = drawdown.recoveredDate.map { String(localized: "recovered \(shortDate($0))") } ?? String(localized: "not yet recovered")
+            readings.append(String(localized: "Largest fall: \(percent(drawdown.fraction)) from \(shortDate(drawdown.peakDate)) to \(shortDate(drawdown.troughDate)), \(recovered)."))
+        }
+        if let trend = report.trend {
+            let word = switch trend {
+            case .rising: String(localized: "rising")
+            case .flat: String(localized: "flat")
+            case .falling: String(localized: "falling")
+            }
+            readings.append(String(localized: "Trend over the range: \(word)."))
+        }
+        if let rsi = report.latestRSI {
+            let reading = rsi >= 70 ? String(localized: "overbought") : rsi <= 30 ? String(localized: "oversold") : String(localized: "neutral")
+            readings.append(String(localized: "RSI (14): \(rsi.formatted(.number.precision(.fractionLength(0)))), \(reading)."))
+        }
+        for crossover in report.crossovers {
+            readings.append(crossover.kind == .golden
+                ? String(localized: "Golden cross on \(shortDate(crossover.date)): the 50-day average rose through the 200-day.")
+                : String(localized: "Death cross on \(shortDate(crossover.date)): the 50-day average fell through the 200-day."))
+        }
+        var sections = [ReportDocumentSection(title: String(localized: "Range"), rows: stats)]
+        let eventColumns = [String(localized: "Date"), String(localized: "Event"), String(localized: "Units"), String(localized: "Amount")]
+        if !report.trades.isEmpty {
+            sections.append(ReportDocumentSection(
+                title: String(localized: "Trades in the range"),
+                rows: report.trades.map { event in
+                    ReportDocumentRow(label: event.description, cells: [
+                        .date(event.date), .text(eventLabel(event.kind)), .units(event.units), .money(event.amount)])
+                },
+                columns: eventColumns))
+        }
+        if !report.income.isEmpty {
+            sections.append(ReportDocumentSection(
+                title: String(localized: "Income in the range"),
+                rows: report.income.map { event in
+                    ReportDocumentRow(label: event.description, cells: [
+                        .date(event.date), .text(eventLabel(event.kind)), .units(nil), .money(event.amount)])
+                },
+                columns: eventColumns))
+        }
+        if report.monthlyCloses.count > 1 {
+            var previous: Decimal?
+            sections.append(ReportDocumentSection(
+                title: String(localized: "Month-end closes"),
+                rows: report.monthlyCloses.map { close in
+                    let change: Decimal? = previous.flatMap { $0 != 0 ? (close.value - $0) / $0 : nil }
+                    previous = close.value
+                    return ReportDocumentRow(label: AppDateFormat.current.monthYear(close.date),
+                                             cells: [.money(close.value), .percent(change)])
+                },
+                columns: [String(localized: "Close"), String(localized: "Change")]))
+        }
+        var notes = [String(localized: "Prices as recorded in the book, in the report currency; the 50- and 200-day averages, the RSI and the crosses are computed on them, with earlier prices warming the averages. Nothing here is a recommendation.")]
+        if let note = unconvertedNote(report.unconvertedCurrencyCodes, code: code) { notes.append(note) }
+        return ReportDocument(
+            title: String(localized: "Price History — \(commodity.mnemonic)"), periodLabel: periodLabel, currencyCode: code,
+            kpis: [ReportKPI(label: String(localized: "Last price"), amount: summary.last.value),
+                   ReportKPI(label: String(localized: "Change"), amount: summary.change, signed: true),
+                   ReportKPI(label: String(localized: "High"), amount: summary.high.value),
+                   ReportKPI(label: String(localized: "Low"), amount: summary.low.value)],
+            summary: readings, chart: nil,
+            sections: sections, notes: notes, facts: nil)
+    }
+
+    /// The printable for the first security with prices over all time —
+    /// what the report shows before a security is chosen.
+    func priceHistoryDocument() -> ReportDocument? {
+        guard let commodity = securitiesWithPriceHistory.first else { return nil }
+        return cachedReport("pricehistorydoc:\(commodity.namespace)|\(commodity.mnemonic):\(reportCurrency.mnemonic):\(AppDateFormat.current.order.rawValue)") {
+            priceHistoryDocument(commodity: commodity, from: .distantPast, to: Self.endOfToday(),
+                                 periodLabel: String(localized: "All recorded prices"))
+        }
     }
 
     // MARK: Cash-flow forecast (FR-RPT — Forecast)

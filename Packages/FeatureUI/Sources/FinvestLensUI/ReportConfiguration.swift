@@ -41,11 +41,24 @@ public struct ReportConfiguration: Codable, Hashable, Sendable {
     /// One portfolio — the account above a set of security accounts — for the
     /// investment reports; `nil` is every portfolio.
     public var portfolioID: GncGUID?
+    /// The security the Price History report shows (`namespace|mnemonic`);
+    /// `nil` is the first held.
+    public var securityKey: String?
+    /// What Price History compares against: a commodity key, or
+    /// `"cash:0.0435"` for a cash rate per annum; `nil` for none.
+    public var benchmark: String?
+    /// Price History shows the price alone, or the price with the income
+    /// the holding paid per unit (`nil` = price alone).
+    public var withIncome: Bool?
+    /// How many months the Forecast projects (`nil` = six).
+    public var horizonMonths: Int?
 
     public init(kind: String, period: ReportPeriod,
                 accountIDs: Set<GncGUID>? = nil, depth: Int? = nil,
                 step: AverageBalanceStep? = nil, comparePeriods: Int? = nil,
-                includeClosed: Bool? = nil, portfolioID: GncGUID? = nil) {
+                includeClosed: Bool? = nil, portfolioID: GncGUID? = nil,
+                securityKey: String? = nil, benchmark: String? = nil, withIncome: Bool? = nil,
+                horizonMonths: Int? = nil) {
         self.kind = kind
         self.period = period
         self.accountIDs = accountIDs
@@ -54,6 +67,10 @@ public struct ReportConfiguration: Codable, Hashable, Sendable {
         self.comparePeriods = comparePeriods
         self.includeClosed = includeClosed
         self.portfolioID = portfolioID
+        self.securityKey = securityKey
+        self.benchmark = benchmark
+        self.withIncome = withIncome
+        self.horizonMonths = horizonMonths
     }
 }
 

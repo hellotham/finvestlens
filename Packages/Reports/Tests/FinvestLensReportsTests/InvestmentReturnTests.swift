@@ -74,7 +74,7 @@ struct InvestmentReturnTests {
         #expect(cba.moneyIn == dec("100"))
         #expect(cba.dividends == 0 && cba.frankingCredits == 0)
         #expect(cba.totalReturn == dec("32"))
-        #expect(abs((cba.returnFraction ?? 0) - 0.32) < 1e-9)
+        #expect(abs((cba.returnOnMoneyIn ?? 0) - 0.32) < 1e-9)
     }
 
     /// Three dividends, each recorded a different way, each counted once:
@@ -110,7 +110,7 @@ struct InvestmentReturnTests {
         #expect(cba.dividends == dec("52"))          // 35 + 10 + 7
         #expect(cba.frankingCredits == dec("18"))    // 15 + 3
         #expect(cba.totalReturn == dec("102"))       // 32 + 52 + 18
-        #expect(abs((cba.returnFraction ?? 0) - 1.02) < 1e-9)
+        #expect(abs((cba.returnOnMoneyIn ?? 0) - 1.02) < 1e-9)
         #expect(report.totalDividends == dec("52"))
         #expect(report.totalFranking == dec("18"))
         #expect(report.totalReturn == dec("102"))
@@ -138,7 +138,7 @@ struct InvestmentReturnTests {
 
         let with = FinancialReports.investmentReturn(f.book, currency: .aud, to: day(420), includeClosed: true)
         let closed = try #require(line(with, "XYZ"))
-        #expect(closed.isClosed && closed.units == 0)
+        #expect(closed.isClosed && closed.unitsHeld == 0)
         #expect(closed.realizedGain == dec("25") && closed.unrealizedGain == 0)
         #expect(closed.dividends == dec("5"))
         #expect(closed.totalReturn == dec("30"))

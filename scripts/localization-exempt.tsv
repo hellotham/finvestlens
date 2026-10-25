@@ -232,3 +232,4 @@ Packages/Quotes/Sources/FinvestLensQuotes/KeyedFundamentalsProviders.swift	Alpha
 Packages/Quotes/Sources/FinvestLensQuotes/KeyedFundamentalsProviders.swift	Twelve Data	a provider's name
 Packages/Quotes/Sources/FinvestLensQuotes/WilsonQuoteProvider.swift	Wilson Asset Management	a provider's name
 Packages/Quotes/Sources/FinvestLensQuotes/YahooFundamentalsProvider.swift	Yahoo Finance	a provider's name
+Packages/Quotes/Sources/FinvestLensQuotes/RBAStatistics.swift	Series ID	the RBA table's own row heading, matched when the CSV is parsed

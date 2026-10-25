@@ -48,6 +48,21 @@ struct ReportDocumentRow: Identifiable {
     /// — several amounts, one per period, for a comparative statement. A `nil`
     /// entry renders blank (the account had no line in that period).
     var amounts: [Decimal?]?
+    /// — or typed cells, one per column, where a column is a date, a count
+    /// of units or words rather than money. Takes precedence over `amounts`.
+    var cells: [ReportCell]?
+
+    /// The row's cells, whichever way they were given: typed, or amounts
+    /// read through the section's column formats.
+    func resolvedCells(formats: [ReportColumnFormat]?) -> [ReportCell] {
+        if let cells { return cells }
+        return (amounts ?? []).enumerated().map { column, amount in
+            switch formats?[safe: column] ?? .amount {
+            case .amount: .money(amount)
+            case .percent: .percent(amount)
+            }
+        }
+    }
 }
 
 /// How a column's figures print: money in the section's currency, or a rate
@@ -60,6 +75,61 @@ enum ReportColumnFormat {
         switch self {
         case .amount: AmountFormat.string(value, code: code)
         case .percent: value.formatted(.percent.precision(.fractionLength(1)))
+        }
+    }
+}
+
+/// One cell of a report table. What it holds decides how it prints and
+/// which way it aligns: figures to the right, dates and words to the left.
+/// The investment reports need dates and units as columns of their own —
+/// "a report needs acquisition date, consideration …" — not words folded
+/// into a row's label.
+enum ReportCell: Hashable {
+    /// Money in the section's currency; red when negative.
+    case money(Decimal?)
+    /// A rate, kept as a fraction and printed with one decimal.
+    case percent(Decimal?)
+    /// A count of units or shares.
+    case units(Decimal?)
+    case date(Date?)
+    case text(String)
+
+    var isNumeric: Bool {
+        switch self {
+        case .money, .percent, .units: true
+        case .date, .text: false
+        }
+    }
+
+    /// Negative money or a negative rate — the figures drawn in red.
+    var isNegative: Bool {
+        switch self {
+        case .money(let value?), .percent(let value?): value < 0
+        default: false
+        }
+    }
+
+    var isEmpty: Bool {
+        switch self {
+        case .money(nil), .percent(nil), .units(nil), .date(nil): true
+        case .text(let text): text.isEmpty
+        default: false
+        }
+    }
+
+    /// The amount of a money cell, for a total that adds a column.
+    var money: Decimal? {
+        if case .money(let value) = self { return value }
+        return nil
+    }
+
+    func string(code: String) -> String {
+        switch self {
+        case .money(let value): value.map { AmountFormat.string($0, code: code) } ?? ""
+        case .percent(let value): value.map { $0.formatted(.percent.precision(.fractionLength(1))) } ?? ""
+        case .units(let value): value.map { $0.formatted() } ?? ""
+        case .date(let date): date.map { AppDateFormat.current.long($0) } ?? ""
+        case .text(let text): text
         }
     }
 }
@@ -82,6 +152,27 @@ struct ReportDocumentSection: Identifiable {
     var columnTotals: (label: String, amounts: [Decimal?])? = nil
     /// How each of `columns` prints; `nil`, or a missing entry, is money.
     var columnFormats: [ReportColumnFormat]? = nil
+    /// A ruled total row of typed cells, where the rows are typed.
+    var cellTotals: (label: String, cells: [ReportCell])? = nil
+
+    /// The total row's cells, typed or from the amounts.
+    var resolvedTotals: (label: String, cells: [ReportCell])? {
+        if let cellTotals { return cellTotals }
+        guard let columnTotals else { return nil }
+        return (columnTotals.label, ReportDocumentRow(label: "", amounts: columnTotals.amounts)
+                    .resolvedCells(formats: columnFormats))
+    }
+
+    /// Whether column `column` reads from the left — a date or words — by
+    /// what its rows hold.
+    func isLeading(_ column: Int) -> Bool {
+        for row in rows {
+            let cells = row.resolvedCells(formats: columnFormats)
+            guard column < cells.count else { continue }
+            return !cells[column].isNumeric
+        }
+        return false
+    }
     /// The section's own currency, where it is not the document's — each
     /// account of a transaction report prints in its own.
     var currencyCode: String? = nil
@@ -96,6 +187,11 @@ enum ReportDocumentChart {
     case averageBars([AverageBalanceInterval])
     /// A composition donut (portfolio allocation): label + positive value.
     case allocation([(label: String, value: Decimal)])
+    /// Signed bars by label, largest first — a gain or loss per security.
+    case bars([(label: String, value: Decimal)])
+    /// Stacked bars: for each label, one segment per series — a security's
+    /// return split into its parts.
+    case stackedBars(series: [String], bars: [(label: String, values: [Decimal])])
 }
 
 /// A complete report, ready to render or print.
@@ -121,6 +217,10 @@ extension ReportDocument {
         kpis.isEmpty && summary.isEmpty && chart == nil
             && sections.allSatisfy { $0.rows.isEmpty }
     }
+
+    /// A document with a wide table — the investment reports' nine and ten
+    /// columns — is laid out wider than a statement's reading measure.
+    var wide: Bool { sections.contains { ($0.columns?.count ?? 0) > 6 } }
 }
 
 /// What the narrator gets: headline figures and ranked lines, no access to
@@ -167,7 +267,7 @@ struct ReportDocumentView: View {
                 notes
             }
             .padding(24)
-            .frame(maxWidth: 760, alignment: .leading)
+            .frame(maxWidth: document.wide ? 1120 : 760, alignment: .leading)
             .frame(maxWidth: .infinity)
         }
     }
@@ -300,6 +400,31 @@ struct ReportDocumentView: View {
             .chartForegroundStyleScale(range: ReportPalette.categorical)
             .chartLegend(position: .trailing, alignment: .center)
             .frame(height: 220)
+        case .bars(let bars):
+            // Gains to the right, losses to the left, the largest first.
+            Chart(Array(bars.enumerated()), id: \.offset) { _, bar in
+                BarMark(x: .value("Amount", NSDecimalNumber(decimal: bar.value).doubleValue),
+                        y: .value("Security", bar.label))
+                    .foregroundStyle(bar.value < 0 ? Color.negativeAmount : Color.appAccent)
+            }
+            .chartXAxis { AxisMarks(format: FloatingPointFormatStyle<Double>.number.notation(.compactName)) }
+            .frame(height: max(120, CGFloat(bars.count) * 26 + 40))
+        case .stackedBars(let series, let bars):
+            Chart {
+                ForEach(Array(bars.enumerated()), id: \.offset) { _, bar in
+                    ForEach(Array(series.enumerated()), id: \.offset) { index, name in
+                        if index < bar.values.count {
+                            BarMark(x: .value("Security", bar.label),
+                                    y: .value("Amount", NSDecimalNumber(decimal: bar.values[index]).doubleValue))
+                                .foregroundStyle(by: .value("Part", name))
+                        }
+                    }
+                }
+            }
+            .chartForegroundStyleScale(range: ReportPalette.categorical)
+            .chartYAxis { AxisMarks(format: FloatingPointFormatStyle<Double>.number.notation(.compactName)) }
+            .chartLegend(position: .bottom)
+            .frame(height: 240)
         }
     }
 
@@ -414,19 +539,20 @@ struct ReportTableView: View {
     private func stackedRows(_ columns: [String]) -> some View {
         LazyVStack(alignment: .leading, spacing: 0) {
             ForEach(Array(section.rows.enumerated()), id: \.element.id) { index, row in
-                stackedBlock(label: row.label, depth: row.depth, amounts: row.amounts ?? [],
+                stackedBlock(label: row.label, depth: row.depth,
+                             cells: row.resolvedCells(formats: section.columnFormats),
                              columns: columns, bold: false)
                     .background(index.isMultiple(of: 2) ? Color.clear : Color.primary.opacity(0.03))
             }
-            if let totals = section.columnTotals {
-                stackedBlock(label: totals.label, depth: 0, amounts: totals.amounts,
+            if let totals = section.resolvedTotals {
+                stackedBlock(label: totals.label, depth: 0, cells: totals.cells,
                              columns: columns, bold: true)
                     .overlay(alignment: .top) { Divider() }
             }
         }
     }
 
-    private func stackedBlock(label: String, depth: Int, amounts: [Decimal?],
+    private func stackedBlock(label: String, depth: Int, cells: [ReportCell],
                               columns: [String], bold: Bool) -> some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(label)
@@ -439,7 +565,7 @@ struct ReportTableView: View {
                         .scaledFont(.caption)
                         .foregroundStyle(.secondary)
                     Spacer(minLength: 0)
-                    amountText(column < amounts.count ? amounts[column] : nil, format: format(column))
+                    cellText(column < cells.count ? cells[column] : .text(""))
                         .scaledFont(.body)
                         .fontWeight(bold ? .bold : .regular)
                 }
@@ -509,8 +635,8 @@ struct ReportTableView: View {
         LazyVStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 16) {
                 Spacer()
-                ForEach(Array(columns.enumerated()), id: \.offset) { _, header in
-                    Text(header).frame(width: amountWidth, alignment: .trailing)
+                ForEach(Array(columns.enumerated()), id: \.offset) { column, header in
+                    Text(header).frame(width: amountWidth, alignment: section.isLeading(column) ? .leading : .trailing)
                 }
             }
             .scaledFont(.caption)
@@ -525,24 +651,24 @@ struct ReportTableView: View {
                         .padding(.leading, CGFloat(row.depth) * 16)
                         .foregroundStyle(row.depth > 0 ? .secondary : .primary)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                    ForEach(0..<(row.amounts?.count ?? 0), id: \.self) { column in
-                        amountText(row.amounts?[column] ?? nil, format: format(column))
+                    ForEach(Array(row.resolvedCells(formats: section.columnFormats).enumerated()), id: \.offset) { column, cell in
+                        cellText(cell)
                             .lineLimit(1)
-                            .frame(width: amountWidth, alignment: .trailing)
+                            .frame(width: amountWidth, alignment: section.isLeading(column) ? .leading : .trailing)
                     }
                 }
                 .scaledFont(.body)
                 .padding(.vertical, 5)
                 .background(index.isMultiple(of: 2) ? Color.clear : Color.primary.opacity(0.03))
             }
-            if let totals = section.columnTotals {
+            if let totals = section.resolvedTotals {
                 HStack(spacing: 16) {
                     Text(totals.label).fontWeight(.bold)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                    ForEach(totals.amounts.indices, id: \.self) { column in
-                        amountText(totals.amounts[column], format: format(column)).fontWeight(.bold)
+                    ForEach(Array(totals.cells.enumerated()), id: \.offset) { column, cell in
+                        cellText(cell).fontWeight(.bold)
                             .lineLimit(1)
-                            .frame(width: amountWidth, alignment: .trailing)
+                            .frame(width: amountWidth, alignment: section.isLeading(column) ? .leading : .trailing)
                     }
                 }
                 .scaledFont(.body)
@@ -566,8 +692,8 @@ struct ReportTableView: View {
         Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 0) {
             GridRow {
                 Text("")
-                ForEach(Array(columns.enumerated()), id: \.offset) { _, header in
-                    Text(header).gridColumnAlignment(.trailing)
+                ForEach(Array(columns.enumerated()), id: \.offset) { column, header in
+                    Text(header).gridColumnAlignment(section.isLeading(column) ? .leading : .trailing)
                 }
             }
             .scaledFont(.caption)
@@ -578,8 +704,8 @@ struct ReportTableView: View {
                     Text(row.label)
                         .padding(.leading, CGFloat(row.depth) * 16)
                         .foregroundStyle(row.depth > 0 ? .secondary : .primary)
-                    ForEach(Array((row.amounts ?? []).enumerated()), id: \.offset) { column, amount in
-                        amountText(amount, format: format(column)).gridColumnAlignment(.trailing)
+                    ForEach(Array(row.resolvedCells(formats: section.columnFormats).enumerated()), id: \.offset) { column, cell in
+                        cellText(cell).gridColumnAlignment(section.isLeading(column) ? .leading : .trailing)
                     }
                 }
                 .scaledFont(.body)
@@ -587,12 +713,12 @@ struct ReportTableView: View {
                 .background(index.isMultiple(of: 2) ? Color.clear
                             : Color.primary.opacity(0.03))
             }
-            if let totals = section.columnTotals {
+            if let totals = section.resolvedTotals {
                 GridRow {
                     Text(totals.label).fontWeight(.bold)
-                    ForEach(Array(totals.amounts.enumerated()), id: \.offset) { column, amount in
-                        amountText(amount, format: format(column)).fontWeight(.bold)
-                            .gridColumnAlignment(.trailing)
+                    ForEach(Array(totals.cells.enumerated()), id: \.offset) { column, cell in
+                        cellText(cell).fontWeight(.bold)
+                            .gridColumnAlignment(section.isLeading(column) ? .leading : .trailing)
                     }
                 }
                 .scaledFont(.body)
@@ -602,21 +728,26 @@ struct ReportTableView: View {
         }
     }
 
-    /// How column `column` prints — money unless the section says otherwise.
-    private func format(_ column: Int) -> ReportColumnFormat {
-        guard let formats = section.columnFormats, column < formats.count else { return .amount }
-        return formats[column]
+    /// One cell, drawn as what it holds: figures monospaced and red when
+    /// negative, dates and words plain.
+    @ViewBuilder
+    private func cellText(_ cell: ReportCell) -> some View {
+        if cell.isEmpty {
+            Text("")
+        } else if cell.isNumeric {
+            Text(cell.string(code: code))
+                .monospacedDigit()
+                .foregroundStyle(cell.isNegative ? Color.negativeAmount : Color.primary)
+        } else {
+            Text(cell.string(code: code))
+                .lineLimit(1)
+                .foregroundStyle(.primary)
+        }
     }
 
     @ViewBuilder
-    private func amountText(_ amount: Decimal?, format: ReportColumnFormat = .amount) -> some View {
-        if let amount {
-            Text(format.string(amount, code: code))
-                .monospacedDigit()
-                .foregroundStyle(amount < 0 ? Color.negativeAmount : Color.primary)
-        } else {
-            Text("")
-        }
+    private func amountText(_ amount: Decimal?) -> some View {
+        cellText(.money(amount))
     }
 }
 
@@ -634,21 +765,20 @@ extension ReportDocument {
         if !summary.isEmpty {
             // Text-only rows: the single nil amount column renders blank.
             sections.append(PrintableSection(heading: String(localized: "In brief"), rows:
-                summary.map { PrintableRow(label: $0, amount: 0, amounts: [nil]) }))
+                summary.map { PrintableRow(label: $0, amount: 0, cells: [.text("")]) }))
         }
         for section in self.sections {
             if let columns = section.columns {
                 var rows = section.rows.map {
                     PrintableRow(label: String(repeating: "    ", count: $0.depth) + $0.label,
-                                 amount: 0, amounts: $0.amounts)
+                                 amount: 0, cells: $0.resolvedCells(formats: section.columnFormats))
                 }
-                if let totals = section.columnTotals {
-                    rows.append(PrintableRow(label: totals.label, amount: 0, bold: true,
-                                             amounts: totals.amounts))
+                if let totals = section.resolvedTotals {
+                    rows.append(PrintableRow(label: totals.label, amount: 0, bold: true, cells: totals.cells))
                 }
                 sections.append(PrintableSection(heading: section.title, rows: rows,
                                                  columns: columns, code: section.currencyCode,
-                                                 columnFormats: section.columnFormats))
+                                                 leadingColumns: Set(columns.indices.filter { section.isLeading($0) })))
                 continue
             }
             var rows = section.rows.map {
