@@ -15,6 +15,9 @@ public struct AdvancedHolding: Identifiable, Hashable, Sendable {
     public let id: GncGUID
     public var accountName: String
     public var symbol: String
+    /// The account above the holding's — its portfolio; `nil` at the top of
+    /// the tree.
+    public var portfolio: PortfolioRef?
     /// Shares still held (from the lot engine).
     public var shares: Decimal
     /// Cost basis of the shares still held.
@@ -44,6 +47,18 @@ public struct AdvancedHolding: Identifiable, Hashable, Sendable {
     public var returnFraction: Double?
     /// Share of the total portfolio market value, if priced.
     public var allocation: Double?
+    /// How long the money has been in, cost-weighted across every parcel —
+    /// a held lot to the report date, a sold one to its sale
+    /// (``InvestmentYield``); `nil` when nothing was paid.
+    public var heldYears: Double?
+    /// ``totalGain`` as a simple annual rate on ``moneyIn`` over ``heldYears``.
+    public var yieldPerAnnum: Double?
+
+    /// Unrealized, realized and income together — GnuCash's total return, in
+    /// money. The figure the holdings are sorted by.
+    public var totalGain: Decimal { (unrealizedGain ?? 0) + realizedGain + income }
+    /// Nothing held: a position sold out of, kept for its history.
+    public var isClosed: Bool { shares == 0 }
 }
 
 /// A richer portfolio valuation: per-holding cost basis, average cost,
@@ -52,6 +67,8 @@ public struct AdvancedPortfolio: Sendable {
     public var asOf: Date
     public var currencyCode: String
     public var method: CostBasisMethod
+    /// By market value, largest first — the order the Investments hub and the
+    /// review decks read; a report that wants another order sorts for itself.
     public var holdings: [AdvancedHolding]
     public var totalCost: Decimal
     public var totalValue: Decimal
@@ -71,6 +88,12 @@ public struct AdvancedPortfolio: Sendable {
         let gain = totalUnrealized + totalRealized + totalIncome
         return NSDecimalNumber(decimal: gain).doubleValue / NSDecimalNumber(decimal: totalMoneyIn).doubleValue
     }
+
+    /// The whole portfolio's gain as an annual rate on its money in, over the
+    /// cost-weighted time the holdings were held.
+    public var yieldPerAnnum: Double? {
+        InvestmentYield.combined(holdings.map { ($0.totalGain, $0.moneyIn, $0.heldYears) })
+    }
 }
 
 public extension FinancialReports {
@@ -82,14 +105,16 @@ public extension FinancialReports {
     /// income still count — where `false` reports only what is held (the
     /// Portfolio report's default, as the Investments hub hides them;
     /// `FR-INV-24`). Reported on build 7: "No toggle to show closed positions
-    /// in investment tab and reports."
+    /// in investment tab and reports." `portfolioID` narrows the report to the
+    /// security accounts directly under one portfolio.
     static func advancedPortfolio(
         _ book: Book,
         currency: Commodity,
         asOf: Date = Date(),
         method: CostBasisMethod = .fifo,
         feeTreatment: FeeTreatment = .ignore,
-        includeClosed: Bool = true
+        includeClosed: Bool = true,
+        portfolioID: GncGUID? = nil
     ) -> AdvancedPortfolio {
         struct Raw {
             let account: Account
@@ -101,6 +126,7 @@ public extension FinancialReports {
             let income: Decimal
             let price: Decimal?
             let marketValue: Decimal?
+            let heldYears: Double?
         }
 
         // Cash income (dividends/interest) attributed to a security: GnuCash's
@@ -134,7 +160,7 @@ public extension FinancialReports {
         var raws: [Raw] = []
         var totalValue = Decimal(0)
 
-        for account in book.accounts where account.type.isSecurityType && !account.isPlaceholder {
+        for account in securityAccounts(book, inPortfolio: portfolioID) {
             let basis = book.costBasis(for: account, asOf: asOf, method: method, feeTreatment: feeTreatment,
                                        currencyFraction: currency.smallestFraction)
             let shares = basis.remainingQuantity
@@ -154,10 +180,23 @@ public extension FinancialReports {
             let marketValue = price.map { currency.round(shares * $0) }
             if let marketValue { totalValue += marketValue }
 
+            // Every parcel the money went into, and for how long: a held lot
+            // to the report date, a sold one to its sale. A pooled lot has no
+            // date of its own and is held from the first purchase.
+            let first = pooledLots(basis) ? (firstAcquisition(of: account, in: book) ?? asOf) : asOf
+            let parcels = basis.openLots.map {
+                HeldParcel(cost: $0.costBasis,
+                           years: InvestmentYield.years(from: $0.acquisitionDate ?? first, to: asOf))
+            } + basis.realizedGains.map {
+                HeldParcel(cost: $0.costBasis,
+                           years: InvestmentYield.years(from: $0.acquisitionDate ?? first, to: $0.disposalDate))
+            }
+
             raws.append(Raw(account: account, shares: shares, costBasis: cost,
                             realized: currency.round(basis.totalRealizedGain),
                             moneyIn: moneyIn, moneyOut: moneyOut, income: income(of: account),
-                            price: price, marketValue: marketValue))
+                            price: price, marketValue: marketValue,
+                            heldYears: InvestmentYield.weightedYears(parcels)))
         }
 
         var holdings: [AdvancedHolding] = []
@@ -184,12 +223,16 @@ public extension FinancialReports {
 
             holdings.append(AdvancedHolding(
                 id: raw.account.guid, accountName: raw.account.name,
-                symbol: raw.account.commodity.mnemonic, shares: raw.shares,
+                symbol: raw.account.commodity.mnemonic,
+                portfolio: portfolio(of: raw.account), shares: raw.shares,
                 costBasis: raw.costBasis, averageCost: averageCost,
                 price: raw.price, marketValue: raw.marketValue,
                 unrealizedGain: unrealized, unrealizedFraction: unrealizedFraction,
                 realizedGain: raw.realized, moneyIn: raw.moneyIn, moneyOut: raw.moneyOut,
-                income: raw.income, returnFraction: returnFraction, allocation: allocation))
+                income: raw.income, returnFraction: returnFraction, allocation: allocation,
+                heldYears: raw.heldYears,
+                yieldPerAnnum: InvestmentYield.annualised(gain: totalGain, cost: raw.moneyIn,
+                                                          years: raw.heldYears)))
 
             totalCost += raw.costBasis
             if let unrealized { totalUnrealized += unrealized }

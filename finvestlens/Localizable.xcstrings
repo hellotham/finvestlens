@@ -13,100 +13,6 @@
       "extractionState": "manual",
       "shouldTranslate": false
     },
-    "%@  %@ @ cost %@": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@  %2$@ zu Anschaffungskosten %3$@"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@  %2$@ a coste %3$@"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@  %2$@ au prix de revient %3$@"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@  %2$@ al costo %3$@"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@  %2$@（取得原価 %3$@）"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@  %2$@ ao custo %3$@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@  %2$@，成本 %3$@"
-          }
-        }
-      }
-    },
-    "%@  %@ @ cost %@ acq %@": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@  %2$@ zu Anschaffungskosten %3$@, erworben %4$@"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@  %2$@ a coste %3$@, adq. %4$@"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@  %2$@ au prix de revient %3$@, acquis le %4$@"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@  %2$@ al costo %3$@, acq. %4$@"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@  %2$@（取得原価 %3$@、取得日 %4$@）"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@  %2$@ ao custo %3$@, adq. %4$@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@  %2$@，成本 %3$@，购入于 %4$@"
-          }
-        }
-      }
-    },
     "%@  %@ sh": {
       "extractionState": "manual",
       "localizations": {
@@ -154,96 +60,49 @@
         }
       }
     },
-    "%@  %@ sh  · income %@": {
+    "%@  %@ sh sold": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@  %2$@ Stk.  · Erträge %3$@"
+            "value": "%1$@  %2$@ Stk. verkauft"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@  %2$@ acc.  · ingresos %3$@"
+            "value": "%1$@  %2$@ acc. vendidas"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@  %2$@ titres  · revenus %3$@"
+            "value": "%1$@  %2$@ titres vendus"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@  %2$@ az.  · entrate %3$@"
+            "value": "%1$@  %2$@ az. vendute"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@  %2$@ 株  · 収益 %3$@"
+            "value": "%1$@  %2$@ 株を売却"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@  %2$@ un.  · receitas %3$@"
+            "value": "%1$@  %2$@ un. vendidas"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@  %2$@ 股  · 收入 %3$@"
-          }
-        }
-      }
-    },
-    "%@  %@ sold %@": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@  %2$@ verkauft am %3$@"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@  %2$@ vendidas el %3$@"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@  %2$@ vendus le %3$@"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@  %2$@ venduti il %3$@"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@  %2$@ を %3$@ に売却"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@  %2$@ vendidas em %3$@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@  %2$@ 于 %3$@ 卖出"
+            "value": "%1$@  已卖出 %2$@ 股"
           }
         }
       }
@@ -770,53 +629,6 @@
         }
       }
     },
-    "%@ (LT)  %@ sold %@": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ (langfr.)  %2$@ verkauft am %3$@"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ (LP)  %2$@ vendidas el %3$@"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ (LT)  %2$@ vendus le %3$@"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ (LT)  %2$@ venduti il %3$@"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@（長期）  %2$@ を %3$@ に売却"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ (LP)  %2$@ vendidas em %3$@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@（长期）  %2$@ 于 %3$@ 卖出"
-          }
-        }
-      }
-    },
     "%@ (new)": {
       "extractionState": "manual",
       "localizations": {
@@ -860,53 +672,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@（新增）"
-          }
-        }
-      }
-    },
-    "%@ (ST)  %@ sold %@": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ (kurzfr.)  %2$@ verkauft am %3$@"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ (CP)  %2$@ vendidas el %3$@"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ (CT)  %2$@ vendus le %3$@"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ (BT)  %2$@ venduti il %3$@"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@（短期）  %2$@ を %3$@ に売却"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ (CP)  %2$@ vendidas em %3$@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@（短期）  %2$@ 于 %3$@ 卖出"
           }
         }
       }
@@ -10890,49 +10655,49 @@
         }
       }
     },
-    "**Closed positions** are hidden: a row under the holdings says how many, with **Show**; hide them again from their heading or **More ▸ Show Closed Positions**. Their history is always kept for capital gains, and the Portfolio and Investment Return reports have a Closed positions switch of their own.": {
+    "**Closed positions** are hidden: a row under the holdings says how many, with **Show**; hide them again from their heading or **More ▸ Show Closed Positions**. Their history is always kept, and every investment report has a Closed positions switch of its own — off for the valuations (Portfolio, Lots), on for the histories (Capital Gains, Investment Return).": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "**Geschlossene Positionen** sind ausgeblendet: Eine Zeile unter den Positionen nennt ihre Zahl, mit **Anzeigen**; über ihre Überschrift oder **Mehr ▸ Geschlossene Positionen anzeigen** blenden Sie sie wieder aus. Ihre Historie bleibt für die Gewinnermittlung stets erhalten, und die Berichte Portfolio und Anlagerendite haben einen eigenen Schalter „Geschlossene Positionen“."
+            "value": "**Geschlossene Positionen** sind ausgeblendet: Eine Zeile unter den Positionen nennt ihre Zahl, mit **Anzeigen**; über ihre Überschrift oder **Mehr ▸ Geschlossene Positionen anzeigen** blenden Sie sie wieder aus. Ihre Historie bleibt stets erhalten, und jeder Anlagebericht hat einen eigenen Schalter „Geschlossene Positionen“ – aus bei den Bewertungen (Portfolio, Anlage-Lots), an bei den Verläufen (Veräußerungsgewinne, Anlagerendite)."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Las **posiciones cerradas** están ocultas: una fila bajo las posiciones indica cuántas hay, con **Mostrar**; vuelve a ocultarlas desde su encabezado o desde **Más ▸ Mostrar posiciones cerradas**. Su historial se conserva siempre para las plusvalías, y los informes Cartera y Rentabilidad de las inversiones tienen su propio interruptor «Posiciones cerradas»."
+            "value": "Las **posiciones cerradas** están ocultas: una fila bajo las posiciones indica cuántas hay, con **Mostrar**; vuelve a ocultarlas desde su encabezado o desde **Más ▸ Mostrar posiciones cerradas**. Su historial se conserva siempre, y cada informe de inversión tiene su propio interruptor «Posiciones cerradas»: apagado en las valoraciones (Cartera, Lotes), encendido en los históricos (Plusvalías, Rentabilidad de las inversiones)."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Les **positions clôturées** sont masquées : une ligne sous les positions en indique le nombre, avec **Afficher** ; masquez-les de nouveau depuis leur en-tête ou via **Plus ▸ Afficher les positions clôturées**. Leur historique est toujours conservé pour les plus-values, et les rapports Portefeuille et Rendement des placements ont leur propre commutateur « Positions clôturées »."
+            "value": "Les **positions clôturées** sont masquées : une ligne sous les positions en indique le nombre, avec **Afficher** ; masquez-les de nouveau depuis leur en-tête ou via **Plus ▸ Afficher les positions clôturées**. Leur historique est toujours conservé, et chaque rapport d’investissement a son propre commutateur « Positions clôturées » : désactivé pour les valorisations (Portefeuille, Lots), activé pour les historiques (Plus-values, Rendement des placements)."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Le **posizioni chiuse** sono nascoste: una riga sotto le posizioni ne indica il numero, con **Mostra**; nascondile di nuovo dalla loro intestazione o da **Altro ▸ Mostra posizioni chiuse**. La loro storia è sempre conservata per le plusvalenze, e i resoconti Portafoglio e Rendimento degli investimenti hanno un proprio interruttore «Posizioni chiuse»."
+            "value": "Le **posizioni chiuse** sono nascoste: una riga sotto le posizioni ne indica il numero, con **Mostra**; nascondile di nuovo dalla loro intestazione o da **Altro ▸ Mostra posizioni chiuse**. La loro storia è sempre conservata, e ogni resoconto di investimento ha un proprio interruttore «Posizioni chiuse»: spento nelle valutazioni (Portafoglio, Lotti), acceso negli storici (Plusvalenze, Rendimento degli investimenti)."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "**クローズ済みポジション**は非表示です。保有一覧の下の行に件数と**表示**が示され、見出しの「非表示」または**その他 ▸ クローズ済みポジションを表示**で再び隠せます。譲渡損益のため履歴は常に保持され、ポートフォリオと投資リターンのレポートにはそれぞれ「クローズ済みポジション」の切り替えがあります。"
+            "value": "**クローズ済みポジション**は非表示です。保有一覧の下の行に件数と**表示**が示され、見出しの「非表示」または**その他 ▸ クローズ済みポジションを表示**で再び隠せます。履歴は常に保持され、各投資レポートにはそれぞれ「クローズ済みポジション」の切り替えがあります。評価のレポート（ポートフォリオ、ロット）ではオフ、履歴のレポート（キャピタルゲイン、投資リターン）ではオンが初期値です。"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "**Posições encerradas** ficam ocultas: uma linha abaixo das posições diz quantas são, com **Mostrar**; oculte-as de novo pelo título delas ou em **Mais ▸ Mostrar posições encerradas**. O histórico é sempre mantido para ganhos de capital, e os relatórios Carteira e Retorno dos investimentos têm sua própria chave “Posições encerradas”."
+            "value": "**Posições encerradas** ficam ocultas: uma linha abaixo das posições diz quantas são, com **Mostrar**; oculte-as de novo pelo título delas ou em **Mais ▸ Mostrar posições encerradas**. O histórico é sempre mantido, e cada relatório de investimentos tem sua própria chave “Posições encerradas”: desligada nas avaliações (Carteira, Lotes), ligada nos históricos (Ganhos de capital, Retorno dos investimentos)."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "**已平仓头寸**默认隐藏：持仓下方的一行会显示数量并提供**显示**；可从其标题或**更多 ▸ 显示已平仓头寸**再次隐藏。其历史始终保留以供资本利得使用，投资组合和投资回报报表各自带有“已平仓头寸”开关。"
+            "value": "**已平仓头寸**默认隐藏：持仓下方的一行会显示数量并提供**显示**；可从其标题或**更多 ▸ 显示已平仓头寸**再次隐藏。其历史始终保留，每份投资报表都带有自己的“已平仓头寸”开关——估值类报表（投资组合、批次）默认关闭，历史类报表（资本利得、投资回报）默认开启。"
           }
         }
       }
@@ -11313,49 +11078,49 @@
         }
       }
     },
-    "**Investment Return**, in Reports, adds up each security's capital gain, dividends and franking credits against the money you put in — closed positions included.": {
+    "**Investment Return**, in Reports, adds up each security's capital gain, dividends and franking credits over the period against the money you put in, by portfolio, with a yield per annum on each row.": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "**Anlagerendite** unter Berichte zählt je Wertpapier Veräußerungsgewinn, Dividenden und Steuergutschriften zusammen und setzt sie ins Verhältnis zum eingesetzten Geld – geschlossene Positionen eingeschlossen."
+            "value": "**Anlagerendite** unter Berichte zählt je Wertpapier Veräußerungsgewinn, Dividenden und Steuergutschriften des Zeitraums zusammen und setzt sie ins Verhältnis zum eingesetzten Geld – nach Portfolio, mit einer Rendite pro Jahr in jeder Zeile."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "**Rentabilidad de las inversiones**, en Informes, suma la plusvalía, los dividendos y los créditos fiscales de cada valor frente al dinero aportado, posiciones cerradas incluidas."
+            "value": "**Rentabilidad de las inversiones**, en Informes, suma la plusvalía, los dividendos y los créditos fiscales de cada valor en el período frente al dinero aportado, por cartera, con una rentabilidad anual en cada fila."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "**Rendement des placements**, dans Rapports, additionne pour chaque titre la plus-value, les dividendes et les crédits d’impôt par rapport aux apports — positions clôturées comprises."
+            "value": "**Rendement des placements**, dans Rapports, additionne pour chaque titre la plus-value, les dividendes et les crédits d’impôt de la période par rapport aux apports, par portefeuille, avec un rendement annuel sur chaque ligne."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "**Rendimento degli investimenti**, in Resoconti, somma per ciascun titolo plusvalenza, dividendi e crediti d’imposta rispetto al denaro investito, posizioni chiuse comprese."
+            "value": "**Rendimento degli investimenti**, in Resoconti, somma per ciascun titolo plusvalenza, dividendi e crediti d’imposta del periodo rispetto al denaro investito, per portafoglio, con un rendimento annuo su ogni riga."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "レポートの**投資リターン**は、証券ごとのキャピタルゲイン、配当、フランキングクレジットを合計し、投入資金と比較します。クローズ済みポジションも含まれます。"
+            "value": "レポートの**投資リターン**は、期間中の証券ごとのキャピタルゲイン、配当、フランキングクレジットを合計して投入資金と比較し、ポートフォリオ別に各行へ年率の利回りを示します。"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "**Retorno dos investimentos**, em Relatórios, soma o ganho de capital, os dividendos e os créditos fiscais de cada título frente ao dinheiro aportado — posições encerradas incluídas."
+            "value": "**Retorno dos investimentos**, em Relatórios, soma o ganho de capital, os dividendos e os créditos fiscais de cada título no período frente ao dinheiro aportado, por carteira, com um rendimento anual em cada linha."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "报表中的**投资回报**会汇总每只证券的资本利得、股息与已缴税抵免，并与投入资金相比较——包含已平仓头寸。"
+            "value": "报表中的**投资回报**会按投资组合汇总每只证券在期间内的资本利得、股息与税收抵免，并与投入资金相比较，每行附有年化收益率。"
           }
         }
       }
@@ -12038,6 +11803,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "**图表把你的账簿画在市场之上。** 线是价格；绿色三角是买入、红色菱形是卖出，各自位于你实际支付或收到的价位；虚线是你的平均成本；阴影带是你持有它的期间。"
+          }
+        }
+      }
+    },
+    "**Transactions**, **Cash Flow** and **Average Balance** take a set of accounts, read the same way: nothing chosen is the report's own default — every account, or the bank and cash accounts — and an account you choose narrows the report to it and its subaccounts.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Buchungen**, **Kapitalfluss** und **Durchschnittssaldo** nehmen eine Auswahl von Konten, die überall gleich gelesen wird: Nichts gewählt bedeutet den eigenen Standard des Berichts – alle Konten oder die Bank- und Bargeldkonten –, und ein gewähltes Konto grenzt den Bericht auf dieses und seine Unterkonten ein."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Transacciones**, **Flujo de caja** y **Saldo medio** toman un conjunto de cuentas, leído de la misma manera: si no eliges ninguna, el informe usa su propio ámbito predeterminado (todas las cuentas, o las cuentas bancarias y de efectivo), y una cuenta elegida reduce el informe a ella y sus subcuentas."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Opérations**, **Flux de trésorerie** et **Solde moyen** prennent un ensemble de comptes, lu de la même façon : rien de choisi signifie la portée par défaut du rapport — tous les comptes, ou les comptes bancaires et espèces — et un compte choisi restreint le rapport à ce compte et à ses sous-comptes."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Transazioni**, **Flusso di cassa** e **Saldo medio** prendono un insieme di conti, letto allo stesso modo: nessuna scelta è l’ambito predefinito del resoconto — tutti i conti, o i conti bancari e contanti — e un conto scelto restringe il resoconto a quel conto e ai suoi sottoconti."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**取引**、**キャッシュフロー**、**平均残高**は勘定科目の集合を同じ規則で読みます。何も選ばなければそのレポート既定の範囲（すべての勘定科目、または銀行・現金勘定）になり、勘定科目を選ぶとその科目と子勘定科目に絞り込まれます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**Transações**, **Fluxo de caixa** e **Saldo médio** recebem um conjunto de contas, lido da mesma forma: nada escolhido é o escopo padrão do relatório — todas as contas, ou as contas bancárias e de dinheiro — e uma conta escolhida restringe o relatório a ela e às suas subcontas."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "**交易**、**现金流**和**平均余额**都接受一组科目，读取方式相同：未选择任何科目时采用报表自身的默认范围（所有科目，或银行与现金科目）；选择某个科目则将报表缩小到该科目及其子科目。"
           }
         }
       }
@@ -14131,6 +13943,53 @@
         }
       }
     },
+    "A parcel still held is valued at the price on the date; a parcel sold, at what it fetched.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein noch gehaltenes Paket wird zum Kurs am Stichtag bewertet; ein verkauftes mit seinem Erlös."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un lote que aún se mantiene se valora al precio de la fecha; uno vendido, por lo que se obtuvo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un lot encore détenu est valorisé au cours de la date ; un lot vendu, à ce qu’il a rapporté."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un lotto ancora in portafoglio è valutato al prezzo della data; uno venduto, a quanto ha reso."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保有中のロットは基準日の価格で評価し、売却済みのロットは売却代金で評価します。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Um lote ainda em carteira é avaliado pelo preço da data; um lote vendido, pelo que rendeu."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仍持有的批次按该日价格估值；已卖出的批次按其成交金额计。"
+          }
+        }
+      }
+    },
     "A payment that matches the other side of a transfer already in the book is completed rather than duplicated.": {
       "extractionState": "manual",
       "localizations": {
@@ -15441,6 +15300,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "致谢"
+          }
+        }
+      }
+    },
+    "acquired %@ · %@ sh": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "erworben %1$@ · %2$@ Stk."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "adquiridas el %1$@ · %2$@ acc."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "acquis le %1$@ · %2$@ titres"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "acquistate il %1$@ · %2$@ az."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ に取得 · %2$@ 株"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "adquiridas em %1$@ · %2$@ un."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ 购入 · %2$@ 股"
           }
         }
       }
@@ -16941,6 +16847,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "所有文件"
+          }
+        }
+      }
+    },
+    "All portfolios": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Portfolios"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todas las carteras"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tous les portefeuilles"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tutti i portafogli"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてのポートフォリオ"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todas as carteiras"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "所有投资组合"
           }
         }
       }
@@ -22068,53 +22021,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "全部持仓"
-          }
-        }
-      }
-    },
-    "All securities": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Alle Wertpapiere"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Todos los valores"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tous les titres"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tutti i titoli"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "全証券"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Todos os títulos"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "全部证券"
           }
         }
       }
@@ -30851,53 +30757,6 @@
         }
       }
     },
-    "By security": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Je Wertpapier"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Por valor"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Par titre"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Per titolo"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "証券別"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Por título"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "按证券"
-          }
-        }
-      }
-    },
     "By week": {
       "extractionState": "manual",
       "localizations": {
@@ -31180,49 +31039,49 @@
         }
       }
     },
-    "Capital gain is the realised gain on every disposal plus the unrealised gain on what is still held, at its latest price. Dividends and franking credits are the income the book records against each security — in a transaction that touches the holding, or under an income account named for it.": {
+    "Capital gain is the realised gain on the period’s disposals plus the move over the period in the unrealised gain on what is held, at the prices on its first and last days. Dividends and franking credits are the income the book records against each security in the period — in a transaction that touches the holding, or under an income account named for it. Over All Time, that is the return since the first purchase.": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Der Veräußerungsgewinn ist der realisierte Gewinn aus jedem Verkauf plus der nicht realisierte Gewinn des noch gehaltenen Bestands zum letzten Kurs. Dividenden und Steuergutschriften sind die Erträge, die das Buch dem jeweiligen Wertpapier zuordnet – in einer Buchung, die die Position berührt, oder unter einem nach ihm benannten Ertragskonto."
+            "value": "Der Veräußerungsgewinn ist der realisierte Gewinn aus den Verkäufen des Zeitraums plus die Veränderung des nicht realisierten Gewinns des gehaltenen Bestands über den Zeitraum, zu den Kursen an seinem ersten und letzten Tag. Dividenden und Steuergutschriften sind die Erträge, die das Buch dem jeweiligen Wertpapier im Zeitraum zuordnet – in einer Buchung, die die Position berührt, oder unter einem nach ihm benannten Ertragskonto. Über „Gesamter Zeitraum“ ist das die Rendite seit dem ersten Kauf."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "La plusvalía es la ganancia realizada en cada venta más la ganancia no realizada de lo que aún se mantiene, al último precio. Los dividendos y los créditos fiscales son los ingresos que el libro registra para cada valor: en una transacción que toca la posición o bajo una cuenta de ingresos con su nombre."
+            "value": "La plusvalía es la ganancia realizada en las ventas del período más la variación, a lo largo del período, de la ganancia no realizada de lo que se mantiene, a los precios de su primer y último día. Los dividendos y los créditos fiscales son los ingresos que el libro registra para cada valor en el período: en una transacción que toca la posición o bajo una cuenta de ingresos con su nombre. En «Todo el período», es la rentabilidad desde la primera compra."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "La plus-value est le gain réalisé sur chaque cession plus le gain latent sur ce qui est encore détenu, au dernier cours. Les dividendes et les crédits d’impôt sont les revenus que le livre enregistre pour chaque titre : dans une transaction qui touche la position, ou sous un compte de revenus portant son nom."
+            "value": "La plus-value est le gain réalisé sur les cessions de la période plus la variation, sur la période, du gain latent sur ce qui est détenu, aux cours de son premier et de son dernier jour. Les dividendes et les crédits d’impôt sont les revenus que le livre enregistre pour chaque titre sur la période : dans une transaction qui touche la position, ou sous un compte de revenus portant son nom. Sur « Depuis le début », c’est le rendement depuis le premier achat."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "La plusvalenza è il guadagno realizzato su ogni cessione più quello non realizzato su ciò che è ancora in portafoglio, all’ultimo prezzo. Dividendi e crediti d’imposta sono i redditi che il libro registra per ciascun titolo: in una transazione che tocca la posizione o sotto un conto di reddito che porta il suo nome."
+            "value": "La plusvalenza è il guadagno realizzato sulle cessioni del periodo più la variazione, nel periodo, del guadagno non realizzato su ciò che è in portafoglio, ai prezzi del suo primo e ultimo giorno. Dividendi e crediti d’imposta sono i redditi che il libro registra per ciascun titolo nel periodo: in una transazione che tocca la posizione o sotto un conto di reddito che porta il suo nome. Su «Tutto il periodo» è il rendimento dal primo acquisto."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "キャピタルゲインは、各売却の実現損益と、保有中の分の最新価格による含み損益の合計です。配当とフランキングクレジットは、帳簿が各証券に対して記録した収益で、ポジションに関わる取引、またはその証券の名前を付けた収益科目から集計します。"
+            "value": "キャピタルゲインは、期間中の売却の実現損益と、保有分の含み損益の期間中の変動（期間の初日と最終日の価格で評価）の合計です。配当とフランキングクレジットは、帳簿が期間中に各証券に対して記録した収益で、ポジションに関わる取引、またはその証券の名前を付けた収益科目から集計します。「全期間」では、最初の購入以降のリターンになります。"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "O ganho de capital é o ganho realizado em cada venda mais o ganho não realizado do que ainda está em carteira, ao último preço. Dividendos e créditos fiscais são as receitas que o livro registra para cada título: em uma transação que toca a posição ou em uma conta de receita com o nome dele."
+            "value": "O ganho de capital é o ganho realizado nas vendas do período mais a variação, ao longo do período, do ganho não realizado do que está em carteira, aos preços do seu primeiro e do seu último dia. Dividendos e créditos fiscais são as receitas que o livro registra para cada título no período: em uma transação que toca a posição ou em uma conta de receita com o nome dele. Em “Todo o período”, é o retorno desde a primeira compra."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "资本利得为每次处置的已实现收益，加上仍持有部分按最新价格计算的未实现收益。股息与已缴税抵免是账簿记录在各证券名下的收入：来自涉及该持仓的交易，或以其命名的收入科目。"
+            "value": "资本利得为期间内处置的已实现收益，加上持有部分未实现收益在期间内的变动（按期间首日与末日的价格计算）。股息与税收抵免是账簿在期间内记录在各证券名下的收入：来自涉及该持仓的交易，或以其命名的收入科目。选择“全部时间”时，即为自首次买入以来的回报。"
           }
         }
       }
@@ -32402,6 +32261,53 @@
         }
       }
     },
+    "Change the period and options at the top of any report. The period is the window's: a report opened from Reports agrees with the board you were looking at.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zeitraum und Optionen ändern Sie oben in jedem Bericht. Der Zeitraum ist der des Fensters: Ein aus Berichte geöffneter Bericht stimmt mit der Übersicht überein, die Sie gerade betrachtet haben."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cambia el período y las opciones en la parte superior de cualquier informe. El período es el de la ventana: un informe abierto desde Informes coincide con el panel que estabas viendo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modifiez la période et les options en haut de chaque rapport. La période est celle de la fenêtre : un rapport ouvert depuis Rapports concorde avec le tableau que vous consultiez."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cambia periodo e opzioni in cima a qualsiasi resoconto. Il periodo è quello della finestra: un resoconto aperto da Resoconti concorda con il pannello che stavi guardando."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "期間やオプションは、各レポートの上部で変更できます。期間はウインドウ全体のもので、レポートから開いたレポートは、直前に見ていたボードと同じ期間になります。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Altere o período e as opções no topo de qualquer relatório. O período é o da janela: um relatório aberto em Relatórios coincide com o painel que você estava vendo."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可在任意报表顶部更改期间与选项。期间与窗口一致：从“报表”打开的报表与你刚查看的概览面板使用同一期间。"
+          }
+        }
+      }
+    },
     "Change Trading Accounts Setting": {
       "extractionState": "manual",
       "localizations": {
@@ -33150,53 +33056,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "请在「设置 ▸ Apple 智能」中选取自己的模型。"
-          }
-        }
-      }
-    },
-    "Choose accounts…": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Konten auswählen …"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Elegir cuentas…"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Choisir des comptes…"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Scegli conti…"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "勘定科目を選択…"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Escolher contas…"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "选取科目…"
           }
         }
       }
@@ -34842,6 +34701,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "更正过账日期"
+          }
+        }
+      }
+    },
+    "Cost": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kosten"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coste"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coût"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Costo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "原価"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Custo"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "成本"
           }
         }
       }
@@ -37617,53 +37523,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "挑战"
-          }
-        }
-      }
-    },
-    "Change the period and options at the top of any report.": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zeitraum und Optionen ändern Sie oben in jedem Bericht."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cambia el período y las opciones en la parte superior de cualquier informe."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Modifiez la période et les options en haut de chaque rapport."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cambia periodo e opzioni in cima a qualsiasi resoconto."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "期間やオプションは、各レポートの上部で変更できます。"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Altere o período e as opções no topo de qualquer relatório."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "可在任意报表顶部更改期间与选项。"
           }
         }
       }
@@ -56494,6 +56353,53 @@
         }
       }
     },
+    "Every portfolio; choose one above to narrow the report.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Portfolios; wählen Sie oben eines aus, um den Bericht einzugrenzen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todas las carteras; elige una arriba para acotar el informe."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tous les portefeuilles ; choisissez-en un ci-dessus pour restreindre le rapport."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tutti i portafogli; scegline uno qui sopra per restringere il resoconto."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてのポートフォリオです。上でひとつ選ぶと、レポートを絞り込めます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todas as carteiras; escolha uma acima para restringir o relatório."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "包含所有投资组合；在上方选取一个可缩小报表范围。"
+          }
+        }
+      }
+    },
     "Every section says **where it came from and when**, and offers **Refetch** — a figure you doubt should never need waiting out.": {
       "extractionState": "manual",
       "localizations": {
@@ -64024,6 +63930,100 @@
         }
       }
     },
+    "Gains on positions sold out of entirely are included.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gewinne aus vollständig verkauften Positionen sind einbezogen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se incluyen las plusvalías de las posiciones vendidas por completo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les plus-values des positions entièrement vendues sont incluses."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le plusvalenze delle posizioni vendute del tutto sono incluse."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "売却済みのポジションの損益を含みます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Os ganhos de posições vendidas por completo estão incluídos."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已包含已全部卖出头寸的收益。"
+          }
+        }
+      }
+    },
+    "Gains on positions sold out of entirely are left out; turn on Closed positions to include them.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gewinne aus vollständig verkauften Positionen bleiben außen vor; schalten Sie „Geschlossene Positionen“ ein, um sie einzubeziehen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Las plusvalías de las posiciones vendidas por completo se omiten; activa «Posiciones cerradas» para incluirlas."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les plus-values des positions entièrement vendues sont exclues ; activez « Positions clôturées » pour les inclure."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le plusvalenze delle posizioni vendute del tutto sono escluse; attiva «Posizioni chiuse» per includerle."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "売却済みのポジションの損益は除外されています。含めるには「クローズ済みポジション」をオンにしてください。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Os ganhos de posições vendidas por completo ficam de fora; ative “Posições encerradas” para incluí-los."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已全部卖出头寸的收益未计入；开启“已平仓头寸”即可包含。"
+          }
+        }
+      }
+    },
     "goal": {
       "extractionState": "manual",
       "localizations": {
@@ -68985,6 +68985,335 @@
           "stringUnit": {
             "state": "translated",
             "value": "已开票"
+          }
+        }
+      }
+    },
+    "No portfolio": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kein Portfolio"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sin cartera"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sans portefeuille"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessun portafoglio"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ポートフォリオなし"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sem carteira"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无投资组合"
+          }
+        }
+      }
+    },
+    "Parcels already sold are left out; turn on Closed positions to list them with their realised gain.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bereits verkaufte Pakete bleiben außen vor; schalten Sie „Geschlossene Positionen“ ein, um sie mit ihrem realisierten Gewinn aufzuführen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los lotes ya vendidos se omiten; activa «Posiciones cerradas» para listarlos con su ganancia realizada."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les lots déjà vendus sont exclus ; activez « Positions clôturées » pour les lister avec leur gain réalisé."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I lotti già venduti sono esclusi; attiva «Posizioni chiuse» per elencarli con il loro guadagno realizzato."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "売却済みのロットは除外されています。実現損益とともに一覧するには「クローズ済みポジション」をオンにしてください。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Os lotes já vendidos ficam de fora; ative “Posições encerradas” para listá-los com seu ganho realizado."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已卖出的批次未列出；开启“已平仓头寸”即可连同其已实现收益一并列出。"
+          }
+        }
+      }
+    },
+    "Parcels already sold are listed with their realised gain.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bereits verkaufte Pakete sind mit ihrem realisierten Gewinn aufgeführt."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los lotes ya vendidos se listan con su ganancia realizada."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les lots déjà vendus sont listés avec leur gain réalisé."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I lotti già venduti sono elencati con il loro guadagno realizzato."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "売却済みのロットを実現損益とともに一覧しています。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Os lotes já vendidos aparecem com seu ganho realizado."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已卖出的批次连同其已实现收益一并列出。"
+          }
+        }
+      }
+    },
+    "pooled · %@ sh": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "gepoolt · %@ Stk."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "agrupadas · %@ acc."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "regroupés · %@ titres"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "cumulate · %@ az."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プール · %@ 株"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "agrupadas · %@ un."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "合并计价 · %@ 股"
+          }
+        }
+      }
+    },
+    "Portfolio: %@. Choose All portfolios to report on every one.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Portfolio: %@. Wählen Sie „Alle Portfolios“, um über alle zu berichten."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cartera: %@. Elige «Todas las carteras» para informar sobre todas."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Portefeuille : %@. Choisissez « Tous les portefeuilles » pour les couvrir tous."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Portafoglio: %@. Scegli «Tutti i portafogli» per riportarli tutti."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ポートフォリオ: %@。すべてを対象にするには「すべてのポートフォリオ」を選んでください。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carteira: %@. Escolha “Todas as carteiras” para incluir todas."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "投资组合：%@。选取“所有投资组合”可报告全部。"
+          }
+        }
+      }
+    },
+    "Proceeds": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erlös"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importe"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Produit"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ricavo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "売却代金"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Valor obtido"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "成交金额"
+          }
+        }
+      }
+    },
+    "Report on one portfolio — the account your security accounts sit under": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Über ein Portfolio berichten – das Konto, unter dem Ihre Wertpapierkonten liegen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Informar sobre una cartera: la cuenta bajo la que están tus cuentas de valores"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rapport sur un portefeuille — le compte sous lequel se trouvent vos comptes de titres"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resoconto su un portafoglio: il conto sotto cui stanno i tuoi conti titoli"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ひとつのポートフォリオ（証券の勘定科目が属する親科目）を対象にします"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Relatório de uma carteira — a conta sob a qual ficam suas contas de títulos"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仅报告一个投资组合——即你的证券科目所属的上级科目"
           }
         }
       }
@@ -78499,6 +78828,382 @@
           "stringUnit": {
             "state": "translated",
             "value": "搜索结果"
+          }
+        }
+      }
+    },
+    "Securities valued at their most recent price; unpriced holdings show zero value. Realised gain and income are since the first purchase.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wertpapiere zum jeweils letzten Kurs bewertet; Positionen ohne Kurs werden mit null ausgewiesen. Realisierter Gewinn und Erträge gelten seit dem ersten Kauf."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Valores valorados a su precio más reciente; las posiciones sin precio muestran valor cero. La ganancia realizada y los ingresos se cuentan desde la primera compra."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Titres valorisés à leur cours le plus récent ; les positions sans cours affichent une valeur nulle. Le gain réalisé et les produits courent depuis le premier achat."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Titoli valutati all’ultimo prezzo disponibile; le posizioni senza prezzo mostrano valore zero. Guadagno realizzato ed entrate sono dal primo acquisto."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "証券は直近の価格で評価しています。価格のない保有は評価額ゼロで表示されます。実現損益と収益は最初の購入以降の累計です。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Títulos avaliados pelo preço mais recente; posições sem preço aparecem com valor zero. O ganho realizado e as receitas contam desde a primeira compra."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "证券按最新价格估值；没有价格的持仓显示为零。已实现收益与收入自首次买入起累计。"
+          }
+        }
+      }
+    },
+    "sold %@ · %@ sh": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "verkauft am %1$@ · %2$@ Stk."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "vendidas el %1$@ · %2$@ acc."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "vendus le %1$@ · %2$@ titres"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "venduti il %1$@ · %2$@ az."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ に売却 · %2$@ 株"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "vendidas em %1$@ · %2$@ un."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ 卖出 · %2$@ 股"
+          }
+        }
+      }
+    },
+    "sold %@ · %@ sh (LT)": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "verkauft am %1$@ · %2$@ Stk. (langfr.)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "vendidas el %1$@ · %2$@ acc. (LP)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "vendus le %1$@ · %2$@ titres (LT)"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "venduti il %1$@ · %2$@ az. (LT)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ に売却 · %2$@ 株（長期）"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "vendidas em %1$@ · %2$@ un. (LP)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ 卖出 · %2$@ 股（长期）"
+          }
+        }
+      }
+    },
+    "sold %@ · %@ sh (ST)": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "verkauft am %1$@ · %2$@ Stk. (kurzfr.)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "vendidas el %1$@ · %2$@ acc. (CP)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "vendus le %1$@ · %2$@ titres (CT)"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "venduti il %1$@ · %2$@ az. (BT)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ に売却 · %2$@ 株（短期）"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "vendidas em %1$@ · %2$@ un. (CP)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ 卖出 · %2$@ 股（短期）"
+          }
+        }
+      }
+    },
+    "sold %@ · %@ sh, acquired %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "verkauft am %1$@ · %2$@ Stk., erworben %3$@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "vendidas el %1$@ · %2$@ acc., adquiridas el %3$@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "vendus le %1$@ · %2$@ titres, acquis le %3$@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "venduti il %1$@ · %2$@ az., acquistate il %3$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ に売却 · %2$@ 株、%3$@ に取得"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "vendidas em %1$@ · %2$@ un., adquiridas em %3$@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ 卖出 · %2$@ 股，%3$@ 购入"
+          }
+        }
+      }
+    },
+    "sold %@ · %@ sh, acquired %@ (LT)": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "verkauft am %1$@ · %2$@ Stk., erworben %3$@ (langfr.)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "vendidas el %1$@ · %2$@ acc., adquiridas el %3$@ (LP)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "vendus le %1$@ · %2$@ titres, acquis le %3$@ (LT)"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "venduti il %1$@ · %2$@ az., acquistate il %3$@ (LT)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ に売却 · %2$@ 株、%3$@ に取得（長期）"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "vendidas em %1$@ · %2$@ un., adquiridas em %3$@ (LP)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ 卖出 · %2$@ 股，%3$@ 购入（长期）"
+          }
+        }
+      }
+    },
+    "sold %@ · %@ sh, acquired %@ (ST)": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "verkauft am %1$@ · %2$@ Stk., erworben %3$@ (kurzfr.)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "vendidas el %1$@ · %2$@ acc., adquiridas el %3$@ (CP)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "vendus le %1$@ · %2$@ titres, acquis le %3$@ (CT)"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "venduti il %1$@ · %2$@ az., acquistate il %3$@ (BT)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ に売却 · %2$@ 株、%3$@ に取得（短期）"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "vendidas em %1$@ · %2$@ un., adquiridas em %3$@ (CP)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ 卖出 · %2$@ 股，%3$@ 购入（短期）"
+          }
+        }
+      }
+    },
+    "The four investment reports — **Portfolio**, **Investment Lots**, **Capital Gains**, **Investment Return** — share one set of controls: the period (Portfolio and Lots read its end; Capital Gains and Investment Return cover it), a **Portfolio** filter, a **Closed positions** switch, and the cost-basis method and fee treatment. Each is laid out by portfolio, then security in order of gain, with a **Yield p.a.** column: the gain as a simple annual rate on what the parcels cost, over the time they were held.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die vier Anlageberichte – **Portfolio**, **Anlage-Lots**, **Veräußerungsgewinne**, **Anlagerendite** – teilen sich einen Satz Bedienelemente: den Zeitraum (Portfolio und Lots lesen sein Ende; Veräußerungsgewinne und Anlagerendite decken ihn ab), einen Filter **Portfolio**, einen Schalter **Geschlossene Positionen** sowie Anschaffungskostenmethode und Gebührenbehandlung. Jeder ist nach Portfolio und darin nach Wertpapier in der Reihenfolge des Gewinns gegliedert, mit einer Spalte **Rendite p. a.**: der Gewinn als einfacher Jahreszinssatz auf die Anschaffungskosten der Pakete über ihre Haltedauer."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los cuatro informes de inversión — **Cartera**, **Lotes de inversión**, **Plusvalías**, **Rentabilidad de las inversiones** — comparten un mismo conjunto de controles: el período (Cartera y Lotes leen su fin; Plusvalías y Rentabilidad de las inversiones lo abarcan), un filtro de **Cartera**, un interruptor de **Posiciones cerradas**, y el método de coste de adquisición y el tratamiento de las comisiones. Cada uno se organiza por cartera y, dentro, por valor en orden de ganancia, con una columna **Rentab. anual**: la ganancia como tasa anual simple sobre lo que costaron los lotes, durante el tiempo que se mantuvieron."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les quatre rapports d’investissement — **Portefeuille**, **Lots d’investissement**, **Plus-values**, **Rendement des placements** — partagent un même jeu de commandes : la période (Portefeuille et Lots en lisent la fin ; Plus-values et Rendement des placements la couvrent), un filtre **Portefeuille**, un commutateur **Positions clôturées**, ainsi que la méthode de prix de revient et le traitement des frais. Chacun est présenté par portefeuille, puis par titre dans l’ordre des gains, avec une colonne **Rendement annuel** : le gain comme taux annuel simple sur ce que les lots ont coûté, sur la durée de détention."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I quattro resoconti di investimento — **Portafoglio**, **Lotti di investimento**, **Plusvalenze**, **Rendimento degli investimenti** — condividono un unico insieme di controlli: il periodo (Portafoglio e Lotti ne leggono la fine; Plusvalenze e Rendimento degli investimenti lo coprono), un filtro **Portafoglio**, un interruttore **Posizioni chiuse**, e il metodo del costo di acquisto e il trattamento delle commissioni. Ciascuno è disposto per portafoglio e poi per titolo in ordine di guadagno, con una colonna **Rendimento annuo**: il guadagno come tasso annuo semplice su quanto sono costati i lotti, per il tempo in cui sono stati detenuti."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "4つの投資レポート — **ポートフォリオ**、**投資ロット**、**キャピタルゲイン**、**投資リターン** — は同じ操作項目を共有します。期間（ポートフォリオとロットはその末日時点、キャピタルゲインと投資リターンは期間全体）、**ポートフォリオ**フィルタ、**クローズ済みポジション**の切り替え、そして取得原価の方法と手数料の扱いです。いずれもポートフォリオ別、その中で証券を損益順に並べ、**年率利回り**の列を備えます。これはロットの取得原価に対する損益を、保有期間で年率換算した単利です。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Os quatro relatórios de investimentos — **Carteira**, **Lotes de investimento**, **Ganhos de capital**, **Retorno dos investimentos** — compartilham um mesmo conjunto de controles: o período (Carteira e Lotes leem o seu fim; Ganhos de capital e Retorno dos investimentos o cobrem), um filtro de **Carteira**, uma chave **Posições encerradas**, e o método de custo de aquisição e o tratamento das taxas. Cada um é organizado por carteira e, dentro dela, por título em ordem de ganho, com uma coluna **Rendimento a.a.**: o ganho como taxa anual simples sobre o que os lotes custaram, pelo tempo em que foram mantidos."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "四份投资报表——**投资组合**、**投资批次**、**资本利得**、**投资回报**——共用同一组控件：期间（投资组合与批次读取期末时点；资本利得与投资回报覆盖整个期间）、**投资组合**筛选、**已平仓头寸**开关，以及成本基础方法与手续费处理。每份报表均按投资组合、再按证券以收益降序排列，并附**年化收益率**列：以批次原始成本为基数、按持有时间折算的单利年率。"
           }
         }
       }
@@ -92955,53 +93660,6 @@
         }
       }
     },
-    "Open Lots (%@)": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Offene Positionen (%@)"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lotes abiertos (%@)"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lots ouverts (%@)"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lotti aperti (%@)"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "未決済ロット（%@）"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lotes abertos (%@)"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "未平仓批次（%@）"
-          }
-        }
-      }
-    },
     "Open Read-Only": {
       "extractionState": "manual",
       "localizations": {
@@ -105555,53 +106213,6 @@
         }
       }
     },
-    "Realised Gains": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Realisierte Gewinne"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Plusvalías realizadas"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Plus-values réalisées"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Plusvalenze realizzate"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "実現損益"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ganhos realizados"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已实现收益"
-          }
-        }
-      }
-    },
     "Realised gains by disposal": {
       "extractionState": "manual",
       "localizations": {
@@ -117399,53 +118010,6 @@
         }
       }
     },
-    "Securities valued at their most recent price; unpriced holdings show zero value.": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wertpapiere zum jeweils letzten Kurs bewertet; Positionen ohne Kurs werden mit null ausgewiesen."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Valores valorados a su precio más reciente; las posiciones sin precio muestran valor cero."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Titres valorisés à leur cours le plus récent ; les positions sans cours affichent une valeur nulle."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Titoli valutati all’ultimo prezzo disponibile; le posizioni senza prezzo mostrano valore zero."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "証券は直近の価格で評価しています。価格のない保有は評価額ゼロで表示されます。"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Títulos avaliados pelo preço mais recente; posições sem preço aparecem com valor zero."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "证券按最新价格估值；没有价格的持仓显示为零。"
-          }
-        }
-      }
-    },
     "Security": {
       "extractionState": "manual",
       "localizations": {
@@ -126924,53 +127488,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "**财年资料包** 会将报税时所需的报表按阅读顺序汇成一份 PDF。"
-          }
-        }
-      }
-    },
-    "The **Transactions** report covers every account until you choose some; an account you choose brings its subaccounts with it.": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Der Bericht **Buchungen** umfasst alle Konten, bis Sie einige auswählen; ein gewähltes Konto bringt seine Unterkonten mit."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "El informe **Transacciones** abarca todas las cuentas hasta que elijas algunas; una cuenta elegida incluye sus subcuentas."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Le rapport **Opérations** couvre tous les comptes jusqu’à ce que vous en choisissiez ; un compte choisi inclut ses sous-comptes."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Il report **Transazioni** copre tutti i conti finché non ne scegli alcuni; un conto scelto porta con sé i suoi sottoconti."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "**取引**レポートは、勘定科目を選ぶまではすべての勘定科目を対象にします。選んだ勘定科目には子勘定科目も含まれます。"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "O relatório **Transações** abrange todas as contas até você escolher algumas; uma conta escolhida inclui as suas subcontas."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "**交易**报表在你选择科目之前涵盖所有科目；所选科目会连同其子科目一并包含。"
           }
         }
       }
@@ -144506,6 +145023,147 @@
           "stringUnit": {
             "state": "translated",
             "value": "市值收益率"
+          }
+        }
+      }
+    },
+    "Yield p.a.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rendite p. a."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rentab. anual"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rendement annuel"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rendimento annuo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "年率利回り"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rendimento a.a."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "年化收益率"
+          }
+        }
+      }
+    },
+    "Yield p.a. is the gain as a simple annual rate on what the parcels cost — gain ÷ cost ÷ years held, the years weighted by cost — so holdings of different ages read alike. Securities and portfolios are in order of gain, largest first.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rendite p. a. ist der Gewinn als einfacher Jahreszinssatz auf die Anschaffungskosten der Pakete – Gewinn ÷ Kosten ÷ Haltejahre, die Jahre nach Kosten gewichtet –, sodass Positionen unterschiedlichen Alters vergleichbar werden. Wertpapiere und Portfolios sind nach Gewinn geordnet, der größte zuerst."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La rentabilidad anual es la ganancia como tasa anual simple sobre lo que costaron los lotes — ganancia ÷ coste ÷ años mantenidos, con los años ponderados por el coste —, de modo que posiciones de distinta antigüedad se leen igual. Los valores y las carteras están en orden de ganancia, de mayor a menor."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le rendement annuel est le gain comme taux annuel simple sur ce que les lots ont coûté — gain ÷ coût ÷ années de détention, les années pondérées par le coût — de sorte que des positions d’âges différents se lisent de la même façon. Titres et portefeuilles sont classés par gain, le plus élevé en premier."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il rendimento annuo è il guadagno come tasso annuo semplice su quanto sono costati i lotti — guadagno ÷ costo ÷ anni di detenzione, con gli anni ponderati per il costo — così posizioni di età diversa si leggono allo stesso modo. Titoli e portafogli sono in ordine di guadagno, dal più grande."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "年率利回りは、ロットの取得原価に対する損益を単利の年率で表したものです（損益 ÷ 原価 ÷ 保有年数。年数は原価で加重）。保有期間の異なる銘柄を同じ尺度で読めます。証券とポートフォリオは損益の大きい順に並びます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O rendimento a.a. é o ganho como taxa anual simples sobre o que os lotes custaram — ganho ÷ custo ÷ anos mantidos, com os anos ponderados pelo custo —, de modo que posições de idades diferentes se leem da mesma forma. Títulos e carteiras estão em ordem de ganho, do maior para o menor."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "年化收益率是以批次原始成本为基数的单利年率——收益 ÷ 成本 ÷ 持有年数，年数按成本加权——使不同持有年限的头寸可以同口径比较。证券与投资组合按收益从大到小排列。"
+          }
+        }
+      }
+    },
+    "Yield per annum: %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rendite pro Jahr: %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rentabilidad anual: %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rendement annuel : %@"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rendimento annuo: %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "年率利回り: %@"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rendimento ao ano: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "年化收益率：%@"
           }
         }
       }

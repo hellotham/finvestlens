@@ -704,8 +704,8 @@
                 "**A break in the line means missing prices** — it is never drawn through days that have none. What counts as a break scales with the period, so a week's absence shows over a month and not over five years.",
                 "Heights are *not* comparable between rows. Each chart uses its own scale, because two securities' prices have no common measure.",
                 "**Valued by hand** collects securities no price service covers, such as super funds. They are not failures; enter their prices from **More ▸ Enter a Price…**, and set how often you expect a new figure with **Valuation Cadence…** on the row — quarterly by default, so a fund is not called stale every Tuesday the market trades.",
-                "**Closed positions** are hidden: a row under the holdings says how many, with **Show**; hide them again from their heading or **More ▸ Show Closed Positions**. Their history is always kept for capital gains, and the Portfolio and Investment Return reports have a Closed positions switch of their own.",
-                "**Investment Return**, in Reports, adds up each security's capital gain, dividends and franking credits against the money you put in — closed positions included."
+                "**Closed positions** are hidden: a row under the holdings says how many, with **Show**; hide them again from their heading or **More ▸ Show Closed Positions**. Their history is always kept, and every investment report has a Closed positions switch of its own — off for the valuations (Portfolio, Lots), on for the histories (Capital Gains, Investment Return).",
+                "**Investment Return**, in Reports, adds up each security's capital gain, dividends and franking credits over the period against the money you put in, by portfolio, with a yield per annum on each row."
               ]
             },
             {
@@ -885,9 +885,10 @@
             {
               "type": "bullets",
               "items": [
-                "Change the period and options at the top of any report.",
+                "Change the period and options at the top of any report. The period is the window's: a report opened from Reports agrees with the board you were looking at.",
                 "Statements show every level of your accounts, each with the total of everything beneath it.",
-                "The **Transactions** report covers every account until you choose some; an account you choose brings its subaccounts with it.",
+                "**Transactions**, **Cash Flow** and **Average Balance** take a set of accounts, read the same way: nothing chosen is the report's own default — every account, or the bank and cash accounts — and an account you choose narrows the report to it and its subaccounts.",
+                "The four investment reports — **Portfolio**, **Investment Lots**, **Capital Gains**, **Investment Return** — share one set of controls: the period (Portfolio and Lots read its end; Capital Gains and Investment Return cover it), a **Portfolio** filter, a **Closed positions** switch, and the cost-basis method and fee treatment. Each is laid out by portfolio, then security in order of gain, with a **Yield p.a.** column: the gain as a simple annual rate on what the parcels cost, over the time they were held.",
                 "Save a report with its settings as a **favourite** to come back to it.",
                 "Export any report as a PDF, or share it."
               ]

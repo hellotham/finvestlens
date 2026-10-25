@@ -78,11 +78,23 @@ your own choice of where the Apple Intelligence features run.
 - **Accounts opens faster on the Mac** — in under a third of the time on a
   large book, and faster again the next time.
 - **Investment Return**, a new report: each security's capital gain,
-  dividends and franking credits, and all three together against the money
-  you put in — closed positions included.
+  dividends and franking credits over the period, and all three together
+  against the money you put in — by portfolio, closed positions included.
+- **The investment reports read alike.** Portfolio, Investment Lots, Capital
+  Gains and Investment Return share one set of controls — the period, a
+  Portfolio filter, Closed positions, and the cost-basis method — and one
+  layout: by portfolio, then security in order of gain, each row with a
+  **Yield p.a.**: the gain as a simple annual rate on what you paid, over
+  the time you held it.
 - **Closed positions, where you look for them.** Investments says how many
-  are hidden, with Show beside it; the Portfolio and Investment Return
-  reports have a Closed positions switch.
+  are hidden, with Show beside it; every investment report has a Closed
+  positions switch — off for the valuations, on for the histories.
+- **Choosing accounts narrows a report.** In Cash Flow and Average Balance,
+  as in Transactions, nothing chosen is the report's default scope and an
+  account you choose is exactly what it covers, subaccounts included. The
+  picker used to open with every bank account already ticked, so one click
+  unticked an account instead of narrowing to it. Changing the cost-basis
+  method or fee treatment now recomputes the report, too.
 - **No lock left behind.** Closing the last window now quits FinvestLens,
   saving the book and releasing it for your other Macs. If FinvestLens is
   stopped without warning — by an update or a crash — with nothing unsaved,

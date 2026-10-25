@@ -29,6 +29,9 @@ struct AccountMatchPicker: View {
     /// subtree — so a placeholder parent can be ticked too, as the one way to
     /// say "everything under Expenses" (the transaction report's scope).
     var emptyMeansAll = false
+    /// What an empty selection means, where it is not every account — a
+    /// report whose default scope is its bank and cash accounts.
+    var emptyLabel: String? = nil
     @Environment(\.dismiss) private var dismiss
 
     @State private var filter = ""
@@ -102,7 +105,8 @@ struct AccountMatchPicker: View {
 
     private var summary: String {
         switch selection.count {
-        case 0: emptyMeansAll ? String(localized: "All accounts") : String(localized: "No accounts selected")
+        case 0: emptyMeansAll ? (emptyLabel ?? String(localized: "All accounts"))
+            : String(localized: "No accounts selected")
         default: emptyMeansAll
             ? String(localized: "\(selection.count) accounts selected, with their subaccounts")
             : String(localized: "\(selection.count) accounts selected")

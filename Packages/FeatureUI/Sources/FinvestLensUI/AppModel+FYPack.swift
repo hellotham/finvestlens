@@ -67,7 +67,7 @@ extension AppModel {
         if let changes = changesInNetWorthStatement(from: from, to: to, periodLabel: label) {
             pages.append(.statement(changes))
         }
-        if let cg = capitalGainsDocument(from: from, to: to) {
+        if let cg = capitalGainsDocument(from: from, to: to, periodLabel: label) {
             pages.append(.document(cg))
         }
         if let dividends = dividendFrankingDocument(from: from, to: to, periodLabel: label) {

@@ -1047,13 +1047,14 @@ public final class AppModel {
     @ObservationIgnored var codeIndex: [GncGUID: String] = [:]
     @ObservationIgnored var sortIndexRevision = -1
 
-    /// The memo behind ``portfolioAccounts``, which the Investments tab strip
-    /// reads several times per SwiftUI pass. `@ObservationIgnored` because it
-    /// is a cache: `derivedRevision` is already the redraw signal.
-    @ObservationIgnored var portfolioCache: [AccountNode] = []
+    /// The memo behind ``portfolioAccounts(includingClosed:)``, which the
+    /// Investments tab strip reads several times per SwiftUI pass, keyed by
+    /// which side of the Show Closed Positions toggle it was built for — the
+    /// hub and a report's portfolio filter read opposite sides in the same
+    /// pass. `@ObservationIgnored` because it is a cache: `derivedRevision`
+    /// is already the redraw signal.
+    @ObservationIgnored var portfolioCache: [Bool: [AccountNode]] = [:]
     @ObservationIgnored var portfolioCacheRevision = -1
-    /// Which side of the Show Closed Positions toggle the cache was built for.
-    @ObservationIgnored var portfolioCacheShowedClosed = false
 
     /// Custom Overview views, decoded once per book rather than per read.
     /// Observed, not `@ObservationIgnored`: saving a view has to redraw the

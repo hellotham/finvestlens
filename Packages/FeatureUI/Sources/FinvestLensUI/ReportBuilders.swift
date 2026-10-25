@@ -30,6 +30,29 @@ extension AppModel {
             .map(\.guid))
     }
 
+    /// The accounts a cash-flow or average-balance report covers: the ones
+    /// chosen, each with its subaccounts — as the Transactions report reads
+    /// its scope — or, with none chosen, the bank and cash accounts
+    /// (``ReportKind/emptyScopeIsEveryAccount``).
+    func accountScope(for configuration: ReportConfiguration) -> Set<GncGUID> {
+        guard let book, let chosen = chosenAccounts(configuration) else { return defaultCashFlowAccountIDs }
+        return Set(FinancialReports.transactionReportAccounts(book, accountIDs: chosen).map(\.guid))
+    }
+
+    /// The accounts a configuration names, or `nil` for none — an empty set
+    /// is no choice, not a choice of nothing, for every scoped kind alike.
+    func chosenAccounts(_ configuration: ReportConfiguration) -> Set<GncGUID>? {
+        configuration.accountIDs.flatMap { $0.isEmpty ? nil : $0 }
+    }
+
+    /// The portfolio a configuration names, if the book still has it: a
+    /// favourite saved on a portfolio since deleted reports every one, and
+    /// its note says so, rather than reporting nothing under a note that
+    /// claims every portfolio.
+    func portfolioFilter(_ configuration: ReportConfiguration) -> GncGUID? {
+        configuration.portfolioID.flatMap { book?.account(with: $0) != nil ? $0 : nil }
+    }
+
     /// Net worth at each month end across a window — the chart the dashboard
     /// draws, generalised to any period.
     func netWorthPoints(from: Date, to: Date) -> [NetWorthPoint] {
@@ -65,23 +88,29 @@ extension AppModel {
         guard book != nil, let kind = ReportKind(rawValue: configuration.kind),
               kind.usesScaffold else { return }
         let (from, to) = resolve(configuration.period)
+        let includeClosed = configuration.includeClosed ?? kind.includesClosedByDefault
+        let portfolioID = portfolioFilter(configuration)
         switch kind {
         case .transactions:
-            await warm(transactionsReportRequest(accountIDs: configuration.accountIDs, from: from, to: to))
+            await warm(transactionsReportRequest(accountIDs: chosenAccounts(configuration), from: from, to: to))
         case .reconcile:
             guard let account = configuration.accountIDs?.first ?? selectedAccountID
                 ?? postableAccounts.first?.id else { return }
             await warm(reconcileReportRequest(accountID: account, asOf: to))
         case .portfolio where !securityCommodities.isEmpty:
-            await warm(advancedPortfolioRequest(asOf: to, includeClosed: configuration.includeClosed ?? false))
+            await warm(advancedPortfolioRequest(asOf: to, includeClosed: includeClosed,
+                                                portfolioID: portfolioID))
         case .investmentReturn where !securityCommodities.isEmpty:
-            await warm(investmentReturnRequest(asOf: to, includeClosed: configuration.includeClosed ?? true))
+            await warm(investmentReturnRequest(from: from, to: to, includeClosed: includeClosed,
+                                               portfolioID: portfolioID))
         case .investmentLots where !securityCommodities.isEmpty:
-            await warm(investmentLotsRequest(asOf: to))
+            await warm(investmentLotsRequest(asOf: to, includeClosed: includeClosed,
+                                             portfolioID: portfolioID))
         case .capitalGains where !securityCommodities.isEmpty:
-            await warm(capitalGainsRequest(from: from, to: to))
+            await warm(capitalGainsRequest(from: from, to: to, includeClosed: includeClosed,
+                                           portfolioID: portfolioID))
         case .averageBalance:
-            let scope = configuration.accountIDs ?? defaultCashFlowAccountIDs
+            let scope = accountScope(for: configuration)
             guard !scope.isEmpty else { return }
             await warm(averageBalanceRequest(accountIDs: scope, from: from, to: to,
                                              step: configuration.step ?? .month))
@@ -99,6 +128,8 @@ extension AppModel {
         let (from, to) = resolve(configuration.period)
         let asOfLabel = String(localized: "As of \(AppDateFormat.current.full(to))")
         let periodLabel = kind.isAsOf ? asOfLabel : label(for: configuration.period)
+        let includeClosed = configuration.includeClosed ?? kind.includesClosedByDefault
+        let portfolioID = portfolioFilter(configuration)
 
         switch kind {
         case .balanceSheet:
@@ -296,7 +327,7 @@ extension AppModel {
                 }())
 
         case .cashFlow:
-            let scope = configuration.accountIDs ?? defaultCashFlowAccountIDs
+            let scope = accountScope(for: configuration)
             guard let report = cashFlow(accountIDs: scope, from: from, to: to) else { return nil }
             return ReportDocument(
                 title: String(localized: "Cash Flow"),
@@ -370,7 +401,7 @@ extension AppModel {
                 }())
 
         case .averageBalance:
-            let scope = configuration.accountIDs ?? defaultCashFlowAccountIDs
+            let scope = accountScope(for: configuration)
             let step = configuration.step ?? .month
             guard let report = averageBalance(accountIDs: scope, from: from, to: to,
                                               step: step) else { return nil }
@@ -476,19 +507,25 @@ extension AppModel {
         case .spendingInsights:
             return spendingInsightsDocument(period: configuration.period)
         case .transactions:
-            return transactionsDocument(accountIDs: configuration.accountIDs, from: from, to: to)
+            return transactionsDocument(accountIDs: chosenAccounts(configuration), from: from, to: to)
         case .reconcile:
             guard let account = configuration.accountIDs?.first ?? selectedAccountID
                 ?? postableAccounts.first?.id else { return nil }
             return reconcileDocument(accountID: account, asOf: to)
         case .portfolio:
-            return portfolioDocument(asOf: to, includeClosed: configuration.includeClosed ?? false)
+            return portfolioDocument(asOf: to, includeClosed: includeClosed,
+                                     portfolioID: portfolioID)
         case .investmentReturn:
-            return investmentReturnDocument(asOf: to, includeClosed: configuration.includeClosed ?? true)
+            return investmentReturnDocument(from: from, to: to, periodLabel: periodLabel,
+                                            includeClosed: includeClosed,
+                                            portfolioID: portfolioID)
         case .investmentLots:
-            return investmentLotsDocument(asOf: to)
+            return investmentLotsDocument(asOf: to, includeClosed: includeClosed,
+                                          portfolioID: portfolioID)
         case .capitalGains:
-            return capitalGainsDocument(from: from, to: to)
+            return capitalGainsDocument(from: from, to: to, periodLabel: periodLabel,
+                                        includeClosed: includeClosed,
+                                        portfolioID: portfolioID)
         default:
             return nil
         }

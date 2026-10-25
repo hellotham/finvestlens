@@ -66,7 +66,7 @@ struct InvestmentReturnTests {
     @Test("Capital gain is realised plus unrealised, from the lot engine")
     func capitalGain() throws {
         let f = fixture()
-        let report = FinancialReports.investmentReturn(f.book, currency: .aud, asOf: day(420))
+        let report = FinancialReports.investmentReturn(f.book, currency: .aud, to: day(420))
         let cba = try #require(line(report, "CBA"))
         #expect(cba.realizedGain == dec("20"))
         #expect(cba.unrealizedGain == dec("12"))
@@ -105,7 +105,7 @@ struct InvestmentReturnTests {
         both.addSplit(account: f.offset, value: dec("3"))
         f.book.addTransaction(both)
 
-        let report = FinancialReports.investmentReturn(f.book, currency: .aud, asOf: day(420))
+        let report = FinancialReports.investmentReturn(f.book, currency: .aud, to: day(420))
         let cba = try #require(line(report, "CBA"))
         #expect(cba.dividends == dec("52"))          // 35 + 10 + 7
         #expect(cba.frankingCredits == dec("18"))    // 15 + 3
@@ -136,7 +136,7 @@ struct InvestmentReturnTests {
         sell.addSplit(account: f.bank, value: dec("125"))
         f.book.addTransaction(sell)
 
-        let with = FinancialReports.investmentReturn(f.book, currency: .aud, asOf: day(420), includeClosed: true)
+        let with = FinancialReports.investmentReturn(f.book, currency: .aud, to: day(420), includeClosed: true)
         let closed = try #require(line(with, "XYZ"))
         #expect(closed.isClosed && closed.units == 0)
         #expect(closed.realizedGain == dec("25") && closed.unrealizedGain == 0)
@@ -145,7 +145,7 @@ struct InvestmentReturnTests {
         #expect(with.totalReturn == dec("62"))      // CBA 32 + XYZ 30
         #expect(with.lines.map(\.symbol) == ["CBA", "XYZ"], "largest return first")
 
-        let without = FinancialReports.investmentReturn(f.book, currency: .aud, asOf: day(420), includeClosed: false)
+        let without = FinancialReports.investmentReturn(f.book, currency: .aud, to: day(420), includeClosed: false)
         #expect(line(without, "XYZ") == nil)
         #expect(without.totalReturn == dec("32"))
         #expect(without.totalMoneyIn == dec("100"))
@@ -160,7 +160,7 @@ struct InvestmentReturnTests {
         buy.addSplit(account: f.bank, value: dec("-50"))
         f.book.addTransaction(buy)
 
-        let report = FinancialReports.investmentReturn(f.book, currency: .aud, asOf: day(420))
+        let report = FinancialReports.investmentReturn(f.book, currency: .aud, to: day(420))
         let line = try #require(line(report, "NAB"))
         #expect(line.unrealizedGain == nil)
         #expect(line.capitalGain == 0)
@@ -177,7 +177,7 @@ struct InvestmentReturnTests {
         foreign.addSplit(account: f.franked, value: dec("-20"))
         f.book.addTransaction(foreign)
 
-        let report = FinancialReports.investmentReturn(f.book, currency: .aud, asOf: day(420))
+        let report = FinancialReports.investmentReturn(f.book, currency: .aud, to: day(420))
         let cba = try #require(line(report, "CBA"))
         #expect(cba.dividends == 0)
         #expect(report.unconvertedCurrencyCodes == ["USD"])

@@ -12,8 +12,13 @@ import FinvestLensEngine
 /// A realised gain line for the capital-gains report, tagged with its security.
 public struct CapitalGainLine: Identifiable, Hashable, Sendable {
     public let id: GncGUID
+    /// The security account the parcel was sold from.
+    public var accountID: GncGUID
     public var symbol: String
     public var accountName: String
+    /// The account above the security's — its portfolio; `nil` at the top of
+    /// the tree.
+    public var portfolio: PortfolioRef?
     public var disposalDate: Date
     public var acquisitionDate: Date?
     public var quantity: Decimal
@@ -21,6 +26,14 @@ public struct CapitalGainLine: Identifiable, Hashable, Sendable {
     public var costBasis: Decimal
     public var gain: Decimal
     public var longTerm: Bool?
+    /// Whether the security was sold out of entirely by the period's end —
+    /// the report's Closed positions switch.
+    public var positionClosed: Bool
+    /// Years the parcel was held; from the first purchase for a pooled lot.
+    public var heldYears: Double?
+    /// The gain as a simple annual rate on the parcel's cost
+    /// (``InvestmentYield``).
+    public var yieldPerAnnum: Double?
 }
 
 /// An open (unsold) parcel for the lots report.
@@ -33,7 +46,7 @@ public struct OpenLotLine: Identifiable, Hashable, Sendable {
     public var costBasis: Decimal
 }
 
-/// Realised capital gains over a period plus the currently-open lots
+/// Realised capital gains over a period plus the lots still open at its end
 /// (`FR-RPT-03`). Amounts are in the report currency; multi-currency FX is a
 /// higher layer, so figures use each security's own transaction amounts.
 public struct CapitalGainsReport: Sendable {
@@ -41,6 +54,7 @@ public struct CapitalGainsReport: Sendable {
     public var method: CostBasisMethod
     public var from: Date
     public var to: Date
+    /// By disposal date, oldest first.
     public var lines: [CapitalGainLine]
     public var openLots: [OpenLotLine]
     /// Currencies whose figures could **not** be converted to the report
@@ -65,12 +79,21 @@ public struct CapitalGainsReport: Sendable {
     public var totalProceeds: Decimal { lines.reduce(0) { $0 + $1.proceeds } }
     public var totalCostBasis: Decimal { lines.reduce(0) { $0 + $1.costBasis } }
     public var openCostBasis: Decimal { openLots.reduce(0) { $0 + $1.costBasis } }
+    /// Every disposal's gain as an annual rate on what the parcels cost, over
+    /// the cost-weighted time they were held.
+    public var yieldPerAnnum: Double? {
+        InvestmentYield.combined(lines.map { ($0.gain, $0.costBasis, $0.heldYears) })
+    }
 }
 
 public extension FinancialReports {
 
-    /// Realised gains disposed within `[from, to]` and all open lots, computed
-    /// per security account under `method` (`FR-RPT-03`).
+    /// Realised gains disposed within `[from, to]` and the lots open at `to`,
+    /// computed per security account under `method` (`FR-RPT-03`).
+    ///
+    /// `includeClosed` keeps the disposals of securities sold out of entirely
+    /// by `to`; `false` reports only gains on what is still held. `portfolioID`
+    /// narrows the report to one portfolio's accounts.
     static func capitalGains(
         _ book: Book,
         currency: Commodity,
@@ -78,18 +101,28 @@ public extension FinancialReports {
         to: Date = .distantFuture,
         method: CostBasisMethod = .fifo,
         longTermThresholdDays: Int = CostBasis.defaultLongTermThresholdDays,
-        feeTreatment: FeeTreatment = .ignore
+        feeTreatment: FeeTreatment = .ignore,
+        includeClosed: Bool = true,
+        portfolioID: GncGUID? = nil
     ) -> CapitalGainsReport {
         var lines: [CapitalGainLine] = []
         var openLots: [OpenLotLine] = []
         var unconverted: Set<String> = []
 
-        for account in book.accounts where account.type.isSecurityType && !account.isPlaceholder {
-            let result = book.costBasis(for: account, method: method,
+        for account in securityAccounts(book, inPortfolio: portfolioID) {
+            // Lots are matched in date order, so what happens after `to`
+            // cannot change a disposal before it; cutting there is what makes
+            // "open lots" the lots open at the period's end, and "closed" a
+            // position closed by then.
+            let result = book.costBasis(for: account, asOf: to, method: method,
                                         longTermThresholdDays: longTermThresholdDays,
                                         feeTreatment: feeTreatment,
                                         currencyFraction: currency.smallestFraction)
+            let closed = result.remainingQuantity == 0
+            guard includeClosed || !closed else { continue }
             let symbol = account.commodity.mnemonic
+            let portfolio = portfolio(of: account)
+            let first = pooledLots(result) ? firstAcquisition(of: account, in: book) : nil
 
             // Cost-basis amounts are in the security's trade currency; convert
             // each to the report currency (dated at the disposal / acquisition)
@@ -114,14 +147,21 @@ public extension FinancialReports {
                 }
                 let proceeds = currency.round(rawProceeds)
                 let costBasis = currency.round(rawCostBasis)
+                let years = (gain.acquisitionDate ?? first).map {
+                    InvestmentYield.years(from: $0, to: gain.disposalDate)
+                }
                 lines.append(CapitalGainLine(
-                    id: .random(), symbol: symbol, accountName: account.name,
-                    disposalDate: gain.disposalDate, acquisitionDate: gain.acquisitionDate,
+                    id: .random(), accountID: account.guid, symbol: symbol, accountName: account.name,
+                    portfolio: portfolio, disposalDate: gain.disposalDate, acquisitionDate: gain.acquisitionDate,
                     quantity: gain.quantity,
                     proceeds: proceeds,
                     costBasis: costBasis,
                     gain: proceeds - costBasis,
-                    longTerm: gain.longTerm))
+                    longTerm: gain.longTerm,
+                    positionClosed: closed,
+                    heldYears: years,
+                    yieldPerAnnum: InvestmentYield.annualised(gain: proceeds - costBasis,
+                                                              cost: costBasis, years: years)))
             }
 
             for lot in result.openLots {

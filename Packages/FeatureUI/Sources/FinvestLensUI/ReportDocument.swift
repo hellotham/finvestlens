@@ -50,6 +50,20 @@ struct ReportDocumentRow: Identifiable {
     var amounts: [Decimal?]?
 }
 
+/// How a column's figures print: money in the section's currency, or a rate
+/// — the investment reports' yield per annum, kept as a fraction.
+enum ReportColumnFormat {
+    case amount
+    case percent
+
+    func string(_ value: Decimal, code: String) -> String {
+        switch self {
+        case .amount: AmountFormat.string(value, code: code)
+        case .percent: value.formatted(.percent.precision(.fractionLength(1)))
+        }
+    }
+}
+
 /// A titled table with an optional ruled total.
 struct ReportDocumentSection: Identifiable {
     /// The title, unless the section says otherwise: the Transactions
@@ -66,6 +80,8 @@ struct ReportDocumentSection: Identifiable {
     var columns: [String]? = nil
     /// A ruled total across the comparative columns.
     var columnTotals: (label: String, amounts: [Decimal?])? = nil
+    /// How each of `columns` prints; `nil`, or a missing entry, is money.
+    var columnFormats: [ReportColumnFormat]? = nil
     /// The section's own currency, where it is not the document's — each
     /// account of a transaction report prints in its own.
     var currencyCode: String? = nil
@@ -456,7 +472,7 @@ struct ReportTableView: View {
                         .foregroundStyle(row.depth > 0 ? .secondary : .primary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     ForEach(0..<(row.amounts?.count ?? 0), id: \.self) { column in
-                        amountText(row.amounts?[column] ?? nil)
+                        amountText(row.amounts?[column] ?? nil, format: format(column))
                             .lineLimit(1)
                             .frame(width: amountWidth, alignment: .trailing)
                     }
@@ -470,7 +486,7 @@ struct ReportTableView: View {
                     Text(totals.label).fontWeight(.bold)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     ForEach(totals.amounts.indices, id: \.self) { column in
-                        amountText(totals.amounts[column]).fontWeight(.bold)
+                        amountText(totals.amounts[column], format: format(column)).fontWeight(.bold)
                             .lineLimit(1)
                             .frame(width: amountWidth, alignment: .trailing)
                     }
@@ -508,8 +524,8 @@ struct ReportTableView: View {
                     Text(row.label)
                         .padding(.leading, CGFloat(row.depth) * 16)
                         .foregroundStyle(row.depth > 0 ? .secondary : .primary)
-                    ForEach(Array((row.amounts ?? []).enumerated()), id: \.offset) { _, amount in
-                        amountText(amount).gridColumnAlignment(.trailing)
+                    ForEach(Array((row.amounts ?? []).enumerated()), id: \.offset) { column, amount in
+                        amountText(amount, format: format(column)).gridColumnAlignment(.trailing)
                     }
                 }
                 .scaledFont(.body)
@@ -520,8 +536,9 @@ struct ReportTableView: View {
             if let totals = section.columnTotals {
                 GridRow {
                     Text(totals.label).fontWeight(.bold)
-                    ForEach(Array(totals.amounts.enumerated()), id: \.offset) { _, amount in
-                        amountText(amount).fontWeight(.bold).gridColumnAlignment(.trailing)
+                    ForEach(Array(totals.amounts.enumerated()), id: \.offset) { column, amount in
+                        amountText(amount, format: format(column)).fontWeight(.bold)
+                            .gridColumnAlignment(.trailing)
                     }
                 }
                 .scaledFont(.body)
@@ -531,10 +548,16 @@ struct ReportTableView: View {
         }
     }
 
+    /// How column `column` prints — money unless the section says otherwise.
+    private func format(_ column: Int) -> ReportColumnFormat {
+        guard let formats = section.columnFormats, column < formats.count else { return .amount }
+        return formats[column]
+    }
+
     @ViewBuilder
-    private func amountText(_ amount: Decimal?) -> some View {
+    private func amountText(_ amount: Decimal?, format: ReportColumnFormat = .amount) -> some View {
         if let amount {
-            Text(AmountFormat.string(amount, code: code))
+            Text(format.string(amount, code: code))
                 .monospacedDigit()
                 .foregroundStyle(amount < 0 ? Color.negativeAmount : Color.primary)
         } else {
@@ -570,7 +593,8 @@ extension ReportDocument {
                                              amounts: totals.amounts))
                 }
                 sections.append(PrintableSection(heading: section.title, rows: rows,
-                                                 columns: columns, code: section.currencyCode))
+                                                 columns: columns, code: section.currencyCode,
+                                                 columnFormats: section.columnFormats))
                 continue
             }
             var rows = section.rows.map {

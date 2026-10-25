@@ -24,7 +24,9 @@ public struct ReportConfiguration: Codable, Hashable, Sendable {
     public var kind: String
     public var period: ReportPeriod
     /// The account scope, for the reports that take one (cash flow,
-    /// transactions, reconciliation, average balance).
+    /// transactions, reconciliation, average balance). Empty or `nil` is the
+    /// kind's own default — every account, or the bank and cash accounts —
+    /// and a chosen account stands for itself and its subaccounts.
     public var accountIDs: Set<GncGUID>?
     /// Tree depth, for the account summary.
     public var depth: Int?
@@ -36,11 +38,14 @@ public struct ReportConfiguration: Codable, Hashable, Sendable {
     /// Whether positions sold out of are reported, for the investment reports
     /// that can leave them out (`nil` = the kind's default).
     public var includeClosed: Bool?
+    /// One portfolio — the account above a set of security accounts — for the
+    /// investment reports; `nil` is every portfolio.
+    public var portfolioID: GncGUID?
 
     public init(kind: String, period: ReportPeriod,
                 accountIDs: Set<GncGUID>? = nil, depth: Int? = nil,
                 step: AverageBalanceStep? = nil, comparePeriods: Int? = nil,
-                includeClosed: Bool? = nil) {
+                includeClosed: Bool? = nil, portfolioID: GncGUID? = nil) {
         self.kind = kind
         self.period = period
         self.accountIDs = accountIDs
@@ -48,6 +53,7 @@ public struct ReportConfiguration: Codable, Hashable, Sendable {
         self.step = step
         self.comparePeriods = comparePeriods
         self.includeClosed = includeClosed
+        self.portfolioID = portfolioID
     }
 }
 

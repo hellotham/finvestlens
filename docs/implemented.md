@@ -5450,3 +5450,87 @@ Three reports from testing build 7 on the Mac.
   `InvestmentReturnTests` records a dividend each way and once both ways, a
   closed position in and out, an unpriced holding, and income in a currency
   with no rate.
+
+## Build 8, as tested (25 Oct 2026)
+
+Two reports from testing build 8 on the Mac, and a requirement restated while
+they were being fixed: "all reports must be consistent and have similar
+filters etc. where appropriate" — `FR-RPT-04`, which the 24 Jul 2026
+consistency pass had applied to presentation and the period control, and
+which build 8 had broken on the investment side (a Closed positions switch
+on two reports of four; Investment Return as-of while Capital Gains was
+period-bound).
+
+- **"The filtering of average balance by account does not seem to work.
+  Please check all reports to sure filtering works."** First the click was
+  ruled out: a lab hosting the real `AccountMatchPicker` on the demo book
+  (`scratchpad/sidebarlab2`, `PickerLab`) posted hand-like clicks on each
+  row's checkbox, the start of its name and along it, with and without the
+  app's appearance modifier, and every row toggled 5/5 at every position in
+  every variant — a `Button` row is not robbed of its click the way a
+  `List(selection:)` row was in build 7. The defect was the picker's model:
+  it opened with every bank and cash account already ticked, so the one
+  click a person makes to narrow the report to an account *unticked* it (the
+  report then covered every other account) or, for an account outside the
+  default, added it to all the rest. It never narrowed. The three reports
+  that take accounts now read their scope one way, the Transactions report's:
+  nothing chosen is the report's own default — every account, or the bank
+  and cash accounts — named on the button and in the picker's summary; a
+  chosen account, a placeholder parent included, is itself and its
+  subaccounts (`AppModel.accountScope(for:)`, through the same
+  `transactionReportAccounts` expansion). Then every control was checked:
+  `ReportFilterTests` drives each through `reportDocument(for:)` on a
+  synthetic book and shows it changes the document — the scope on all three
+  kinds, a parent standing for its children, an empty choice equal to the
+  default, the period on Transactions, Capital Gains and Investment Return,
+  the interval, the depth, the reconciliation's account, and the investment
+  controls below. One more came out of reading rather than testing: Method
+  and Fees are bound to the model, not the configuration, and the screen
+  recomputed on the configuration alone, so changing them moved the pickers
+  and not the report. `ReportScreen` now keys its recompute on all three
+  (`ComputeKey`), and the test suite checks FIFO against LIFO on the figures.
+- **"The total investment and capital gains reports should be by portfolio,
+  then security, and should allow filtering by portfolio, open/close toggle,
+  and sorted by decreasing gain. They should also calculate an equivalent
+  yield per annum based on original purchase price. Actually, all the
+  investment reports should be filterable by portfolio, financial year,
+  open/close toggle etc. They need to be consistent."** The four investment
+  reports — Portfolio, Investment Lots, Capital Gains, Investment Return —
+  now share one set of controls and one shape. *Controls:* the period (the
+  window's, so a financial year is a menu item away; Portfolio and Lots read
+  its end, Capital Gains and Investment Return cover it), a **Portfolio**
+  filter (`ReportConfiguration.portfolioID`; every account that parents a
+  security account, closed-only ones included, since the switch beside it
+  can bring one back — `portfolioAccounts(includingClosed:)`), **Closed
+  positions** on all four — off for the valuations, on for the histories;
+  for Lots it lists the parcels already sold, with what they fetched and
+  their realised gain, so a security's whole lot history reads in one
+  place — and the cost-basis method and fee treatment. *Shape:* a section
+  per portfolio, its securities in order of gain, largest first, each
+  parcel under its security (lots by acquisition date, disposals by sale
+  date), the portfolio's total under them, and with more than one portfolio
+  a closing table of the portfolios themselves in the same order
+  (`AppModel.investmentSections`). *Yield:* every table ends in **Yield
+  p.a.** — the gain as a simple annual rate on what the parcels cost, gain ÷
+  cost ÷ years held, the years weighted by cost (`InvestmentYield`, one
+  implementation for a parcel, a security, a portfolio and the whole
+  report) — printed as a rate through a new per-column format
+  (`ReportColumnFormat.percent`) on screen and in the PDF alike. *Investment
+  Return* is a period report now: the realised gain on the period's
+  disposals, the move over the period in the unrealised gain on what is
+  held (marked at the prices nearest its first and last days, the engine's
+  GnuCash `pricedb-nearest` rule), and the income recorded in the period,
+  against the cost of every parcel held at any time in it; All Time is the
+  lifetime figure the report gave before. *Columns:* Portfolio takes
+  GnuCash's advanced-portfolio set (cost, value, unrealised, realised,
+  income); Lots cost, value (proceeds for a sold parcel), gain; Capital
+  Gains proceeds, cost, gain, with its period label now the period rather
+  than the method, which moved to the notes as on the others; Investment
+  Return capital gain, dividends, franking, total. Each report's notes say
+  which portfolio, which way the switch is set, the method, and what the
+  yield is. The Reports package gains `InvestmentYieldTests` and
+  `InvestmentPortfolioFilterTests` (the filter on all four, closed positions
+  on Capital Gains and sold parcels on Lots, yields by hand, a period's
+  return with the nearest-price rule spelled out); the hub, the review
+  decks, a security's page and the Financial Year Pack read the same
+  functions with their defaults and are unchanged.

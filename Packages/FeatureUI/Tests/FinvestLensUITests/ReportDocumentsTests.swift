@@ -80,6 +80,6 @@ struct ReportDocumentsTests {
         // No realised disposals → capital-gains report has no lines, but the
         // document itself is still produced with a "no gains" note when there
         // are securities; with none at all it is nil.
-        #expect(model.capitalGainsDocument() == nil)
+        #expect(model.capitalGainsDocument(periodLabel: "Period") == nil)
     }
 }

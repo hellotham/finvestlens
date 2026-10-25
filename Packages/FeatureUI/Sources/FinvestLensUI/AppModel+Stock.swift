@@ -45,7 +45,13 @@ extension AppModel {
     /// simply has one portfolio.
     ///
     /// Sorted by the name shown, so the tabs and the sidebar agree on order.
-    public var portfolioAccounts: [AccountNode] {
+    public var portfolioAccounts: [AccountNode] { portfolioAccounts(includingClosed: showsClosedPositions) }
+
+    /// The portfolios, with or without those nothing is held through any
+    /// more. The hub reads the toggle's side; a report's portfolio filter
+    /// lists every one, since its own Closed positions switch can bring a
+    /// closed portfolio's history back.
+    public func portfolioAccounts(includingClosed showClosed: Bool) -> [AccountNode] {
         // **Memoised on the book revision.** Reported 16 Aug 2026: "investments
         // took a long time to display, so there is a performance issue" — and
         // this was it. `standingTabs` calls this to build the Investments tab
@@ -62,9 +68,11 @@ extension AppModel {
         // reference book has fifteen parents and only some are live. The
         // existing Show Closed Positions toggle governs it, so one control
         // means one thing in the tab strip and the holdings table alike.
-        let showClosed = showsClosedPositions
-        if portfolioCacheRevision == bookRevision,
-           portfolioCacheShowedClosed == showClosed { return portfolioCache }
+        if portfolioCacheRevision != bookRevision {
+            portfolioCache.removeAll()
+            portfolioCacheRevision = bookRevision
+        }
+        if let cached = portfolioCache[showClosed] { return cached }
         guard let book else { return [] }
         var seen = Set<GncGUID>()
         var parents: [GncGUID] = []
@@ -89,9 +97,7 @@ extension AppModel {
         visit(accountTree)
         let out = parents.compactMap { found[$0] }
             .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
-        portfolioCache = out
-        portfolioCacheRevision = bookRevision
-        portfolioCacheShowedClosed = showClosed
+        portfolioCache[showClosed] = out
         return out
     }
 

@@ -144,28 +144,47 @@ public enum ReportKind: String, CaseIterable, Identifiable, Codable, Sendable {
         switch self {
         case .balanceSheet, .trialBalance, .accountSummary, .receivableAging,
              .payableAging, .customerSummary, .vendorSummary, .employeeSummary,
-             .jobSummary, .reconcile, .portfolio, .investmentLots, .investmentReturn: true
+             .jobSummary, .reconcile, .portfolio, .investmentLots: true
         default: false
         }
     }
 
     var usesDepth: Bool { self == .accountSummary }
     var usesAccounts: Bool { self == .cashFlow || self == .averageBalance || self == .transactions }
-    /// Reports whose account scope, left empty, means every account — each
-    /// chosen account standing for its whole subtree.
-    var scopeEmptyMeansAll: Bool { self == .transactions }
+    /// What an empty account scope means, for the kinds that take one: every
+    /// account, or the bank and cash accounts money is followed through.
+    /// Either way a chosen account stands for its whole subtree, and choosing
+    /// one narrows the report to it — the Transactions report's model, now
+    /// every scoped report's. Reported on build 8: "The filtering of average
+    /// balance by account does not seem to work" — that picker opened with
+    /// the default accounts all ticked, so the one click a person makes to
+    /// narrow the report unticked an account, or added one to all the rest.
+    var emptyScopeIsEveryAccount: Bool { self == .transactions }
+    /// The empty scope, as the scope button names it.
+    var emptyScopeLabel: String {
+        emptyScopeIsEveryAccount
+            ? String(localized: "All accounts") : String(localized: "Bank & cash accounts")
+    }
     /// Reports over exactly one account (a reconciliation).
     var usesSingleAccount: Bool { self == .reconcile }
-    /// Reports whose figures depend on the cost-basis method and fee treatment.
+    /// The investment reports, which share one set of controls: the
+    /// cost-basis method and fee treatment, a portfolio filter, and the
+    /// Closed positions switch (`FR-RPT-04`). Asked for on build 8: "all the
+    /// investment reports should be filterable by portfolio, financial year,
+    /// open/close toggle etc. They need to be consistent."
     var usesInvestmentOptions: Bool {
         self == .portfolio || self == .investmentLots || self == .capitalGains
             || self == .investmentReturn
     }
+    /// Reports narrowed to one portfolio — the account above a set of
+    /// security accounts.
+    var usesPortfolioFilter: Bool { usesInvestmentOptions }
     /// Reports that can leave out positions sold out of (`FR-INV-24`).
-    var usesClosedPositions: Bool { self == .portfolio || self == .investmentReturn }
-    /// Whether such a report includes them unless told otherwise: a return is
-    /// history, so the Investment Return report does; a valuation is not.
-    var includesClosedByDefault: Bool { self == .investmentReturn }
+    var usesClosedPositions: Bool { usesInvestmentOptions }
+    /// Whether such a report includes them unless told otherwise: a gain or a
+    /// return is history, so Capital Gains and Investment Return do; a
+    /// valuation of what is held — Portfolio, Investment Lots — does not.
+    var includesClosedByDefault: Bool { self == .capitalGains || self == .investmentReturn }
     /// Whether the report takes an interval size (the average-balance report).
     var usesStep: Bool { self == .averageBalance }
 
@@ -696,6 +715,19 @@ struct ReportScreen: View {
     @State private var computeFinished = false
 
     private var kind: ReportKind? { ReportKind(rawValue: configuration.kind) }
+
+    /// Everything the document is computed from: the configuration, and the
+    /// two investment settings that live on the model rather than in it.
+    /// Keyed on the configuration alone, Method and Fees changed their
+    /// pickers and not the report.
+    private struct ComputeKey: Hashable {
+        var configuration: ReportConfiguration
+        var method: CostBasisMethod
+        var fees: FeeTreatment
+    }
+    private var computeKey: ComputeKey {
+        ComputeKey(configuration: configuration, method: model.costBasisMethod, fees: model.feeTreatment)
+    }
     /// The report's name as the reader sees it — on the progress line, as a
     /// favourite's first name, and as the PDF's.
     private var kindTitle: String { ReportKind.title(of: configuration.kind) }
@@ -796,15 +828,36 @@ struct ReportScreen: View {
                 }
                 .fixedSize()
             }
-            if kind?.usesAccounts == true {
+            if let kind, kind.usesAccounts {
                 AccountScopeButton(model: model, accountIDs: $configuration.accountIDs,
-                                   emptyMeansAll: kind?.scopeEmptyMeansAll == true)
+                                   emptyLabel: kind.emptyScopeLabel)
             }
             if kind?.usesSingleAccount == true {
                 AccountField(nodes: model.postableAccounts, selection: Binding(
                     get: { configuration.accountIDs?.first ?? model.selectedAccountID },
                     set: { configuration.accountIDs = $0.map { [$0] } }))
                     .frame(maxWidth: 320)
+            }
+            if kind?.usesPortfolioFilter == true {
+                // Every portfolio, closed ones too: the Closed positions
+                // switch beside this can bring a closed portfolio back.
+                let portfolios = model.portfolioAccounts(includingClosed: true)
+                if !portfolios.isEmpty {
+                    // A portfolio the book no longer has reads as every one,
+                    // as the report then covers.
+                    Picker("Portfolio", selection: Binding(
+                        get: { portfolios.contains { $0.id == configuration.portfolioID }
+                                   ? configuration.portfolioID : nil },
+                        set: { configuration.portfolioID = $0 })) {
+                        Text("All portfolios").tag(GncGUID?.none)
+                        ForEach(portfolios) { portfolio in
+                            Text(portfolio.name).tag(Optional(portfolio.id))
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .fixedSize()
+                    .help("Report on one portfolio — the account your security accounts sit under")
+                }
             }
             if kind?.usesInvestmentOptions == true {
                 Picker("Method", selection: $model.costBasisMethod) {
@@ -860,7 +913,7 @@ struct ReportScreen: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
-            .task(id: configuration) { await recomputeStatement() }
+            .task(id: computeKey) { await recomputeStatement() }
         } else if let kind, kind.usesScaffold {
             Group {
                 if let document {
@@ -880,7 +933,7 @@ struct ReportScreen: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
-            .task(id: configuration) { await recompute() }
+            .task(id: computeKey) { await recompute() }
         } else {
             legacyContent
         }
@@ -955,39 +1008,31 @@ struct ReportScreen: View {
 }
 
 /// The account scope for reports that take one, behind a button naming the
-/// choice — the same tree-with-filter picker Find uses.
+/// choice — the same tree-with-filter picker Find uses. Nothing chosen is
+/// the report's own default scope, named on the button; a chosen account — a
+/// placeholder parent included — is its whole subtree, and the report
+/// narrows to what is chosen (``ReportKind/emptyScopeIsEveryAccount``).
 struct AccountScopeButton: View {
     @Bindable var model: AppModel
     @Binding var accountIDs: Set<GncGUID>?
-    /// The transaction report's scope: nothing chosen is every account, and a
-    /// chosen account — a placeholder parent included — is its whole subtree.
-    var emptyMeansAll = false
+    /// What nothing chosen means, as the button and the picker say it.
+    let emptyLabel: String
     @State private var pickerShown = false
 
     var body: some View {
         Button(label) { pickerShown = true }
             .popover(isPresented: $pickerShown) {
-                if emptyMeansAll {
-                    AccountMatchPicker(tree: model.accountTree, selection: Binding(
-                        get: { accountIDs ?? [] },
-                        set: { accountIDs = $0.isEmpty ? nil : $0 }),
-                        emptyMeansAll: true)
-                } else {
-                    AccountMatchPicker(tree: model.accountTree, selection: Binding(
-                        get: { accountIDs ?? model.defaultCashFlowAccountIDs },
-                        set: { accountIDs = $0 }))
-                }
+                AccountMatchPicker(tree: model.accountTree, selection: Binding(
+                    get: { accountIDs ?? [] },
+                    set: { accountIDs = $0.isEmpty ? nil : $0 }),
+                    emptyMeansAll: true, emptyLabel: emptyLabel)
             }
     }
 
     private var label: String {
-        if emptyMeansAll, accountIDs?.isEmpty ?? true { return String(localized: "All accounts") }
-        guard let ids = accountIDs else { return String(localized: "Bank & cash accounts") }
-        switch ids.count {
-        case 0: return String(localized: "Choose accounts…")
-        case 1: return model.accountName(ids.first!) ?? String(localized: "\(ids.count) accounts")
-        default: return String(localized: "\(ids.count) accounts")
-        }
+        guard let ids = accountIDs, !ids.isEmpty else { return emptyLabel }
+        if ids.count == 1, let name = model.accountName(ids.first!) { return name }
+        return String(localized: "\(ids.count) accounts")
     }
 }
 

@@ -30,6 +30,14 @@ struct PrintableSection: Identifiable {
     /// The section's own currency, where it differs from the statement's —
     /// a transaction report's foreign account.
     var code: String?
+    /// How each column prints; `nil`, or a missing entry, is money.
+    var columnFormats: [ReportColumnFormat]?
+
+    /// How column `column` prints.
+    func format(_ column: Int) -> ReportColumnFormat {
+        guard let columnFormats, column < columnFormats.count else { return .amount }
+        return columnFormats[column]
+    }
 }
 
 /// A clean, VStack-based statement layout for PDF rendering (avoids List/Table
@@ -88,8 +96,8 @@ struct PrintableStatement: View {
                 ForEach(section.rows) { row in
                     GridRow {
                         Text(row.label).fontWeight(row.bold ? .bold : .regular)
-                        ForEach(Array((row.amounts ?? []).enumerated()), id: \.offset) { _, amount in
-                            Text(amount.map { AmountFormat.string($0, code: section.code ?? code) } ?? "")
+                        ForEach(Array((row.amounts ?? []).enumerated()), id: \.offset) { column, amount in
+                            Text(amount.map { section.format(column).string($0, code: section.code ?? code) } ?? "")
                                 .fontWeight(row.bold ? .bold : .regular)
                                 .gridColumnAlignment(.trailing)
                         }
@@ -124,7 +132,8 @@ extension PrintableStatement {
                 let chunk = rest.prefix(room)
                 rest = rest.dropFirst(chunk.count)
                 pages[pages.count - 1].append(PrintableSection(heading: section.heading, rows: Array(chunk),
-                                                               columns: section.columns, code: section.code))
+                                                               columns: section.columns, code: section.code,
+                                                               columnFormats: section.columnFormats))
                 used += chunk.count + 1
             } while !rest.isEmpty
         }
