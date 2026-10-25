@@ -153,6 +153,15 @@ platform). Never a real book, never `imports/`.
   Actions menu, and asserts along the way: a step it cannot take fails the
   test. Before that a sheet it could not close left every later step to
   skip in silence, and the tour "passed" having toured half the app.
+  `testCaptureInvestmentReports` (with `TEST_RUNNER_FL_INVEST=1`) opens the
+  four investment reports from the gallery and captures each — the pass for
+  their shared table at phone width (25 Oct 2026). Headless alternatives
+  were tried first and are worth knowing: `xcrun simctl launch` with the
+  same `-finvestlens.recentBookPaths` / `-session.period:<path>` defaults
+  opens the book, but a `-session.navigation:<path>` default does not push a
+  report on the phone shell, and `simctl terminate` is a kill — the unsigned
+  simulator build cannot break the lock it leaves, so the next launch asks
+  the person; delete the scratch copy's `.lock` between launches.
 - **iPhone Duo** — its own tab since Xcode 27.1: the outer display
   1398×2034 px (2034×1398 landscape), the inner 2007×2853 (2853×2007).
   Optional for now, and they put an "optimized for iPhone Duo" badge on the

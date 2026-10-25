@@ -89,6 +89,10 @@ your own choice of where the Apple Intelligence features run.
 - **Closed positions, where you look for them.** Investments says how many
   are hidden, with Show beside it; every investment report has a Closed
   positions switch — off for the valuations, on for the histories.
+- **Wide reports fit the phone.** A report's controls scroll sideways on an
+  iPhone instead of pushing the page off both edges, and a table with more
+  than three columns — the investment reports, Average Balance — reads as a
+  block per row, each figure under its heading.
 - **Choosing accounts narrows a report.** In Cash Flow and Average Balance,
   as in Transactions, nothing chosen is the report's default scope and an
   account you choose is exactly what it covers, subaccounts included. The

@@ -91,6 +91,50 @@ final class ScreenshotTests: XCTestCase {
         return app
     }
 
+    /// The four investment reports on the phone — Portfolio, Investment
+    /// Lots, Capital Gains, Investment Return — one capture each, opened from
+    /// the gallery: the visual pass for their shared layout (a section per
+    /// portfolio, five or six columns and a Yield p.a. column) at phone
+    /// width, where a table that fits a Mac can crowd. Not part of the store
+    /// set, so it runs only with `FL_INVEST=1`; the Portfolio report is
+    /// asserted to have rendered its table, since the demo book holds
+    /// securities.
+    @MainActor
+    func testCaptureInvestmentReports() throws {
+        guard ProcessInfo.processInfo.environment["FL_INVEST"] != nil else {
+            throw XCTSkip("Set TEST_RUNNER_FL_INVEST=1 to capture the investment reports")
+        }
+        guard let app = launchOnBook() else { return }
+        tapMode("Reports", app)
+        // Average Balance rides along: its five columns take the same phone
+        // layout as the investment reports' four to six.
+        for report in ["Portfolio", "Investment Lots", "Capital Gains", "Investment Return",
+                       "Average Balance"] {
+            guard openReport(report, app) || openCard(report, app) else { continue }
+            if report == "Portfolio" {
+                XCTAssertTrue(app.staticTexts["Yield p.a."].firstMatch.waitForExistence(timeout: 30),
+                              "the Portfolio report showed no Yield p.a. column")
+            }
+            settle(2)
+            capture("invest-" + report.lowercased().replacingOccurrences(of: " ", with: "-"))
+        }
+    }
+
+    /// A gallery card further down than `tapRow` scrolls: its button's label
+    /// is the title and the subtitle together, so match on the start.
+    @MainActor
+    private func openCard(_ name: String, _ app: XCUIApplication) -> Bool {
+        let card = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", name)).firstMatch
+        for _ in 0..<4 where !(card.exists && card.isHittable) { app.swipeUp(); settle(1) }
+        guard card.exists, card.isHittable else {
+            dump("missing-card-\(name)", app)
+            return false
+        }
+        card.tap()
+        settle(2)
+        return true
+    }
+
     /// Every destination the phone can reach, one capture each, and the
     /// navigation the compact shell promises asserted along the way — the
     /// pass for a change to the compact shell. Not part of the store set, so

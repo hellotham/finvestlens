@@ -376,6 +376,7 @@ struct ReportDocumentView: View {
 
 /// One table: label column, amount column(s), rules, a bold total.
 struct ReportTableView: View {
+    @Environment(\.isCompactShell) private var compact
     let section: ReportDocumentSection
     let code: String
 
@@ -386,7 +387,9 @@ struct ReportTableView: View {
                 .padding(.bottom, 6)
             Divider()
             if let columns = section.columns {
-                if section.rows.count > Self.gridLimit {
+                if compact, columns.count > Self.compactColumnLimit {
+                    stackedRows(columns)
+                } else if section.rows.count > Self.gridLimit {
                     longColumns(columns)
                 } else {
                     comparativeGrid(columns)
@@ -395,6 +398,57 @@ struct ReportTableView: View {
                 singleGrid
             }
         }
+    }
+
+    /// Past this many amount columns a phone cannot hold the row: the
+    /// investment reports' four to six, Average Balance's five. Seen on the
+    /// iPhone 18 Pro capture of the Portfolio report (25 Oct 2026): six
+    /// columns pushed the label column off the left edge. A comparative
+    /// statement's two or three still fit.
+    static let compactColumnLimit = 3
+
+    /// The phone's form of a wide table: one block per row — its label, then
+    /// each column's header against its figure — so nothing is cut off and
+    /// the figures keep their width. Parcels under a security indent as they
+    /// do in the grid.
+    private func stackedRows(_ columns: [String]) -> some View {
+        LazyVStack(alignment: .leading, spacing: 0) {
+            ForEach(Array(section.rows.enumerated()), id: \.element.id) { index, row in
+                stackedBlock(label: row.label, depth: row.depth, amounts: row.amounts ?? [],
+                             columns: columns, bold: false)
+                    .background(index.isMultiple(of: 2) ? Color.clear : Color.primary.opacity(0.03))
+            }
+            if let totals = section.columnTotals {
+                stackedBlock(label: totals.label, depth: 0, amounts: totals.amounts,
+                             columns: columns, bold: true)
+                    .overlay(alignment: .top) { Divider() }
+            }
+        }
+    }
+
+    private func stackedBlock(label: String, depth: Int, amounts: [Decimal?],
+                              columns: [String], bold: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(label)
+                .scaledFont(.body)
+                .fontWeight(bold ? .bold : (depth == 0 ? .medium : .regular))
+                .foregroundStyle(depth > 0 ? .secondary : .primary)
+            ForEach(Array(columns.enumerated()), id: \.offset) { column, header in
+                HStack(spacing: 12) {
+                    Text(header)
+                        .scaledFont(.caption)
+                        .foregroundStyle(.secondary)
+                    Spacer(minLength: 0)
+                    amountText(column < amounts.count ? amounts[column] : nil, format: format(column))
+                        .scaledFont(.body)
+                        .fontWeight(bold ? .bold : .regular)
+                }
+                .padding(.leading, 12)
+            }
+        }
+        .padding(.leading, CGFloat(depth) * 16)
+        .padding(.vertical, 6)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var singleGrid: some View {

@@ -702,6 +702,7 @@ struct PeriodSelector: View {
 /// One report: parameter bar, then the computed document (or the interactive
 /// view, for the kinds that keep one).
 struct ReportScreen: View {
+    @Environment(\.isCompactShell) private var compact
     @Bindable var model: AppModel
     @State var configuration: ReportConfiguration
     let close: () -> Void
@@ -801,8 +802,22 @@ struct ReportScreen: View {
                       contentType: .pdf, defaultFilename: kindTitle) { _ in }
     }
 
+    /// The controls, in a row — and on the phone a row that scrolls
+    /// sideways. An investment report's period, portfolio, method, fees and
+    /// switch run past a phone's width, and an HStack wider than the window
+    /// widened everything under it: the Portfolio report captured on an
+    /// iPhone 18 Pro (25 Oct 2026) had its tiles, its table's label column
+    /// and its notes cut off at both edges.
     @ViewBuilder
     private var parameterBar: some View {
+        if compact {
+            ScrollView(.horizontal, showsIndicators: false) { parameterControls }
+        } else {
+            parameterControls
+        }
+    }
+
+    private var parameterControls: some View {
         HStack(spacing: 12) {
             if kind?.usesScaffold == true {
                 // The window's period, not a second copy. Two selectors were

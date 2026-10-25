@@ -5534,3 +5534,23 @@ period-bound).
   return with the nearest-price rule spelled out); the hub, the review
   decks, a security's page and the Financial Year Pack read the same
   functions with their defaults and are unchanged.
+- **At phone width, seen rather than assumed.** A new gated UI test,
+  `ScreenshotTests.testCaptureInvestmentReports` (`TEST_RUNNER_FL_INVEST=1`),
+  opens the four investment reports and Average Balance from the phone's
+  gallery and captures each. The first run on an iPhone 18 Pro showed the
+  whole report cut off at both edges — tiles, the table's label column, the
+  notes — on every investment report, the empty Capital Gains included: the
+  parameter bar (period, portfolio, method, fees, the switch) is wider than
+  a phone, and an `HStack` wider than the window widens everything under
+  it, which SwiftUI then centres and clips. On the compact shell the bar now
+  scrolls sideways. The table itself cannot hold six columns at 402 points
+  either, so past three amount columns a phone renders one block per row —
+  the label, then each header against its figure
+  (`ReportTableView.stackedRows`); Average Balance's five columns take the
+  same form, and a comparative statement's two or three keep the grid. The
+  Mac and iPad are unchanged. Of the headless routes tried first,
+  `simctl launch` with the app's own defaults opens the book but a
+  `session.navigation` default does not push a report on the phone, and
+  `simctl terminate` strands the scratch book's lock (the unsigned simulator
+  build has no identity to break it) — recorded in `docs/app-store.md`.
+
