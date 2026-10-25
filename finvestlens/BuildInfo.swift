@@ -15,9 +15,9 @@ enum BuildInfo {
     /// Marketing version (matches MARKETING_VERSION in the project).
     static let version = "1.2"
     /// Short git commit the build was cut from.
-    static let commit = "c9bb28a"
+    static let commit = "dd0306d"
     /// The day the build was cut, ISO 8601.
-    static let buildDay = "2026-10-25"
+    static let buildDay = "2026-10-26"
 
     /// The build day as the reader writes a date — "11 October 2026",
     /// "11. Oktober 2026", "2026年10月11日". It was stamped as English text.
@@ -28,6 +28,6 @@ enum BuildInfo {
         return date.formatted(date: .long, time: .omitted)
     }
 
-    /// e.g. "Version 1.0 (c9bb28a)".
+    /// e.g. "Version 1.0 (dd0306d)".
     static var versionString: String { String(localized: "Version \(version) (\(commit))") }
 }
