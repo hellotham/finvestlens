@@ -123,6 +123,8 @@ INVESTMENTS
 • Dividends, reinvestment, returns of capital and stock splits
 • Price updates from the provider you choose
 • A portfolio view with allocation and return
+• Capital gains as the tax return wants them: every parcel sold with its dates, cost base, proceeds and the ATO’s treatment, and the year’s net capital gain — including the 1 July 2027 changes
+• Total return since you bought, income, historical cost, returns by financial year, drawdown, and a price chart with moving averages, RSI, your trades and a benchmark
 
 BUDGETS, PLANNING AND REPORTS
 • Budgets by category, with rollover
@@ -180,6 +182,8 @@ INVESTMENTS
 • Dividends, reinvestment, returns of capital and stock splits
 • Price updates from the provider you choose, with history
 • A portfolio view with allocation and return
+• Capital gains as the tax return wants them: every parcel sold with its dates, cost base, proceeds and the ATO’s treatment, and the year’s net capital gain — including the 1 July 2027 changes
+• Total return since you bought, income, historical cost, returns by financial year, drawdown, and a price chart with moving averages, RSI, your trades and a benchmark
 
 BUDGETS, PLANNING AND REPORTS
 • Budgets by category, with rollover

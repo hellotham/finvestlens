@@ -32,7 +32,7 @@ FinvestLens is not a fork of GnuCash. It is a clean, idiomatic Swift reimplement
 - **Native `Decimal` money** (no binary floating-point error), rounded to each commodity's fraction. Exact bit-for-bit parity with GnuCash's arithmetic is a non-goal; small rounding differences are acceptable.
 - Commodities and currencies, including multi-currency accounts and price/exchange-rate handling.
 - A price database for commodity and currency valuations.
-- **Lot tracking and capital gains** (FIFO / LIFO / average cost) with a step-by-step Stock Transaction Assistant — buys, sells, dividends, reinvestment, returns of capital, and stock splits (short positions included).
+- **Lot tracking and capital gains** (FIFO / LIFO / average cost) with a step-by-step Stock Transaction Assistant — buys, sells, dividends, reinvestment, returns of capital, and stock splits (short positions included). Capital gains are assessed the way an Australian tax return wants them: every parcel sold with its dates, cost base, proceeds and the ATO's treatment, the year's net capital gain by the ATO's steps, and from 1 July 2027 the reform's CPI indexation, the split of a parcel owned across that day and the 30% minimum tax.
 - **Online price quotes** via pluggable providers: a keyless *yfinance-like* Yahoo source out of the box, plus keyed services (**EODHD** — including historical prices for **delisted** securities — Alpha Vantage, Finnhub) with API keys stored in the Keychain. Supports historical backfill.
 
 **Native document & platform integration**
@@ -53,7 +53,7 @@ FinvestLens is not a fork of GnuCash. It is a clean, idiomatic Swift reimplement
 - Chart of accounts with running balances.
 - Basic reconciliation.
 - Scheduled/recurring transactions.
-- Core reports (account balances, income/expense, net worth).
+- Core reports (account balances, income/expense, net worth), and nine investment reports on one shared history of every security — Portfolio, Investment Lots, Capital Gains, Investment Return (total return since purchase, money-weighted annualised), Income, Historical Cost, Returns by Period, Drawdown and a Price History explorer (moving averages and their crosses, RSI, your trades and average cost, price with income, a benchmark).
 
 **Bank/financial file import** (native, reimplemented in Swift — not GnuCash's importers)
 - **CSV** import with configurable column mapping and saved mapping profiles.

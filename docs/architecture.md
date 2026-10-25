@@ -219,6 +219,29 @@ Results are written into `PriceDB` (`FR-INV-03`, `FR-CUR-04`); users pick a defa
 
 > ADR-7a: CSV/QIF/OFX are native, core importers over a shared `ImportParser` → Import Matcher pipeline; QIF and OFX/QFX are hand-written (no Swift package exists), specced against mature non-Swift parsers.
 
+### 5.9 Investment reports — one history, tax rules as pure functions (Oct 2026)
+
+**Context.** The four investment reports each read the lot engine and the
+income accounts their own way, and the owner's review of build 10 found them
+"not useful": no acquisition dates, a period figure under total return's
+name, a Price History nobody could navigate. **Design.** `InvestmentHistory`
+(Reports) turns one security account into dated events — buy, sell, every
+kind of income, return of capital, split — in the report currency, with the
+parcel a sale consumed and the parcels still open; the nine investment
+reports read it and nothing else, so their figures agree. The tax arithmetic
+is a pure module, `CapitalGainsTaxRules`: the ATO's steps for one parcel and
+for a year's netting, and the 1 July 2027 reform (CPI indexation, the
+market-value or apportionment split, the Bill's loss ordering, the
+minimum-tax gain), each rule under the ATO's own sentence and tested against
+its worked example; the report layer brings prices, the CPI series (RBA
+table G1, a tax setting) and the entity. `MoneyWeightedReturn` is Excel's
+XIRR, never applied under a year. Documents are typed cells (`ReportCell`),
+so a date is a date on screen and on paper.
+
+> ADR-5.9: every investment report derives from one `InvestmentHistory`; tax
+> rules live in pure functions the report layer feeds; nothing in a report is
+> computed inside a view.
+
 ---
 
 ## 6. Native file format on a NAS — locking & write safety

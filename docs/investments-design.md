@@ -116,7 +116,7 @@ none of them; it serves an eighth job nobody has ("browse all prices").
 ```
 Sidebar
 ├── Dashboard
-├── Reports ─────────────► Investment Review deck, Capital Gains, Lots  (unchanged)
+├── Reports ─────────────► Investment Review deck; the nine investment reports (Portfolio, Lots, Capital Gains, Investment Return, Income, Historical Cost, Returns by Period, Drawdown, Price History — rebuilt Oct 2026 on `InvestmentHistory`)
 ├── Investments  ◄── NEW destination, promoted out of "Records"
 └── …
     Records

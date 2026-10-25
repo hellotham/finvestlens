@@ -84,8 +84,15 @@ Tax-line **tagging** exists (account-level tax flags); the estimator reads it:
 - **Assessable income**: FY-to-date totals of tax-relevant income accounts;
   franking (imputation) credits are grossed up and counted as an offset.
 - **Deductions**: FY-to-date totals of tax-relevant expense accounts.
-- **Capital gains**: the existing realised-gains machinery for the FY, with
-  the >12-month discount share applied (editable, default 50% — AU).
+- **Capital gains**: the Capital Gains report's ATO assessment for the FY
+  (`CapitalGainsTaxRules`, Oct 2026): every parcel sold, losses off the
+  gains from the non-discountable first, the entity's discount on what
+  remains (individual/trust 50%, super fund 33⅓%, company none, foreign
+  resident none), and from 1 July 2027 the reform — CPI indexation of the
+  post-reform gain, the split of a parcel owned across the day, and the
+  part of the net gain the 30% minimum tax reaches, which the estimate tops
+  up. Who the gains are assessed for, residency, income support and the CPI
+  table (fetched from RBA table G1) are tax settings beside the brackets.
 - **Taxable income** = assessable + net capital gains − deductions.
 - **Brackets**: an editable table (rate over threshold), seeded with
   Australian resident rates for the current FY (2026–27: 0% to $18,200, then
