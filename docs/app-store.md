@@ -146,8 +146,12 @@ platform). Never a real book, never `imports/`.
 
   `TEST_RUNNER_FL_SHOT_PERIOD` overrides the period (default: the previous
   financial year, where the demo book's postings are); `xcrun simctl
-  status_bar <udid> override --time 9:41 …` sets the status bar. Sizes that
-  App Store Connect asks for: iPad Pro 13" gives 2064×2752; **iPhone 18 Pro
+  status_bar <udid> override --time 9:41 …` sets the status bar; keep applying
+  it through the run, because set once right after boot its signal bars did not
+  hold and the shots showed "no service" (4 Nov 2026). If `simctl boot` says
+  `runtime path not found` while the runtime is listed and mounted,
+  `killall com.apple.CoreSimulator.CoreSimulatorService` cured it that day, once
+  nothing else was using a simulator. Sizes that App Store Connect asks for: iPad Pro 13" gives 2064×2752; **iPhone 18 Pro
   gives 1206×2622, the required "iPhone with Dynamic Island (medium
   display)" slot**; iPhone 18 Pro Max gives 1320×2868 for the optional large
   slot (Media Manager). `testTourCompactDestinations` (with
