@@ -8,20 +8,22 @@ const isCurrent = (href: string) => path.endsWith(href.replace(/\/$/, ''));
 <header
   class="sticky top-0 z-40 border-b border-ink-200/70 bg-white/85 backdrop-blur-md dark:border-ink-800 dark:bg-ink-950/85"
 >
-  <div class="mx-auto flex max-w-6xl items-center gap-6 px-5 py-3">
-    <a href={url('/')} class="flex shrink-0 items-center gap-2.5 font-semibold tracking-tight">
+  {/* One row from md up. Below it the links take a row of their own: on a phone
+      they and the name do not fit across, and the whole page scrolled sideways. */}
+  <div class="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-5 py-3 md:flex-nowrap">
+    <a href={url('/')} class="mr-auto flex shrink-0 items-center gap-2.5 font-semibold tracking-tight">
       <img src={url('/images/icon-64.png')} alt="" width="30" height="30" class="" />
       <span class="text-[1.0625rem] text-ink-900 dark:text-white">{site.name}</span>
     </a>
 
-    <nav class="ml-auto flex items-center gap-1 text-sm" aria-label="Main">
+    <nav class="order-last -mx-2 flex w-full items-center gap-0.5 text-sm md:order-none md:mx-0 md:w-auto md:gap-1" aria-label="Main">
       {
         nav.map((item) => (
           <a
             href={url(item.href)}
             aria-current={isCurrent(item.href) ? 'page' : undefined}
             class:list={[
-              'rounded-lg px-3 py-1.5 font-medium transition-colors',
+              'rounded-lg px-2 py-1.5 font-medium transition-colors md:px-3',
               isCurrent(item.href)
                 ? 'bg-brand-50 text-brand-700 dark:bg-brand-900/40 dark:text-brand-200'
                 : 'text-ink-600 hover:bg-ink-100 hover:text-ink-900 dark:text-ink-400 dark:hover:bg-ink-800 dark:hover:text-white',
@@ -33,10 +35,10 @@ const isCurrent = (href: string) => path.endsWith(href.replace(/\/$/, ''));
       }
       <a
         href={url('/download/')}
-        class="mx-2 hidden rounded-lg bg-ink-900 px-3.5 py-1.5 font-medium text-white transition-colors hover:bg-ink-700 sm:block dark:bg-white dark:text-ink-900 dark:hover:bg-ink-200"
+        class="mx-2 hidden rounded-lg bg-ink-900 px-3.5 py-1.5 font-medium text-white transition-colors hover:bg-ink-700 md:block dark:bg-white dark:text-ink-900 dark:hover:bg-ink-200"
         >Get the app</a
       >
-      <ThemeToggle />
     </nav>
+    <ThemeToggle />
   </div>
 </header>

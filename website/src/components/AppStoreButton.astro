@@ -1,0 +1,26 @@
+---
+import { release } from '../data/site';
+interface Props {
+  variant?: 'light' | 'dark';
+  /** Leaves out the platforms, for a place that has just said them. */
+  plain?: boolean;
+}
+const { variant = 'dark', plain = false } = Astro.props;
+---
+<a
+  href={release.appStore}
+  class:list={[
+    'inline-flex items-center gap-2.5 rounded-xl px-6 py-3.5 text-base font-semibold shadow-sm transition-transform hover:-translate-y-0.5',
+    variant === 'light'
+      ? 'bg-white text-ink-900 hover:bg-ink-100'
+      : 'bg-ink-900 text-white hover:bg-ink-800 dark:bg-white dark:text-ink-900 dark:hover:bg-ink-200',
+  ]}
+>
+  <svg class="h-5 w-5" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h9A1.5 1.5 0 0 1 16 5.5V12H4V5.5Z" />
+    <path d="M2 15h9" />
+    <rect x="13" y="9.5" width="5" height="8" rx="1.2" fill="currentColor" stroke="none" />
+  </svg>
+  Get it on the App Store
+  {!plain && <span class="hidden text-sm font-normal opacity-60 sm:inline">Mac, iPhone, iPad</span>}
+</a>

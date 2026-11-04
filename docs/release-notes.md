@@ -7,10 +7,12 @@ uses FinvestLens would notice.
 
 ---
 
-## 1.2 (not yet released)
+## 1.2 (31 October 2026)
 
 FinvestLens on the 27 releases, on a phone, in the reader's language, and with
-your own choice of where the Apple Intelligence features run.
+your own choice of where the Apple Intelligence features run. The first version
+on the App Store, for Mac, iPhone and iPad; the notarized disk image for Mac is
+the same version from the same source (published 4 November 2026).
 
 ### New
 
@@ -29,22 +31,22 @@ your own choice of where the Apple Intelligence features run.
   without a connection goes up when it returns; and a version another device
   saved is never replaced — **Keep Both** puts yours beside it.
 - **A model of your own.** Point Settings ▸ Apple Intelligence at a folder
-  of MLX models and choose one: it serves every Apple Intelligence feature,
-  on your Mac, iPhone or iPad. Nothing is bundled, recommended or
-  downloaded.
+  of MLX models and choose one: it serves every Apple Intelligence feature
+  on your Mac. The pane is on iPhone and iPad too, where no device run has
+  been made yet. Nothing is bundled, recommended or downloaded.
 - **Invoices read from their picture.** Split from Invoice, Smart Import's
   invoices and Categorise from Attachment read a photographed or scanned
   invoice as a picture, with Vision's text reader to hand — it got every
   field right on every test page, where reading the text alone missed two
   totals in fifteen. A photo is turned the right way up first.
 - **Where each request runs, said where you start it.** Every command that
-  could leave the device says where it runs, beside its button. Private
-  Cloud Compute is built in and stays off until Apple grants the
-  entitlement it needs.
+  could leave the device says where it runs, beside its button. The App
+  Store version can use Apple's Private Cloud Compute, and asks you first.
+  The disk image cannot, because Apple does not offer it to apps distributed
+  outside the App Store, so it stays on your Mac.
 - **Everything in your language.** Reports, the review decks, error
   messages, undo names, toasts, Siri's phrases and the starter chart of
   accounts are now translated too, in all eight languages.
-
 - **Investment reports rebuilt.** Nine reports on one history of every
   security — every buy, sell, dividend, credit, distribution and split —
   laid out the same way: by portfolio, then security, with the parcels or
@@ -102,18 +104,13 @@ your own choice of where the Apple Intelligence features run.
   end of the row.
 - **Accounts opens faster on the Mac** — in under a third of the time on a
   large book, and faster again the next time.
-- **Investment Return**, a new report: each security's capital gain,
-  dividends and franking credits over the period, and all three together
-  against the money you put in — by portfolio, closed positions included.
-- **The investment reports read alike.** Portfolio, Investment Lots, Capital
-  Gains and Investment Return share one set of controls — the period, a
-  Portfolio filter, Closed positions, and the cost-basis method — and one
-  layout: by portfolio, then security in order of gain, each row with a
-  **Yield p.a.**: the gain as a simple annual rate on what you paid, over
-  the time you held it.
+- **The investment reports read alike.** All of them share one set of
+  controls — the period, a Portfolio filter and, where it means something,
+  Closed positions and the cost-basis method — and one layout: by portfolio,
+  then security, largest first.
 - **Closed positions, where you look for them.** Investments says how many
-  are hidden, with Show beside it; every investment report has a Closed
-  positions switch — off for the valuations, on for the histories.
+  are hidden, with Show beside it, and an investment report's Closed positions
+  switch says what it does on that report.
 - **Wide reports fit the phone.** A report's controls scroll sideways on an
   iPhone instead of pushing the page off both edges, and a table with more
   than three columns — the investment reports, Average Balance — reads as a
@@ -132,10 +129,26 @@ your own choice of where the Apple Intelligence features run.
   have permission" in a folder the app had not been given; it no longer
   needs the folder.
 
+### Moving from the 1.1 disk image
+
+The Mac app is now sandboxed, as the Mac App Store requires. A book opened
+before 1.2 reopens by itself only after you have opened it once with
+File ▸ Open, a drag or the Finder; the same goes for the two document folders
+in Settings.
+
+### Privacy
+
+The privacy policy now names one more request, updated 4 November 2026:
+**Fetch from the RBA**, in the tax estimator, downloads the Reserve Bank of
+Australia's public table of the consumer price index. It is started by you and
+carries nothing from your book. The policy also says what it had left out:
+**Auto-refresh**, if you turn it on for a book, updates its prices when you open
+it and every six hours while it stays open.
+
 ### Requirements
 
-macOS 27, iPadOS 27 or iOS 27. The Mac app is sandboxed, as the Mac App
-Store requires.
+macOS 27 on Apple silicon, iPadOS 27 or iOS 27. FinvestLens 1.1 stays on GitHub
+for macOS 26.5 and Intel Macs.
 
 ---
 

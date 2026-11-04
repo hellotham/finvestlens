@@ -56,6 +56,12 @@ let opening = account("Opening Balances", .equity, under: equity)
 let income = account("Income", .income, code: "4000")
 let salary = account("Salary", .income, under: income, code: "4010")
 let dividends = account("Dividends", .income, under: income, code: "4020")
+// Dividends ▸ TICKER ▸ …: the shape the investment reports attribute income by.
+let vasIncome = account("VAS", .income, under: dividends)
+let vasFranked = account("Franked", .income, under: vasIncome)
+let vasCredits = account("Imputation Credit", .income, under: vasIncome)
+let ndqIncome = account("NDQ", .income, under: dividends)
+let ndqUnfranked = account("Unfranked", .income, under: ndqIncome)
 let interest = account("Interest", .income, under: income)
 
 let expenses = account("Expenses", .expense, code: "5000")
@@ -68,14 +74,19 @@ let health = account("Health", .expense, under: expenses)
 let subscriptions = account("Subscriptions", .expense, under: expenses)
 let homeExp = account("Home", .expense, under: expenses)
 let interestExp = account("Loan Interest", .expense, under: expenses, code: "5900")
+let creditOffset = account("Imputation Credit Offset", .expense, under: expenses)
 
-// Securities: two invented holdings.
+// Securities: two invented holdings, and an invented index to compare them with
+// (named to sort last, so Price History opens on a holding).
 let vas = Commodity(namespace: .security("ASX"), mnemonic: "VAS",
                     fullName: "Australian Shares ETF", smallestFraction: 1000)
 let ndq = Commodity(namespace: .security("ASX"), mnemonic: "NDQ",
                     fullName: "Global Technology ETF", smallestFraction: 1000)
+let idx = Commodity(namespace: .security("INDEX"), mnemonic: "XDM",
+                    fullName: "Demo Market Index", smallestFraction: 100)
 book.registerCommodity(vas)
 book.registerCommodity(ndq)
+book.registerCommodity(idx)
 let vasAcct = account("VAS", .stock, under: investments, commodity: vas)
 let ndqAcct = account("NDQ", .stock, under: investments, commodity: ndq)
 
@@ -101,8 +112,9 @@ post(day(2025, 7, 1), "Opening Balances", [
     (opening, -298_880.30),
 ])
 
-// A year of everyday life, generated with a little variation so the charts and
-// reports have something honest-looking to show.
+// Sixteen months of everyday life, to the end of October 2026, generated with a
+// little variation so the charts and reports have something honest-looking to
+// show — and something in the financial year a screenshot opens on.
 var seed: UInt64 = 20_260_725
 @MainActor func rnd(_ lo: Double, _ hi: Double) -> Decimal {
     seed = seed &* 6_364_136_223_846_793_005 &+ 1_442_695_040_888_963_407
@@ -111,7 +123,7 @@ var seed: UInt64 = 20_260_725
     return Decimal(cents) / 100
 }
 
-for month in 0..<12 {
+for month in 0..<16 {
     let base = calendar.date(byAdding: .month, value: month, to: day(2025, 7, 1))!
     func at(_ d: Int) -> Date { calendar.date(bySetting: .day, value: d, of: base)! }
 
@@ -147,7 +159,7 @@ for month in 0..<12 {
         let amount = rnd(lo, hi)
         charged += amount
         post(at(dayOfMonth), payee, [(acct, amount), (card, -amount)],
-             reconciled: month < 11)
+             reconciled: month < 15)
     }
 
     // Settle last month's statement, so the card carries a believable balance.
@@ -167,7 +179,8 @@ for month in 0..<12 {
     post(at(28), "Savings interest", [(savings, earned), (interest, -earned)])
 }
 
-// Investments: two purchases and a dividend each.
+// Investments: three purchases, a distribution a quarter, and two parcels sold —
+// one held over twelve months and one under — so Capital Gains has both to show.
 @MainActor func buy(_ date: Date, _ acct: Account, _ units: Decimal, _ price: Decimal, _ fee: Decimal) {
     let total = units * price + fee
     let t = Transaction(currency: aud, datePosted: date, description: "Buy \(acct.name)")
@@ -182,27 +195,75 @@ buy(day(2025, 8, 12), vasAcct, 120, 92.40, 9.50)
 buy(day(2025, 11, 4), ndqAcct, 65, 48.15, 9.50)
 buy(day(2026, 3, 18), vasAcct, 40, 97.80, 9.50)
 
-for (date, acct, amount) in [
-    (day(2025, 10, 2), vasAcct, Decimal(318.40)),
-    (day(2026, 1, 8), ndqAcct, Decimal(96.20)),
-    (day(2026, 4, 2), vasAcct, Decimal(402.75)),
+@MainActor func sell(_ date: Date, _ acct: Account, _ units: Decimal, _ price: Decimal) {
+    let t = Transaction(currency: aud, datePosted: date, description: "Sell \(acct.name)")
+    let leg = Split(account: acct, value: -(units * price), quantity: -units)
+    leg.reconcileState = .reconciled
+    t.addSplit(leg)
+    t.addSplit(Split(account: brokerage, value: units * price))
+    book.addTransaction(t)
+}
+sell(day(2026, 9, 15), vasAcct, 40, 106.20)     // from the Aug 2025 parcel: over twelve months
+sell(day(2026, 10, 6), ndqAcct, 15, 57.10)      // from the Nov 2025 parcel: under twelve months
+
+// A franked distribution carries its credit, offset by an expense the way the
+// book records one; each transaction has one distribution in it.
+for (date, cash, credit) in [
+    (day(2025, 10, 2), Decimal(318.40), Decimal(136.46)),
+    (day(2026, 1, 8), Decimal(344.10), Decimal(147.47)),
+    (day(2026, 4, 2), Decimal(402.75), Decimal(172.61)),
+    (day(2026, 7, 2), Decimal(418.30), Decimal(179.27)),
+    (day(2026, 10, 2), Decimal(366.05), Decimal(156.88)),
 ] {
-    post(date, "\(acct.name) distribution", [(brokerage, amount), (dividends, -amount)])
+    post(date, "VAS distribution", [(brokerage, cash), (vasFranked, -cash),
+                                    (vasCredits, -credit), (creditOffset, credit)])
+}
+for (date, cash) in [(day(2026, 1, 8), Decimal(96.20)), (day(2026, 7, 2), Decimal(112.45))] {
+    post(date, "NDQ distribution", [(brokerage, cash), (ndqUnfranked, -cash)])
 }
 
 // Top the brokerage account up so it is not overdrawn.
 post(day(2025, 8, 1), "Transfer to brokerage", [(brokerage, 18_000), (savings, -18_000)])
 
-// Prices, so the portfolio values itself and the charts have a series.
-var vasPrice = Decimal(90.10)
-var ndqPrice = Decimal(46.80)
-for week in 0..<52 {
-    let date = calendar.date(byAdding: .day, value: week * 7, to: day(2025, 7, 4))!
-    vasPrice += rnd(-1.6, 1.9)
-    ndqPrice += rnd(-1.1, 1.5)
-    book.addPrice(Price(commodity: vas, currency: aud, date: date, value: vasPrice, source: "demo"))
-    book.addPrice(Price(commodity: ndq, currency: aud, date: date, value: ndqPrice, source: "demo"))
+// Prices, every weekday for two and a bit years, so the portfolio values itself
+// and Price History has averages, crosses and a benchmark to draw: each series
+// walks a little around straight lines between these invented levels — a rise,
+// a fall early in 2025, and the recovery the purchases and sales sit on.
+@MainActor func addDailyPrices(_ commodity: Commodity, _ path: [(Date, Double)], wobble: Double) {
+    var drift = 0.0
+    var date = path[0].0
+    let last = path[path.count - 1].0
+    while date <= last {
+        let weekday = calendar.component(.weekday, from: date)
+        if weekday != 1 && weekday != 7 {
+            let next = path.firstIndex { $0.0 >= date } ?? path.count - 1
+            let (from, to) = (path[max(next - 1, 0)], path[next])
+            let span = to.0.timeIntervalSince(from.0)
+            let level = span > 0
+                ? from.1 + (to.1 - from.1) * date.timeIntervalSince(from.0) / span
+                : to.1
+            drift = drift * 0.9 + NSDecimalNumber(decimal: rnd(-wobble, wobble)).doubleValue
+            let cents = Int(((level + drift) * 100).rounded())
+            book.addPrice(Price(commodity: commodity, currency: aud, date: date,
+                                value: Decimal(cents) / 100, source: "demo"))
+        }
+        date = calendar.date(byAdding: .day, value: 1, to: date)!
+    }
 }
+addDailyPrices(vas, [
+    (day(2024, 7, 1), 86.0), (day(2024, 12, 2), 94.0), (day(2025, 4, 7), 82.0),
+    (day(2025, 8, 12), 92.4), (day(2026, 1, 15), 95.5), (day(2026, 3, 18), 97.8),
+    (day(2026, 6, 15), 101.0), (day(2026, 9, 15), 106.2), (day(2026, 10, 30), 108.4),
+], wobble: 0.45)
+addDailyPrices(ndq, [
+    (day(2024, 7, 1), 37.5), (day(2025, 1, 15), 44.0), (day(2025, 4, 7), 36.5),
+    (day(2025, 11, 4), 48.15), (day(2026, 3, 2), 46.0), (day(2026, 6, 1), 51.0),
+    (day(2026, 10, 6), 57.1), (day(2026, 10, 30), 58.2),
+], wobble: 0.3)
+addDailyPrices(idx, [
+    (day(2024, 7, 1), 7_800), (day(2024, 12, 2), 8_400), (day(2025, 4, 7), 7_500),
+    (day(2025, 11, 4), 8_700), (day(2026, 3, 2), 8_600), (day(2026, 10, 30), 9_150),
+], wobble: 28)
 
 // MARK: Write it out
 

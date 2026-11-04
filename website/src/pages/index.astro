@@ -1,5 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
+import AppStoreButton from '../components/AppStoreButton.astro';
 import DownloadButton from '../components/DownloadButton.astro';
 import Screenshot from '../components/Screenshot.astro';
 import { site, release, url } from '../data/site';
@@ -16,9 +17,9 @@ const pillars = [
   {
     title: 'Your book is a file you own',
     body:
-      'One SQLite document on your disk, iCloud Drive or a NAS. No account to ' +
-      'create, no server to trust, nothing uploaded. Open it, edit it, back it ' +
-      'up like any other file.',
+      'One SQLite document on your disk, in iCloud Drive, on a NAS or in your own ' +
+      'Box account. No account to create and no server of ours to trust. Open ' +
+      'it, edit it, back it up like any other file.',
     icon: 'M3 5.5A1.5 1.5 0 0 1 4.5 4h3l1.5 2h6A1.5 1.5 0 0 1 16.5 7.5v7A1.5 1.5 0 0 1 15 16H4.5A1.5 1.5 0 0 1 3 14.5v-9Z',
   },
   {
@@ -50,19 +51,46 @@ const features = [
       'Balance sheet, income statement, trial balance and cash flow, built from ' +
       'your own chart of accounts with comparatives and accounting typography. ' +
       'Plus two presentation decks — a CFO-style Financial Review and a factsheet ' +
-      'Investment Review — that write their own commentary on your Mac.',
+      'Investment Review — whose commentary is written from your figures, with ' +
+      'every number checked against them before you see it.',
     image: 'reports',
-    alt: 'A FinvestLens report showing a financial statement with charts.',
+    alt: 'A FinvestLens income statement set out the way an annual report is.',
+  },
+  {
+    kicker: 'Investing',
+    title: 'Capital gains the way a tax return wants them',
+    body:
+      'Every parcel sold, with when it was bought and sold, its cost base and ' +
+      'proceeds, how long it was held and how the ATO treats it — then the ' +
+      'year’s net capital gain, including the changes from 1 July 2027. Total ' +
+      'return since you bought, with a money-weighted annual rate, and income, ' +
+      'historical cost and returns by financial year beside it.',
+    image: 'capital-gains',
+    alt: 'The Capital Gains report: each parcel sold with its dates, cost base, proceeds, gain and treatment.',
+  },
+  {
+    kicker: 'Prices',
+    title: 'A price history you can actually read',
+    body:
+      'One security over any period, with its 50- and 200-day averages and their ' +
+      'crosses, the RSI, your own buys and sells against your average cost, and ' +
+      'the range’s high, low, volatility and largest fall. Add the income it paid ' +
+      'to see total return, and draw a benchmark beside it — a cash rate you set, ' +
+      'or any other security or index you hold prices for.',
+    image: 'price-history',
+    alt: 'The Price History report: a price chart with moving averages and trades above a strip of statistics.',
   },
 ];
 
 const onDevice = {
-  kicker: 'On device',
+  kicker: 'Apple Intelligence',
   title: 'Apple Intelligence reads your paperwork',
   body:
     'Point Smart Import at a PDF bank statement, dividend notice or invoice. It ' +
-    'is read on your Mac, matched to transactions already in your book, linked ' +
-    'and categorised — and nothing is sent anywhere.',
+    'is read, matched to transactions already in your book, linked and ' +
+    'categorised. Bank statements are always read on your device; for the rest ' +
+    'you choose your device, Apple’s Private Cloud Compute where it is offered, ' +
+    'or a model of your own. Nothing is ever sent to us.',
   steps: [
     ['Reads the rows', 'Including scanned pages, not just digital PDFs.'],
     ['Finds the match', 'Against transactions already in your book, in any account.'],
@@ -110,16 +138,12 @@ const interop = [
           you own, on macOS, iPad and iPhone.
         </p>
         <div class="mt-9 flex flex-wrap items-center justify-center gap-4">
-          <DownloadButton />
-          <a
-            href={url('/features/')}
-            class="inline-flex items-center gap-1.5 rounded-xl border border-ink-300 px-6 py-3.5 text-base font-semibold text-ink-700 transition-colors hover:border-ink-400 hover:bg-ink-50 dark:border-ink-700 dark:text-ink-200 dark:hover:bg-ink-800"
-          >
-            See what it does
-          </a>
+          <AppStoreButton />
+          <DownloadButton variant="outline" />
         </div>
         <p class="mt-5 text-sm text-ink-500 dark:text-ink-400">
-          {release.requirements} · Free software, GPL v3
+          Version {release.version} · {release.platforms} · Free software, GPL v3 ·
+          <a href={url('/features/')} class="font-medium underline decoration-ink-300 underline-offset-4 hover:text-ink-700 dark:decoration-ink-600 dark:hover:text-ink-200">See what it does</a>
         </p>
       </div>
 
@@ -179,7 +203,48 @@ const interop = [
     </div>
   </section>
 
-  <!-- On-device band -->
+  <!-- iPhone -->
+  <section class="border-b border-ink-200 dark:border-ink-800">
+    <div class="mx-auto grid max-w-6xl items-center gap-12 px-5 py-24 lg:grid-cols-2 lg:gap-16">
+      <div>
+        <p class="text-sm font-semibold tracking-wider text-brand-600 uppercase dark:text-brand-400">
+          iPhone and iPad
+        </p>
+        <h2 class="mt-2 text-3xl font-bold tracking-tight text-ink-900 dark:text-white">
+          The same book, in your pocket
+        </h2>
+        <p class="mt-4 text-lg leading-relaxed text-ink-600 dark:text-ink-300">
+          On iPhone, FinvestLens has a layout of its own: a tab for each area, a
+          register you can read at a glance, and a form for entering a transaction.
+          Keep your book in iCloud Drive and open it on any of your devices. Bank files
+          are imported on iPad or Mac, and a GnuCash file or Ledger journal on a Mac.
+        </p>
+        <div class="mt-8"><AppStoreButton /></div>
+      </div>
+      <div class="flex items-start justify-center gap-4 sm:gap-6">
+        <img
+          src={url('/images/screens/iphone-dashboard.png')}
+          alt="The dashboard on iPhone, with the tab bar along the bottom."
+          width="804"
+          height="1748"
+          loading="lazy"
+          decoding="async"
+          class="w-[44%] max-w-64 rounded-[2rem] border border-ink-200 shadow-xl shadow-ink-900/10 dark:border-ink-700"
+        />
+        <img
+          src={url('/images/screens/iphone-register.png')}
+          alt="An account's register on iPhone: each posting with its date, amount and running balance."
+          width="804"
+          height="1748"
+          loading="lazy"
+          decoding="async"
+          class="mt-10 w-[44%] max-w-64 rounded-[2rem] border border-ink-200 shadow-xl shadow-ink-900/10 dark:border-ink-700"
+        />
+      </div>
+    </div>
+  </section>
+
+  <!-- Apple Intelligence band -->
   <section class="mx-auto max-w-6xl px-5 py-24">
     <div class="mx-auto max-w-2xl text-center">
       <p class="text-sm font-semibold tracking-wider text-brand-600 uppercase dark:text-brand-400">
@@ -235,12 +300,13 @@ const interop = [
     >
       <div class="mx-auto max-w-2xl text-center">
         <h2 class="text-2xl font-bold tracking-tight text-ink-900 sm:text-3xl dark:text-white">
-          Your finances stay on your Mac
+          Your finances stay yours
         </h2>
         <p class="mt-4 text-lg leading-relaxed text-ink-600 dark:text-ink-300">
-          There is no FinvestLens account, no analytics and no server. Documents
-          are read on device by Apple Intelligence. Price quotes are the only
-          network requests the app makes, and you choose whether to make them.
+          There is no FinvestLens account, no analytics and no server of ours. The
+          app goes online only when you ask it to — for prices, the consumer price
+          index, your own Box account or, if you allow it, Apple’s Private Cloud
+          Compute — and nothing is ever sent to us.
         </p>
         <a
           href={url('/privacy/')}
@@ -256,17 +322,18 @@ const interop = [
     <div class="brand-gradient rounded-2xl px-8 py-14 text-center sm:px-14">
       <h2 class="text-3xl font-bold tracking-tight text-white">Bring your money into focus.</h2>
       <p class="mx-auto mt-3 max-w-xl text-lg text-white/90">
-        Free software, signed and notarized by Apple. Import your GnuCash file and
-        pick up where you left off.
+        Free software, on the App Store or as a notarized download. Import your
+        GnuCash file and pick up where you left off.
       </p>
       <div class="mt-8 flex flex-wrap items-center justify-center gap-4">
-        <DownloadButton variant="light" />
-        <a
-          href={url('/manual/')}
-          class="inline-flex items-center rounded-xl border border-white/40 px-6 py-3.5 font-semibold text-white transition-colors hover:bg-white/10"
-          >Read the manual</a
-        >
+        <AppStoreButton variant="light" />
+        <DownloadButton variant="outline-light" />
       </div>
+      <a
+        href={url('/manual/')}
+        class="mt-6 inline-block font-semibold text-white underline decoration-white/50 underline-offset-4 hover:decoration-white"
+        >Read the manual</a
+      >
     </div>
   </section>
 </Base>

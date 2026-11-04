@@ -1,10 +1,14 @@
 # App Store Connect & TestFlight runbook
 
 > Started 11 Oct 2026. The App Store Connect record exists; this is the recipe
-> for getting a build onto TestFlight and, later, into review. The DMG path
-> (`scripts/release-dmg.sh`, Developer ID, notarised) is separate and
-> unchanged — the two distribution channels sign differently and the export
-> option files are not interchangeable.
+> for getting a build onto TestFlight and into review. **1.2 (build 11) went on
+> sale for Mac, iPhone and iPad on 31 Oct 2026.** The DMG path
+> (`scripts/release-dmg.sh`, Developer ID, notarised; its profiles are in
+> `provisioning.md` ▸ B5) is separate — the two distribution channels sign
+> differently and the export option files are not interchangeable. **Keep the
+> two on one release:** when a
+> version goes live, cut the DMG from the commit its build was archived from,
+> tag that commit, and move `website/src/data/site.ts` in the same change.
 
 ## The record
 

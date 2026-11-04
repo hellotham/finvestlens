@@ -38,10 +38,11 @@ const appSchema = {
   description: site.description,
   applicationCategory: 'FinanceApplication',
   applicationSubCategory: 'Accounting',
-  // The system the released file runs on (see `release.requirements`), not
-  // what the tree builds for: the download is a Mac disk image.
-  operatingSystem: 'macOS 26.5',
+  // What the released version runs on, not what the tree builds for.
+  operatingSystem: release.operatingSystem,
   softwareVersion: release.version,
+  // The App Store for every platform; the disk image for a Mac.
+  installUrl: release.appStore,
   downloadUrl: release.url,
   fileSize: release.sizeLabel,
   license: 'https://www.gnu.org/licenses/gpl-3.0.html',

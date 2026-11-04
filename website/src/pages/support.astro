@@ -10,27 +10,31 @@ const topicCount = manual.sections.reduce((n, s) => n + s.topics.length, 0);
 const faqs = [
   {
     q: 'Can I move my GnuCash book across?',
-    a: 'Yes. File ▸ Import GnuCash… reads your .gnucash file — accounts, transactions, prices, scheduled transactions and business records. You can export back to GnuCash XML at any time, and the round trip is verified byte-identical.',
+    a: 'Yes, on a Mac. File ▸ Import GnuCash… reads your .gnucash file — accounts, transactions, prices, scheduled transactions and business records — and the book it makes opens on your iPhone and iPad too. You can export back to GnuCash XML at any time, and the round trip is verified byte-identical.',
   },
   {
     q: 'Where is my data stored?',
-    a: 'In one .finvestlens file wherever you put it — local disk, iCloud Drive or a NAS. There is no account and no server. Back it up like any other document.',
+    a: 'In one .finvestlens file wherever you put it — local disk, iCloud Drive, a NAS or your own Box account. There is no FinvestLens account and no server of ours. Back it up like any other document.',
   },
   {
     q: 'Can two people use the same book?',
-    a: 'Not simultaneously. A book on a shared drive is locked by whichever Mac has it open, with a heartbeat so a crashed session does not lock you out permanently. If the lock is stale you can break it and open anyway.',
+    a: 'Not simultaneously. A book on a shared drive is locked by whichever device has it open, with a heartbeat so a crashed session does not lock you out permanently. If the lock is stale you can break it and open anyway.',
   },
   {
     q: 'Does it work offline?',
-    a: 'Entirely. The only network requests are the price quotes you explicitly ask for.',
+    a: 'Yes. The app goes online only when you ask it to: for price quotes, the consumer price index, your own Box account or, if you allow it, Apple’s Private Cloud Compute. The privacy policy lists each.',
+  },
+  {
+    q: 'Should I use the App Store or the disk image on a Mac?',
+    a: 'Either: they are the same version from the same source. The App Store version updates itself and can use Apple’s Private Cloud Compute if you allow it. The disk image cannot, because Apple does not offer that to apps distributed outside the App Store, and you download new versions yourself. The download page sets out the difference.',
   },
   {
     q: 'Why does macOS not warn me when I open it?',
-    a: 'Because every release is signed with a Developer ID and notarized by Apple. You can verify that yourself — the commands are on the download page.',
+    a: 'Because Apple has checked it: through App Review on the App Store, and by notarization for the disk image, which is also signed with a Developer ID. You can verify the disk image yourself — the commands are on the download page.',
   },
   {
     q: 'Is there an iPhone or iPad version?',
-    a: 'The app runs on iPadOS and iOS from the same codebase and can open, create and edit books. Importing and exporting are macOS-only for now.',
+    a: 'Yes, on the App Store: one free download for Mac, iPhone and iPad. On iPhone, FinvestLens opens, creates and edits books. Bank files are imported on iPad or Mac, and a GnuCash file or Ledger journal on a Mac.',
   },
 ];
 ---
@@ -69,8 +73,8 @@ const faqs = [
       <h2>Reporting a problem</h2>
       <p>
         The most useful report says what you did, what happened, and what you
-        expected instead. Please include the app version (FinvestLens ▸ About) and
-        your macOS version. The current release is {release.version}.
+        expected instead. Please include the app version and your system version.
+        The current release is {release.version}.
       </p>
       <p>
         <strong>Please do not attach your book file</strong> — it contains your

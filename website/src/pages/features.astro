@@ -24,11 +24,11 @@ const groups = [
     items: [
       ['Bank and broker import', 'CSV with saved column profiles, QIF, OFX/QFX, SWIFT MT940/MT942 and ISO 20022 CAMT.053 — format detected from the file itself.'],
       ['An import matcher that thinks', 'Duplicate detection on FITID plus amount and date with one-to-one claiming, destination accounts learned from payee history, and cross-account transfer completion instead of double entries.'],
-      ['Smart Import with Apple Intelligence', 'PDF statements, dividend notices and invoices read on device, matched to existing transactions, linked and categorised.'],
+      ['Smart Import with Apple Intelligence', 'PDF statements, dividend notices and invoices read, matched to existing transactions, linked and categorised — a photographed or scanned invoice as a picture. Bank statements are always read on your device.'],
       ['Rules', 'Trigger and action groups that categorise, rename, tag, or mark a payment as settling a particular bill — on import or applied to history.'],
       ['Reconciliation', 'Enter the statement balance; matching transactions auto-clear, and the running difference tells you exactly what you are hunting.'],
       ['Scheduled transactions', 'Any recurrence, with formula amounts you are prompted for, a loan calculator that builds the schedule, and bill reminders that clear exactly.'],
-      ['Budgets', 'Per-account planned amounts with rollover, auto-budget from actual spending, and a monthly proposal written on device.'],
+      ['Budgets', 'Per-account planned amounts with rollover, auto-budget from actual spending, and a monthly proposal written from your own spending.'],
       ['Attachments', 'Receipts and invoices linked relatively — the same scheme GnuCash uses — so book and documents move together.'],
     ],
   },
@@ -37,7 +37,7 @@ const groups = [
     title: 'Investments',
     lead: 'A portfolio that values itself.',
     items: [
-      ['Live and historical prices', 'Yahoo and Stooq need no key; EODHD, Alpha Vantage, Finnhub and Twelve Data take a free one, kept in your keychain — never in the book.'],
+      ['Live and historical prices', 'Yahoo, Stooq, FIIG (bonds) and Wilson Asset Management (its funds) need no key; EODHD, Alpha Vantage, Finnhub and Twelve Data take a free one, kept in your keychain — never in the book.'],
       ['Historical backfill', 'Fill every gap in a security’s history from first holding to today, including delisted securities through EODHD.'],
       ['Cost basis and realised gains', 'Computed per lot with the method you choose, with brokerage handled the way your tax return expects.'],
       ['Dividends and franking credits', 'Recorded gross where it applies, so the tax reports have what they need at year end.'],
@@ -53,7 +53,7 @@ const groups = [
     lead: 'Presentation-standard output, not a data dump.',
     items: [
       ['The statements', 'Balance sheet, income statement, trial balance and cash flow — hierarchical face-and-notes built from your own chart of accounts, with comparatives and materiality folding.'],
-      ['Presentation decks', 'A CFO-style Financial Review and a factsheet Investment Review, with charts, callouts and commentary generated on device from the figures on the slide.'],
+      ['Presentation decks', 'A CFO-style Financial Review and a factsheet Investment Review, with charts, callouts and commentary written from the figures on the slide, every number checked against them.'],
       ['Financial Year Pack', 'Everything you need at tax time gathered into one PDF, in reading order.'],
       ['Nine investment reports, one shape', 'Portfolio, Investment Lots, Capital Gains, Investment Return, Income, Historical Cost, Returns by Period, Drawdown and Price History share the same controls — period, portfolio, closed positions, cost-basis method — and the same layout: by portfolio, then security, with the parcels or history beneath, every date a date and every count a count.'],
       ['Business reports', 'Receivable and payable aging, customer summaries and printable tax invoices.'],
@@ -67,7 +67,7 @@ const groups = [
     items: [
       ['Debt Reduction Planner', 'Avalanche against snowball, with the payoff date and the interest saved versus paying minimums.'],
       ['Lifetime Planner', 'A long-range projection seeded from your book, with editable assumptions, one-off life events and a today’s-money view.'],
-      ['Tax estimator', 'Built from the accounts you mark as income and deductions, with editable brackets defaulting to Australian resident rates.'],
+      ['Tax estimator', 'Built from the accounts you mark as income and deductions, with editable brackets defaulting to Australian resident rates and capital gains assessed the ATO’s way.'],
       ['Spending insights', 'Period-on-period comparison in plain language, with unusual-spend alerts.'],
       ['Financial wellbeing score', 'Four measures from your own books — savings rate, cash runway, debt to income, spending trend — each shown with how it was worked out.'],
       ['Savings goals', 'Earmark part of an account toward something, with optional time-boxed challenges.'],
@@ -89,7 +89,9 @@ const groups = [
     title: 'Apple platform',
     lead: 'Native, not a web app in a window.',
     items: [
-      ['macOS, iPadOS and iOS', 'One SwiftUI codebase with layouts that suit each.'],
+      ['macOS, iPadOS and iOS', 'One SwiftUI codebase with layouts that suit each — modes and a sidebar on Mac and iPad; on iPhone a tab for each area, a register to read at a glance and a form for entering a transaction. Bank files are imported on Mac or iPad, and a GnuCash file or Ledger journal on a Mac.'],
+      ['Books on Box', 'Keep a book in your own Box account, through a Box app you set up yourself. Each save is a new version, a large book goes up in parts, and a version another device saved is never replaced.'],
+      ['Where Apple Intelligence runs', 'On your device, on Apple’s Private Cloud Compute if you allow it (App Store version), or with a model of your own in MLX format. Every command that could leave the device says so beside its button.'],
       ['Eight languages', 'English, German, Spanish, French, Italian, Japanese, Brazilian Portuguese and Simplified Chinese, with accounting terms following GnuCash’s own conventions.'],
       ['Widgets, Shortcuts and Spotlight', 'Net worth and upcoming bills on your desktop; App Intents for automation; Quick Look previews of your book.'],
       ['Accessibility', 'Dynamic Type, VoiceOver labels throughout, full keyboard control.'],

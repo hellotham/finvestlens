@@ -198,6 +198,30 @@ select the matching App ID, your certificate and test devices, download, and
 select each in the target's **Signing & Capabilities ▸ Provisioning Profile**.
 With automatic signing, skip this — Xcode manages profiles.
 
+### B5. The disk image's Developer ID profiles
+
+`scripts/release-dmg.sh` exports with **manual** signing, because each thing an
+automatic export leans on can be missing on the day: Xcode drops its account
+after a while ("No Accounts"), and an App Manager API key is refused cloud
+signing ("Cloud signing permission error"). It names two profiles of type
+*Developer ID* (`MAC_APP_DIRECT` in the API):
+
+| Profile name | App ID |
+|---|---|
+| `FinvestLens Developer ID` | `com.hellotham.finvestlens` |
+| `FinvestLens Widgets Developer ID` | `com.hellotham.finvestlens.FinvestLensWidgets` |
+
+They were created on 4 Nov 2026 through the App Store Connect API
+(`POST /v1/profiles`, with the key in `~/.appstoreconnect/`), and live in
+`~/Library/Developer/Xcode/UserData/Provisioning Profiles/`, named by UUID.
+Neither carries Private Cloud Compute, which Apple does not provision for
+Developer ID. On another Mac, create them under the same names in the portal
+(**Profiles** ▸ **+** ▸ *Developer ID*) or the API, and install them there.
+
+The **Developer ID Application certificate expires on 1 February 2027**. A disk
+image already signed and timestamped stays valid after that; the next one needs
+a new certificate, and these two profiles made again against it.
+
 ---
 
 ## C. Verify

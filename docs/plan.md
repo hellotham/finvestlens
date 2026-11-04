@@ -2,8 +2,8 @@
 
 | | |
 |---|---|
-| **Document status** | **Phases P0–P12 complete.** v1.0 was P0–P6 (13 July 2026); P7 business, P8 extended import, P9 planning & insights, P10 ledger CLI & interchange and P11 the Investments hub have landed since, **plus the Jul 2026 usability/performance and report-quality redesigns**, and the Aug 2026 register-style restoration and large-book NAS validation that closed the last NFR-02 item (`finlab`, [lab.md](lab.md)). Online bank sync skipped to [deferred.md](deferred.md). |
-| **Last updated** | 2026-08-15 |
+| **Document status** | **Phases P0–P12 complete; 1.2 released** (App Store, 31 October 2026; notarized disk image, 4 November 2026). v1.0 was P0–P6 (13 July 2026); P7 business, P8 extended import, P9 planning & insights, P10 ledger CLI & interchange and P11 the Investments hub have landed since, **plus the Jul 2026 usability/performance and report-quality redesigns**, and the Aug 2026 register-style restoration and large-book NAS validation that closed the last NFR-02 item (`finlab`, [lab.md](lab.md)). Online bank sync skipped to [deferred.md](deferred.md). |
+| **Last updated** | 2026-11-04 |
 | **Scope** | The build plan: phases, workstreams, tasks, dependencies, and exit criteria |
 | **Companions** | [PRD](prd.md) · [Architecture](architecture.md) · [Porting Strategy](porting.md) · [Implemented](implemented.md) · [Deferred backlog](deferred.md) · [Money study](enhancements-msmoney.md) · [Firefly study](enhancements-firefly.md) · [Frollo study](enhancements-frollo.md) |
 

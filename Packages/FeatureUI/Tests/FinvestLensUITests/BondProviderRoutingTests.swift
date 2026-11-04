@@ -262,11 +262,23 @@ struct BondProviderRoutingTests {
 }
 
 /// Three days of FIIG history, in the live shape: no ISIN on the rows, price
-/// as percent of par.
-private let bondHistoryJSON = """
-{"data":[
-  {"georgiaId":18,"isin":"","yield":0.05,"priceDate":"2021-10-27","priceValue":98.5},
-  {"georgiaId":18,"isin":"","yield":0.05,"priceDate":"2021-10-28","priceValue":99.0},
-  {"georgiaId":18,"isin":"","yield":0.05,"priceDate":"2021-10-29","priceValue":99.5}
-]}
-"""
+/// as percent of par. Dated back from today: a security with no holding rebuilds
+/// only the last five years, so rows fixed in October 2021 fell out of that
+/// window on 30 October 2026, and this suite with them.
+private let bondHistoryJSON: String = {
+    let formatter = DateFormatter()
+    formatter.calendar = Calendar(identifier: .gregorian)
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    formatter.timeZone = TimeZone(identifier: "UTC")
+    formatter.dateFormat = "yyyy-MM-dd"
+    func daysAgo(_ days: Int) -> String {
+        formatter.string(from: Date().addingTimeInterval(-86_400 * Double(days)))
+    }
+    return """
+    {"data":[
+      {"georgiaId":18,"isin":"","yield":0.05,"priceDate":"\(daysAgo(30))","priceValue":98.5},
+      {"georgiaId":18,"isin":"","yield":0.05,"priceDate":"\(daysAgo(29))","priceValue":99.0},
+      {"georgiaId":18,"isin":"","yield":0.05,"priceDate":"\(daysAgo(28))","priceValue":99.5}
+    ]}
+    """
+}()

@@ -5645,3 +5645,56 @@ chart code were opened and ported where this app lacked them.
   typed columns, the CGT parcel rows and assessment, closed-position
   semantics, cumulative return with history, periods side by side, cost
   reconciliation. Quotes: the RBA table parser on a captured slice.
+
+## 1.2, released: the disk image and the site to match (4 Nov 2026)
+
+Apple approved 1.2 for Mac, iPhone and iPad; the store's own record gives
+`releaseDate` 31 October 2026. This is what it took to put the other channel and
+the public pages on the same release.
+
+- **The disk image.** `FinvestLens-1.2.dmg`, tagged `v1.2` on `dd4f747`, the
+  commit build 11 was archived from. Since that commit only documents, the
+  website, the README and one test's fixture have changed, so it is the store's
+  source and build number. It is a separate compile, with Xcode 27.2 where the
+  store's build used 27.1, and it has no Private Cloud Compute, which Apple does
+  not provision for Developer ID. The app and the image are each notarized and
+  stapled, and `spctl` reads "Notarized Developer ID" for both. Read back from the
+  export: 1.2 (11), arm64, `LSMinimumSystemVersion` 27.0, sandboxed, hardened
+  runtime. It ran from the mounted image on the demo book, took and released its
+  lock, and left no crash report.
+- **The export is manual now.** Xcode had dropped its account and the API key is
+  refused cloud signing, so `scripts/release-dmg.sh` names two Developer ID
+  profiles, created through the App Store Connect API (`provisioning.md` ▸ B5).
+  The certificate expires on 1 February 2027.
+- **A test with a date in it.** `BondProviderRoutingTests` carried bond history
+  from October 2021, which fell out of the five-year rebuild window on
+  30 October 2026: red with no change to the code. Its rows are dated from today.
+- **The release gate on 27.2.** 2,312 tests across the twelve packages, both
+  platform builds. The update also took the Metal toolchain with it:
+  `xcodebuild -downloadComponent MetalToolchain` again, as `CLAUDE.md` says.
+- **The site.** Two ways to get it, side by side, with the App Store for all three
+  platforms and the disk image for a Mac; an iPhone section; Capital Gains and
+  Price History on the home page; screenshots retaken from the release build and
+  the iPhone simulator on a demo book extended to the end of October 2026, with
+  franked distributions, two parcels sold and daily prices. Palette PNGs took the
+  Mac set to a fifth of its size, and they are sRGB now, not the capture's Display
+  P3. Recipe: `website/scripts/demo-book/README.md`.
+- **The header fits a phone.** The nav was wider than the screen on every page at
+  375 points: `scrollWidth` 591, so the whole page scrolled sideways, which matters
+  now the app is on the iPhone. Below `md` the links take their own row.
+- **Claims checked against the code.** The site said GnuCash import was on the Mac
+  or iPad; `Import GnuCash…` and `Import Ledger Journal…` are `#if os(macOS)`
+  (`finvestlensApp.swift:260`), so it now says a Mac. The privacy policy said every
+  request was started by you, and had no word for Auto-refresh, which fetches prices
+  on opening and every six hours once it is on for a book
+  (`AppModel+Quotes.swift:239`); nor for Fetch from the RBA, added in build 11. It
+  now names both, and that the disk image has no Private Cloud Compute.
+- **Noticed in the shipped build, left alone so the disk image stays the store's
+  release.** Report tables stripe each cell rather than the row, so Capital Gains
+  shows blocks of colour; Price History's legend draws Sell in purple where the mark
+  is red; the Auto-refresh toggle still says "Yahoo" while it uses the book's chosen
+  provider; `building.2.crop.circle.badge.clock` is not an SF Symbol (Payable Aging);
+  the gallery shows "(FR-PLAN-17)" under Financial Summary; on iPhone and iPad,
+  opening a GnuCash file says to import it and offers only OK
+  (`ContentView.swift:164`), though the store description says "Import a GnuCash
+  file" on every platform; the Security picker logs an invalid empty selection.

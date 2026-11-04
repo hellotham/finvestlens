@@ -1,42 +1,92 @@
 ---
 import Base from '../layouts/Base.astro';
 import PageHeader from '../components/PageHeader.astro';
+import AppStoreButton from '../components/AppStoreButton.astro';
 import DownloadButton from '../components/DownloadButton.astro';
 import { site, release, url } from '../data/site';
 ---
 
 <Base
   title="Download"
-  description={`Download FinvestLens ${release.version} for macOS — signed with a Developer ID and notarized by Apple.`}
+  description={`Get FinvestLens ${release.version} for ${release.platforms} — on the App Store, or for Mac as a disk image signed with a Developer ID and notarized by Apple.`}
 >
-  <PageHeader eyebrow="Download" title={`FinvestLens ${release.version}`} lead={release.requirements} />
+  <PageHeader
+    eyebrow="Download"
+    title={`FinvestLens ${release.version}`}
+    lead={`For ${release.platforms}. Free, and free software under the GPL v3.`}
+  />
 
-  <div class="mx-auto max-w-3xl px-5 py-16">
-    <div class="rounded-2xl border border-ink-200 p-8 text-center dark:border-ink-800">
-      <DownloadButton />
-      <p class="mt-4 text-sm text-ink-500 dark:text-ink-400">
-        {release.file} · {release.sizeLabel} · free software under the GPL v3
-      </p>
+  <div class="mx-auto max-w-4xl px-5 py-16">
+    <div class="grid gap-6 md:grid-cols-2">
+      <div class="flex flex-col rounded-2xl border border-ink-200 p-8 dark:border-ink-800">
+        <h2 class="text-xl font-bold tracking-tight text-ink-900 dark:text-white">App Store</h2>
+        <p class="mt-1 font-medium text-ink-600 dark:text-ink-300">{release.platforms}</p>
+        <p class="mt-3 flex-1 text-ink-600 dark:text-ink-400">
+          One free download for all three. It updates itself, and is the only way to
+          get FinvestLens on iPhone and iPad.
+        </p>
+        <div class="mt-6"><AppStoreButton plain /></div>
+        <p class="mt-4 text-sm text-ink-500 dark:text-ink-400">{release.appStoreRequirements}</p>
+      </div>
+      <div class="flex flex-col rounded-2xl border border-ink-200 p-8 dark:border-ink-800">
+        <h2 class="text-xl font-bold tracking-tight text-ink-900 dark:text-white">Disk image</h2>
+        <p class="mt-1 font-medium text-ink-600 dark:text-ink-300">Mac only</p>
+        <p class="mt-3 flex-1 text-ink-600 dark:text-ink-400">
+          The same version, signed with a Developer ID and notarized by Apple, for
+          anyone who would rather install it directly.
+        </p>
+        <div class="mt-6"><DownloadButton /></div>
+        <p class="mt-4 text-sm text-ink-500 dark:text-ink-400">
+          {release.file} · {release.sizeLabel} · {release.requirements}
+        </p>
+      </div>
     </div>
 
     <div class="prose-doc mt-14">
-      <h2>Installing</h2>
+      <h2 id="which">Which one on a Mac?</h2>
+      <p>
+        Either. Both are version {release.version} from the same source, and a book
+        is the same file whichever you use. They differ in two ways:
+      </p>
+      <ul>
+        <li>
+          <strong>Updates.</strong> The App Store version updates itself. The disk image
+          does not; a new version is announced here and on
+          <a href={site.repo}>GitHub</a>, and you install it over the old one.
+        </li>
+        <li>
+          <strong>Private Cloud Compute.</strong> Apple offers it only to apps from the
+          App Store, so the disk image runs Apple Intelligence on your Mac alone, or a
+          model of your own. On the App Store version it stays off unless you allow it
+          (see <a href={url('/privacy/')}>the privacy policy</a>).
+        </li>
+      </ul>
+      <p>Install one or the other: they are the same app to macOS.</p>
+
+      <h2>Installing the disk image</h2>
       <ol>
         <li>Open the downloaded disk image.</li>
         <li>Drag <strong>FinvestLens</strong> onto the Applications folder.</li>
         <li>Open it from Applications.</li>
       </ol>
       <p>
-        Coming from GnuCash? Choose <strong>File ▸ Import GnuCash…</strong> and pick
-        your <code>.gnucash</code> file — accounts, transactions, prices, schedules and
-        business records all come across, and you can export back at any time.
+        Coming from GnuCash? On a Mac, choose <strong>File ▸ Import GnuCash…</strong>
+        and pick your <code>.gnucash</code> file — accounts, transactions, prices, schedules
+        and business records all come across, and you can export back at any time. The
+        book it makes opens on your iPhone and iPad too.
+      </p>
+      <p>
+        Coming from the 1.1 disk image? {release.version} runs in the App Sandbox, as
+        the App Store requires, so open each book once with <strong>File ▸ Open</strong>,
+        a drag or the Finder; from then on it reopens by itself. The same goes for the
+        two document folders in Settings.
       </p>
 
       <h2 id="signed">Signed and notarized</h2>
       <p>
-        Every release is signed with Hello Tham’s Apple Developer ID and submitted
-        to Apple for notarization, so macOS opens it without a Gatekeeper warning.
-        You can check that for yourself before you install:
+        The disk image is signed with Hello Tham’s Apple Developer ID and submitted to
+        Apple for notarization, so macOS opens it without a Gatekeeper warning. You can
+        check that for yourself before you install:
       </p>
       <pre><code>spctl --assess --type open --context context:primary-signature -vv {release.file}</code></pre>
       <p>It should report:</p>
@@ -46,23 +96,54 @@ origin={release.signedBy}</code></pre>
       <pre><code>shasum -a 256 {release.file}</code></pre>
       <p class="break-all"><code>{release.sha256}</code></p>
 
+      <h2 id="older">On an older Mac</h2>
+      <p>
+        FinvestLens {release.version} needs macOS 27 and Apple silicon.
+        <a href={release.previous.url}>FinvestLens {release.previous.version}</a> stays
+        on GitHub for {release.previous.requirements}.
+      </p>
+
       <h2 id="whats-new">What’s in {release.version}</h2>
       <p>
-        The first release after 1.0, and a large one. Every planned phase is
-        complete: the accounting engine, the native document with NAS-safe
-        locking, GnuCash import and export, the register and chart of accounts,
-        everyday finance, investments and multi-currency, sync and dashboard,
-        Apple Intelligence, small-business features, extended statement import,
-        the planning layer, and the Ledger interchange with the
-        <code>finlens</code> command line.
+        On the App Store since {release.released}. The headlines; the
+        <a href={release.notes}>release notes</a> have the rest.
       </p>
-      <p>
-        It has been exercised against a real GnuCash book of 46,553 transactions,
-        559 accounts and 102,706 prices — imported and compared side by side with
-        GnuCash 5.16, which it matches to the cent on net worth, every account
-        subtree, register running balances, the balance sheet and the investment
-        reports.
-      </p>
+      <ul>
+        <li>
+          <strong>iPhone.</strong> A layout of its own: a tab for each area, a register
+          you can read at a glance, and a form for entering a transaction.
+        </li>
+        <li>
+          <strong>Investment reports, rebuilt.</strong> Capital Gains lists every parcel
+          sold with its dates, cost base, proceeds and the ATO’s treatment, and works out
+          the year’s net capital gain, including the changes from 1 July 2027. Investment
+          Return is total return since you bought, with a money-weighted annual rate.
+          New: Income, Historical Cost, Returns by Period and Drawdown.
+        </li>
+        <li>
+          <strong>Price History you can read.</strong> Moving averages and their crosses,
+          the RSI, your own trades against your average cost, the price with the income it
+          paid, and a benchmark drawn beside it.
+        </li>
+        <li>
+          <strong>Books on Box.</strong> Keep a book in your own Box account, through a Box
+          app you set up yourself.
+        </li>
+        <li>
+          <strong>Your choice of where Apple Intelligence runs.</strong> On your device, on
+          Apple’s Private Cloud Compute if you allow it (App Store version), or with a model
+          of your own in MLX format. A photographed or scanned invoice is read as a picture.
+        </li>
+        <li>
+          <strong>Faster, and harder to lock yourself out of.</strong> Saving no longer holds
+          the window, a keystroke searches a large book in milliseconds, and a lock left by
+          a copy that is no longer running clears by itself.
+        </li>
+        <li>
+          <strong>Everything in your language.</strong> Reports, the review decks, messages
+          and the starter chart of accounts, in all eight languages.
+        </li>
+      </ul>
 
       <h2>The command line</h2>
       <p>

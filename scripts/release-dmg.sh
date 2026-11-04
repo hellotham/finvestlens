@@ -112,6 +112,13 @@ xcodebuild archive \
 # ------------------------------------------------------------------- export
 
 step "Exporting the signed app"
+# Manual signing, with the two Developer ID profiles named: automatic signing
+# needs an account signed in to Xcode, which Xcode drops after an App Store
+# upload ("No Accounts"), and an App Manager API key is refused cloud signing.
+# The profiles are good to 2044 and live in Xcode's profile folder. If they are
+# ever missing, create them (type MAC_APP_DIRECT, the Developer ID certificate)
+# with the API (POST /v1/profiles) or at developer.apple.com, under these names.
+# The Quick Look extension has no restricted entitlement and needs no profile.
 cat > "$BUILD/ExportOptions.plist" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -119,8 +126,14 @@ cat > "$BUILD/ExportOptions.plist" <<EOF
 <dict>
     <key>method</key><string>developer-id</string>
     <key>teamID</key><string>$TEAM_ID</string>
-    <key>signingStyle</key><string>automatic</string>
+    <key>signingStyle</key><string>manual</string>
+    <key>signingCertificate</key><string>Developer ID Application</string>
     <key>destination</key><string>export</string>
+    <key>provisioningProfiles</key>
+    <dict>
+        <key>com.hellotham.finvestlens</key><string>FinvestLens Developer ID</string>
+        <key>com.hellotham.finvestlens.FinvestLensWidgets</key><string>FinvestLens Widgets Developer ID</string>
+    </dict>
 </dict>
 </plist>
 EOF
@@ -128,7 +141,6 @@ xcodebuild -exportArchive \
     -archivePath "$ARCHIVE" \
     -exportPath "$EXPORT" \
     -exportOptionsPlist "$BUILD/ExportOptions.plist" \
-    -allowProvisioningUpdates \
     | grep -E "error:|EXPORT" || true
 APP="$EXPORT/$APP_NAME.app"
 [[ -d "$APP" ]] || fail "export failed — no app at $APP"

@@ -2,7 +2,7 @@
 import Base from '../layouts/Base.astro';
 import PageHeader from '../components/PageHeader.astro';
 import { site, url } from '../data/site';
-const updated = '17 October 2026';
+const updated = '4 November 2026';
 ---
 
 <Base
@@ -72,7 +72,7 @@ const updated = '17 October 2026';
 
       <h2>Network requests the app can make</h2>
       <p>
-        FinvestLens contacts a network service in three situations, all started by you.
+        FinvestLens contacts a network service in four situations, all of them your choice.
       </p>
       <p>
         <strong>Prices and company data.</strong> When you update prices, look up a
@@ -82,7 +82,15 @@ const updated = '17 October 2026';
         (<code>twelvedata.com</code>), FIIG (bond prices) or Wilson Asset Management (its
         own funds’ unit prices). The request carries the ticker, ISIN or fund name —
         never an amount, a balance or anything else from your book — and goes from your
-        device straight to that provider, under its own privacy policy.
+        device straight to that provider, under its own privacy policy. If you turn on
+        Auto-refresh for a book, which is off until you do, the app also updates its
+        prices when you open it and every six hours while it stays open.
+      </p>
+      <p>
+        <strong>The consumer price index.</strong> When you choose Fetch from the RBA
+        in the tax estimator, the app downloads the Reserve Bank of Australia’s public
+        table of the consumer price index (<code>rba.gov.au</code>), which the capital
+        gains reports use for indexation. The request carries nothing from your book.
       </p>
       <p>
         <strong>Your own Box account.</strong> If you connect a Box account, the app
@@ -102,7 +110,9 @@ const updated = '17 October 2026';
         the app asks you; you can keep everything on your device instead, and change
         your answer at any time in Settings ▸ Apple Intelligence. A PDF imported as a
         bank statement is always read on your device, and Auto-Categorise and an
-        import’s category suggestions always run on it.
+        import’s category suggestions always run on it. The disk image for Mac from this
+        site does not use Private Cloud Compute at all: Apple offers it only to the App
+        Store version.
       </p>
       <p>
         If you do none of these, the app makes no network requests at all. It works
@@ -119,9 +129,10 @@ const updated = '17 October 2026';
 
       <h2>Local authentication</h2>
       <p>
-        Where the app asks for Touch ID or your password — to open a protected book,
-        or to reach Emergency Records — that check is performed by macOS. FinvestLens
-        receives only a yes or no. It never sees your password or biometric data.
+        Where the app asks for Touch ID, Face ID or your password — to open a protected
+        book, or to reach Emergency Records — that check is performed by the operating
+        system. FinvestLens receives only a yes or no. It never sees your password or
+        biometric data.
       </p>
 
       <h2>Children</h2>

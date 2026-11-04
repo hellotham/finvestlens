@@ -1,7 +1,8 @@
 # App Store listing — 1.2
 
 > **The copy for the version being prepared — not a record of what is live.**
-> App Store Connect is the source of truth for the live listing. This exists
+> 1.2 has been live since 31 October 2026, and App Store Connect is the source
+> of truth for the live listing. This exists
 > as a file so `StoreListingTests`
 > (`Packages/FeatureUI/Tests/FinvestLensUITests/StoreListingTests.swift`) can
 > check every field against App Store Connect's limits *before* anything is
@@ -48,8 +49,9 @@
   content shared with others, no web browsing, no gambling, no health topics.
 - **App Privacy.** Expected "Data Not Collected": the app has no account, no
   analytics and no server of the publisher's, and its privacy manifest
-  declares no collected data types. Requests to a price provider or to the
-  person's own Box account go from the device to that service.
+  declares no collected data types. Requests to a price provider, to the
+  person's own Box account or for the RBA's consumer price index go from the
+  device to that service.
 
 ## Fields for both platforms
 
@@ -221,7 +223,7 @@ FinvestLens is a double-entry accounting app. Nothing needs to be set up and the
 
 All data stays in the book file the person creates. The app has no server and collects nothing.
 
-NETWORK. The app contacts a network service in three situations, all started by the person: fetching security prices and exchange rates from the price provider they choose (Yahoo Finance, Stooq, FIIG and Wilson Asset Management need no key; EODHD, Alpha Vantage, Finnhub and Twelve Data use a key the person enters, which is stored in the Keychain); optionally, signing in to their own Box account to open a book stored there (File ▸ Open from Box…); and Apple's Private Cloud Compute, below. Box sign-in uses Box's own page in a system web authentication session and requires the person's own Box developer app credentials, entered in Settings; it is not needed for any other feature and can be ignored for review.
+NETWORK. The app contacts a network service in four situations, all of them the person's choice: fetching security prices and exchange rates from the price provider they choose (Yahoo Finance, Stooq, FIIG and Wilson Asset Management need no key; EODHD, Alpha Vantage, Finnhub and Twelve Data use a key the person enters, which is stored in the Keychain), when they ask or, if they turn on Auto-refresh for a book, when it opens and every six hours while it stays open; downloading the Reserve Bank of Australia's public consumer price index (Fetch from the RBA, in the tax estimator), which carries nothing from the book; optionally, signing in to their own Box account to open a book stored there (File ▸ Open from Box…); and Apple's Private Cloud Compute, below. Box sign-in uses Box's own page in a system web authentication session and requires the person's own Box developer app credentials, entered in Settings; it is not needed for any other feature and can be ignored for review.
 
 APPLE INTELLIGENCE. Category suggestions, budget proposals, document reading and report notes run on Apple Foundation Models, where Apple Intelligence is available and turned on: on the device, or on Private Cloud Compute (com.apple.developer.private-cloud-compute, granted to this App ID). Private Cloud Compute is the default where it is offered; the first command that would use it asks the person, beside the command, whether to use it or keep everything on the device, and the answer is kept in Settings ▸ Apple Intelligence, where it can be changed. Bank statements, Auto-Categorise and an import's category suggestions always run on the device. Where Apple Intelligence is not available, those commands are disabled and say why; every other feature works without it. The app contains no third-party AI services and no API keys for any.
 
