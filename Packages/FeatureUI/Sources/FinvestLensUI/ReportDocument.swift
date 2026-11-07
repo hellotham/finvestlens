@@ -499,6 +499,68 @@ struct ReportDocumentView: View {
     }
 }
 
+/// Where each row of a report's `Grid` lies, by row: index, or ``total``.
+///
+/// A `GridRow` hands its modifiers to each of its cells, so a stripe put on
+/// the row was drawn cell by cell — blocks the width of each label or figure,
+/// with the column gaps showing between them (Capital Gains on build 11,
+/// 4 Nov 2026) — and a total's rule came in pieces the same way. Each cell
+/// reports its frame instead, and the grid draws one stripe or one rule
+/// across the whole of every row behind it.
+struct GridRowFrames: PreferenceKey {
+    /// The key a total row reports under; rows are 0 and up.
+    static let total = -1
+
+    static var defaultValue: [Int: [Anchor<CGRect>]] { [:] }
+
+    static func reduce(value: inout [Int: [Anchor<CGRect>]], nextValue: () -> [Int: [Anchor<CGRect>]]) {
+        value.merge(nextValue(), uniquingKeysWith: +)
+    }
+
+    /// The vertical extent of one row's cells, in the grid's space.
+    static func band(_ anchors: [Anchor<CGRect>]?, in proxy: GeometryProxy) -> CGRect? {
+        guard let anchors, !anchors.isEmpty else { return nil }
+        let rects = anchors.map { proxy[$0] }
+        let top = rects.map(\.minY).min() ?? 0
+        let bottom = rects.map(\.maxY).max() ?? 0
+        return CGRect(x: 0, y: top, width: proxy.size.width, height: bottom - top)
+    }
+}
+
+extension View {
+    /// On a `GridRow`: reports each cell's frame under `row`.
+    func gridRowFrame(_ row: Int) -> some View {
+        anchorPreference(key: GridRowFrames.self, value: .bounds) { [row: [$0]] }
+    }
+
+    /// On a `Grid` whose rows report with ``gridRowFrame(_:)``: a light stripe
+    /// behind every second row, the first plain, and a rule over the total,
+    /// each the grid's full width.
+    func rowStripesAndTotalRule() -> some View {
+        backgroundPreferenceValue(GridRowFrames.self) { frames in
+            GeometryReader { proxy in
+                ForEach(frames.keys.filter { $0 > 0 && !$0.isMultiple(of: 2) }.sorted(), id: \.self) { row in
+                    if let band = GridRowFrames.band(frames[row], in: proxy) {
+                        Rectangle()
+                            .fill(Color.primary.opacity(0.03))
+                            .frame(width: proxy.size.width, height: band.height)
+                            .offset(y: band.minY)
+                    }
+                }
+            }
+        }
+        .overlayPreferenceValue(GridRowFrames.self) { frames in
+            GeometryReader { proxy in
+                if let band = GridRowFrames.band(frames[GridRowFrames.total], in: proxy) {
+                    Divider()
+                        .frame(width: proxy.size.width)
+                        .offset(y: band.minY)
+                }
+            }
+        }
+    }
+}
+
 /// One table: label column, amount column(s), rules, a bold total.
 struct ReportTableView: View {
     @Environment(\.isCompactShell) private var compact
@@ -603,8 +665,7 @@ struct ReportTableView: View {
                 }
                 .scaledFont(.body)
                 .padding(.vertical, 5)
-                .background(index.isMultiple(of: 2) ? Color.clear
-                            : Color.primary.opacity(0.03))
+                .gridRowFrame(index)
             }
             if let total = section.total {
                 GridRow {
@@ -620,9 +681,10 @@ struct ReportTableView: View {
                 }
                 .scaledFont(.body)
                 .padding(.vertical, 6)
-                .overlay(alignment: .top) { Divider() }
+                .gridRowFrame(GridRowFrames.total)
             }
         }
+        .rowStripesAndTotalRule()
     }
 
     /// Past this many rows a section is drawn lazily, in fixed columns: a
@@ -710,8 +772,7 @@ struct ReportTableView: View {
                 }
                 .scaledFont(.body)
                 .padding(.vertical, 5)
-                .background(index.isMultiple(of: 2) ? Color.clear
-                            : Color.primary.opacity(0.03))
+                .gridRowFrame(index)
             }
             if let totals = section.resolvedTotals {
                 GridRow {
@@ -723,9 +784,10 @@ struct ReportTableView: View {
                 }
                 .scaledFont(.body)
                 .padding(.vertical, 6)
-                .overlay(alignment: .top) { Divider() }
+                .gridRowFrame(GridRowFrames.total)
             }
         }
+        .rowStripesAndTotalRule()
     }
 
     /// One cell, drawn as what it holds: figures monospaced and red when

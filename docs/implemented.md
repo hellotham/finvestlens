@@ -5696,5 +5696,79 @@ the public pages on the same release.
   provider; `building.2.crop.circle.badge.clock` is not an SF Symbol (Payable Aging);
   the gallery shows "(FR-PLAN-17)" under Financial Summary; on iPhone and iPad,
   opening a GnuCash file says to import it and offers only OK
-  (`ContentView.swift:164`), though the store description says "Import a GnuCash
-  file" on every platform; the Security picker logs an invalid empty selection.
+  (`ContentView.swift:164`); the Security picker logs an invalid empty selection.
+  Fixed in the next section. (This note first said the store description promised
+  GnuCash import on every platform: it does not, the iPhone and iPad description
+  says FinvestLens for Mac reads GnuCash files.)
+
+## The defects noticed in 1.2, fixed (7 Nov 2026)
+
+Each one seen in the shipped build on the demo book while the website's
+screenshots were taken, and none of them fixed then, so the disk image would stay
+the store's release.
+
+- **Report tables striped by the cell.** A `GridRow` hands its modifiers to each
+  cell, so the stripe on every second row was drawn cell by cell — blocks the
+  width of each label or figure, the column gaps showing between them — and a
+  total's rule came in pieces. Each cell now reports its frame
+  (`GridRowFrames`, an anchor preference) and the grid draws one stripe or one
+  rule across the whole row behind it. Both grids of `ReportTableView`; the lazy
+  and the phone's stacked layouts were rows already, and stay as they were.
+  GnuCash does the same: its stylesheet colours the row
+  (`tr.alternate-row { background: … }`, `html-fonts.scm:171`), and the first
+  row is the plain one (`odd-row?` starts `#t` and maps to `normal-row`,
+  `portfolio.scm:104,152`; `trep-engine.scm:1952,1977`), as here.
+  `ReportTableStripeTests` draws both grids with `ImageRenderer` and reads the
+  pixels: a full-width stripe leaves no pixel row of its band transparent, a
+  per-cell one leaves the column gaps clear. Both tests failed with the old
+  modifiers.
+- **Price History's legend keyed a sale in the wrong colour.** A trade marked with
+  `.symbol(by:)` and a fixed colour is keyed in the symbol scale's default
+  colour, so a red sale showed in the accent colour. A harness rendering the
+  chart three ways (`ImageRenderer`) showed the obvious alternatives no better:
+  the trades in the colour scale keyed each one twice, or in the wrong shape. The
+  chart now draws a buy as a green triangle and a sale as a red diamond, as the
+  security page does, and its key is drawn by the view: each mark as it is drawn,
+  and only what is showing. The security page's own key showed a sale as a
+  triangle, the buy's shape; it is a diamond now. Both charts and both keys
+  take a trade's shape and colour from one place (`TradeMark`, with
+  `ChartKeyMark` for an entry of a key, `PriceChartMarks.swift`), so the key
+  cannot drift from the mark again; a sale on the security page is the money
+  red (`negativeAmount`) that Price History uses, where it was system red.
+- **Price History's Security picker** read its selection lazily, so on closing
+  the book it found no security and answered `""`, a tag it does not have —
+  three "invalid selection" warnings on every quit from the report. The
+  selection is read with the tags and is always one of them.
+- **"vnode unlinked while in use".** Closing a book removed its working copy
+  while the SQLite connection still held it, and revert copied over it the same
+  way, which SQLite logs as an API violation. `SQLiteDocumentStore.close()`;
+  `discard()` closes under the save lock, before the lock is released and the
+  file removed; `revert()` copies the shared file in beside the working copy,
+  closes, and swaps, so a copy that fails leaves the session as it was.
+  `WorkingCopyCloseTests` tell a closed connection from a removed file by the
+  error (`SQLITE_MISUSE`); both failed with the old code. A connection that
+  will not close (`SQLITE_BUSY`, a statement still alive) stays open by GRDB's
+  contract, so its file is left alone: revert reports the error and the session
+  goes on as it was, and discard leaves the working copy in the temporary
+  folder rather than remove it from under the connection; a third test holds a
+  statement open to show both, and failed with a close whose error was ignored.
+  Revert also marks earlier staged saves as written while it holds the save
+  lock, so one already waiting for the lock cannot reach the closed store.
+- **An SF Symbol that does not exist.** Payable Aging's
+  `building.2.crop.circle.badge.clock` drew nothing; it is
+  `building.2.crop.circle`. A scan of every symbol name in the app and its
+  extensions against AppKit's symbol set found no other; `SymbolNameTests` asks
+  for every report kind's icon.
+- **Requirement numbers in the interface.** "(FR-PLAN-17)" under Financial
+  Summary, and two more found by looking for the same thing: "(FR-REC-03)" in
+  the reconcile window and "(FR-SCH-02)" in the formula sheet. The translations
+  never had them.
+- **The Auto-refresh toggle said Yahoo.** It refreshes from the provider chosen
+  just above it; the label now says what it does: "Auto-refresh on open and
+  every 6 hours".
+- **GnuCash on iPhone and iPad.** Opening a GnuCash book there said to import it
+  and offered only OK: importing is the Mac's (`FR-PLT-06`). The message now says
+  to import it with FinvestLens on a Mac, and that the book it makes opens on the
+  iPhone or iPad too; the SQLite-backend message likewise. The help said "Choose File ▸ Import
+  GnuCash…" on every platform and now says on a Mac, as it does for importing a
+  Ledger journal.

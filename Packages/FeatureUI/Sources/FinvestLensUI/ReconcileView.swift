@@ -76,7 +76,7 @@ struct ReconcileView: View {
                             ? String(localized: "Re-opened \(reverted) reconciled splits — they're now cleared and can be reconciled again.")
                             : String(localized: "Nothing to re-open.")
                     }
-                    Text("The most recent reconciliation was \(dateFormat.long(last)). Re-opening reverts those splits to cleared so you can reconcile the statement again (FR-REC-03).")
+                    Text("The most recent reconciliation was \(dateFormat.long(last)). Re-opening reverts those splits to cleared so you can reconcile the statement again.")
                         .scaledFont(.caption)
                         .foregroundStyle(.secondary)
                 }

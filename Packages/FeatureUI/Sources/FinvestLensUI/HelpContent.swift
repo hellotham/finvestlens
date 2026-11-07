@@ -121,7 +121,7 @@ public enum HelpBook {
             ]),
             .heading("Coming from GnuCash"),
             .text("""
-                Choose File ▸ Import GnuCash… and pick your `.gnucash` file. Accounts, \
+                On a Mac, choose File ▸ Import GnuCash… and pick your `.gnucash` file. Accounts, \
                 transactions, prices, scheduled transactions and business records all come \
                 across, and you can export back to GnuCash at any time.
                 """),
@@ -1042,7 +1042,7 @@ public enum HelpBook {
             .heading("Ledger journals"),
             .text("""
                 File ▸ Export Ledger Journal… (⇧⌘E) writes a plain-text Ledger journal, \
-                and File ▸ Import Ledger Journal… reads one back.
+                and File ▸ Import Ledger Journal…, on the Mac, reads one back.
                 """),
             .heading("The finlens command line"),
             .text("""

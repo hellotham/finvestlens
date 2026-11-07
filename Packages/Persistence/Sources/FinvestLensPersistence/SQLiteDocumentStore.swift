@@ -25,7 +25,9 @@ import FinvestLensEngine
 /// can exist. Two saves never overlap: the document holds a lock around them.
 public final class SQLiteDocumentStore: @unchecked Sendable {
 
-    private let dbQueue: DatabaseQueue
+    /// Internal, not private, for the tests that hold a statement open to
+    /// see what a connection that will not close does to its file.
+    let dbQueue: DatabaseQueue
 
     /// The current change counter, bumped on every ``write(_:)``. Used by the
     /// document layer for conflict detection on write-back (`FR-DAT-08`).
@@ -56,6 +58,16 @@ public final class SQLiteDocumentStore: @unchecked Sendable {
             try Int64.fetchOne(db, sql: "SELECT value FROM meta WHERE key = 'changeCounter'")
                 .flatMap { $0 } ?? 0
         }
+    }
+
+    /// Closes the connection; any use after this throws. Called before the
+    /// file under it is removed or replaced: removing a database file a
+    /// connection still holds is what SQLite logs as "BUG IN CLIENT OF
+    /// libsqlite3.dylib: database integrity compromised by API violation:
+    /// vnode unlinked while in use" — on every close of a book, and on every
+    /// revert (4 Nov 2026).
+    public func close() throws {
+        try dbQueue.close()
     }
 
     // MARK: Schema

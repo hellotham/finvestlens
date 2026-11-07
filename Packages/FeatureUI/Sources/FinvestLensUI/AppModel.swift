@@ -2742,14 +2742,24 @@ public final class AppModel {
     /// instead of a raw SQLite error.
     static func foreignBookError(_ kind: FinvestLensDocument.ForeignFileKind,
                                  at url: URL) -> DocumentError {
+        // Importing is the Mac's alone (`FR-PLT-06`), and on iPhone and iPad
+        // the alert has no Import button, so there the message says where to
+        // go: it told the person to import, then offered only OK.
         switch kind {
         case .gnuCashBook:
-            return DocumentError(
-                message: String(localized: "“\(url.lastPathComponent)” is a GnuCash book. FinvestLens keeps books in its own .finvestlens format — import it to create a native copy, and you can export back to GnuCash at any time."),
-                gnuCashImportURL: url)
+            #if os(macOS)
+            let message = String(localized: "“\(url.lastPathComponent)” is a GnuCash book. FinvestLens keeps books in its own .finvestlens format — import it to create a native copy, and you can export back to GnuCash at any time.")
+            #else
+            let message = String(localized: "“\(url.lastPathComponent)” is a GnuCash book. FinvestLens keeps books in its own .finvestlens format: import this one with FinvestLens on a Mac, and the book it makes opens here too.")
+            #endif
+            return DocumentError(message: message, gnuCashImportURL: url)
         case .gnuCashSQLite:
-            return DocumentError(
-                message: String(localized: "“\(url.lastPathComponent)” was saved with GnuCash’s SQLite backend, which FinvestLens can’t read. In GnuCash, choose File ▸ Save As… with the XML format, then use File ▸ Import GnuCash… here."))
+            #if os(macOS)
+            let message = String(localized: "“\(url.lastPathComponent)” was saved with GnuCash’s SQLite backend, which FinvestLens can’t read. In GnuCash, choose File ▸ Save As… with the XML format, then use File ▸ Import GnuCash… here.")
+            #else
+            let message = String(localized: "“\(url.lastPathComponent)” was saved with GnuCash’s SQLite backend, which FinvestLens can’t read. In GnuCash, choose File ▸ Save As… with the XML format, then import that file with FinvestLens on a Mac.")
+            #endif
+            return DocumentError(message: message)
         case .unrecognized:
             return DocumentError(
                 message: String(localized: "“\(url.lastPathComponent)” isn’t a FinvestLens book."))

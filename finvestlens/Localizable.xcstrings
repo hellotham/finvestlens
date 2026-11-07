@@ -15326,7 +15326,7 @@
         }
       }
     },
-    "A one-page snapshot for sharing — net worth, trend, assets, income, savings rate (FR-PLAN-17)": {
+    "A one-page snapshot for sharing — net worth, trend, assets, income, savings rate": {
       "extractionState": "manual",
       "localizations": {
         "de": {
@@ -27773,49 +27773,49 @@
         }
       }
     },
-    "Auto-refresh on open (Yahoo, every 6h)": {
+    "Auto-refresh on open and every 6 hours": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Beim Öffnen automatisch aktualisieren (Yahoo, alle 6 Std.)"
+            "value": "Beim Öffnen und alle 6 Stunden automatisch aktualisieren"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Actualizar al abrir (Yahoo, cada 6 h)"
+            "value": "Actualizar al abrir y cada 6 horas"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Actualiser à l’ouverture (Yahoo, toutes les 6 h)"
+            "value": "Actualiser à l’ouverture et toutes les 6 heures"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Aggiorna all’apertura (Yahoo, ogni 6 h)"
+            "value": "Aggiorna all’apertura e ogni 6 ore"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "開いたときに自動更新（Yahoo、6 時間ごと）"
+            "value": "開いたときと 6 時間ごとに自動更新"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Atualizar ao abrir (Yahoo, a cada 6 h)"
+            "value": "Atualizar ao abrir e a cada 6 horas"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "打开时自动刷新（Yahoo，每 6 小时）"
+            "value": "打开时及每 6 小时自动刷新"
           }
         }
       }
@@ -41259,53 +41259,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "选择“账簿 ▸ 导入银行文件…”(⌥⌘I)，然后选中银行提供的文件。格式会依据文件本身自动识别——CSV、QIF、OFX/QFX、SWIFT MT940/MT942 与 ISO 20022 CAMT.053 均可读取。"
-          }
-        }
-      }
-    },
-    "Choose File ▸ Import GnuCash… and pick your `.gnucash` file. Accounts, transactions, prices, scheduled transactions and business records all come across, and you can export back to GnuCash at any time.": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wählen Sie Ablage ▸ GnuCash importieren… und dann Ihre `.gnucash`-Datei. Konten, Buchungen, Kurse, terminierte Buchungen und Geschäftsdaten kommen alle mit, und Sie können jederzeit wieder nach GnuCash exportieren."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Elija Archivo ▸ Importar GnuCash… y seleccione su archivo `.gnucash`. Cuentas, transacciones, cotizaciones, transacciones programadas y registros de negocio pasan todos, y puede volver a exportar a GnuCash cuando quiera."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Choisissez Fichier ▸ Importer GnuCash… et sélectionnez votre fichier `.gnucash`. Comptes, opérations, cours, opérations programmées et données commerciales sont tous repris, et vous pouvez réexporter vers GnuCash à tout moment."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Scegliete Archivio ▸ Importa GnuCash… e selezionate il file `.gnucash`. Conti, transazioni, quotazioni, transazioni pianificate e dati aziendali vengono importati tutti, e potete riesportare verso GnuCash in qualsiasi momento."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ファイル ▸ GnuCash を読み込む… を選び、`.gnucash` ファイルを指定します。勘定科目、取引、価格、予定取引、business の記録がすべて引き継がれ、いつでも GnuCash へ書き戻せます。"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Escolha Arquivo ▸ Importar GnuCash… e selecione seu arquivo `.gnucash`. Contas, transações, cotações, transações programadas e registros de negócio vêm todos, e você pode exportar de volta para o GnuCash quando quiser."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "选择“文件 ▸ 导入 GnuCash…”，然后选中你的 `.gnucash` 文件。科目、交易、价格、计划交易和业务记录都会一并导入，你也可以随时导出回 GnuCash。"
           }
         }
       }
@@ -63362,49 +63315,49 @@
         }
       }
     },
-    "File ▸ Export Ledger Journal… (⇧⌘E) writes a plain-text Ledger journal, and File ▸ Import Ledger Journal… reads one back.": {
+    "File ▸ Export Ledger Journal… (⇧⌘E) writes a plain-text Ledger journal, and File ▸ Import Ledger Journal…, on the Mac, reads one back.": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ablage ▸ Ledger-Journal exportieren… (⇧⌘E) schreibt ein Ledger-Journal als reinen Text, und Ablage ▸ Ledger-Journal importieren… liest eines wieder ein."
+            "value": "Ablage ▸ Ledger-Journal exportieren… (⇧⌘E) schreibt ein Ledger-Journal als reinen Text, und Ablage ▸ Ledger-Journal importieren… liest auf dem Mac eines wieder ein."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Archivo ▸ Exportar diario Ledger… (⇧⌘E) escribe un diario Ledger en texto plano, y Archivo ▸ Importar diario Ledger… vuelve a leerlo."
+            "value": "Archivo ▸ Exportar diario Ledger… (⇧⌘E) escribe un diario Ledger en texto plano, y Archivo ▸ Importar diario Ledger…, en el Mac, vuelve a leerlo."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fichier ▸ Exporter le journal Ledger… (⇧⌘E) écrit un journal Ledger en texte brut, et Fichier ▸ Importer le journal Ledger… le relit."
+            "value": "Fichier ▸ Exporter le journal Ledger… (⇧⌘E) écrit un journal Ledger en texte brut, et Fichier ▸ Importer le journal Ledger…, sur le Mac, le relit."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Archivio ▸ Esporta giornale Ledger… (⇧⌘E) scrive un giornale Ledger in testo semplice, e Archivio ▸ Importa giornale Ledger… lo rilegge."
+            "value": "Archivio ▸ Esporta giornale Ledger… (⇧⌘E) scrive un giornale Ledger in testo semplice, e Archivio ▸ Importa giornale Ledger…, sul Mac, lo rilegge."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ファイル ▸ Ledger ジャーナルを書き出す… (⇧⌘E) はプレーンテキストの Ledger ジャーナルを書き出し、ファイル ▸ Ledger ジャーナルを読み込む… はそれを読み戻します。"
+            "value": "ファイル ▸ Ledger ジャーナルを書き出す… (⇧⌘E) はプレーンテキストの Ledger ジャーナルを書き出し、Mac では ファイル ▸ Ledger ジャーナルを読み込む… でそれを読み戻せます。"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Arquivo ▸ Exportar diário Ledger… (⇧⌘E) grava um diário Ledger em texto puro, e Arquivo ▸ Importar diário Ledger… o lê de volta."
+            "value": "Arquivo ▸ Exportar diário Ledger… (⇧⌘E) grava um diário Ledger em texto puro, e Arquivo ▸ Importar diário Ledger…, no Mac, o lê de volta."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "“文件 ▸ 导出 Ledger 日记账…”(⇧⌘E) 会写出纯文本的 Ledger 日记账，“文件 ▸ 导入 Ledger 日记账…”则可将其读回。"
+            "value": "“文件 ▸ 导出 Ledger 日记账…”(⇧⌘E) 会写出纯文本的 Ledger 日记账，在 Mac 上，“文件 ▸ 导入 Ledger 日记账…”则可将其读回。"
           }
         }
       }
@@ -76238,6 +76191,53 @@
         }
       }
     },
+    "On a Mac, choose File ▸ Import GnuCash… and pick your `.gnucash` file. Accounts, transactions, prices, scheduled transactions and business records all come across, and you can export back to GnuCash at any time.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wählen Sie auf einem Mac Ablage ▸ GnuCash importieren… und dann Ihre `.gnucash`-Datei. Konten, Buchungen, Kurse, terminierte Buchungen und Geschäftsdaten kommen alle mit, und Sie können jederzeit wieder nach GnuCash exportieren."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En un Mac, elige Archivo ▸ Importar GnuCash… y selecciona tu archivo `.gnucash`. Cuentas, transacciones, cotizaciones, transacciones programadas y registros de negocio pasan todos, y puedes volver a exportar a GnuCash cuando quieras."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sur un Mac, choisissez Fichier ▸ Importer GnuCash… et sélectionnez votre fichier `.gnucash`. Comptes, opérations, cours, opérations programmées et données commerciales sont tous repris, et vous pouvez réexporter vers GnuCash à tout moment."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Su un Mac, scegli Archivio ▸ Importa GnuCash… e seleziona il file `.gnucash`. Conti, transazioni, quotazioni, transazioni pianificate e dati aziendali vengono importati tutti, e puoi riesportare verso GnuCash in qualsiasi momento."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mac で ファイル ▸ GnuCash を読み込む… を選び、`.gnucash` ファイルを指定します。勘定科目、取引、価格、予定取引、business の記録がすべて引き継がれ、いつでも GnuCash へ書き戻せます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Em um Mac, escolha Arquivo ▸ Importar GnuCash… e selecione seu arquivo `.gnucash`. Contas, transações, cotações, transações programadas e registros de negócio vêm todos, e você pode exportar de volta para o GnuCash quando quiser."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 Mac 上选择“文件 ▸ 导入 GnuCash…”，然后选中你的 `.gnucash` 文件。科目、交易、价格、计划交易和业务记录都会一并导入，你也可以随时导出回 GnuCash。"
+          }
+        }
+      }
+    },
     "One security’s prices, trends, your trades and a benchmark": {
       "extractionState": "manual",
       "localizations": {
@@ -88708,6 +88708,53 @@
         }
       }
     },
+    "The most recent reconciliation was %@. Re-opening reverts those splits to cleared so you can reconcile the statement again.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der letzte Abgleich war am %@. Beim erneuten Öffnen werden diese Buchungsteile wieder auf „bestätigt“ gesetzt, damit Sie den Auszug erneut abgleichen können."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La última conciliación fue el %@. Al reabrirla, esos desgloses vuelven a «confirmado» para que puedas conciliar el extracto de nuevo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le dernier rapprochement date du %@. Sa réouverture ramène ces répartitions à l’état pointé afin de rapprocher à nouveau le relevé."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L’ultima riconciliazione è del %@. Riaprendola, quelle suddivisioni tornano a «compensato» così puoi riconciliare di nuovo l’estratto conto."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "直近の照合は %@ です。開き直すと、それらのスプリットは清算済みに戻り、明細を再度照合できます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A última reconciliação foi em %@. Ao reabrir, essas divisões voltam a «compensado» para você reconciliar o extrato novamente."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最近一次对账是 %@。重新打开会将这些分录恢复为「已结清」，以便你重新核对该对账单。"
+          }
+        }
+      }
+    },
     "The net capital gain follows the ATO’s steps: losses — this year’s — come off the gains, from those not eligible for the discount first; the discount applies to what is left of the eligible gains. It is worked over the period’s parcels alone.": {
       "extractionState": "manual",
       "localizations": {
@@ -88916,6 +88963,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "要显示价格的证券"
+          }
+        }
+      }
+    },
+    "These scheduled transactions use formulas. Enter the amounts for each variable; they apply to every instance posted now.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese geplanten Buchungen verwenden Formeln. Geben Sie die Beträge für jede Variable ein; sie gelten für alle jetzt gebuchten Vorkommen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estas transacciones programadas usan fórmulas. Introduce los importes de cada variable; se aplican a todas las instancias que se contabilicen ahora."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ces opérations planifiées utilisent des formules. Saisissez les montants de chaque variable ; ils s’appliquent à toutes les occurrences comptabilisées maintenant."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Queste transazioni pianificate usano formule. Inserisci gli importi per ogni variabile; si applicano a tutte le occorrenze registrate ora."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "これらの予定取引は数式を使用します。各変数の金額を入力してください。今回記帳されるすべての回に適用されます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estas transações programadas usam fórmulas. Informe os valores de cada variável; eles se aplicam a todas as ocorrências lançadas agora."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这些预定交易使用公式。请为每个变量输入金额；它们将应用于此次过账的所有实例。"
           }
         }
       }
@@ -89181,59 +89275,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "买入以来的总回报：资本利得、股息和已缴税抵免，附历史"
-          }
-        }
-      }
-    },
-    "Trade": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Trade"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Trade"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Operación"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Opération"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Operazione"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "売買"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Operação"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "交易"
           }
         }
       }
@@ -139279,53 +139320,6 @@
         }
       }
     },
-    "The most recent reconciliation was %@. Re-opening reverts those splits to cleared so you can reconcile the statement again (FR-REC-03).": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Der letzte Abgleich war am %@. Beim erneuten Öffnen werden diese Buchungsteile wieder auf „bestätigt“ gesetzt, damit Sie den Auszug erneut abgleichen können."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La última conciliación fue el %@. Al reabrirla, esos desgloses vuelven a «confirmado» para que puedas conciliar el extracto de nuevo."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Le dernier rapprochement date du %@. Sa réouverture ramène ces répartitions à l’état pointé afin de rapprocher à nouveau le relevé."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "L’ultima riconciliazione è del %@. Riaprendola, quelle suddivisioni tornano a «compensato» così puoi riconciliare di nuovo l’estratto conto."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "直近の照合は %@ です。開き直すと、それらのスプリットは清算済みに戻り、明細を再度照合できます。"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "A última reconciliação foi em %@. Ao reabrir, essas divisões voltam a «compensado» para você reconciliar o extrato novamente."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "最近一次对账是 %@。重新打开会将这些分录恢复为「已结清」，以便你重新核对该对账单。"
-          }
-        }
-      }
-    },
     "The movement not explained by the period’s income and expenses: market-price changes on securities, foreign-currency translation, and entries made directly to equity. Derived as closing net worth less opening net worth less the net surplus.": {
       "extractionState": "manual",
       "localizations": {
@@ -141107,53 +141101,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "这些是基于你自己的数据与假设的估算，并非财务或税务建议。"
-          }
-        }
-      }
-    },
-    "These scheduled transactions use formulas (FR-SCH-02). Enter the amounts for each variable; they apply to every instance posted now.": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Diese geplanten Buchungen verwenden Formeln. Geben Sie die Beträge für jede Variable ein; sie gelten für alle jetzt gebuchten Vorkommen."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Estas transacciones programadas usan fórmulas. Introduce los importes de cada variable; se aplican a todas las instancias que se contabilicen ahora."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ces opérations planifiées utilisent des formules. Saisissez les montants de chaque variable ; ils s’appliquent à toutes les occurrences comptabilisées maintenant."
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Queste transazioni pianificate usano formule. Inserisci gli importi per ogni variabile; si applicano a tutte le occorrenze registrate ora."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "これらの予定取引は数式を使用します。各変数の金額を入力してください。今回記帳されるすべての回に適用されます。"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Estas transações programadas usam fórmulas. Informe os valores de cada variável; eles se aplicam a todas as ocorrências lançadas agora."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "这些预定交易使用公式。请为每个变量输入金额；它们将应用于此次过账的所有实例。"
           }
         }
       }
@@ -159119,6 +159066,53 @@
         }
       }
     },
+    "“%@” is a GnuCash book. FinvestLens keeps books in its own .finvestlens format: import this one with FinvestLens on a Mac, and the book it makes opens here too.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„%@“ ist ein GnuCash-Buch. FinvestLens führt Bücher im eigenen .finvestlens-Format: Importieren Sie es mit FinvestLens auf einem Mac – das so erstellte Buch lässt sich auch hier öffnen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "«%@» es un libro de GnuCash. FinvestLens guarda los libros en su propio formato .finvestlens: impórtalo con FinvestLens en un Mac, y el libro que se crea también se abre aquí."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "« %@ » est un livre GnuCash. FinvestLens conserve les livres dans son propre format .finvestlens : importez-le avec FinvestLens sur un Mac, et le livre ainsi créé s’ouvre aussi ici."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "«%@» è un libro GnuCash. FinvestLens conserva i libri nel proprio formato .finvestlens: importalo con FinvestLens su un Mac, e il libro che ne risulta si apre anche qui."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」は GnuCash の帳簿です。FinvestLens は帳簿を独自の .finvestlens 形式で管理します。Mac の FinvestLens で読み込んでください。作成された帳簿はこちらでも開けます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "«%@» é um livro do GnuCash. O FinvestLens mantém os livros em seu próprio formato .finvestlens — importe-o com o FinvestLens em um Mac, e o livro criado também abre aqui."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」是 GnuCash 账簿。FinvestLens 使用自己的 .finvestlens 格式保存账簿——请在 Mac 上用 FinvestLens 导入，生成的账簿在这里也能打开。"
+          }
+        }
+      }
+    },
     "“%@” is empty and can be deleted.": {
       "extractionState": "manual",
       "localizations": {
@@ -159444,6 +159438,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "「%@」不是 FinvestLens 账簿。"
+          }
+        }
+      }
+    },
+    "“%@” was saved with GnuCash’s SQLite backend, which FinvestLens can’t read. In GnuCash, choose File ▸ Save As… with the XML format, then import that file with FinvestLens on a Mac.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„%@“ wurde mit dem SQLite-Speicher von GnuCash gesichert, den FinvestLens nicht lesen kann. Sichern Sie es in GnuCash über „Speichern unter …“ im XML-Format und importieren Sie diese Datei dann mit FinvestLens auf einem Mac."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "«%@» se guardó con el almacenamiento SQLite de GnuCash, que FinvestLens no puede leer. En GnuCash, usa «Guardar como…» con el formato XML y luego importa ese archivo con FinvestLens en un Mac."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "« %@ » a été enregistré avec le format SQLite de GnuCash, que FinvestLens ne sait pas lire. Dans GnuCash, utilisez « Enregistrer sous… » au format XML, puis importez ce fichier avec FinvestLens sur un Mac."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "«%@» è stato registrato con il formato SQLite di GnuCash, che FinvestLens non può leggere. In GnuCash usa «Salva con nome…» con il formato XML, poi importa quel file con FinvestLens su un Mac."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」は GnuCash の SQLite 形式で保存されているため、FinvestLens では読み込めません。GnuCash で「名前を付けて保存…」を XML 形式で実行し、そのファイルを Mac の FinvestLens で読み込んでください。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "«%@» foi salvo com o armazenamento SQLite do GnuCash, que o FinvestLens não consegue ler. No GnuCash, use «Salvar como…» no formato XML e depois importe esse arquivo com o FinvestLens em um Mac."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」使用 GnuCash 的 SQLite 存储保存，FinvestLens 无法读取。请在 GnuCash 中用「另存为…」以 XML 格式存储，然后在 Mac 上用 FinvestLens 导入该文件。"
           }
         }
       }

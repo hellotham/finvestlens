@@ -129,9 +129,15 @@ struct PriceHistoryControls: View {
 
     var body: some View {
         let securities = model.pricedSecurities(inPortfolio: model.portfolioFilter(configuration))
-        if !securities.isEmpty {
+        if let first = securities.first {
+            // Read now, with the tags below, and always one of them. Asked
+            // later, as the binding was, it could find the book already
+            // closed and answer "" — no tag at all, which SwiftUI logged as an
+            // invalid selection three times on every quit from this report.
+            let shown = model.priceHistorySecurity(for: configuration)?.priceHistoryKey
+            let selected = securities.first { $0.priceHistoryKey == shown }?.priceHistoryKey ?? first.priceHistoryKey
             Picker("Security", selection: Binding(
-                get: { model.priceHistorySecurity(for: configuration)?.priceHistoryKey ?? "" },
+                get: { selected },
                 set: { configuration.securityKey = $0 })) {
                 ForEach(securities, id: \.priceHistoryKey) { security in
                     Text(security.mnemonic).tag(security.priceHistoryKey)
@@ -468,10 +474,11 @@ struct PriceHistoryView: View {
             if overlays {
                 ForEach(report.trades) { trade in
                     if let units = trade.units, units != 0 {
+                        let mark = TradeMark(isBuy: trade.kind == .buy)
                         PointMark(x: .value("Date", trade.date),
                                   y: .value("Value", Self.double(trade.amount / units.magnitude)))
-                            .symbol(by: .value("Trade", trade.kind == .buy ? String(localized: "Buy") : String(localized: "Sell")))
-                            .foregroundStyle(trade.kind == .buy ? Color.green : Color.negativeAmount)
+                            .symbol(mark.chartSymbol)
+                            .foregroundStyle(mark.colour)
                             .symbolSize(70)
                     }
                 }
@@ -498,7 +505,9 @@ struct PriceHistoryView: View {
             }
         }
         .chartForegroundStyleScale(seriesColours(report))
-        .chartLegend(position: .bottom)
+        .chartLegend(position: .bottom, alignment: .leading) {
+            legend(report, points: points, trades: overlays)
+        }
         .chartXAxis {
             if compact { AxisMarks(values: .automatic(desiredCount: 4)) } else { AxisMarks() }
         }
@@ -507,6 +516,38 @@ struct PriceHistoryView: View {
         .accessibilityLabel(isIndex
             ? "\(report.commodity.mnemonic) and its benchmark, both rebased to 100, over \(periodLabel)"
             : "\(report.commodity.mnemonic) prices over \(periodLabel)")
+    }
+
+    /// The chart's key, drawn here rather than by Charts. Its own keyed a trade
+    /// marked by `.symbol(by:)` in the scale's default colour, so a sale drawn
+    /// red was keyed in the accent colour (build 11, 4 Nov 2026); moving the
+    /// trades into the colour scale instead keyed each one twice, or in the
+    /// wrong shape. Each entry here is the mark the chart draws, and only what
+    /// it is showing.
+    private func legend(_ report: PriceHistoryReport, points: [Point], trades: Bool) -> some View {
+        let shown = Set(points.map(\.series))
+        let plotted = trades ? report.trades.filter { ($0.units ?? 0) != 0 } : []
+        let entries = Group {
+            // By position: a benchmark can share the security's mnemonic.
+            ForEach(Array(seriesColours(report).enumerated()), id: \.offset) { _, entry in
+                if shown.contains(entry.key) {
+                    ChartKeyMark(verbatim: entry.key, symbol: "minus", colour: entry.value)
+                }
+            }
+            if plotted.contains(where: { $0.kind == .buy }) { ChartKeyMark(.buy, "Buy") }
+            if plotted.contains(where: { $0.kind != .buy }) { ChartKeyMark(.sale, "Sell") }
+        }
+        // Down the side where the row does not fit, as on a phone at a large
+        // text size: Charts' own legend wrapped.
+        return ViewThatFits(in: .horizontal) {
+            HStack(spacing: 12) { entries }
+            VStack(alignment: .leading, spacing: 4) { entries }
+        }
+        .scaledFont(.caption)
+        // The colour, not the hierarchical `.secondary`: inside a chart legend
+        // that is a lighter shade of the tint, which drew the names in it.
+        .foregroundStyle(Color.secondary)
+        .accessibilityElement(children: .combine)
     }
 
     private func overlayBar(_ report: PriceHistoryReport) -> some View {

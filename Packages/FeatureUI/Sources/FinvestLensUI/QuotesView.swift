@@ -80,7 +80,9 @@ struct QuotesView: View {
             }
             .disabled(isFetching || model.pricableSecurities.isEmpty)
 
-            Toggle("Auto-refresh on open (Yahoo, every 6h)", isOn: Binding(
+            // From the provider chosen above (`refreshQuotesNow()`), not Yahoo:
+            // the label named Yahoo after the refresh stopped assuming it.
+            Toggle("Auto-refresh on open and every 6 hours", isOn: Binding(
                 get: { model.autoRefreshQuotes },
                 set: { model.autoRefreshQuotes = $0 }))
 

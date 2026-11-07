@@ -575,8 +575,34 @@ public final class FinvestLensDocument {
     /// The shared file is untouched.
     public func revert() throws {
         try saveLock.withLock {
-            try Self.copyItem(from: fileURL, to: workingCopyURL)
+            // The shared file comes in beside the working copy first, so a copy
+            // that fails leaves the session as it was; the connection closes
+            // before its file is replaced, never after (see
+            // ``SQLiteDocumentStore/close()``).
+            let incoming = workingCopyURL.deletingLastPathComponent()
+                .appendingPathComponent(UUID().uuidString + ".finvestlens")
+            try Self.copyItem(from: fileURL, to: incoming)
+            do {
+                try store.close()
+            } catch {
+                // `SQLITE_BUSY`: by GRDB's contract the connection may still
+                // be open, so its file is not replaced; the session goes on
+                // as it was, and the revert reports why it did not happen.
+                try? FileManager.default.removeItem(at: incoming)
+                throw error
+            }
+            do {
+                _ = try FileManager.default.replaceItemAt(workingCopyURL, withItemAt: incoming)
+            } catch {
+                try? FileManager.default.removeItem(at: incoming)
+                store = try SQLiteDocumentStore(path: workingCopyURL.path)
+                throw error
+            }
             store = try SQLiteDocumentStore(path: workingCopyURL.path)
+            // A save staged before now must not reach the closed store: skipped
+            // here, under the same lock, not only by `rebaseline` once the lock
+            // is let go, when one could already be writing.
+            sequence.lastWritten = stagedCount
         }
         book = try store.read()
         Self.markPersistedIfFaithful(book, readBy: store)
@@ -601,8 +627,18 @@ public final class FinvestLensDocument {
     /// Closes the document, discarding any unsaved working-session changes and
     /// releasing the lock. The shared file reflects only the last ``save()``.
     public func discard() {
+        // Closed before its file goes (see ``SQLiteDocumentStore/close()``),
+        // and under the save lock, so a write-back already running finishes
+        // first — and before the lock is released, so no other Mac can open
+        // the book while it is still being written. The app's close
+        // (`AppModel.saveAndClose()`) waits for any save in flight before it
+        // gets here, so the lock is free and nothing waits on it there.
+        let closed = saveLock.withLock { (try? store.close()) != nil }
         lock.release()
-        try? FileManager.default.removeItem(at: workingCopyURL)
+        // A connection that would not close (`SQLITE_BUSY`) may still be
+        // open, by GRDB's contract: its file stays where it is, in the
+        // temporary folder the system clears, rather than go from under it.
+        if closed { try? FileManager.default.removeItem(at: workingCopyURL) }
     }
 
     /// Refreshes the lock heartbeat (drive from a timer while open).

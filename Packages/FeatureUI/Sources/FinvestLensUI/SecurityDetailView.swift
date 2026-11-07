@@ -351,27 +351,20 @@ struct SecurityDetailView: View {
         let buys = events.filter { $0.kind == .buy }.count
         let sells = events.filter { $0.kind == .sell }.count
         HStack(spacing: 12) {
-            legendMark("Price", symbol: "minus", colour: .appAccent)
-            if buys > 0 { legendMark("Bought", symbol: "triangle.fill", colour: .green) }
-            if sells > 0 { legendMark("Sold", symbol: "triangle.fill", colour: .red) }
+            ChartKeyMark("Price", symbol: "minus", colour: .appAccent)
+            if buys > 0 { ChartKeyMark(.buy, "Bought") }
+            if sells > 0 { ChartKeyMark(.sale, "Sold") }
             if detail.averageCost != nil {
-                legendMark("Average cost", symbol: "minus", colour: .secondary)
+                ChartKeyMark("Average cost", symbol: "minus", colour: .secondary)
             }
             if !detail.holdingPeriods.isEmpty {
-                legendMark("Held", symbol: "square.fill", colour: .appAccent.opacity(0.12))
+                ChartKeyMark("Held", symbol: "square.fill", colour: .appAccent.opacity(0.12))
             }
         }
         .scaledFont(.caption2)
         .foregroundStyle(.secondary)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(chartVoiceOver(detail, window: window, buys: buys, sells: sells))
-    }
-
-    private func legendMark(_ label: LocalizedStringKey, symbol: String, colour: Color) -> some View {
-        HStack(spacing: 3) {
-            Image(systemName: symbol).foregroundStyle(colour).accessibilityHidden(true)
-            Text(label)
-        }
     }
 
     /// A chart is invisible to VoiceOver, so its whole content is spoken here:
@@ -952,11 +945,12 @@ struct PriceHistoryChart: View, Equatable {
             // Your movements, placed at what you actually paid or received, so
             // a marker sitting above the line is a purchase above the market.
             ForEach(markers) { marker in
+                let mark = TradeMark(isBuy: marker.kind == .buy)
                 PointMark(x: .value("Date", marker.date),
                           y: .value("Price", marker.price))
-                    .symbol(marker.kind == .buy ? .triangle : .diamond)
+                    .symbol(mark.chartSymbol)
                     .symbolSize(70)
-                    .foregroundStyle(marker.kind == .buy ? Color.green : Color.red)
+                    .foregroundStyle(mark.colour)
             }
         }
         .chartXScale(domain: window)

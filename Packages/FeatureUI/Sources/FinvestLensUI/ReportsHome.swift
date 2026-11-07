@@ -264,7 +264,10 @@ public enum ReportKind: String, CaseIterable, Identifiable, Codable, Sendable {
         case .multiPeriodReturn: "calendar.badge.clock"
         case .drawdown: "arrow.down.right.circle"
         case .receivableAging: "person.crop.circle.badge.clock"
-        case .payableAging: "building.2.crop.circle.badge.clock"
+        // There is no `building.2.crop.circle.badge.clock` to pair with the
+        // receivables' person: that name drew nothing and logged "No symbol
+        // named …" (4 Nov 2026). `SymbolNameTests` asks the system for each.
+        case .payableAging: "building.2.crop.circle"
         case .customerSummary: "person.2.badge.gearshape"
         case .vendorSummary: "building.2"
         case .employeeSummary: "person.text.rectangle"
@@ -502,7 +505,7 @@ struct ReportGallery: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Label("Financial Summary", systemImage: "doc.text.image")
                             .scaledFont(.headline)
-                        Text("A one-page snapshot for sharing — net worth, trend, assets, income, savings rate (FR-PLAN-17)")
+                        Text("A one-page snapshot for sharing — net worth, trend, assets, income, savings rate")
                             .scaledFont(.caption)
                             .foregroundStyle(.secondary)
                     }

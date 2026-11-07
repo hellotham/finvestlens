@@ -122,7 +122,7 @@ struct ScheduledView: View {
                                 }
                             }
                         }
-                        Text("These scheduled transactions use formulas (FR-SCH-02). Enter the amounts for each variable; they apply to every instance posted now.")
+                        Text("These scheduled transactions use formulas. Enter the amounts for each variable; they apply to every instance posted now.")
                             .scaledFont(.caption).foregroundStyle(.secondary)
                     }
                     .navigationTitle("Formula Values")
