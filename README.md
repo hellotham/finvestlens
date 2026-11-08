@@ -23,10 +23,10 @@ FinvestLens is not a fork of GnuCash. It is a clean, idiomatic Swift reimplement
 
 ## Get FinvestLens
 
-Version 1.2, free, for macOS 27, iPadOS 27 and iOS 27:
+Version 1.3, free, for macOS 27, iPadOS 27 and iOS 27:
 
 - **[On the App Store](https://apps.apple.com/app/finvestlens/id6821468191)** — one download for Mac, iPhone and iPad.
-- **[As a disk image for Mac](https://github.com/hellotham/finvestlens/releases/download/v1.2/FinvestLens-1.2.dmg)** — the same version from the same source, signed with a Developer ID and notarized by Apple, for Apple silicon. It updates by hand and has no Private Cloud Compute, which Apple offers only to App Store apps.
+- **[As a disk image for Mac](https://github.com/hellotham/finvestlens/releases/download/v1.3/FinvestLens-1.3.dmg)** — the same version from the same source, signed with a Developer ID and notarized by Apple, for Apple silicon. It updates by hand and has no Private Cloud Compute, which Apple offers only to App Store apps.
 
 [The download page](https://hellotham.com/finvestlens/download/) has the checksum and how to verify the signature; [FinvestLens 1.1](https://github.com/hellotham/finvestlens/releases/tag/v1.1) stays available for macOS 26.5 and Intel Macs.
 
@@ -143,6 +143,7 @@ Phased delivery (full detail in [docs/plan.md](docs/plan.md)):
 - ✅ **P11 Investments hub (Aug 2026)** — the *Prices & Securities* editor replaced by a portfolio instrument panel: a tab per portfolio, security detail pages, holdings and reconciliation, bond and fund price providers beside the equity ones, a fundamentals sidecar, and one gate deciding what may become a price ([investments-design.md](docs/investments-design.md)).
 - ✅ **P12 Modes, sidebar and tabs (Aug 2026)** — an always-visible mode selector, one sidebar per mode, and a tabbed detail pane, replacing one sidebar that held thirteen destinations above the account tree ([navigation-design.md](docs/navigation-design.md)).
 - ✅ **P13 Remediation (Aug 2026)** — a five-angle read-only scan of the finished tree (reachability, surface parity, spec against build, docs against code, price-data consistency) that returned 47 issues, fixed in five ordered phases.
+- ✅ **1.3 (8 Nov 2026)** — FinvestLens signs in to Box with its own Box app, so a book on Box needs nothing set up; report tables shaded row by row; Price History and a security's page keyed and read aloud as they are drawn; Reload and Revert read the saved book in full before replacing anything. On the App Store for review, and as a notarized disk image for Mac.
 - ✅ **1.2 (31 Oct 2026)** — on the App Store for Mac, iPhone and iPad, with a notarized disk image for Mac from the same source. macOS 27 / iPadOS 27 / iOS 27 targets on Xcode 27, App Sandbox, a compact shell for iPhone, the second performance review, the Foundation Models 27 rework (one seam between a feature and a model, documents cut by the model's own token count, prose whose every figure is checked in eight languages), a model of the person's own in place of Apple's (a folder of MLX models they point the app at — nothing is bundled or downloaded), books kept in the person's own Box account (Open from Box…), and the investment reports rebuilt on one history of every security (Capital Gains by the ATO's rules, total return since purchase, a Price History explorer).
 
 ## Command line

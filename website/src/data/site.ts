@@ -26,9 +26,10 @@ export const site = {
 } as const;
 
 export const release = {
-  version: '1.2',
-  /** The App Store's own date for this version (`releaseDate` in its record). */
-  released: '31 October 2026',
+  version: '1.3',
+  /** The date this version was released: the disk image's, until the App
+   *  Store's own date (`releaseDate` in its record) replaces it. */
+  released: '8 November 2026',
   /** Every system this version runs on, in words. */
   platforms: 'Mac, iPhone and iPad',
   /** The same, for the structured data. `minimumOsVersion` in the App Store record. */
@@ -38,14 +39,14 @@ export const release = {
   appStore: 'https://apps.apple.com/app/finvestlens/id6821468191',
   appStoreRequirements: 'macOS 27, iOS 27 or iPadOS 27, or later',
   /** Signed with Developer ID and notarized by Apple. */
-  file: 'FinvestLens-1.2.dmg',
+  file: 'FinvestLens-1.3.dmg',
   sizeLabel: '18 MB',
-  sha256: 'ad75affc22df62efb10e2a9a484bd222ee86c65f279ecbc221289faede26b3fc',
+  sha256: 'a37505b69213d02e5acdc473360f20e2c71e637c084db66bee6ed28fd4ca705f',
   /** Release assets live on GitHub, not in this repository. The file itself,
    *  by version, so the hash above always describes what the button downloads
    *  — `releases/latest` moved on before the page did. */
-  url: 'https://github.com/hellotham/finvestlens/releases/download/v1.2/FinvestLens-1.2.dmg',
-  notes: 'https://github.com/hellotham/finvestlens/releases/tag/v1.2',
+  url: 'https://github.com/hellotham/finvestlens/releases/download/v1.3/FinvestLens-1.3.dmg',
+  notes: 'https://github.com/hellotham/finvestlens/releases/tag/v1.3',
   /** What the file above needs — not what the source tree builds for: read from
    *  the file (`LSMinimumSystemVersion`, `lipo -archs`). This line moves in the
    *  same change as `version`, `file` and `sha256`. */
