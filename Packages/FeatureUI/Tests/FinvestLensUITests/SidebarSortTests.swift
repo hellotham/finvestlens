@@ -66,7 +66,7 @@ struct SidebarSortTests {
     @Test("By name, by balance, and by first transaction")
     func criteriaOrder() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         #expect(names(f, .name) == ["Apple", "Mango", "Zebra"])
         #expect(names(f, .balance) == ["Zebra", "Mango", "Apple"])
@@ -79,7 +79,7 @@ struct SidebarSortTests {
     @Test("Manual order leaves an untouched tree alone")
     func manualIsStableUntilMoved() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         let asFound = f.model.accountTree.filter { $0.name != "Salary" }.map(\.name)
         #expect(names(f, .manual) == asFound)
@@ -90,7 +90,7 @@ struct SidebarSortTests {
     @Test("Reordering moves one account and renumbers its siblings")
     func reorderWritesTheLevel() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         f.model.reorderAccount(f.mango, to: 0)
         #expect(names(f, .manual).first == "Mango")
@@ -107,7 +107,7 @@ struct SidebarSortTests {
     @Test("A manual order is stored in the account's kvp")
     func orderIsInTheKvp() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         f.model.reorderAccount(f.apple, to: 0)
         let account = try #require(f.model.book?.account(with: f.apple))
@@ -141,7 +141,7 @@ struct SidebarSortTests {
     @Test("A sort belongs to one mode")
     func sortIsPerMode() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         defer {
             for mode in AppMode.allCases {
                 UserDefaults.standard.removeObject(forKey: "sidebar.sort.\(mode.rawValue)")
@@ -220,7 +220,7 @@ struct SidebarReorderTests {
     @Test("Reordering twice compounds rather than fighting itself")
     func secondReorderUsesDisplayOrder() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         #expect(order(f) == ["A", "B", "C"])
         f.model.reorderAccount(f.c, to: 0)
@@ -235,7 +235,7 @@ struct SidebarReorderTests {
     @Test("Move Up and Move Down walk the same order")
     func nudgeWalksDisplayOrder() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         f.model.nudgeAccount(f.c, by: -1)
         #expect(order(f) == ["A", "C", "B"])
@@ -248,7 +248,7 @@ struct SidebarReorderTests {
     @Test("The first and last rows cannot move past the ends")
     func nudgeStopsAtTheEnds() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         #expect(!f.model.canNudgeAccount(f.a, by: -1))
         #expect(f.model.canNudgeAccount(f.a, by: 1))
@@ -270,7 +270,7 @@ struct SidebarPlacementTests {
     /// this same target read.
     private func tearDown(_ model: AppModel, _ url: URL) {
         model.close()
-        try? FileManager.default.removeItem(at: url)
+        removeBook(at: url)
     }
 
 

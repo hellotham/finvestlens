@@ -25,7 +25,7 @@ struct StarterChartTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let count = model.createStarterAccounts()
         #expect(count == StarterChart.nodes.count)

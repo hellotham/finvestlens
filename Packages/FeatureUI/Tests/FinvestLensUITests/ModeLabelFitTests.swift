@@ -95,7 +95,7 @@ struct ModeLabelFitTests {
             .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         // All seven are drawn now, so this is the figure that has to fit.
         let sevenWide = AppMode.allCases.reduce(CGFloat(0)) { $0 + ModeLabelFit.width(of: $1.name) }

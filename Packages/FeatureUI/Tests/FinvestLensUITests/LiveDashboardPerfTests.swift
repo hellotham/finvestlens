@@ -38,7 +38,7 @@ struct LiveDashboardPerfTests {
         let copy = FileManager.default.temporaryDirectory
             .appendingPathComponent("fldash-\(UUID().uuidString).finvestlens")
         try FileManager.default.copyItem(at: source, to: copy)
-        defer { try? FileManager.default.removeItem(at: copy) }
+        defer { removeBook(at: copy) }
 
         let clock = ContinuousClock()
         let model = AppModel()
@@ -162,7 +162,7 @@ struct LiveDashboardPerfTests {
             .appendingPathComponent("fldash-\(UUID().uuidString).finvestlens")
         try FileManager.default.copyItem(at: source, to: copy)
         defer {
-            try? FileManager.default.removeItem(at: copy)
+            removeBook(at: copy)
             try? FileManager.default.removeItem(at: URL(fileURLWithPath: copy.path + ".audit.log"))
         }
 
@@ -247,7 +247,7 @@ struct LiveDashboardPerfTests {
             .appendingPathComponent("fldash-\(UUID().uuidString).finvestlens")
         try FileManager.default.copyItem(at: source, to: copy)
         defer {
-            try? FileManager.default.removeItem(at: copy)
+            removeBook(at: copy)
             try? FileManager.default.removeItem(at: URL(fileURLWithPath: copy.path + ".audit.log"))
         }
         let clock = ContinuousClock()

@@ -61,7 +61,7 @@ struct CascadeAccountTests {
     @Test("Colour reaches the grandchild, not just the child")
     func colourCascades() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         let changed = f.model.cascadeProperties(from: f.parent, .init(color: true))
         #expect(changed == 2)
         #expect(try account(f, f.child).color == "rgb(144,144,238)")
@@ -72,7 +72,7 @@ struct CascadeAccountTests {
     @Test("Only the ticked properties travel")
     func propertiesAreIndependent() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         f.model.cascadeProperties(from: f.parent, .init(color: true))
 
         let child = try account(f, f.child)
@@ -86,7 +86,7 @@ struct CascadeAccountTests {
     @Test("Hidden and placeholder cascade when asked for")
     func flagsCascade() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         f.model.cascadeProperties(from: f.parent, .init(isPlaceholder: true, isHidden: true))
         let grandchild = try account(f, f.grandchild)
         #expect(grandchild.isPlaceholder)
@@ -99,7 +99,7 @@ struct CascadeAccountTests {
     @Test("Cascading an off flag turns the subtree off")
     func cascadingOffIsAChange() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         let book = try #require(f.model.book)
         book.account(with: f.child)?.isHidden = true
         book.account(with: f.grandchild)?.isHidden = true
@@ -113,7 +113,7 @@ struct CascadeAccountTests {
     @Test("Nothing outside the subtree is touched")
     func outsiderUntouched() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         f.model.cascadeProperties(from: f.parent, .init(color: true, isPlaceholder: true,
                                                         isHidden: true))
         let outsider = try account(f, f.outsider)
@@ -125,7 +125,7 @@ struct CascadeAccountTests {
     @Test("The account itself is unchanged — it is the source")
     func sourceUnchanged() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         f.model.cascadeProperties(from: f.parent, .init(color: true, isPlaceholder: true,
                                                         isHidden: true))
         let parent = try account(f, f.parent)
@@ -137,7 +137,7 @@ struct CascadeAccountTests {
     @Test("Ticking nothing changes nothing")
     func emptyOptions() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         #expect(AppModel.CascadeOptions().isEmpty)
         #expect(f.model.cascadeProperties(from: f.parent, .init()) == 0)
         #expect(try account(f, f.child).color == nil)
@@ -146,7 +146,7 @@ struct CascadeAccountTests {
     @Test("A leaf has nothing to cascade onto")
     func leaf() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         #expect(f.model.descendantCount(of: f.grandchild) == 0)
         #expect(f.model.cascadeProperties(from: f.grandchild, .init(color: true)) == 0)
     }
@@ -154,7 +154,7 @@ struct CascadeAccountTests {
     @Test("The count offered is the count changed")
     func countMatches() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         let offered = f.model.descendantCount(of: f.parent)
         let changed = f.model.cascadeProperties(from: f.parent, .init(color: true))
         #expect(offered == 2)
@@ -165,7 +165,7 @@ struct CascadeAccountTests {
     @Test("A cascade is undoable")
     func undoable() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         let undo = UndoManager()
         f.model.undoManager = undo
         undo.removeAllActions()

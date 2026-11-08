@@ -63,7 +63,7 @@ struct FindModesTests {
     @Test("A new search replaces whatever was showing")
     func newReplaces() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         f.model.runFind(descriptionQuery("Woolies"))
         #expect(results(f) == ["Woolies", "Woolies petrol"])
         f.model.runFind(descriptionQuery("Coles"), mode: .new)
@@ -73,7 +73,7 @@ struct FindModesTests {
     @Test("Refine keeps only results that also match")
     func refineNarrows() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         f.model.runFind(descriptionQuery("Woolies"))
         f.model.runFind(descriptionQuery("petrol"), mode: .refine)
         #expect(results(f) == ["Woolies petrol"])
@@ -82,7 +82,7 @@ struct FindModesTests {
     @Test("Add widens the results")
     func addWidens() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         f.model.runFind(descriptionQuery("Coles"))
         f.model.runFind(descriptionQuery("petrol"), mode: .add)
         #expect(results(f) == ["Coles", "Woolies petrol"])
@@ -91,7 +91,7 @@ struct FindModesTests {
     @Test("Delete removes matches from the results")
     func deleteRemoves() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         f.model.runFind(descriptionQuery("Woolies"))
         f.model.runFind(descriptionQuery("petrol"), mode: .delete)
         #expect(results(f) == ["Woolies"])
@@ -102,7 +102,7 @@ struct FindModesTests {
     @Test("Refining composes on splits, not transactions")
     func refineIsSplitwise() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         // All bank legs (three), then refine to value ≤ -30: the Coles bank leg
         // (-20) drops even though its transaction matched the first query.
         f.model.runFind(FindQuery(criteria: [
@@ -116,7 +116,7 @@ struct FindModesTests {
     @Test("Clearing a find forgets the working set")
     func clearForgets() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         f.model.runFind(descriptionQuery("Woolies"))
         #expect(f.model.hasFindResults)
         f.model.clearFind()
@@ -134,7 +134,7 @@ struct FindModesTests {
     @Test("All Accounts means the transaction touches every one")
     func allAccounts() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         f.model.runFind(FindQuery(criteria: [
             FindCriterion(test: .allAccounts([f.bank, f.food]))]))
         #expect(results(f) == ["Coles", "Woolies"])
@@ -152,7 +152,7 @@ struct FindModesTests {
     @Test("Closing Entries reads the book_closing slot")
     func closingEntries() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         let book = try #require(f.model.book)
         let closing = try #require(book.transactions.first { $0.transactionDescription == "Coles" })
         closing.kvp["book_closing"] = .int64(1)
@@ -170,7 +170,7 @@ struct FindModesTests {
     func savedQueryPersists() async throws {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
 
         let model = AppModel()
         try model.newDocument(at: url)
@@ -190,7 +190,7 @@ struct FindModesTests {
     @Test("Saving under an existing name replaces, not duplicates")
     func saveReplacesByName() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         f.model.saveFindQuery(descriptionQuery("Woolies"), named: "Mine")
         f.model.saveFindQuery(descriptionQuery("Coles"), named: "Mine")
         #expect(f.model.savedFindQueries.count == 1)
@@ -201,7 +201,7 @@ struct FindModesTests {
     @Test("An empty query or a blank name is not worth saving")
     func saveRefusesEmpty() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         f.model.saveFindQuery(FindQuery(), named: "Empty")
         f.model.saveFindQuery(descriptionQuery("x"), named: "   ")
         #expect(f.model.savedFindQueries.isEmpty)
@@ -210,7 +210,7 @@ struct FindModesTests {
     @Test("Deleting a saved query deletes that one")
     func deleteSaved() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         f.model.saveFindQuery(descriptionQuery("a"), named: "A")
         f.model.saveFindQuery(descriptionQuery("b"), named: "B")
         let id = try #require(f.model.savedFindQueries.first { $0.name == "A" }?.id)

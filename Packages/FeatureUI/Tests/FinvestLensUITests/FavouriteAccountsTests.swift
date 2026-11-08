@@ -31,7 +31,7 @@ struct FavouriteAccountsTests {
     @Test("Toggling pins and unpins, keeping the order favourites were added")
     func toggleAndOrder() throws {
         let (model, url, everyday, groceries) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         #expect(!model.isFavouriteAccount(everyday))
         model.toggleFavouriteAccount(groceries)
@@ -48,7 +48,7 @@ struct FavouriteAccountsTests {
     @Test("Favourites persist in the book's KVP slot and reload from it")
     func persistsInBookKvp() throws {
         let (model, url, everyday, _) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         model.toggleFavouriteAccount(everyday)
         // Blank the mirror, then reload from the book — proves the slot
@@ -66,7 +66,7 @@ struct FavouriteAccountsTests {
     @Test("An id whose account is gone stays stored but never renders")
     func deletedAccountDropsOut() throws {
         let (model, url, everyday, _) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         model.toggleFavouriteAccount(everyday)
         model.favouriteAccountIDs.append(.random())   // simulates a deleted account

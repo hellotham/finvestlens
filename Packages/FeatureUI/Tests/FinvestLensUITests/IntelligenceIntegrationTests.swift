@@ -41,7 +41,7 @@ struct IntelligenceIntegrationTests {
     @Test("Uncategorised items are found in Imbalance accounts and re-assignable")
     func uncategorized() throws {
         let url = tempURL()
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         let model = AppModel()
         try model.newDocument(at: url)
         defer { model.close() }
@@ -70,7 +70,7 @@ struct IntelligenceIntegrationTests {
     @Test("Dividend with franking credits books five balanced splits and creates accounts")
     func dividendWithCredits() throws {
         let url = tempURL()
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         let model = AppModel()
         try model.newDocument(at: url)
         defer { model.close() }
@@ -105,7 +105,7 @@ struct IntelligenceIntegrationTests {
     @Test("Dividend without gross-up books only cash and income components")
     func dividendWithoutCredits() throws {
         let url = tempURL()
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         let model = AppModel()
         try model.newDocument(at: url)
         defer { model.close() }
@@ -127,7 +127,7 @@ struct IntelligenceIntegrationTests {
     @Test("Matched duplicates get their register split marked cleared")
     func reconcileDuplicates() throws {
         let url = tempURL()
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         let model = AppModel()
         try model.newDocument(at: url)
         defer { model.close() }
@@ -164,7 +164,7 @@ struct IntelligenceIntegrationTests {
         // receipt from January was reported as matching a supermarket purchase in
         // March. The note has to clear the same date bar as a real match.
         let url = tempURL()
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         let model = AppModel()
         try model.newDocument(at: url)
         defer { model.close() }
@@ -203,7 +203,7 @@ struct IntelligenceIntegrationTests {
         // issuer wrote the original into the narrative, which is the number the
         // receipt does share — no exchange rate, no tolerance, nothing tagged.
         let url = tempURL()
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         let model = AppModel()
         try model.newDocument(at: url)
         defer { model.close() }
@@ -246,7 +246,7 @@ struct IntelligenceIntegrationTests {
     @Test("A domestic narrative contributes nothing to the foreign index")
     func domesticNarrativesAreNotIndexed() throws {
         let url = tempURL()
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         let model = AppModel()
         try model.newDocument(at: url)
         defer { model.close() }
@@ -262,7 +262,7 @@ struct IntelligenceIntegrationTests {
     @Test("A cash receipt is entered against the account it is told, and only that")
     func recordCashPurchase() async throws {
         let url = tempURL()
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         let model = AppModel()
         try model.newDocument(at: url)
         defer { model.close() }
@@ -270,7 +270,7 @@ struct IntelligenceIntegrationTests {
         let folder = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: folder) }
+        defer { removeBook(at: folder) }
         model.configuredDocumentFolder = folder
 
         let hers = try #require(model.addAccount(name: "Her Cash", type: .cash))
@@ -311,13 +311,13 @@ struct IntelligenceIntegrationTests {
         // UTC (GnuCashDate writes `00:00:00 +0000`). Stored raw it renders a
         // day early anywhere reading UTC, and exports to GnuCash wrong.
         let url = tempURL()
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         let model = AppModel()
         try model.newDocument(at: url)
         defer { model.close() }
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: folder) }
+        defer { removeBook(at: folder) }
         model.configuredDocumentFolder = folder
 
         let cash = try #require(model.addAccount(name: "Cash", type: .cash))
@@ -348,13 +348,13 @@ struct IntelligenceIntegrationTests {
         // have dirtied hundreds of untouched rows to fix something that was
         // not wrong with them.
         let url = tempURL()
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         let model = AppModel()
         try model.newDocument(at: url)
         defer { model.close() }
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: folder) }
+        defer { removeBook(at: folder) }
         model.configuredDocumentFolder = folder
 
         let card = try #require(model.addAccount(name: "Card", type: .credit))
@@ -397,13 +397,13 @@ struct IntelligenceIntegrationTests {
     @Test("A cash purchase with no vendor still gets a usable description")
     func cashPurchaseFallsBackToTheFileName() async throws {
         let url = tempURL()
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         let model = AppModel()
         try model.newDocument(at: url)
         defer { model.close() }
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: folder) }
+        defer { removeBook(at: folder) }
         model.configuredDocumentFolder = folder
 
         let cash = try #require(model.addAccount(name: "Cash", type: .cash))
@@ -420,7 +420,7 @@ struct IntelligenceIntegrationTests {
     @Test("Budget suggestions create or update the monthly budget")
     func applyBudgetSuggestion() throws {
         let url = tempURL()
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         let model = AppModel()
         try model.newDocument(at: url)
         defer { model.close() }
@@ -451,7 +451,7 @@ struct IntelligenceIntegrationTests {
     @Test("Spending history and income average reflect prior months")
     func spendingHistory() throws {
         let url = tempURL()
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         let model = AppModel()
         try model.newDocument(at: url)
         defer { model.close() }

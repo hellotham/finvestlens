@@ -33,7 +33,7 @@ struct LazyPriceRowTests {
     @Test("Price rows refresh after a later edit")
     func cacheIsDroppedOnEdit() throws {
         let url = tempURL()
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         let model = AppModel()
         try model.newDocument(at: url)
         defer { model.close() }
@@ -65,7 +65,7 @@ struct LazyPriceRowTests {
     @Test("Closing a book clears the rows")
     func cacheIsDroppedOnClose() throws {
         let url = tempURL()
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         let model = AppModel()
         try model.newDocument(at: url)
 

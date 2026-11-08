@@ -27,7 +27,7 @@ struct AppImportTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let groceries = try #require(model.addAccount(name: "Groceries", type: .expense))
@@ -74,7 +74,7 @@ struct AppImportTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         _ = try #require(model.addAccount(name: "Groceries", type: .expense))
@@ -147,8 +147,8 @@ struct AppImportTests {
             .appendingPathComponent("\(UUID().uuidString).gnucash")
         let destination = tempURL()
         defer {
-            try? FileManager.default.removeItem(at: source)
-            try? FileManager.default.removeItem(at: destination)
+            removeBook(at: source)
+            removeBook(at: destination)
         }
         try Data(xml.utf8).write(to: source)
 
@@ -210,7 +210,7 @@ struct AppImportTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let cma = try #require(model.addAccount(name: "CMA", type: .bank))
         let cmaa = try #require(model.addAccount(name: "CMAA", type: .bank))
@@ -248,7 +248,7 @@ struct AppImportTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let groceries = try #require(model.addAccount(name: "Groceries", type: .expense))
@@ -273,7 +273,7 @@ struct AppImportTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let imbalance = try #require(model.addAccount(name: "Imbalance-AUD", type: .bank))
@@ -309,7 +309,7 @@ struct AppImportTests {
             let url = tempURL()
             let model = AppModel()
             try model.newDocument(at: url)
-            defer { model.close(); try? FileManager.default.removeItem(at: url) }
+            defer { model.close(); removeBook(at: url) }
 
             let bank = try #require(model.addAccount(name: "Bank", type: .bank))
             let groceries = try #require(model.addAccount(name: "Groceries", type: .expense))
@@ -442,7 +442,7 @@ struct ImportTargetDefaultTests {
             .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let everyday = try #require(model.addAccount(name: "Everyday", type: .bank))
         let card = try #require(model.addAccount(name: "Card", type: .credit))
@@ -479,7 +479,7 @@ struct ImportTargetDefaultTests {
             .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let everyday = try #require(model.addAccount(name: "Everyday", type: .bank))
         let salary = try #require(model.addAccount(name: "Salary", type: .income))

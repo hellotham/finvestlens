@@ -78,7 +78,7 @@ struct EditPreservationTests {
     @Test("Editing a transaction leaves reconcile state alone")
     func reconcileStateSurvives() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         try resave(f)
         #expect(f.txn.splits.map(\.reconcileState) == [.reconciled, .cleared])
     }
@@ -86,7 +86,7 @@ struct EditPreservationTests {
     @Test("Editing a transaction leaves the reconcile date alone")
     func reconcileDateSurvives() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         try resave(f)
         #expect(f.txn.splits[0].reconcileDate == Date(timeIntervalSince1970: 500_000))
     }
@@ -97,7 +97,7 @@ struct EditPreservationTests {
     @Test("Editing a transaction preserves split identity")
     func splitGUIDsSurvive() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         let before = f.txn.splits.map(\.guid)
         try resave(f)
         #expect(f.txn.splits.map(\.guid) == before)
@@ -106,7 +106,7 @@ struct EditPreservationTests {
     @Test("Editing a transaction preserves per-split action and memo")
     func actionAndMemoSurvive() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         try resave(f)
         #expect(f.txn.splits.map(\.action) == ["Withdrawal", "Buy"])
         #expect(f.txn.splits.map(\.memo) == ["card", "veg"])
@@ -115,7 +115,7 @@ struct EditPreservationTests {
     @Test("Editing a transaction preserves notes and preserved slots")
     func notesAndSlotsSurvive() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         f.txn.splits[0].kvp["some-importer-slot"] = .string("keep me")
         try resave(f)
         #expect(f.txn.notes == "weekly shop")
@@ -129,7 +129,7 @@ struct EditPreservationTests {
     @Test("Editing a transaction does not rewrite the entry date")
     func dateEnteredSurvives() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         try resave(f)
         #expect(f.txn.dateEntered == Date(timeIntervalSince1970: 900_000))
     }
@@ -139,7 +139,7 @@ struct EditPreservationTests {
     @Test("Changing the posting date still moves the posting date")
     func datePostedStillChanges() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         let edit = try #require(f.model.editData(forTransaction: f.txn.guid))
         let moved = Date(timeIntervalSince1970: 86_400)
         _ = try f.model.updateTransaction(id: f.txn.guid, date: moved,
@@ -154,7 +154,7 @@ struct EditPreservationTests {
     @Test("A newly added leg is a new split, unreconciled")
     func addedLegIsNew() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         let book = try #require(f.model.book)
         let feesID = try #require(f.model.addAccount(name: "Fees", type: .expense))
         let before = Set(f.txn.splits.map(\.guid))
@@ -180,7 +180,7 @@ struct EditPreservationTests {
     @Test("A removed leg stays removed")
     func removedLegStaysRemoved() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         let feesID = try #require(f.model.addAccount(name: "Fees", type: .expense))
         var splits = try #require(f.model.editData(forTransaction: f.txn.guid)).splits
         let droppedGUID = try #require(splits[1].splitID)

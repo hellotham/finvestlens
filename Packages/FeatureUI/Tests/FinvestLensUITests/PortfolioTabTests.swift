@@ -75,7 +75,7 @@ struct PortfolioTabTests {
     @Test("A portfolio is a parent of security accounts, and only that")
     func portfoliosAreDerived() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         let names = f.model.portfolioAccounts.map(\.name)
         #expect(names == ["Broker", "Super"], "sorted by the name shown")
@@ -88,7 +88,7 @@ struct PortfolioTabTests {
     @Test("Each portfolio holds its own securities")
     func holdingsAreScoped() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         #expect(f.model.securityCommodities(inPortfolio: f.broker) == [f.acme])
         #expect(f.model.securityCommodities(inPortfolio: f.superFund) == [f.zeta])
@@ -101,7 +101,7 @@ struct PortfolioTabTests {
     @Test("The Investments sidebar lists All Holdings and every portfolio")
     func sidebarListsPortfolios() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         let ids = ModeSidebarRows.groups(for: .investments, model: f.model)
             .flatMap(\.rows).map(\.id)
@@ -118,7 +118,7 @@ struct PortfolioTabTests {
             .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let broker = try #require(model.addAccount(name: "Broker", type: .asset))
         let acme = Commodity(namespace: .security("ASX"), mnemonic: "ACME",
@@ -141,7 +141,7 @@ struct PortfolioTabTests {
     @Test("Only portfolios with an open holding appear, unless closed are shown")
     func closedPortfoliosAreHidden() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         #expect(f.model.showsClosedPositions == false)
         #expect(f.model.portfolioAccounts.map(\.name) == ["Broker", "Super"])
@@ -171,7 +171,7 @@ struct PortfolioTabTests {
     @Test("A securities group is headed by the exchange, not the enum case")
     func namespaceHeadingIsTheExchange() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         let headings = ModeSidebarRows.groups(for: .investments, model: f.model)
             .compactMap(\.text)
@@ -183,7 +183,7 @@ struct PortfolioTabTests {
     @Test("A portfolio opens in its own tab, named after the account")
     func portfolioOpensInATab() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         f.model.showMode(.investments)
         #expect(f.model.tabTitle(for: .investments) == "All Holdings")
@@ -201,7 +201,7 @@ struct PortfolioTabTests {
     @Test("A deleted portfolio does not survive as a tab")
     func deadPortfolioIsFilteredOut() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         #expect(f.model.exists(.portfolio(f.broker)))
         #expect(!f.model.exists(.portfolio(.random())))

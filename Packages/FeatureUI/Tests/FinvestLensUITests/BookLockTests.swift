@@ -31,7 +31,7 @@ struct BookLockTests {
 
         let reopened = AppModel(authenticator: AllowAllAuthenticator())
         try await reopened.open(at: url)
-        defer { reopened.close(); try? FileManager.default.removeItem(at: url) }
+        defer { reopened.close(); removeBook(at: url) }
         #expect(reopened.requireAuthentication)
         #expect(reopened.isLocked)                    // locked on open
 
@@ -46,7 +46,7 @@ struct BookLockTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         #expect(model.isLocked == false)
         model.lockNow()
         #expect(model.isLocked)

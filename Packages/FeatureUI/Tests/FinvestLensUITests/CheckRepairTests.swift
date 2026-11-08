@@ -27,7 +27,7 @@ struct CheckRepairTests {
     @Test("Check & Repair proposes, cleans, and reports")
     func proposeAndClean() throws {
         let url = tempURL()
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         let model = AppModel()
         try model.newDocument(at: url)
         defer { model.close() }
@@ -100,8 +100,8 @@ struct CheckRepairTests {
             .appendingPathComponent("\(UUID().uuidString).gnucash")
         let destination = tempURL()
         defer {
-            try? FileManager.default.removeItem(at: source)
-            try? FileManager.default.removeItem(at: destination)
+            removeBook(at: source)
+            removeBook(at: destination)
         }
         try Data(xml.utf8).write(to: source)
 
@@ -144,7 +144,7 @@ struct AccountColorTests {
     @Test("Setting an account colour lands in the tree, the slot, and the file")
     func colorPersists() async throws {
         let url = tempURL()
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         let model = AppModel()
         try model.newDocument(at: url)
 

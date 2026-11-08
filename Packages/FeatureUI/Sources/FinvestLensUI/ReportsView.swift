@@ -81,23 +81,30 @@ extension Commodity {
 
 extension AppModel {
     /// The benchmark a configuration names: a cash rate (`"cash:0.0435"`), or
-    /// a priced commodity by its key.
+    /// a priced commodity by its key — never the security being shown. Chosen
+    /// as the benchmark and then as the security, it was rebased against
+    /// itself under one name: two keys in the colour scale, one line, the
+    /// Benchmark picker holding a choice it has no item for.
     func priceBenchmark(for configuration: ReportConfiguration) -> PriceBenchmark? {
         guard let text = configuration.benchmark, !text.isEmpty else { return nil }
         if text.hasPrefix("cash:") {
             return Double(text.dropFirst(5)).map { .cashRate($0) }
         }
+        guard text != priceHistorySecurity(for: configuration)?.priceHistoryKey else { return nil }
         return securitiesWithPriceHistory.first { $0.priceHistoryKey == text }.map { .commodity($0) }
     }
 
     /// The security Price History shows: the configuration's, if it is still
     /// priced and in the chosen portfolio, else the first that is.
     func priceHistorySecurity(for configuration: ReportConfiguration) -> Commodity? {
-        let candidates = pricedSecurities(inPortfolio: portfolioFilter(configuration))
-        if let key = configuration.securityKey, let chosen = candidates.first(where: { $0.priceHistoryKey == key }) {
-            return chosen
-        }
-        return candidates.first
+        priceHistorySecurity(for: configuration,
+                             in: pricedSecurities(inPortfolio: portfolioFilter(configuration)))
+    }
+
+    /// The same, from the candidates a caller already has — each list costs a
+    /// pass over every price.
+    func priceHistorySecurity(for configuration: ReportConfiguration, in candidates: [Commodity]) -> Commodity? {
+        candidates.first { $0.priceHistoryKey == configuration.securityKey } ?? candidates.first
     }
 }
 
@@ -129,15 +136,13 @@ struct PriceHistoryControls: View {
 
     var body: some View {
         let securities = model.pricedSecurities(inPortfolio: model.portfolioFilter(configuration))
-        if let first = securities.first {
-            // Read now, with the tags below, and always one of them. Asked
-            // later, as the binding was, it could find the book already
-            // closed and answer "" — no tag at all, which SwiftUI logged as an
-            // invalid selection three times on every quit from this report.
-            let shown = model.priceHistorySecurity(for: configuration)?.priceHistoryKey
-            let selected = securities.first { $0.priceHistoryKey == shown }?.priceHistoryKey ?? first.priceHistoryKey
+        if let current = model.priceHistorySecurity(for: configuration, in: securities) {
+            // Read now, from the list the tags below are made of, so always
+            // one of them. Asked later, as the binding was, it could find the
+            // book already closed and answer "" — no tag at all, which SwiftUI
+            // logged as an invalid selection three times on every quit.
             Picker("Security", selection: Binding(
-                get: { selected },
+                get: { current.priceHistoryKey },
                 set: { configuration.securityKey = $0 })) {
                 ForEach(securities, id: \.priceHistoryKey) { security in
                     Text(security.mnemonic).tag(security.priceHistoryKey)
@@ -147,7 +152,6 @@ struct PriceHistoryControls: View {
             .fixedSize()
             .help("The security whose prices to show")
 
-            let current = model.priceHistorySecurity(for: configuration)
             Picker("Benchmark", selection: Binding(get: { choice }, set: { setChoice($0) })) {
                 Text("No benchmark").tag(BenchmarkChoice.none)
                 Text("Cash rate").tag(BenchmarkChoice.cash)
@@ -464,58 +468,71 @@ struct PriceHistoryView: View {
         let points = points(report)
         let isIndex = rebased(report)
         let overlays = !isIndex && showTrades
-        Chart {
-            ForEach(points) { point in
-                LineMark(x: .value("Date", point.date), y: .value("Value", point.value))
-                    .foregroundStyle(by: .value("Series", point.series))
-                    .interpolationMethod(.monotone)
-                    .lineStyle(StrokeStyle(lineWidth: point.series == priceSeriesName || point.series == report.commodity.mnemonic ? 2 : 1))
-            }
-            if overlays {
-                ForEach(report.trades) { trade in
-                    if let units = trade.units, units != 0 {
-                        let mark = TradeMark(isBuy: trade.kind == .buy)
-                        PointMark(x: .value("Date", trade.date),
-                                  y: .value("Value", Self.double(trade.amount / units.magnitude)))
-                            .symbol(mark.chartSymbol)
-                            .foregroundStyle(mark.colour)
-                            .symbolSize(70)
+        // Decided once, for the marks and for the key: a trade needs units to
+        // have a price per unit to be drawn at.
+        let plotted = overlays ? report.trades.filter { ($0.units ?? 0) != 0 } : []
+        VStack(alignment: .leading, spacing: 8) {
+            Chart {
+                ForEach(points) { point in
+                    LineMark(x: .value("Date", point.date), y: .value("Value", point.value))
+                        .foregroundStyle(by: .value("Series", point.series))
+                        .interpolationMethod(.monotone)
+                        .lineStyle(StrokeStyle(lineWidth: point.series == priceSeriesName || point.series == report.commodity.mnemonic ? 2 : 1))
+                }
+                if overlays {
+                    ForEach(plotted) { trade in
+                        if let units = trade.units {
+                            let mark = TradeMark(isBuy: trade.kind == .buy)
+                            PointMark(x: .value("Date", trade.date),
+                                      y: .value("Value", Self.double(trade.amount / units.magnitude)))
+                                // By value, not a fixed shape: the value is what
+                                // VoiceOver and Audio Graph call the point by.
+                                .symbol(by: .value("Trade", mark.name))
+                                .foregroundStyle(mark.colour)
+                                .symbolSize(70)
+                        }
+                    }
+                    if let average = report.averageCost, report.unitsHeld > 0 {
+                        RuleMark(y: .value("Average cost", Self.double(average)))
+                            .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 4]))
+                            // The colour: on a mark the hierarchical
+                            // `.secondary` is the accent at half strength.
+                            .foregroundStyle(Color.secondary)
+                            .annotation(position: .top, alignment: .leading) {
+                                Text("Average cost").scaledFont(.caption2).foregroundStyle(Color.secondary)
+                            }
                     }
                 }
-                if let average = report.averageCost, report.unitsHeld > 0 {
-                    RuleMark(y: .value("Average cost", Self.double(average)))
-                        .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 4]))
-                        .foregroundStyle(.secondary)
-                        .annotation(position: .top, alignment: .leading) {
-                            Text("Average cost").scaledFont(.caption2).foregroundStyle(.secondary)
-                        }
+                if !isIndex, !withIncome, showSMA50, showSMA200 {
+                    ForEach(report.crossovers, id: \.date) { crossover in
+                        PointMark(x: .value("Date", crossover.date), y: .value("Value", Self.double(crossover.price)))
+                            .foregroundStyle(crossover.kind == .golden ? Color.positiveAmount : Color.negativeAmount)
+                            .symbolSize(90)
+                            .annotation(position: .top) {
+                                Text(crossover.kind == .golden ? "Golden cross" : "Death cross")
+                                    .scaledFont(.caption2)
+                                    .foregroundStyle(Color.secondary)
+                            }
+                    }
                 }
             }
-            if !isIndex, !withIncome, showSMA50, showSMA200 {
-                ForEach(report.crossovers, id: \.date) { crossover in
-                    PointMark(x: .value("Date", crossover.date), y: .value("Value", Self.double(crossover.price)))
-                        .foregroundStyle(crossover.kind == .golden ? Color.green : Color.negativeAmount)
-                        .symbolSize(90)
-                        .annotation(position: .top) {
-                            Text(crossover.kind == .golden ? "Golden cross" : "Death cross")
-                                .scaledFont(.caption2)
-                                .foregroundStyle(.secondary)
-                        }
-                }
+            .chartForegroundStyleScale(seriesColours(report))
+            .chartSymbolScale(domain: TradeMark.allCases.map(\.name), range: TradeMark.allCases.map(\.chartSymbol))
+            // Charts' own legend keyed a trade in the scale's default colour; the
+            // key below is drawn by hand.
+            .chartLegend(.hidden)
+            .chartXAxis {
+                if compact { AxisMarks(values: .automatic(desiredCount: 4)) } else { AxisMarks() }
             }
+            .chartYScale(domain: .automatic(includesZero: false))
+            .frame(height: compact ? 240 : 320)
+            .accessibilityLabel(isIndex
+                ? "\(report.commodity.mnemonic) and its benchmark, both rebased to 100, over \(periodLabel)"
+                : "\(report.commodity.mnemonic) prices over \(periodLabel)")
+            // Under the chart, not in it: inside, the chart's VoiceOver label was
+            // read for the key too, and the key's lines came out of the plot.
+            legend(report, points: points, plotted: plotted)
         }
-        .chartForegroundStyleScale(seriesColours(report))
-        .chartLegend(position: .bottom, alignment: .leading) {
-            legend(report, points: points, trades: overlays)
-        }
-        .chartXAxis {
-            if compact { AxisMarks(values: .automatic(desiredCount: 4)) } else { AxisMarks() }
-        }
-        .chartYScale(domain: .automatic(includesZero: false))
-        .frame(height: compact ? 240 : 320)
-        .accessibilityLabel(isIndex
-            ? "\(report.commodity.mnemonic) and its benchmark, both rebased to 100, over \(periodLabel)"
-            : "\(report.commodity.mnemonic) prices over \(periodLabel)")
     }
 
     /// The chart's key, drawn here rather than by Charts. Its own keyed a trade
@@ -523,12 +540,10 @@ struct PriceHistoryView: View {
     /// red was keyed in the accent colour (build 11, 4 Nov 2026); moving the
     /// trades into the colour scale instead keyed each one twice, or in the
     /// wrong shape. Each entry here is the mark the chart draws, and only what
-    /// it is showing.
-    private func legend(_ report: PriceHistoryReport, points: [Point], trades: Bool) -> some View {
+    /// it is showing: the series it has points for, the trades it plots.
+    private func legend(_ report: PriceHistoryReport, points: [Point], plotted: [InvestmentEvent]) -> some View {
         let shown = Set(points.map(\.series))
-        let plotted = trades ? report.trades.filter { ($0.units ?? 0) != 0 } : []
-        let entries = Group {
-            // By position: a benchmark can share the security's mnemonic.
+        return ChartKey {
             ForEach(Array(seriesColours(report).enumerated()), id: \.offset) { _, entry in
                 if shown.contains(entry.key) {
                     ChartKeyMark(verbatim: entry.key, symbol: "minus", colour: entry.value)
@@ -536,12 +551,6 @@ struct PriceHistoryView: View {
             }
             if plotted.contains(where: { $0.kind == .buy }) { ChartKeyMark(.buy, "Buy") }
             if plotted.contains(where: { $0.kind != .buy }) { ChartKeyMark(.sale, "Sell") }
-        }
-        // Down the side where the row does not fit, as on a phone at a large
-        // text size: Charts' own legend wrapped.
-        return ViewThatFits(in: .horizontal) {
-            HStack(spacing: 12) { entries }
-            VStack(alignment: .leading, spacing: 4) { entries }
         }
         .scaledFont(.caption)
         // The colour, not the hierarchical `.secondary`: inside a chart legend

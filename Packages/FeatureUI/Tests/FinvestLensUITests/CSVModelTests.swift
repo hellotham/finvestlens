@@ -29,7 +29,7 @@ struct CSVExportModelTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let deductions = try #require(model.addAccount(name: "Work Deductions", type: .expense))
@@ -54,7 +54,7 @@ struct CSVExportModelTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let groceries = try #require(model.addAccount(name: "Groceries", type: .expense))
@@ -86,7 +86,7 @@ struct CSVExportModelTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let cba = Commodity(namespace: .security("ASX"), mnemonic: "CBA",
@@ -109,7 +109,7 @@ struct CSVExportModelTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let cba = Commodity(namespace: .security("ASX"), mnemonic: "CBA",
                             fullName: "Commonwealth Bank", smallestFraction: 10000)

@@ -83,7 +83,7 @@ private struct Fixture {
 
     func tearDown() {
         model.close()
-        try? FileManager.default.removeItem(at: url)
+        removeBook(at: url)
     }
 }
 
@@ -298,7 +298,7 @@ struct StatementTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let book = try #require(model.book)
         func add(_ name: String, _ type: AccountType, under parent: Account) -> Account {
             let account = Account(name: name, type: type, commodity: .aud)

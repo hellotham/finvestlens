@@ -88,14 +88,14 @@ struct SearchIndexTests {
                       "acme october", "1042", "everyday", "zzz", "o", "groceries kitty"])
     func plainWords(_ query: String) throws {
         let (model, url, _) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         #expect(found(query, in: model) == walked(query, in: model))
     }
 
     @Test("Negations and keys still test what is left after the words")
     func keysAndNegations() throws {
         let (model, url, _) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let groceries = found("groc", in: model)
         let notOutlet = found("groc -outlet", in: model)
         #expect(notOutlet == groceries.subtracting(found("outlet", in: model)))
@@ -107,7 +107,7 @@ struct SearchIndexTests {
     @Test("A lengthened query narrows the last one's matches, and finds what a fresh one would")
     func narrowing() throws {
         let (model, url, _) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         for query in ["g", "gr", "gro", "groc", "groce", "grocer"] {
             #expect(found(query, in: model) == walked(query, in: model), "\(query)")
         }
@@ -122,7 +122,7 @@ struct SearchIndexTests {
     @Test("An edit between keystrokes is searched for — the index and the narrowing follow the book")
     func editBetweenKeystrokes() throws {
         let (model, url, ids) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         _ = found("gro", in: model)
         let everyday = try #require(ids["Everyday Account"])
         let groceries = try #require(ids["Groceries"])
@@ -138,7 +138,7 @@ struct SearchIndexTests {
     @Test("The search ledger is the matches in the general ledger's own order — under no account's sort or filter")
     func searchLedger() throws {
         let (model, url, _) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         model.searchQuery = "groc"
         model.runSearch()
         let matched = Set(model.searchResults.map(\.id))
@@ -162,7 +162,7 @@ struct SearchIndexTests {
     @Test("A word and its negation are complements, whatever the text's script")
     func negationComplements() throws {
         let (model, url, ids) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let everyday = try #require(ids["Everyday Account"])
         let cafe = try #require(ids["Café Visits"])
         for description in ["Thanks 👍🏽 lunch", "ร้านค้า", "Plain"] {
@@ -181,7 +181,7 @@ struct SearchIndexTests {
     @Test("Results are rows only when asked, newest first, and follow an edit to a result")
     func rowsWhenAsked() throws {
         let (model, url, _) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         model.searchQuery = "groc"
         model.runSearch()
         #expect(model.searchResultsCache == nil, "a keystroke makes no rows")

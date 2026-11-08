@@ -73,7 +73,7 @@ struct SmartCategorizeTests {
     @Test("A raw import matches its payee's template and inherits the scaled split structure")
     func planFromTemplate() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         // A raw import: half the usual pay, counter-leg parked in Imbalance.
         let target = try f.model.addTransaction(
@@ -115,7 +115,7 @@ struct SmartCategorizeTests {
     @Test("Applying a plan replaces the imbalance leg, balances, and preserves the narrative")
     func applyPlan() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         let target = try f.model.addTransaction(
             date: Date(timeIntervalSince1970: 2_000_000),
@@ -154,7 +154,7 @@ struct SmartCategorizeTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let imbalance = try #require(model.addAccount(name: "Imbalance-AUD", type: .bank))
@@ -193,7 +193,7 @@ struct SmartCategorizeTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let imbalance = try #require(model.addAccount(name: "Imbalance-AUD", type: .bank))
@@ -229,7 +229,7 @@ struct SmartCategorizeTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let imbalance = try #require(model.addAccount(name: "Imbalance-AUD", type: .bank))
@@ -264,7 +264,7 @@ struct SmartCategorizeTests {
     @Test("Plain assignments move the uncategorised leg; unknown ids are ignored")
     func applyAssignments() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         let target = try f.model.addTransaction(
             date: Date(timeIntervalSince1970: 2_000_000),
@@ -290,7 +290,7 @@ struct SmartCategorizeTests {
     @Test("Off the main actor the categoriser proposes exactly what it does on it")
     func offMainMatchesMainActor() async throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         let pay = try f.model.addTransaction(
             date: Date(timeIntervalSince1970: 2_000_000),
@@ -323,7 +323,7 @@ struct SmartCategorizeTests {
     @Test("A plan its transaction has outgrown is not applied, and nothing unbalances")
     func stalePlansRefused() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         let book = try #require(f.model.book)
 
         func payroll(_ amount: String, at seconds: TimeInterval) throws -> GncGUID {

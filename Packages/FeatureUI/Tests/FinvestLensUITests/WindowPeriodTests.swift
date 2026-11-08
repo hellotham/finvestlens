@@ -40,7 +40,7 @@ struct WindowPeriodTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         #expect(model.period == model.defaultReportPeriod)
 
@@ -57,7 +57,7 @@ struct WindowPeriodTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         defer { UserDefaults.standard.removeObject(forKey: periodKey(url)) }
 
         model.period = .last12Months
@@ -70,7 +70,7 @@ struct WindowPeriodTests {
     @Test("A custom range survives a reopen")
     func customRangeRoundTrips() async throws {
         let url = tempURL()
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         defer { UserDefaults.standard.removeObject(forKey: periodKey(url)) }
 
         let from = Date(timeIntervalSince1970: 1_700_000_000)
@@ -94,7 +94,7 @@ struct WindowPeriodTests {
     @Test("The dashboard's old period migrates to the window")
     func migratesTheDashboardKey() async throws {
         let url = tempURL()
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         defer {
             UserDefaults.standard.removeObject(forKey: periodKey(url))
             UserDefaults.standard.removeObject(forKey: "session.dashboardPeriod")
@@ -122,7 +122,7 @@ struct WindowPeriodTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         defer { UserDefaults.standard.removeObject(forKey: periodKey(url)) }
 
         model.period = .previousMonth

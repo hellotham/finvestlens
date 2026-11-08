@@ -35,7 +35,7 @@ struct BudgetModelTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let groceries = try #require(model.addAccount(name: "Groceries", type: .expense))
 
         var budget = Budget(name: "Monthly")
@@ -64,7 +64,7 @@ struct BudgetModelTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let groceries = try #require(model.addAccount(name: "Groceries", type: .expense))
@@ -123,7 +123,7 @@ struct BudgetModelTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let groceries = try #require(model.addAccount(name: "Groceries", type: .expense))
@@ -158,7 +158,7 @@ struct BudgetModelTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let groceries = try #require(model.addAccount(name: "Groceries", type: .expense))
         let rent = try #require(model.addAccount(name: "Rent", type: .expense))
@@ -185,7 +185,7 @@ struct BudgetModelTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let groceries = try #require(model.addAccount(name: "Groceries", type: .expense))

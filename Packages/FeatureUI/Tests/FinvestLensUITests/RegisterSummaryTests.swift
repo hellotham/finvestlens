@@ -30,7 +30,7 @@ struct RegisterSummaryTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let income = try #require(model.addAccount(name: "Income", type: .income))
@@ -79,7 +79,7 @@ struct RegisterSummaryTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let income = try #require(model.addAccount(name: "Income", type: .income))
@@ -114,7 +114,7 @@ struct RegisterSummaryTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         #expect(model.registerSummary == nil)          // nothing selected
 

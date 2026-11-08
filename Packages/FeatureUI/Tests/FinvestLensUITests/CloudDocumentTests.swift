@@ -33,7 +33,7 @@ struct CloudDocumentTests {
     @Test("Opening a book records a resolvable bookmark for recents")
     func recentsBookmark() async throws {
         let url = tempURL()
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
 
         let model = AppModel()
         try model.newDocument(at: url)
@@ -105,7 +105,7 @@ struct CloudDocumentTests {
     @Test("Re-opening the already-open book is a no-op, not a close-and-reload")
     func reopeningSameBookIsNoOp() async throws {
         let url = tempURL()
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         let model = AppModel()
         try model.newDocument(at: url)
         defer { model.close() }
@@ -137,7 +137,7 @@ struct CloudDocumentTests {
 
         // A locked book is a different failure — the entry must be kept.
         let url = tempURL()
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         let holder = AppModel()
         try holder.newDocument(at: url)
         defer { holder.close() }
@@ -155,7 +155,7 @@ struct CloudDocumentTests {
         let folder = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: folder) }
+        defer { removeBook(at: folder) }
 
         // Empty folder → plain "Untitled".
         #expect(AppModel.newBookURL(in: folder).lastPathComponent == "Untitled.finvestlens")
@@ -185,7 +185,7 @@ struct CloudDocumentTests {
         defer {
             try? FileManager.default.setAttributes([.posixPermissions: 0o755],
                                                    ofItemAtPath: folder.path)
-            try? FileManager.default.removeItem(at: folder)
+            removeBook(at: folder)
         }
 
         let model = AppModel()

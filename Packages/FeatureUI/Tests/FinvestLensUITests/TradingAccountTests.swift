@@ -27,7 +27,7 @@ struct TradingAccountTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let aud = try #require(model.addAccount(name: "AUD Cash", type: .bank, commodity: .aud))
         let usd = try #require(model.addAccount(name: "USD Cash", type: .bank, commodity: .usd))

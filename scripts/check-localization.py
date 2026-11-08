@@ -8,7 +8,7 @@
 #
 """Gate the string catalogs against what the compiler actually emits.
 
-Five checks, each of which has caught a real shipping defect:
+Six checks, each of which has caught a real shipping defect:
 
   missing   a key the compiler emits with no catalog entry — the string ships
             in English in every language. 106 accumulated unnoticed, because
@@ -27,6 +27,11 @@ Five checks, each of which has caught a real shipping defect:
             this gate reported full coverage. Run with `--literals`, which
             `--build` turns on; it reads the source as well as the extraction,
             and needs both platforms' extraction to mean anything.
+  spec      a requirement number — `FR-PLAN-17`, `NFR-04`, `ADR-L2` — in
+            anything a reader meets. Three reached the screen in 1.2 ("…
+            reconcile the statement again (FR-REC-03).") and every check
+            above passed them: each was a perfectly good emitted key. The
+            numbers belong in docs/ and in comments, never in the catalog.
 
 **Both platforms are needed**, and the extraction has to go through
 `xcodebuild`. Two traps found the hard way:
@@ -107,6 +112,11 @@ SPECIFIER = re.compile(
     r"%(?:\d+\$)?[-+#0]*(?:\d+|\*)?(?:\.(?:\d+|\*))?"
     r"(?:hh|h|ll|l|q|L|z|t|j)?[@dioouxXeEfgGaAcsp]"
 )
+
+# A requirement or decision number from docs/prd.md and docs/architecture.md:
+# FR-PLAN-17, FR-RPT-02d, NFR-04, ADR-L2. Case-sensitive, so "fr-FR" and
+# "Fri" are prose, not numbers.
+REQUIREMENT_ID = re.compile(r"\b(?:N?FR|ADR)-[A-Z0-9]+(?:-[A-Z0-9]+)*[a-z]?\b")
 
 # App Intents phrases go to their own metadata table, not the catalogs.
 SKIP_FILES = {"ExtractedAppShortcutsMetadata.stringsdata"}
@@ -306,6 +316,13 @@ def check(catalog_rel: str, emitted: set[str]) -> list[str]:
 
     for key, entry in sorted(entries.items()):
         localizations = entry.get("localizations") or {}
+        for text in [key] + [value for localization in localizations.values()
+                             for value in values_of(localization)]:
+            if spec := REQUIREMENT_ID.search(text):
+                problems.append(
+                    f"{catalog_rel}: {key!r} shows the reader a requirement number "
+                    f"({spec.group(0)}) — it belongs in docs/ or a comment")
+                break
         if entry.get("shouldTranslate") is not False:
             if missing := LANGUAGES - set(localizations):
                 problems.append(
@@ -659,16 +676,23 @@ def check_literals(roots: list[pathlib.Path]) -> list[str]:
         rel = path.relative_to(REPO).as_posix()
         keys = emitted.get(rel, set())
         for line, text, before in swift_literals(path.read_text(encoding="utf-8")):
-            if not reads_as_english(text) or text.replace("%%", "%") in keys:
+            if not reads_as_english(text) or NOT_FOR_THE_READER.search(before):
                 continue
-            if NOT_FOR_THE_READER.search(before):
+            shown = text if len(text) <= 120 else text[:117] + "…"
+            # An emitted key is the catalog check's (`check`); this is for
+            # English that reaches the reader without one — exempt or not.
+            emitted_here = text.replace("%%", "%") in keys
+            if not emitted_here and (spec := REQUIREMENT_ID.search(text)):
+                problems.append(f"{rel}:{line}: a requirement number reaches the reader "
+                                f"({spec.group(0)}) — {shown!r}")
+                continue
+            if emitted_here:
                 continue
             matched = [index for index, (where, literal, _) in enumerate(exemptions)
                        if where == rel and exempts(literal, text)]
             if matched:
                 used.update(matched)
                 continue
-            shown = text if len(text) <= 120 else text[:117] + "…"
             problems.append(f"{rel}:{line}: English the compiler cannot see — {shown!r}")
     for index, (where, literal, _) in enumerate(exemptions):
         if index not in used:
@@ -712,6 +736,11 @@ Text("Each edit is recorded in \(url ?? "the audit log").")
     unsafe = [("Every day, from %@", 2), ("%3$@", 2)]
     failures += [f"fewer_is_safe({f!r}, {n}) is False" for f, n in safe if not fewer_is_safe(f, n)]
     failures += [f"fewer_is_safe({f!r}, {n}) is True" for f, n in unsafe if fewer_is_safe(f, n)]
+    numbered = ["Set a savings rate (FR-PLAN-17)", "reconcile the statement again (FR-REC-03).",
+                "NFR-04", "as ADR-L2 decided", "any other priced commodity (FR-RPT-02d)"]
+    prose = ["fr-FR", "Fri", "FR", "FREE-FORM", "Every day", "A–Z", "ISO-8601", "Tax (FR)"]
+    failures += [f"REQUIREMENT_ID misses {t!r}" for t in numbered if not REQUIREMENT_ID.search(t)]
+    failures += [f"REQUIREMENT_ID takes {t!r}" for t in prose if REQUIREMENT_ID.search(t)]
     return failures
 
 

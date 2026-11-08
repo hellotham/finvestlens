@@ -27,7 +27,7 @@ struct ForeignRestructureTests {
     @Test("AUD charge restructures to MYR values with AUD quantities")
     func restructure() throws {
         let url = tempURL()
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         let model = AppModel()
         try model.newDocument(at: url)
         defer { model.close() }
@@ -68,7 +68,7 @@ struct ForeignRestructureTests {
     @Test("Multi-leg and same-currency transactions are refused")
     func refusals() throws {
         let url = tempURL()
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         let model = AppModel()
         try model.newDocument(at: url)
         defer { model.close() }

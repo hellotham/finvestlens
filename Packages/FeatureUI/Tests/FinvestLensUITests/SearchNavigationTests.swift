@@ -47,7 +47,7 @@ struct SearchNavigationTests {
     @Test("Showing a result in its register clears the search and selects the account")
     func showInRegisterClearsSearchAndSelectsAccount() throws {
         let (model, url, txn, bank) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         model.searchQuery = "Acme"
 
@@ -66,7 +66,7 @@ struct SearchNavigationTests {
     @Test("Showing a result names the row to land on")
     func showInRegisterNamesTheRow() throws {
         let (model, url, txn, bank) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         model.showInRegister(txn)
 
@@ -83,7 +83,7 @@ struct SearchNavigationTests {
     @Test("The pending row is consumed once")
     func pendingSelectionIsOneShot() throws {
         let (model, url, txn, _) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         model.showInRegister(txn)
         #expect(model.pendingRegisterSplitID != nil)
@@ -102,7 +102,7 @@ struct SearchNavigationTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         // Imbalance-AUD is typed `.bank`, exactly as Scrub creates it — so it
         // looks like a real balance-sheet leg and has to be skipped by name.
@@ -130,7 +130,7 @@ struct SearchNavigationTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let groceries = try #require(model.addAccount(name: "Groceries", type: .expense))
         let dining = try #require(model.addAccount(name: "Dining", type: .expense))
@@ -148,7 +148,7 @@ struct SearchNavigationTests {
     @Test("Showing an unknown transaction changes nothing")
     func showInRegisterIgnoresUnknown() throws {
         let (model, url, _, _) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         model.searchQuery = "Acme"
 

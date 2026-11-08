@@ -48,7 +48,7 @@ struct SearchNoticeTests {
     @Test("An unknown key is reported, not swallowed")
     func unknownKeyIsReported() throws {
         let (model, url) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         model.searchQuery = "date:2026"
 
@@ -66,7 +66,7 @@ struct SearchNoticeTests {
     @Test("An unknown key still searches as literal text")
     func unknownKeyStillSearchesLiterally() throws {
         let (model, url) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         model.searchQuery = "Date:"
 
@@ -79,7 +79,7 @@ struct SearchNoticeTests {
     @Test("Known keys are silent")
     func knownKeysAreSilent() throws {
         let (model, url) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         for query in ["account:Everyday Card", "desc:NRMA", "memo:x", "amount:>1", "tag:foo", "acct:Everyday Card"] {
             model.searchQuery = query
@@ -91,7 +91,7 @@ struct SearchNoticeTests {
     @Test("Plain text is not mistaken for a key")
     func plainTextIsSilent() throws {
         let (model, url) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         model.searchQuery = "NRMA"
 
@@ -105,7 +105,7 @@ struct SearchNoticeTests {
     @Test("A non-alphabetic prefix is not a key")
     func numericPrefixIsNotAKey() throws {
         let (model, url) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         model.searchQuery = "09:30"
 
@@ -116,7 +116,7 @@ struct SearchNoticeTests {
     @Test("Each unknown key is named once")
     func unknownKeysAreDeduplicated() throws {
         let (model, url) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         model.searchQuery = "date:2026 date:2025 notes:x"
 
@@ -127,7 +127,7 @@ struct SearchNoticeTests {
     @Test("Clearing the query clears the notices")
     func clearingQueryClearsNotices() throws {
         let (model, url) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         model.searchQuery = "date:2026"
 

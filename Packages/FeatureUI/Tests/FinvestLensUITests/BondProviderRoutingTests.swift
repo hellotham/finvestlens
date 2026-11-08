@@ -90,7 +90,7 @@ struct BondProviderRoutingTests {
     func mixedBookIsPricedInOneRun() async throws {
         let http = RoutingHTTP()
         let (model, url) = try book(http)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let cba = share(model)
         model.setQuoteSymbol("CBA.AX", for: cba)
@@ -121,7 +121,7 @@ struct BondProviderRoutingTests {
         // failure names the security, and the fix is one picker on its page.
         let http = RoutingHTTP()
         let (model, url) = try book(http)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         _ = bond(model, "BOND1", isin: "AU0EXAMPLE01")
 
         await model.fetchLatestQuotes(using: .yahoo)
@@ -134,7 +134,7 @@ struct BondProviderRoutingTests {
     func candidates() throws {
         let http = RoutingHTTP()
         let (model, url) = try book(http)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         _ = share(model)                                    // no identifier
         let withISIN = bond(model, "BOND1", isin: "AU0EXAMPLE01")
@@ -165,7 +165,7 @@ struct BondProviderRoutingTests {
     func perSecurityChoiceWins() throws {
         let http = RoutingHTTP()
         let (model, url) = try book(http)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let held = bond(model, "BOND1", isin: "AU0EXAMPLE01")
 
         #expect(model.effectiveProvider(for: held, in: .yahoo) == .yahoo)
@@ -182,7 +182,7 @@ struct BondProviderRoutingTests {
         // when the run's own provider could have priced it.
         let http = RoutingHTTP()
         let (model, url) = try book(http)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let cba = share(model)
 
         model.setQuoteProvider(.eodhd, for: cba)
@@ -194,7 +194,7 @@ struct BondProviderRoutingTests {
     func choiceIsPersisted() async throws {
         let http = RoutingHTTP()
         let (model, url) = try book(http)
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         let held = bond(model, "BOND1", isin: "AU0EXAMPLE01")
         model.setQuoteProvider(.fiig, for: held)
         try model.save()
@@ -222,7 +222,7 @@ struct BondProviderRoutingTests {
     func rebuildUsesTheSeries() async throws {
         let http = RoutingHTTP()
         let (model, url) = try book(http)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let held = bond(model, "BOND1", isin: "AU0EXAMPLE01")
         model.setQuoteProvider(.fiig, for: held)
 
@@ -242,7 +242,7 @@ struct BondProviderRoutingTests {
     func rebuildDoesNotWipeAHistoryForOnePoint() async throws {
         let http = RoutingHTTP()
         let (model, url) = try book(http)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let cba = share(model)
         model.setQuoteProvider(.finnhub, for: cba)
         #expect(!QuoteProviderKind.finnhub.supportsHistory)

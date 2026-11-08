@@ -188,8 +188,18 @@ enum LockReaper {
         }
     }
 
-    static func deregister(_ url: URL) {
-        queue.sync { held[url] = nil }
+    /// Forgets `url` only if `instanceID` is the one registered for it. A
+    /// lock object for the same file that never held it — a read-only open of
+    /// the book the app has open, in the same process — used to take the
+    /// holder's entry with it when it went, and the next SIGTERM left the
+    /// open book's lock behind to sync to every other Mac.
+    static func deregister(_ url: URL, instanceID: String) {
+        queue.sync { if held[url] == instanceID { held[url] = nil } }
+    }
+
+    /// The instance registered for `url`, for tests.
+    static func registeredInstance(for url: URL) -> String? {
+        queue.sync { held[url] }
     }
 
     /// Remove only the lock files still carrying our own instance id — another
@@ -271,7 +281,7 @@ public final class FileLock {
         // reaper on an abnormal one, and this for an object that simply goes
         // out of scope with the lock still held.
         if held { release() }
-        LockReaper.deregister(lockURL)
+        LockReaper.deregister(lockURL, instanceID: instanceID)
         if RelatedSidecar.isSandboxed { NSFileCoordinator.removeFilePresenter(presenter) }
     }
 
@@ -535,7 +545,7 @@ public final class FileLock {
             Self.log.error("release: \(self.lockURL.lastPathComponent, privacy: .public) is not ours on disk (unreadable or another holder)")
         }
         held = false
-        LockReaper.deregister(lockURL)
+        LockReaper.deregister(lockURL, instanceID: instanceID)
     }
 
     private func makeHolder(now: Date) -> LockHolder {

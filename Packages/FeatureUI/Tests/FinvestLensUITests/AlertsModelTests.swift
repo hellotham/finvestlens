@@ -40,7 +40,7 @@ struct AlertsModelTests {
         try model.save(); model.close()
         let reopened = AppModel()
         try await reopened.open(at: url)
-        defer { reopened.close(); try? FileManager.default.removeItem(at: url) }
+        defer { reopened.close(); removeBook(at: url) }
         #expect(reopened.priceTargets.count == 1)
     }
 
@@ -49,7 +49,7 @@ struct AlertsModelTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         _ = model.addAccount(name: "Bank", type: .bank)
         #expect(model.alerts().isEmpty)
     }

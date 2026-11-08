@@ -50,7 +50,7 @@ struct ScheduledIntegrationTests {
     @Test("Posting due instances creates transactions and advances lastPosted")
     func postDue() throws {
         let (model, from, to, url) = try setup()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         model.addScheduledTransaction(rentSX(from: from, to: to))
         let pending = model.pendingScheduled(through: date(2020, 3, 15))
@@ -76,7 +76,7 @@ struct ScheduledIntegrationTests {
 
         let reopened = AppModel()
         try await reopened.open(at: url)
-        defer { reopened.close(); try? FileManager.default.removeItem(at: url) }
+        defer { reopened.close(); removeBook(at: url) }
         #expect(reopened.scheduledTransactions.first?.name == "Rent")
         #expect(reopened.scheduledTransactions.first?.isBalanced == true)
     }

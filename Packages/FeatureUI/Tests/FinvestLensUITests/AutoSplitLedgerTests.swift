@@ -59,7 +59,7 @@ struct AutoSplitLedgerTests {
     @Test("Show All Splits opens every transaction out")
     func expandAll() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         f.model.selectedAccountID = f.bank
         let rows = f.model.autoSplitRows(expanding: nil, expandAll: true)
         // Two main rows + one counter-leg (Lunch) + three counter-legs (Shop).
@@ -77,7 +77,7 @@ struct AutoSplitLedgerTests {
     @Test("Nothing selected shows one line per transaction")
     func collapsed() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         f.model.selectedAccountID = f.bank
         let rows = f.model.autoSplitRows(expanding: nil)
         #expect(rows.count == 2)
@@ -90,7 +90,7 @@ struct AutoSplitLedgerTests {
     @Test("The selected transaction opens out into its legs")
     func expanded() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         f.model.selectedAccountID = f.bank
         let rows = f.model.autoSplitRows(expanding: f.multi)
         // Two transaction rows, plus the three counter-legs of the multi.
@@ -105,7 +105,7 @@ struct AutoSplitLedgerTests {
     @Test("Nobody else opens out")
     func onlyTheSelectedOne() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         f.model.selectedAccountID = f.bank
         let rows = f.model.autoSplitRows(expanding: f.simple)
         // The simple transaction's one counter-leg (Food); Shop stays closed.
@@ -117,7 +117,7 @@ struct AutoSplitLedgerTests {
     @Test("Rows stay in date order with the expanded legs beneath their row")
     func ordering() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         f.model.selectedAccountID = f.bank
         let rows = f.model.autoSplitRows(expanding: f.multi)
         #expect(rows.first?.main?.description == "Lunch")
@@ -131,7 +131,7 @@ struct AutoSplitLedgerTests {
     @Test("Main rows are the Basic register's rows")
     func rowsMatchRegister() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         f.model.selectedAccountID = f.bank
         let auto = f.model.autoSplitRows(expanding: f.multi)
         let register = f.model.registerRows
@@ -145,7 +145,7 @@ struct AutoSplitLedgerTests {
     @Test("Expanding something not in this register changes nothing")
     func unknownExpansion() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         f.model.selectedAccountID = f.bank
         let rows = f.model.autoSplitRows(expanding: .random())
         #expect(rows.count == 2)
@@ -155,7 +155,7 @@ struct AutoSplitLedgerTests {
     @Test("An account with no postings has no rows")
     func emptyAccount() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         let unused = try #require(f.model.addAccount(name: "Unused", type: .expense))
         f.model.selectedAccountID = unused
         #expect(f.model.autoSplitRows(expanding: nil).isEmpty)

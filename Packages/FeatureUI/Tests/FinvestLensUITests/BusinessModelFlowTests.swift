@@ -27,7 +27,7 @@ struct BusinessModelFlowTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let ar = try #require(model.addAccount(name: "A/R", type: .receivable))
         _ = try #require(model.addAccount(name: "A/P", type: .payable))
@@ -68,7 +68,7 @@ struct BusinessModelFlowTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let ar = try #require(model.addAccount(name: "A/R", type: .receivable))
         let sales = try #require(model.addAccount(name: "Sales", type: .income))
@@ -91,7 +91,7 @@ struct BusinessModelFlowTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let ar = try #require(model.addAccount(name: "A/R", type: .receivable))
         let sales = try #require(model.addAccount(name: "Sales", type: .income))
@@ -132,7 +132,7 @@ struct BusinessModelFlowTests {
 
         let reopened = AppModel()
         try await reopened.open(at: url)
-        defer { reopened.close(); try? FileManager.default.removeItem(at: url) }
+        defer { reopened.close(); removeBook(at: url) }
         #expect(reopened.businessJobs.first?.name == "Website")
         #expect(reopened.companyInfo.name == "My Studio")
         #expect(reopened.companyInfo.taxID == "ABN 123")
@@ -143,7 +143,7 @@ struct BusinessModelFlowTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let ar = try #require(model.addAccount(name: "A/R", type: .receivable))
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
@@ -170,7 +170,7 @@ struct BusinessModelFlowTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let ap = try #require(model.addAccount(name: "A/P", type: .payable))
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
@@ -231,7 +231,7 @@ struct BusinessModelFlowTests {
         try model.save(); model.close()
         let reopened = AppModel()
         try await reopened.open(at: url)
-        defer { reopened.close(); try? FileManager.default.removeItem(at: url) }
+        defer { reopened.close(); removeBook(at: url) }
         #expect(reopened.billableEntries.count == 2)
         let reopenedBilled = reopened.billableEntries.allSatisfy { $0.billed }
         #expect(reopenedBilled)
@@ -255,7 +255,7 @@ struct BusinessModelFlowTests {
         // Reopen from disk (SQLite): the business graph is intact.
         let reopened = AppModel()
         try await reopened.open(at: url)
-        defer { reopened.close(); try? FileManager.default.removeItem(at: url) }
+        defer { reopened.close(); removeBook(at: url) }
         #expect(reopened.businessCustomers.first?.name == "Acme")
         #expect(reopened.outstanding(invoice) == dec("100"))
     }

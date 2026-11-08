@@ -50,7 +50,7 @@ struct ModeTabTests {
     @Test("A mode starts on its home tab, which never closes")
     func homeTabIsPinned() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         for mode in AppMode.allCases {
             f.model.showMode(mode)
@@ -67,7 +67,7 @@ struct ModeTabTests {
     @Test("A click replaces the current tab, except on home")
     func clickReplacesExceptOnHome() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         f.model.navigate(to: .account(f.bank))
         #expect(f.model.openTabs == [.generalLedger, .account(f.bank)])
@@ -83,7 +83,7 @@ struct ModeTabTests {
     @Test("A new tab is opened on request")
     func newTabIsDeliberate() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         f.model.navigate(to: .account(f.bank))
         f.model.navigate(to: .account(f.savings), inNewTab: true)
@@ -97,7 +97,7 @@ struct ModeTabTests {
     @Test("Opening something already open focuses its tab")
     func neverDuplicates() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         f.model.navigate(to: .account(f.bank))
         f.model.navigate(to: .account(f.savings), inNewTab: true)
@@ -118,7 +118,7 @@ struct ModeTabTests {
     @Test("A placeholder account opens no tab")
     func placeholderOpensNothing() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         f.model.showMode(.accounts)
         f.model.navigate(to: .account(f.parent))
@@ -129,7 +129,7 @@ struct ModeTabTests {
     @Test("Closing a tab lands on the one that took its place")
     func closingLandsSensibly() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         f.model.navigate(to: .account(f.bank))
         f.model.navigate(to: .account(f.savings), inNewTab: true)
@@ -142,7 +142,7 @@ struct ModeTabTests {
     @Test("Close Other Tabs keeps the one asked for, and the home")
     func closeOthers() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         f.model.navigate(to: .account(f.bank))
         f.model.navigate(to: .account(f.savings), inNewTab: true)
@@ -155,7 +155,7 @@ struct ModeTabTests {
     @Test("Tabs belong to their mode")
     func tabsArePerMode() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         f.model.navigate(to: .account(f.bank))
         f.model.showMode(.planning)
@@ -173,7 +173,7 @@ struct ModeTabTests {
     func tabsSurviveRelaunch() async throws {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         defer {
             UserDefaults.standard.removeObject(
                 forKey: "session.navigation:\(url.standardizedFileURL.path)")
@@ -204,7 +204,7 @@ struct ModeTabTests {
             .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
         let key = "session.navigation:\(url.standardizedFileURL.path)"
         defer {
-            try? FileManager.default.removeItem(at: url)
+            removeBook(at: url)
             UserDefaults.standard.removeObject(forKey: key)
         }
 
@@ -233,7 +233,7 @@ struct ModeTabTests {
             .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
         let key = "session.navigation:\(url.standardizedFileURL.path)"
         defer {
-            try? FileManager.default.removeItem(at: url)
+            removeBook(at: url)
             UserDefaults.standard.removeObject(forKey: key)
         }
 
@@ -283,7 +283,7 @@ struct ModeTabRegressionTests {
     @Test("New Tab opens a destination that is not already open")
     func newTabOpensADestination() throws {
         let (model, url) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let bank = try #require(model.addAccount(name: "Everyday", type: .bank))
         let savings = try #require(model.addAccount(name: "Savings", type: .bank))
 
@@ -308,7 +308,7 @@ struct ModeTabRegressionTests {
     @Test("New Tab does nothing when the mode has nothing else to show")
     func newTabIsANoOpWhenExhausted() throws {
         let (model, url) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         model.showMode(.accounts)
         model.openNewTab()
@@ -327,7 +327,7 @@ struct ModeTabRegressionTests {
             .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         model.showMode(.reports)
         #expect(model.sidebarSelection == .reports)
@@ -351,7 +351,7 @@ struct ModeTabRegressionTests {
             .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
         let key = "session.navigation:\(url.standardizedFileURL.path)"
         defer {
-            try? FileManager.default.removeItem(at: url)
+            removeBook(at: url)
             UserDefaults.standard.removeObject(forKey: key)
         }
 
@@ -385,7 +385,7 @@ struct ModeTabRegressionTests {
             .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
         let key = "session.navigation:\(url.standardizedFileURL.path)"
         defer {
-            try? FileManager.default.removeItem(at: url)
+            removeBook(at: url)
             UserDefaults.standard.removeObject(forKey: key)
         }
 
@@ -420,7 +420,7 @@ struct ModeTabRegressionTests {
             .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
         let key = "session.navigation:\(url.standardizedFileURL.path)"
         defer {
-            try? FileManager.default.removeItem(at: url)
+            removeBook(at: url)
             UserDefaults.standard.removeObject(forKey: key)
         }
 
@@ -474,7 +474,7 @@ struct StandingTabIndexTests {
     /// this same target read.
     private func tearDown(_ model: AppModel, _ url: URL) {
         model.close()
-        try? FileManager.default.removeItem(at: url)
+        removeBook(at: url)
     }
 
     @Test("Investments really does have a standing tab in this fixture")

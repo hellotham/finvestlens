@@ -90,6 +90,19 @@ https://hellotham.com/finvestlens/privacy/
 2026 Hello Tham Pty. Ltd.
 ```
 
+**Version** — What's New in 1.3 (drafted 8 Nov 2026; build 12):
+```
+• Box: sign in with your Box account and open your books there. There is no longer a Box app of your own to set up.
+• Reports: every second row is shaded across the whole width of the table, as GnuCash shades it, and long reports scroll smoothly.
+• Price History: buys and sales are marked in the same shapes and colours in the chart and in its key, the key fits on a phone screen, and VoiceOver names each buy and sale.
+• A security's page: the chart's key lists only what the chart draws, and VoiceOver reads each figure with its name.
+• Reload and Revert read the saved book in full before they replace anything, so a damaged or half-synced file can no longer take the place of your work. A failed save, reload or revert says what failed.
+• Shortcuts and Spotlight read your book safely while it is being saved.
+• Smaller fixes: the Payable Aging report's icon, the Auto-refresh label, and the message for a GnuCash book opened on iPhone and iPad.
+
+FinvestLens 1.3 requires iOS 27, iPadOS 27 or macOS 27.
+```
+
 **Version** — What's New in 1.2:
 ```
 FinvestLens comes to the App Store, and to iPhone.
@@ -223,7 +236,7 @@ FinvestLens is a double-entry accounting app. Nothing needs to be set up and the
 
 All data stays in the book file the person creates. The app has no server and collects nothing.
 
-NETWORK. The app contacts a network service in four situations, all of them the person's choice: fetching security prices and exchange rates from the price provider they choose (Yahoo Finance, Stooq, FIIG and Wilson Asset Management need no key; EODHD, Alpha Vantage, Finnhub and Twelve Data use a key the person enters, which is stored in the Keychain), when they ask or, if they turn on Auto-refresh for a book, when it opens and every six hours while it stays open; downloading the Reserve Bank of Australia's public consumer price index (Fetch from the RBA, in the tax estimator), which carries nothing from the book; optionally, signing in to their own Box account to open a book stored there (File ▸ Open from Box…); and Apple's Private Cloud Compute, below. Box sign-in uses Box's own page in a system web authentication session and requires the person's own Box developer app credentials, entered in Settings; it is not needed for any other feature and can be ignored for review.
+NETWORK. The app contacts a network service in four situations, all of them the person's choice: fetching security prices and exchange rates from the price provider they choose (Yahoo Finance, Stooq, FIIG and Wilson Asset Management need no key; EODHD, Alpha Vantage, Finnhub and Twelve Data use a key the person enters, which is stored in the Keychain), when they ask or, if they turn on Auto-refresh for a book, when it opens and every six hours while it stays open; downloading the Reserve Bank of Australia's public consumer price index (Fetch from the RBA, in the tax estimator), which carries nothing from the book; optionally, signing in to their own Box account to open a book stored there (File ▸ Open from Box…); and Apple's Private Cloud Compute, below. Box sign-in uses Box's own page in a system web authentication session, through FinvestLens's own Box app, with the person's own Box account; it is not needed for any other feature and can be ignored for review.
 
 APPLE INTELLIGENCE. Category suggestions, budget proposals, document reading and report notes run on Apple Foundation Models, where Apple Intelligence is available and turned on: on the device, or on Private Cloud Compute (com.apple.developer.private-cloud-compute, granted to this App ID). Private Cloud Compute is the default where it is offered; the first command that would use it asks the person, beside the command, whether to use it or keep everything on the device, and the answer is kept in Settings ▸ Apple Intelligence, where it can be changed. Bank statements, Auto-Categorise and an import's category suggestions always run on the device. Where Apple Intelligence is not available, those commands are disabled and say why; every other feature works without it. The app contains no third-party AI services and no API keys for any.
 
@@ -288,8 +301,9 @@ offers only the device and a model of the person's own.
   >
   > *Your own Box account.* If you connect a Box account, the app signs you
   > in on Box's own page and then reads and writes the book files you choose
-  > there, directly between your device and Box. We never see your Box
-  > credentials or your files.
+  > there, directly between your device and Box. It does so as FinvestLens's
+  > own Box app, which identifies the app to Box and gives us no access to
+  > your account: we never see your Box credentials or your files.
 
   And, only with the Private Cloud Compute entitlement:
 

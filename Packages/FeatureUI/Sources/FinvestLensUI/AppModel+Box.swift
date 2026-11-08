@@ -189,15 +189,34 @@ public enum BoxOpenPhase: Equatable, Sendable {
     case downloading(Double?)
 }
 
+/// FinvestLens's own Box app's client ID and secret, as a build carries them
+/// (`BuiltInBoxApp` in the app target). `print`, interpolation, `dump` and
+/// `po` show only that it is there: as a bare tuple, `dump` of the model
+/// printed both (found in review, 8 Nov 2026). A debugger reading memory raw
+/// can still find them, as it can any value in a running app.
+public struct BuiltInBoxCredentials: Sendable, Equatable, CustomStringConvertible,
+                                     CustomDebugStringConvertible, CustomReflectable {
+    public let clientID: String
+    public let clientSecret: String
+
+    public init(clientID: String, clientSecret: String) {
+        self.clientID = clientID
+        self.clientSecret = clientSecret
+    }
+
+    public var description: String { "BuiltInBoxCredentials(set)" }
+    public var debugDescription: String { description }
+    public var customMirror: Mirror { Mirror(self, children: [:], displayStyle: .struct) }
+}
+
 @MainActor
 extension AppModel {
 
     // MARK: Configuration
 
-    /// The Box application's client id, from the user's own Box developer
-    /// console. Empty until they set it — Box has no anonymous API, and a
-    /// client id shipped in the binary would make every user's traffic look
-    /// like one developer's.
+    /// A Box app of the person's own: its client id, from their Box developer
+    /// console — for a build without FinvestLens's own (``builtInBoxApp``),
+    /// such as one made from the public source. Box has no anonymous API.
     public var boxClientID: String {
         get { boxDefaults.string(forKey: "finvestlens.box.clientID") ?? "" }
         set {
@@ -209,7 +228,7 @@ extension AppModel {
     /// Must match the redirect URI registered on that Box application.
     public static let boxRedirectURI = "finvestlens://box-auth"
 
-    /// The Box app's client secret, in the Keychain — Box has no PKCE, so the
+    /// That Box app's client secret, in the Keychain — Box has no PKCE, so the
     /// token exchange needs one, and a credential does not belong beside the
     /// client id in `UserDefaults`. Read from the Keychain once, then held:
     /// views ask for it as they draw.
@@ -237,16 +256,29 @@ extension AppModel {
         }
     }
 
+    /// The Box app every request goes through: FinvestLens's own when the
+    /// build carries it — the person's own settings are then not read, nor is
+    /// their secret's Keychain item — and otherwise the one in Settings.
     public var boxConfiguration: BoxAppConfiguration {
-        BoxAppConfiguration(clientID: boxClientID.trimmingCharacters(in: .whitespacesAndNewlines),
-                            clientSecret: boxClientSecret,
-                            redirectURI: Self.boxRedirectURI)
+        if let app = builtInBoxApp {
+            return BoxAppConfiguration(clientID: app.clientID, clientSecret: app.clientSecret,
+                                       redirectURI: Self.boxRedirectURI)
+        }
+        return BoxAppConfiguration(clientID: boxClientID.trimmingCharacters(in: .whitespacesAndNewlines),
+                                   clientSecret: boxClientSecret,
+                                   redirectURI: Self.boxRedirectURI)
     }
 
-    /// Whether a Box app has been described in Settings — without one there
-    /// is no signing in at all. The one rule, used by every view that asks.
+    /// Whether sign-in goes through FinvestLens's own Box app, so there is no
+    /// Box app to set up, and none is shown or asked for.
+    public var usesBuiltInBoxApp: Bool { builtInBoxApp != nil }
+
+    /// Whether there is a Box app to sign in through — FinvestLens's own, or
+    /// one described in Settings; without one there is no signing in at all.
+    /// The one rule, used by every view that asks.
     public var isBoxConfigured: Bool {
         _ = boxSessionRevision
+        if usesBuiltInBoxApp { return true }
         return !boxClientID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !boxClientSecret.isEmpty
     }
 
@@ -263,6 +295,7 @@ extension AppModel {
         if let cached = boxAuthenticatorCache, cached.configuration == configuration {
             return cached.authenticator
         }
+        retireBoxTokensIssuedElsewhere()
         let store = ObservedBoxTokenStore(boxTokenStore) { [weak self] in
             Task { @MainActor in self?.boxSignInChanged() }
         }
@@ -279,6 +312,31 @@ extension AppModel {
     func boxSignInChanged() {
         boxSignedInCache = nil
         boxSessionRevision &+= 1
+    }
+
+    /// Tokens Box issued to another Box app — the person's own, before the
+    /// build carried FinvestLens's — are refused at their first refresh, which
+    /// read as an expired sign-in an hour into the session. They go at once,
+    /// with the reason. Tokens stored before the issuing app was kept are
+    /// judged by the client ID the person had set; those of the app in use
+    /// are kept, and marked as its.
+    func retireBoxTokensIssuedElsewhere() {
+        let configuration = boxConfiguration
+        guard !configuration.clientID.isEmpty, let tokens = boxTokenStore.tokens() else { return }
+        let own = boxDefaults.string(forKey: "finvestlens.box.clientID")?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let issuer = tokens.clientID ?? (own?.isEmpty == false ? own : nil) else { return }
+        if issuer == configuration.clientID {
+            if tokens.clientID == nil {
+                var marked = tokens
+                marked.clientID = issuer
+                try? boxTokenStore.setTokens(marked)
+            }
+            return
+        }
+        try? boxTokenStore.setTokens(nil)
+        boxSignInNotice = String(localized: "FinvestLens now connects to Box through its own Box app. The sign-in made through your own app has ended: connect again. Your books on this device are kept.")
+        boxSignInChanged()
     }
 
     public var isBoxSignedIn: Bool {
@@ -300,6 +358,7 @@ extension AppModel {
         }
         // Possibly a different account from the last one.
         boxAccountCache = nil
+        boxSignInNotice = nil
         boxSignInChanged()
         showToast(.success, "Connected to Box.")
         resumeBoxUploads()
@@ -897,6 +956,7 @@ extension AppModel {
             link.lastRefusal = error.localizedDescription
             saveBoxLink(link)
             documentError = DocumentError(
+                title: String(localized: "Couldn’t save to Box"),
                 message: String(localized: "Box refused “\(link.bookName)”: \(error.localizedDescription) It is saved on this device; press ⌘S to try again."))
         }
     }
@@ -1076,6 +1136,7 @@ extension AppModel {
             boxLibrary.unlock(busy)
             noteBoxFailure(error)
             documentError = DocumentError(
+                title: String(localized: "Couldn’t save to Box"),
                 message: String(localized: "Couldn’t put your version of “\(link.bookName)” on Box: \(error.localizedDescription) It is still saved on this device."))
             return
         }
@@ -1109,6 +1170,7 @@ extension AppModel {
             try FileManager.default.moveItem(at: copy, to: destination)
         } catch {
             documentError = DocumentError(
+                title: String(localized: "Couldn’t save to Box"),
                 message: String(localized: "Couldn’t put your version of “\(link.bookName)” on Box: \(error.localizedDescription) It is still saved on this device."))
             if openNow {
                 // The book closed for the move goes back on screen. It is

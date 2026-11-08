@@ -5712,7 +5712,8 @@ the store's release.
   width of each label or figure, the column gaps showing between them — and a
   total's rule came in pieces. Each cell now reports its frame
   (`GridRowFrames`, an anchor preference) and the grid draws one stripe or one
-  rule across the whole row behind it. Both grids of `ReportTableView`; the lazy
+  rule across the whole row behind it. (Narrowed on 8 Nov to one report per
+  striped row, which scrolling made necessary: see the next section.) Both grids of `ReportTableView`; the lazy
   and the phone's stacked layouts were rows already, and stay as they were.
   GnuCash does the same: its stylesheet colours the row
   (`tr.alternate-row { background: … }`, `html-fonts.scm:171`), and the first
@@ -5758,7 +5759,8 @@ the store's release.
   `building.2.crop.circle.badge.clock` drew nothing; it is
   `building.2.crop.circle`. A scan of every symbol name in the app and its
   extensions against AppKit's symbol set found no other; `SymbolNameTests` asks
-  for every report kind's icon.
+  for every report kind's icon (and since 8 Nov for every name in the sources:
+  see the next section).
 - **Requirement numbers in the interface.** "(FR-PLAN-17)" under Financial
   Summary, and two more found by looking for the same thing: "(FR-REC-03)" in
   the reconcile window and "(FR-SCH-02)" in the formula sheet. The translations
@@ -5772,3 +5774,240 @@ the store's release.
   iPhone or iPad too; the SQLite-backend message likewise. The help said "Choose File ▸ Import
   GnuCash…" on every platform and now says on a Mac, as it does for importing a
   Ledger journal.
+
+## The 7 Nov fixes, reviewed (8 Nov 2026)
+
+A maximum-effort review of `22e0182`: ten finder angles, then each candidate put
+to a verifier of its own. Of 21 candidates verified, 19 held (several covering
+more than one defect) and 2 were refuted. Everything that held is fixed here.
+
+**The book file**
+
+- **A save staged before a failed revert wrote to a closed connection.**
+  `StagedSave` carried the store itself. Revert closes the store before the
+  swap, and when the swap failed it opened a new one that a save already staged
+  never saw. A staged save now holds the document's `StoreHandle` and writes to
+  whichever store is current. Revert opens the store once, whichever way the
+  swap went, and marks earlier saves as written only when the swap succeeded.
+- **Copies left behind.** A revert whose copy failed part-way, and an open or a
+  read-only open that failed after copying, left a copy of the book in the
+  temporary folder, which nothing clears. Revert removes its incoming copy on
+  every path. Both opens go through `readWorkingCopy`, which closes and removes
+  the copy on any failure. A working copy swept from the temporary folder is
+  replaced by moving the incoming copy into place, and a store is never reopened
+  on a path with nothing at it (`init(path:mustExist:)`), which would make an
+  empty book.
+- **Reload from Disk and Use Other Version hid a failed revert.** Both used
+  `try?`, then cleared the changed-on-disk banner and the undo stack as if the
+  other version had loaded. Both now show the error and change nothing.
+- **The same fault elsewhere.** App Intents read the last book through a GRDB
+  connection on the shared file itself, which every save replaces. They now read
+  a copy (`FinvestLensDocument.readSnapshot(of:)`: copy, read, close, remove).
+  `finlab bench` removed a database under its open store and never discarded its
+  read-only document.
+- `WorkingCopyCloseTests` adds revert after the working copy has vanished,
+  revert of a damaged shared file (the session as it was, no copy left), and a
+  failed open (no copy, no lock). With either cleanup removed, its test fails.
+
+**The price charts**
+
+- **Trade marks lost their names for VoiceOver and Audio Graph.** The fixed
+  `.symbol(_:)` had replaced `.symbol(by:)`, whose value is what a point is read
+  by. Price History is back to `.symbol(by: .value("Trade", …))`, with
+  `.chartSymbolScale(domain:range:)` for the shapes and Charts' own legend
+  hidden. Its key is drawn below the chart, outside the chart's accessibility
+  label and its fixed frame.
+- **The key could squeeze the chart.** When the key's entries did not fit in
+  one row, the fallback put one entry per line, inside the chart's 240-point
+  frame on a phone. `ChartKey` wraps its entries onto as many lines as they
+  need (`WrappingRow`, a `Layout`) on both charts. An entry wider than a whole
+  line gets the line's width and wraps its own text (`ChartKeyLayoutTests`).
+- **Keys naming marks that are not drawn.** The security page's key counted a
+  split (a buy or a sale with no price), which has no mark. It also keyed the
+  held shading at a different opacity, and drew the average cost grey where the
+  chart drew it in the accent at half strength (`.secondary` on a mark is
+  hierarchical). The key now reads the chart's own markers, shading and average
+  cost, and both charts draw the rule in `Color.secondary`.
+- **Buy marks failed contrast.** System green measures 2.2:1 on a white row,
+  under WCAG 1.4.11's 3:1 for a mark that carries meaning. Buys are now
+  `positiveAmount` and sales `negativeAmount`, and the security page's list of
+  transactions takes the same colours (`TradeMark`).
+- **A benchmark could be the security itself.** Chosen as the benchmark and then
+  as the security, it was rebased against itself, with a duplicate key entry
+  and a Benchmark picker holding a choice it had no item for. `priceBenchmark(for:)`
+  ignores a benchmark equal to the security shown.
+- **The price-provider picker** could hold a provider chosen on another device,
+  where its API key lives (keys stay on their device); this device's menu had no
+  item for it. It shows "Use the run's provider" there.
+- **The security page's figures were two VoiceOver stops each.**
+  `.accessibilityElement(children: .combine)` on a `GridRow` combines each cell
+  with itself. The label's cell now carries both the label and the value.
+- The Range picker's empty selection, flagged as possible, is not a fault. A
+  segmented picker with no matching tag logs no warning on macOS or iOS. Each was
+  probed with one picker per run; a menu picker in the same probe does warn.
+
+**Report tables**
+
+- **The stripes did work on every scroll.** Every cell published an anchor, and
+  every scroll step resolved them all again: 847 anchor updates and 427 frame
+  look-ups per step on three 120-row, seven-column grids, at twice the
+  main-thread time of 1.2's static rows. Now only a striped row's label cell
+  reports (its padding sets the row's height), and the stripes and the total's
+  rule are drawn in one pass. That is 61 updates per step, at about the
+  main-thread time of 1.2's rows: a median of 1.4 ms per step, against 1.7 ms
+  for 1.2 and 3.0 ms for the reviewed code. These are from a scratch harness on
+  a quiet machine.
+- The stripe's colour and its odd-row rule are kept in one place
+  (`ReportTableView.stripe`, `isStriped`), for the grids, the long sections and
+  the phone's blocks alike.
+- `ReportTableStripeTests` let a `CGContext` keep a pointer to an array after
+  the call that made it. It now draws into the context's own buffer.
+
+**Prevention**
+
+- `scripts/check-localization.py` has a sixth check, **spec**. A requirement
+  number (`FR-…`, `NFR-…`, `ADR-…`) in a catalog entry, or in English a reader
+  meets, fails the gate.
+- `SymbolNameTests` reads every SF Symbol name in the sources of the app and its
+  extensions (186 in a scan when written) and asks AppKit for each one.
+- Whether GnuCash books import on this device has one answer,
+  `AppModel.canImportGnuCash`. The open message and the Import button both
+  follow it, and `ForeignBookErrorTests` checks both answers on the Mac.
+
+**Found by the final sweep, mostly in the fixes themselves**
+
+- **Revert swapped before it knew the book read.** It checked only that the
+  incoming file opened. A file torn by a sync opens, and only fails once its
+  tables are read — which happened after the working copy had been replaced and
+  the old connection closed. Revert now reads the whole incoming book, judges it
+  and takes the fingerprint first, refuses a file of no bytes, and replaces
+  `book` only after every step that can throw. So Reload's error path, which
+  keeps undo and the views, is right to treat the session as untouched.
+  `RevertReadsFirstTests` corrupts the second half of a 400-account book, and
+  empties another. Each test fails with its guard taken out. The book's load
+  warnings now travel with it (`loadWarnings` is set on open and on revert).
+  They had been read off whichever store read last, and the full suite caught
+  them empty after a revert.
+- **A read-only open unregistered the open book's lock.** `FileLock`'s deinit
+  told the signal reaper to forget its file whether or not that object had
+  held the lock. A read-only open of the book the app has open, the intents'
+  path at the time, made such an object, and the next SIGTERM would have left
+  the real lock to sync to every other Mac. The reaper now forgets an entry only
+  for the instance that registered it (`LockReaperEntryTests`, which fails with
+  the old forget). The intents no longer make a lock object at all, and no
+  longer hash the whole book for a fingerprint only saving uses.
+- **A working folder swept away whole.** The system's cleaner can take the
+  temporary working folder with the copy in it, from a book left untouched for
+  days. Then neither saving nor reverting worked, though revert is the way back.
+  Revert now makes the folder again. `SweptWorkingFolderTests` gives its
+  document a working folder of its own (`create(at:workingDirectory:)`) and
+  removes that, and it fails with the line taken out. Its first version removed
+  the shared folder in a run with `TMPDIR` pointed elsewhere, on the belief
+  that the folder would move too. It does not: Foundation's temporary directory
+  ignores `TMPDIR` on the Mac. That run deleted the shared folder's leftover
+  test books, twice.
+- **Over-wide key entries**, above.
+- **The symbol scan's blind spots.** A `? :` choice wrapped onto the next line,
+  the `icon:` label, and `RegisterSheet`'s image helper (eight names, passed
+  without a label) were out of its sight. The scan reads all three now (194
+  names; the helper takes `symbol:`).
+- **Alerts titled "Couldn't open book" over a book that was still open.** Reload,
+  Keep Your Version, Use the Other Version and Revert failures now say what
+  failed, in a title the error carries (`DocumentError.title`). So do failed
+  saves, a failed Ledger import and a failed Box upload, which had the same
+  title.
+
+Refuted, and left as they are: revert making an empty book when the working copy
+is missing (`replaceItemAt` does not fail when the original is absent; it moves
+the replacement into place), and revert leaving a closed store when the reopen
+fails, as a regression.
+
+## FinvestLens's own Box app, built in (8 Nov 2026)
+
+Opening a book from Box asked every person for a Box client ID and secret: they
+had to register a Box app of their own at developer.box.com first. The owner's
+decision is that the app uses FinvestLens's own Box app, and never shows its
+credentials to anyone. They are put into each build without ever being in the
+source tree, git or a log.
+
+- **Where the values live.** In the login Keychain of the Mac that builds, under
+  service `com.hellotham.finvestlens.box-app` (accounts `client-id`,
+  `client-secret`), readable by `/usr/bin/security` without asking.
+  `scripts/box-app-credentials.sh store` puts them there once per Mac. The secret
+  is not echoed, and the values go only through shell built-ins and pipes, never
+  into a command's arguments. This Mac's were copied from where the app had kept
+  them since August, without being printed.
+- **How they get into a build.** The app target's *Embed Box App* phase runs the
+  same script before compiling. It writes
+  `$(DERIVED_FILE_DIR)/BoxAppCredentials.swift` in the build folder, which
+  Compile Sources lists by a build-folder reference. The bytes are XOR-masked
+  with a key derived from the values, and the file is rewritten only when its
+  content would change, so an unchanged build recompiles nothing.
+  `finvestlens/BuiltInBoxApp.swift` unmasks them, and the app hands them to
+  `AppModel.builtInBoxApp` as it starts.
+- **What a build without them does.** A Release build stops. A Debug or CI build
+  asks for a Box app of the person's own, as before.
+- **What changes for the person.** With the built-in app, Settings ▸ General ▸
+  Box and the browser show no client ID or secret fields and no developer-console
+  instructions: only Connect, and a line saying that sign-in happens on Box's own
+  page. `boxConfiguration` uses the built-in app and reads neither the person's
+  client ID nor their secret's Keychain item. The help says to choose Open from
+  Box… and sign in.
+- **Kept out of sight.** `BoxAppConfiguration` and `BuiltInBoxCredentials`
+  describe and reflect themselves only as set or not, so `print`,
+  interpolation, `dump` and `po` never show the values
+  (`BoxAppConfigurationTests`, `BuiltInBoxAppTests`). A debugger reading memory
+  raw, as `frame variable` does, can find them, as it can any value in a
+  running app. The client ID also travels in Box's sign-in address, as every
+  OAuth app's does. This was checked on the
+  built Debug app, printing nothing but counts:
+  - the generated file is only in the build folder (no copy in the source tree,
+    none in `git status`);
+  - neither value appears as plain text anywhere in the app bundle or in the
+    build log;
+  - the unmasked values match the Keychain.
+
+  A scratch program with dummy values, built `-O -wmo`, kept none of them as
+  plain text either. Masking keeps the values from being read off the binary in
+  passing, not from someone set on it. Box has no PKCE, so a shipped app must
+  carry a secret, and the docs say so (`docs/architecture.md` §6.4).
+- **Tests.** `BuiltInBoxAppTests`: with the built-in app, that app is the
+  configuration, Box counts as set up, and the person's secret is never read.
+  Taking the built-in branch out fails three of its expectations. Without the
+  built-in app, the person's own settings work as before. `BoxAppConfigurationTests`
+  checks the redaction.
+- **Docs.** `FR-PLT-08`, the architecture's §6.4, the privacy policy ("as
+  FinvestLens's own Box app, which identifies the app to Box and gives us no
+  access to your account") and CLAUDE.md say the same.
+
+**Found by its own review, and fixed**
+
+- **A masking step that failed passed the Release stop.** The key came from
+  `shasum`, a Perl script; a stray `PERL5OPT` left it empty, the masked lists
+  came out empty, and the phase still said "built in". The build would then
+  have asked everyone for a Box app of their own. The key is now made in the
+  shell itself, and the lists are made one at a time and checked for length
+  and by unmasking them again. Any failure stops the build, in every
+  configuration. Tracing is off whatever the caller exported, so a `sh -x` run
+  prints no value. The secret prompt gives echo back on ⌃C. A locked Keychain
+  or a refused prompt is no longer reported as "not there". Checked with dummy
+  values and a broken `PERL5OPT`, with `sh -x` (no value in its output), and
+  with a corrupted key, which stops the build. This Mac's own items embed.
+- **The values printed in clear from the model.** `AppModel.builtInBoxApp` was
+  a bare tuple, which `dump` and `po` print. It is now `BuiltInBoxCredentials`.
+- **Tokens belong to the app that was issued them.** Box accepts a refresh
+  token only with its own app's credentials. So a person who had registered a
+  Box app of their own was signed out an hour into the session, as though the
+  sign-in had expired. Tokens now carry their issuer's client ID. When the
+  built-in app arrives, tokens from another app are retired at once, with a
+  notice by Connect saying why. Older tokens are judged by the client ID the
+  person had set. An authenticator never sends tokens of another app
+  (`BoxTokenIssuerTests`, `BuiltInBoxAppTests`).
+- **Box refusing the app itself is not a lost grant.** `invalid_client` and
+  `unauthorized_client` mean the app was refused: its secret reset, or the app
+  disabled. Wiping the grant over that made an endless "Connect again". Those
+  refusals are now their own error, which says the books are safe on the device,
+  and the grant is kept for when Box accepts the app again.
+- The person's own client ID and secret, unused while the built-in app is,
+  are kept: deleting someone's settings cannot be undone, and nothing needs it.
+

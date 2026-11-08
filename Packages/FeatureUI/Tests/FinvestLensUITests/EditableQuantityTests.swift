@@ -62,7 +62,7 @@ struct EditableQuantityTests {
             .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let book = try #require(model.book)
         let bhpCommodity = Commodity(namespace: .security("ASX"), mnemonic: "BHP",

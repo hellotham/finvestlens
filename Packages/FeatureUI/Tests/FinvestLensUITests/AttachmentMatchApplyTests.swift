@@ -24,7 +24,7 @@ struct AttachmentMatchApplyTests {
     func oneEdit() throws {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         let model = AppModel()
         let undo = UndoManager()
         model.undoManager = undo
@@ -75,7 +75,7 @@ struct AttachmentMatchApplyTests {
     func sameTransactionTwice() throws {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         let model = AppModel()
         try model.newDocument(at: url)
         defer { model.close() }

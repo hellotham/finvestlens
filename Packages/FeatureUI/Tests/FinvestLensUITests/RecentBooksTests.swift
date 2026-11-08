@@ -28,7 +28,7 @@ struct RecentBooksTests {
     func movedRecentIsFound() throws {
         let base = FileManager.default.temporaryDirectory
             .appendingPathComponent("recents-\(UUID().uuidString)", isDirectory: true)
-        defer { try? FileManager.default.removeItem(at: base) }
+        defer { removeBook(at: base) }
         let before = base.appendingPathComponent("Container-A", isDirectory: true)
         let after = base.appendingPathComponent("Container-B", isDirectory: true)
         try FileManager.default.createDirectory(at: before, withIntermediateDirectories: true)
@@ -54,7 +54,7 @@ struct RecentBooksTests {
     func unmovedRecentStays() throws {
         let base = FileManager.default.temporaryDirectory
             .appendingPathComponent("recents-\(UUID().uuidString)", isDirectory: true)
-        defer { try? FileManager.default.removeItem(at: base) }
+        defer { removeBook(at: base) }
         try FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
         let book = base.appendingPathComponent("Household.finvestlens")
         try Data("a book".utf8).write(to: book)

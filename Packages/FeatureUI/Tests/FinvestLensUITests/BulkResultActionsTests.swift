@@ -60,7 +60,7 @@ struct BulkResultActionsTests {
     @Test("Deleting several results is one edit and one undo")
     func bulkDelete() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         let undo = UndoManager()
         f.model.undoManager = undo
         undo.removeAllActions()
@@ -75,7 +75,7 @@ struct BulkResultActionsTests {
     @Test("Voiding several results voids all their splits")
     func bulkVoid() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         f.model.voidTransactions(Array(f.txns.prefix(2)))
         let book = try #require(f.model.book)
         for id in f.txns.prefix(2) {
@@ -94,7 +94,7 @@ struct BulkResultActionsTests {
     @Test("Bulk reconcile marks the matched splits and only those")
     func bulkReconcileMarksMatches() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         findCheques(f)
         #expect(f.model.searchResults.count == 4)
 
@@ -113,7 +113,7 @@ struct BulkResultActionsTests {
     @Test("Bulk reconcile without a find does nothing rather than guessing")
     func bulkReconcileNeedsAFind() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         // No find has run, so no result remembers a matched split.
         f.model.setReconcileStateOfMatches(in: f.txns, to: .cleared)
         let book = try #require(f.model.book)
@@ -128,7 +128,7 @@ struct BulkResultActionsTests {
     @Test("A refined result set survives an edit")
     func refinedResultsSurviveEdits() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         findCheques(f)
         // Narrow to the two cheapest cheques.
         f.model.runFind(FindQuery(criteria: [
@@ -149,7 +149,7 @@ struct BulkResultActionsTests {
     @Test("Deleting results removes their rows and keeps the rest")
     func deletePrunesResults() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         findCheques(f)
         f.model.deleteTransactions([f.txns[0], f.txns[2]])
         #expect(f.model.searchResults.map(\.description).sorted() == ["Cheque 1", "Cheque 3"])

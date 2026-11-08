@@ -37,8 +37,8 @@ struct LinkedDocumentsListTests {
         defer {
             model.configuredDocumentFolder = priorFolder
             model.close()
-            try? FileManager.default.removeItem(at: url)
-            try? FileManager.default.removeItem(at: folder)
+            removeBook(at: url)
+            removeBook(at: folder)
         }
 
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
@@ -78,7 +78,7 @@ struct LinkedDocumentsListTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let expense = try #require(model.addAccount(name: "Office", type: .expense))

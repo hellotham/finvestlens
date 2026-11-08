@@ -25,7 +25,7 @@ struct AccountCodeTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let parent = try #require(model.addAccount(name: "Assets", type: .asset))
         _ = model.addAccount(name: "Bank", type: .bank, parentID: parent)

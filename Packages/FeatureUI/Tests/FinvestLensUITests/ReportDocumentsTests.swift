@@ -28,7 +28,7 @@ struct ReportDocumentsTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let food = try #require(model.addAccount(name: "Food", type: .expense))
@@ -52,7 +52,7 @@ struct ReportDocumentsTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let salary = try #require(model.addAccount(name: "Salary", type: .income))
@@ -71,7 +71,7 @@ struct ReportDocumentsTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         _ = try #require(model.addAccount(name: "Bank", type: .bank))
 
         #expect(model.portfolioDocument() == nil)

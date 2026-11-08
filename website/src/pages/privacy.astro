@@ -2,7 +2,7 @@
 import Base from '../layouts/Base.astro';
 import PageHeader from '../components/PageHeader.astro';
 import { site, url } from '../data/site';
-const updated = '4 November 2026';
+const updated = '8 November 2026';
 ---
 
 <Base
@@ -96,8 +96,9 @@ const updated = '4 November 2026';
         <strong>Your own Box account.</strong> If you connect a Box account, the app
         signs you in on Box’s own page and then reads and writes the book files you
         choose there — with Open from Box…, and when you save as described above —
-        directly between your device and Box. We never see your Box credentials or your
-        files.
+        directly between your device and Box. It does so as FinvestLens’s own Box app,
+        which identifies the app to Box and gives us no access to your account: we
+        never see your Box credentials or your files.
       </p>
       <p>
         <strong>Apple’s Private Cloud Compute.</strong> Where it is available,
@@ -121,10 +122,10 @@ const updated = '4 November 2026';
 
       <h2>API keys and credentials</h2>
       <p>
-        Keys for the keyed price providers, and the client secret and sign-in tokens
-        of your Box app, are stored in the Keychain on the device you enter them on.
-        They are never written into your book file and are never transmitted anywhere
-        except to the service they belong to.
+        Keys you enter for the keyed price providers, and the tokens Box issues when
+        you sign in, are stored in the Keychain on that device. They are never written
+        into your book file and are never transmitted anywhere except to the service
+        they belong to.
       </p>
 
       <h2>Local authentication</h2>

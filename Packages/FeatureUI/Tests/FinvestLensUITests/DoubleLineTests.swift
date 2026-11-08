@@ -33,7 +33,7 @@ struct DoubleLineTests {
     @Test("A new transaction can be given notes, and they come back")
     func notesRoundTripThroughTheEditor() throws {
         let (model, url, bank, food) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let id = try model.addTransaction(
             date: Date(timeIntervalSince1970: 0), description: "Shop", currency: .aud,
@@ -50,7 +50,7 @@ struct DoubleLineTests {
     @Test("Notes, memo and action can all be edited")
     func fieldsAreEditable() throws {
         let (model, url, bank, food) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let id = try model.addTransaction(
             date: Date(timeIntervalSince1970: 0), description: "Shop", currency: .aud,
@@ -77,7 +77,7 @@ struct DoubleLineTests {
     @Test("Omitting notes leaves existing notes alone")
     func omittedNotesArePreserved() throws {
         let (model, url, bank, food) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let id = try model.addTransaction(
             date: Date(timeIntervalSince1970: 0), description: "Shop", currency: .aud,
@@ -112,7 +112,7 @@ struct DoubleLineTests {
     @Test("Register rows carry the transaction's notes and the split's action")
     func registerRowCarriesNotes() throws {
         let (model, url, bank, food) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         _ = try model.addTransaction(
             date: Date(timeIntervalSince1970: 0), description: "Shop", currency: .aud,

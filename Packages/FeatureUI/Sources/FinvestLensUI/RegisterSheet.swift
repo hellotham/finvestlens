@@ -654,7 +654,7 @@ private enum SheetSymbols {
     /// in secondary grey at 10pt — the faintest thing in the row — against
     /// 61.7 here.
     static func paperclip(_ s: CGFloat) -> NSImage? {
-        make("paperclip", NSColor(Color.appAccent), 12 * s, .bold)
+        make(symbol: "paperclip", NSColor(Color.appAccent), 12 * s, .bold)
     }
     // Interactive glyphs use `labelColor`, not the secondary/tertiary greys
     // they started in. Measured against the register's own alternating row
@@ -669,37 +669,37 @@ private enum SheetSymbols {
     /// scores 87.1, against the bare `pencil`'s 22.3 (which is why dropping
     /// the square made it fainter, not bolder) and the caret's 49.0.
     static func pencil(_ s: CGFloat) -> NSImage? {
-        make("square.and.pencil", NSColor(Color.appAccent), 15 * s, .semibold)
+        make(symbol: "square.and.pencil", NSColor(Color.appAccent), 15 * s, .semibold)
     }
 
     /// Genuinely filled, and red: this one discards work, so it is the one
     /// place a stronger signal than the accent is right. `xmark.circle.fill`
     /// scores 151.8 ink mass against the outline ring's 61.2.
     static func cancel(_ s: CGFloat) -> NSImage? {
-        make("xmark.circle.fill", .systemRed, 14 * s, knockout: .white)
+        make(symbol: "xmark.circle.fill", .systemRed, 14 * s, knockout: .white)
     }
 
     static func addSplit(_ s: CGFloat) -> NSImage? {
-        make("plus.circle", .labelColor, 11 * s)
+        make(symbol: "plus.circle", .labelColor, 11 * s)
     }
     /// The disclosure triangle. HIG *Disclosure controls*: it "points inward
     /// from the leading edge when its content is hidden and down when its
     /// content is visible" — hence a triangle, not a chevron. Sized to match
     /// the reconcile glyphs rather than the 9pt it began at.
     static func caret(open: Bool, _ s: CGFloat) -> NSImage? {
-        make(open ? "arrowtriangle.down.fill" : "arrowtriangle.right.fill",
+        make(symbol: open ? "arrowtriangle.down.fill" : "arrowtriangle.right.fill",
              NSColor(Color.appAccent), 11 * s)
     }
     static func removeSplit(_ s: CGFloat) -> NSImage? {
-        make("minus.circle", .labelColor, 11 * s)
+        make(symbol: "minus.circle", .labelColor, 11 * s)
     }
     /// Same two-layer trap as `cancel`: with one palette colour this drew a
     /// plain orange triangle, mass identical to `triangle.fill`, no "!".
     static func warning(_ s: CGFloat) -> NSImage? {
-        make("exclamationmark.triangle.fill", .systemOrange, 10 * s, knockout: .white)
+        make(symbol: "exclamationmark.triangle.fill", .systemOrange, 10 * s, knockout: .white)
     }
     static func sort(reversed: Bool, _ s: CGFloat) -> NSImage? {
-        make(reversed ? "chevron.down" : "chevron.up", .secondaryLabelColor, 8 * s)
+        make(symbol: reversed ? "chevron.down" : "chevron.up", .secondaryLabelColor, 8 * s)
     }
 
     /// Weight is the lever for "solid": a thin outline anti-aliases to many
@@ -716,7 +716,7 @@ private enum SheetSymbols {
     /// first — never evaluates it: the accent callers pass
     /// `NSColor(Color.appAccent)`, a defaults read and a colour conversion
     /// that used to run per paperclip, pencil and caret drawn (R9).
-    private static func make(_ name: String, _ color: @autoclosure () -> NSColor, _ size: CGFloat,
+    private static func make(symbol name: String, _ color: @autoclosure () -> NSColor, _ size: CGFloat,
                              _ weight: NSFont.Weight = .regular,
                              knockout: NSColor? = nil) -> NSImage? {
         let key = "\(name)|\(Int(size.rounded()))|\(weight.rawValue)|\(knockout != nil)"

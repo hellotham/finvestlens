@@ -35,7 +35,7 @@ struct EditingTests {
     @Test("Multi-split transaction must balance")
     func multiSplitBalancing() throws {
         let (model, bank, salary, groceries, url) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         // Unbalanced → throws.
         #expect(throws: TransactionEntryError.self) {
@@ -59,7 +59,7 @@ struct EditingTests {
     @Test("Delete, duplicate and reverse")
     func lifecycle() throws {
         let (model, bank, salary, _, url) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let txn = try model.addTransaction(date: Date(), description: "Pay", currency: .aud, splits: [
             SplitInput(accountID: bank, value: 100), SplitInput(accountID: salary, value: -100),
@@ -83,7 +83,7 @@ struct EditingTests {
     @Test("Voiding removes a transaction from balances")
     func voiding() throws {
         let (model, bank, salary, _, url) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let txn = try model.addTransaction(date: Date(), description: "Pay", currency: .aud, splits: [
             SplitInput(accountID: bank, value: 100), SplitInput(accountID: salary, value: -100),
@@ -99,7 +99,7 @@ struct EditingTests {
     @Test("Reconcile state cycles n → c → y → n")
     func reconcileCycle() throws {
         let (model, bank, salary, _, url) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         try model.addTransaction(date: Date(), description: "Pay", currency: .aud, splits: [
             SplitInput(accountID: bank, value: 100), SplitInput(accountID: salary, value: -100),
@@ -121,7 +121,7 @@ struct EditingTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let assets = try #require(model.addAccount(name: "Assets", type: .asset))
         let bank = try #require(model.addAccount(name: "Bank", type: .bank, parentID: assets))
@@ -134,7 +134,7 @@ struct EditingTests {
     @Test("Search matches description and account name")
     func search() throws {
         let (model, bank, salary, groceries, url) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         try model.addTransaction(date: Date(), description: "Woolworths", currency: .aud, splits: [
             SplitInput(accountID: groceries, value: 50), SplitInput(accountID: bank, value: -50),
@@ -162,7 +162,7 @@ struct EditingTests {
     @Test("Editing a transaction in place, with re-validation")
     func editTransaction() throws {
         let (model, bank, salary, groceries, url) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let txn = try model.addTransaction(date: Date(), description: "Pay", currency: .aud, splits: [
             SplitInput(accountID: bank, value: 100), SplitInput(accountID: salary, value: -100),
@@ -194,7 +194,7 @@ struct EditingTests {
     @Test("Jump selects the counter-account")
     func jump() throws {
         let (model, bank, salary, _, url) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         try model.addTransaction(date: Date(), description: "Pay", currency: .aud, splits: [
             SplitInput(accountID: bank, value: 100), SplitInput(accountID: salary, value: -100),
@@ -208,7 +208,7 @@ struct EditingTests {
     @Test("Editing an account's fields")
     func editAccount() throws {
         let (model, bank, _, _, url) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let edit = try #require(model.editData(forAccount: bank))
         #expect(edit.name == "Bank")
@@ -222,7 +222,7 @@ struct EditingTests {
     @Test("QuickFill suggests and templates recent entries")
     func quickFill() throws {
         let (model, bank, _, groceries, url) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         try model.addTransaction(date: Date(timeIntervalSince1970: 1), description: "Coffee Shop",
                                  currency: .aud, splits: [

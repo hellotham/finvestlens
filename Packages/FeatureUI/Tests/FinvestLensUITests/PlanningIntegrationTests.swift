@@ -36,7 +36,7 @@ struct PlanningIntegrationTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         _ = try #require(model.addAccount(name: "Visa", type: .credit))
@@ -74,7 +74,7 @@ struct PlanningIntegrationTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let salary = try #require(model.addAccount(name: "Salary", type: .income))
@@ -113,7 +113,7 @@ struct PlanningIntegrationTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let bank = try #require(model.addAccount(name: "Everyday", type: .bank))
         let smsf = try #require(model.addAccount(name: "SMSF Cash", type: .bank))
@@ -143,7 +143,7 @@ struct PlanningIntegrationTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let salary = try #require(model.addAccount(name: "Salary", type: .income))
@@ -191,8 +191,8 @@ struct PlanningIntegrationTests {
         try model.newDocument(at: url)
         defer {
             model.close()
-            try? FileManager.default.removeItem(at: url)
-            if let log = model.auditLogURL { try? FileManager.default.removeItem(at: log) }
+            removeBook(at: url)
+            if let log = model.auditLogURL { removeBook(at: log) }
         }
 
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))

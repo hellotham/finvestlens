@@ -38,7 +38,7 @@ struct LivePriceHealthTests {
             .appendingPathComponent("flph-\(UUID().uuidString).finvestlens")
         try FileManager.default.copyItem(at: source, to: copy)
         defer {
-            try? FileManager.default.removeItem(at: copy)
+            removeBook(at: copy)
             try? FileManager.default.removeItem(at: URL(fileURLWithPath: copy.path + ".audit.log"))
         }
 
@@ -145,7 +145,7 @@ struct LivePriceHealthTests {
             .appendingPathComponent("fllots-\(UUID().uuidString).finvestlens")
         try FileManager.default.copyItem(at: source, to: copy)
         defer {
-            try? FileManager.default.removeItem(at: copy)
+            removeBook(at: copy)
             try? FileManager.default.removeItem(at: URL(fileURLWithPath: copy.path + ".audit.log"))
         }
 
@@ -212,7 +212,7 @@ struct LivePriceHealthTests {
             .appendingPathComponent("flrows-\(UUID().uuidString).finvestlens")
         try FileManager.default.copyItem(at: source, to: copy)
         defer {
-            try? FileManager.default.removeItem(at: copy)
+            removeBook(at: copy)
             try? FileManager.default.removeItem(at: URL(fileURLWithPath: copy.path + ".audit.log"))
         }
 

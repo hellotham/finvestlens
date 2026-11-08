@@ -59,7 +59,7 @@ struct BondPricingTests {
     @Test("A bond bought in $100 parcels keeps the market's per-100 figure")
     func perHundredConvention() throws {
         let (model, url) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let bnp = bond("AU3CB0327641")
         try buy(model, bnp, units: 500, perUnit: dec("100.6"))
@@ -73,7 +73,7 @@ struct BondPricingTests {
     @Test("A bond held in dollars of face stays par-relative")
     func parRelativeConvention() throws {
         let (model, url) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let jem = bond("AU300JEMF025")
         try buy(model, jem, units: 60_000, perUnit: dec("0.8268"))
@@ -86,7 +86,7 @@ struct BondPricingTests {
     @Test("One book can hold both conventions")
     func bothAtOnce() throws {
         let (model, url) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let parcels = bond("AU3CB0328482")
         let face = bond("AU300JEMF025")
@@ -111,7 +111,7 @@ struct BondPricingTests {
     @Test("Only a par-percent provider is rescaled")
     func onlyParPercentProviders() throws {
         let (model, url) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let share = Commodity(namespace: .security("ASX"), mnemonic: "BHP.AX",
                               fullName: "BHP", smallestFraction: 10_000)
@@ -127,7 +127,7 @@ struct BondPricingTests {
     @Test("An unbought security falls back to par-relative")
     func noHistory() throws {
         let (model, url) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let unknown = bond("XS9999999999")
         #expect(model.establishedUnitPrice(for: unknown) == nil)
@@ -220,7 +220,7 @@ struct NarrativeFXTests {
             .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let card = try #require(model.addAccount(name: "Card", type: .credit, commodity: .aud))
         let spend = try #require(model.addAccount(name: "Lodging", type: .expense, commodity: .aud))
@@ -274,7 +274,7 @@ struct CardFeeTests {
     @Test("The fee leaves the goods leg and lands on its own, in both units")
     func feeSplit() throws {
         let (model, url) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let card = try #require(model.addAccount(name: "Card", type: .credit, commodity: .aud))
         let lodging = try #require(model.addAccount(name: "Lodging", type: .expense, commodity: .aud))
@@ -310,7 +310,7 @@ struct CardFeeTests {
     @Test("A transaction that already has its fee out is left alone")
     func idempotent() throws {
         let (model, url) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let card = try #require(model.addAccount(name: "Card", type: .credit, commodity: .aud))
         let lodging = try #require(model.addAccount(name: "Lodging", type: .expense, commodity: .aud))
@@ -332,7 +332,7 @@ struct CardFeeTests {
     @Test("Asking without applying writes nothing")
     func dryRunWritesNothing() throws {
         let (model, url) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let card = try #require(model.addAccount(name: "Card", type: .credit, commodity: .aud))
         let lodging = try #require(model.addAccount(name: "Lodging", type: .expense, commodity: .aud))
@@ -356,7 +356,7 @@ struct CardFeeTests {
     @Test("A transfer into a foreign account is credited in that currency")
     func foreignAccountQuantity() throws {
         let (model, url) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let card = try #require(model.addAccount(name: "Card", type: .credit, commodity: .aud))
         let myr = try #require(model.resolveCurrencyCode("MYR"))
@@ -405,7 +405,7 @@ struct FundamentalsRoutingTests {
     @Test("A security identified by ISIN asks FIIG for its profile")
     func bondsGoToFIIG() throws {
         let (model, url) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         var bond = Commodity(namespace: .security("Bond"), mnemonic: "BNP-7.00%-02Jun31c",
                              fullName: "BNP", smallestFraction: 10_000)
@@ -417,7 +417,7 @@ struct FundamentalsRoutingTests {
     @Test("A share is not sent to the bond index")
     func sharesDoNot() throws {
         let (model, url) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let share = Commodity(namespace: .security("ASX"), mnemonic: "BHP.AX",
                               fullName: "BHP", smallestFraction: 10_000)
@@ -428,7 +428,7 @@ struct FundamentalsRoutingTests {
     @Test("The user's own choice outranks the ISIN shortcut")
     func explicitChoiceWins() throws {
         let (model, url) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         var bond = Commodity(namespace: .security("Bond"), mnemonic: "SOMEBOND",
                              fullName: "Some Bond", smallestFraction: 10_000)
@@ -495,7 +495,7 @@ struct UnquotedSecurityTests {
     @Test("A hand-valued security is asked for neither prices nor company data")
     func excludedFromBothFetches() throws {
         let (model, url) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let option = fund("MLC Growth")
         _ = try #require(model.addAccount(name: "Super", type: .stock, commodity: option))
@@ -513,7 +513,7 @@ struct UnquotedSecurityTests {
     @Test("Hand-valued is not the same as no longer trading")
     func notTheSameAsDelisted() throws {
         let (model, url) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let option = fund("WSSP-B")
         _ = try #require(model.addAccount(name: "Super", type: .stock, commodity: option))
@@ -526,7 +526,7 @@ struct UnquotedSecurityTests {
     @Test("The mark is reversible and survives a save")
     func reversibleAndPersisted() async throws {
         let (model, url) = try book()
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
 
         let option = fund("HPA Member")
         _ = try #require(model.addAccount(name: "Super", type: .stock, commodity: option))
@@ -569,7 +569,7 @@ struct PreferredProviderTests {
     @Test("A configured keyed provider beats the keyless default")
     func keyedProviderWins() throws {
         let (model, url) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         // Whatever the environment has, the rule is the same: never Yahoo when
         // a keyed provider is available and nothing else was chosen.
@@ -586,7 +586,7 @@ struct PreferredProviderTests {
     @Test("The book's own choice wins and is remembered")
     func explicitChoiceWinsAndPersists() async throws {
         let (model, url) = try book()
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
 
         model.preferredQuoteProvider = .yahoo
         #expect(model.preferredProvider == .yahoo)
@@ -604,7 +604,7 @@ struct PreferredProviderTests {
     @Test("There is one default, under two names")
     func oneDefinition() throws {
         let (model, url) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         #expect(model.preferredProvider == model.preferredQuoteProvider)
     }
 }

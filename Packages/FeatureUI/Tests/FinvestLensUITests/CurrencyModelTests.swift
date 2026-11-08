@@ -34,7 +34,7 @@ struct CurrencyModelTests {
     @Test("Currency list reflects account commodities")
     func currencies() throws {
         let (model, _, _, url) = try model()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let codes = model.currencyCommodities.map(\.mnemonic)
         #expect(codes.contains("AUD"))
         #expect(codes.contains("USD"))
@@ -43,7 +43,7 @@ struct CurrencyModelTests {
     @Test("Currency transfer balances and records a rate/rate row")
     func transfer() throws {
         let (model, aud, usd, url) = try model()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         // Move 300 AUD out, 200 USD in (rate AUD→USD = 0.6667).
         try model.recordCurrencyTransfer(fromID: aud, toID: usd,
@@ -60,7 +60,7 @@ struct CurrencyModelTests {
     @Test("Added rate values a foreign balance sheet")
     func rateValuation() throws {
         let (model, _, usd, url) = try model()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let opening = try #require(model.addAccount(name: "USD Opening", type: .equity, commodity: .usd))
         // Deposit 200 USD from a USD-denominated equity account.
         try model.addTransaction(date: day(1), description: "USD in", currency: .usd, splits: [
@@ -77,7 +77,7 @@ struct CurrencyModelTests {
     @Test("Same-currency transfer throws")
     func sameCurrency() throws {
         let (model, aud, _, url) = try model()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let aud2 = try #require(model.addAccount(name: "AUD Savings", type: .bank, commodity: .aud))
         #expect(throws: CurrencyEntryError.sameCurrency) {
             try model.recordCurrencyTransfer(fromID: aud, toID: aud2,

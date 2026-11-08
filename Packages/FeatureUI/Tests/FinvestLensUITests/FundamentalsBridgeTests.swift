@@ -99,8 +99,8 @@ struct FundamentalsBridgeTests {
         let (model, bookURL, cacheDirectory) = try model(http)
         defer {
             model.close()
-            try? FileManager.default.removeItem(at: bookURL)
-            try? FileManager.default.removeItem(at: cacheDirectory)
+            removeBook(at: bookURL)
+            removeBook(at: cacheDirectory)
         }
         let commodity = share(model)
 
@@ -132,8 +132,8 @@ struct FundamentalsBridgeTests {
         let (model, bookURL, cacheDirectory) = try model(http)
         defer {
             model.close()
-            try? FileManager.default.removeItem(at: bookURL)
-            try? FileManager.default.removeItem(at: cacheDirectory)
+            removeBook(at: bookURL)
+            removeBook(at: cacheDirectory)
         }
         let commodity = share(model)
 
@@ -157,8 +157,8 @@ struct FundamentalsBridgeTests {
         let (model, bookURL, cacheDirectory) = try model(http)
         defer {
             model.close()
-            try? FileManager.default.removeItem(at: bookURL)
-            try? FileManager.default.removeItem(at: cacheDirectory)
+            removeBook(at: bookURL)
+            removeBook(at: cacheDirectory)
         }
         let first = share(model)
         let second = Commodity(namespace: .security("ASX"), mnemonic: "ABC",
@@ -180,8 +180,8 @@ struct FundamentalsBridgeTests {
         let (model, bookURL, cacheDirectory) = try model(http)
         defer {
             model.close()
-            try? FileManager.default.removeItem(at: bookURL)
-            try? FileManager.default.removeItem(at: cacheDirectory)
+            removeBook(at: bookURL)
+            removeBook(at: cacheDirectory)
         }
         let bond = Commodity(namespace: .security("Bond"), mnemonic: "BOND1",
                              fullName: "A bond", smallestFraction: 100,
@@ -205,8 +205,8 @@ struct FundamentalsBridgeTests {
         let (model, bookURL, cacheDirectory) = try model(http)
         defer {
             model.close()
-            try? FileManager.default.removeItem(at: bookURL)
-            try? FileManager.default.removeItem(at: cacheDirectory)
+            removeBook(at: bookURL)
+            removeBook(at: cacheDirectory)
         }
         let commodity = share(model)
         // Stooq is a CSV of closes and nothing else. Falling back to Yahoo is
@@ -226,8 +226,8 @@ struct FundamentalsBridgeTests {
         let (model, bookURL, cacheDirectory) = try model(http)
         defer {
             model.close()
-            try? FileManager.default.removeItem(at: bookURL)
-            try? FileManager.default.removeItem(at: cacheDirectory)
+            removeBook(at: bookURL)
+            removeBook(at: cacheDirectory)
         }
         let commodity = share(model)
 
@@ -255,8 +255,8 @@ struct FundamentalsBridgeTests {
         let (model, bookURL, cacheDirectory) = try model(http)
         defer {
             model.close()
-            try? FileManager.default.removeItem(at: bookURL)
-            try? FileManager.default.removeItem(at: cacheDirectory)
+            removeBook(at: bookURL)
+            removeBook(at: cacheDirectory)
         }
         let commodity = share(model)
 
@@ -289,8 +289,8 @@ struct FundamentalsBridgeTests {
                              fundamentalsCache: FundamentalsCache(directory: cacheDirectory))
         defer {
             model.close()
-            try? FileManager.default.removeItem(at: bookURL)
-            try? FileManager.default.removeItem(at: cacheDirectory)
+            removeBook(at: bookURL)
+            removeBook(at: cacheDirectory)
         }
         try model.newDocument(at: bookURL)
         let commodity = share(model)
@@ -311,8 +311,8 @@ struct FundamentalsBridgeTests {
         let (model, bookURL, cacheDirectory) = try model(http)
         defer {
             model.close()
-            try? FileManager.default.removeItem(at: bookURL)
-            try? FileManager.default.removeItem(at: cacheDirectory)
+            removeBook(at: bookURL)
+            removeBook(at: cacheDirectory)
         }
         let commodity = share(model)
 
@@ -336,8 +336,8 @@ struct FundamentalsBridgeTests {
                              fundamentalsCache: FundamentalsCache(directory: cacheDirectory))
         defer {
             model.close()
-            try? FileManager.default.removeItem(at: bookURL)
-            try? FileManager.default.removeItem(at: cacheDirectory)
+            removeBook(at: bookURL)
+            removeBook(at: cacheDirectory)
         }
         try model.newDocument(at: bookURL)
         let bond = Commodity(namespace: .security("Bond"), mnemonic: "BOND1",
@@ -359,8 +359,8 @@ struct FundamentalsBridgeTests {
         let (model, bookURL, cacheDirectory) = try model(http)
         defer {
             model.close()
-            try? FileManager.default.removeItem(at: bookURL)
-            try? FileManager.default.removeItem(at: cacheDirectory)
+            removeBook(at: bookURL)
+            removeBook(at: cacheDirectory)
         }
         let commodity = share(model)
         let before = model.fundamentalsRevision

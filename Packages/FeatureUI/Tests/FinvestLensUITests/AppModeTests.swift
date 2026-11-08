@@ -122,7 +122,7 @@ struct AppModeTests {
     @Test("Every mode's home is a row its sidebar carries")
     func homeIsSelectable() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         for mode in AppMode.allCases {
             let home = mode.defaultSelection
@@ -143,7 +143,7 @@ struct AppModeTests {
     @Test("A mode remembers where it was")
     func modesKeepTheirPlace() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         f.model.selectedAccountID = f.bank
         #expect(f.model.mode == .accounts)
@@ -159,7 +159,7 @@ struct AppModeTests {
     @Test("Navigating to another mode's destination switches mode")
     func navigateCrossesModes() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         f.model.navigate(to: .budgets)
         #expect(f.model.mode == .planning)
@@ -179,7 +179,7 @@ struct AppModeTests {
     @Test("Clearing the account stays in Accounts")
     func clearingStaysPut() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         f.model.selectedAccountID = f.bank
         f.model.selectedAccountID = nil
@@ -190,7 +190,7 @@ struct AppModeTests {
     @Test("Closing the book forgets every mode's place")
     func closeResetsNavigation() throws {
         let f = try makeFixture()
-        defer { try? FileManager.default.removeItem(at: f.url) }
+        defer { removeBook(at: f.url) }
 
         f.model.navigate(to: .budgets)
         f.model.selectedAccountID = f.bank
@@ -208,7 +208,7 @@ struct AppModeTests {
     func sessionRoundTrip() async throws {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         defer { UserDefaults.standard.removeObject(forKey: navigationKey(url)) }
 
         let first = AppModel()
@@ -236,7 +236,7 @@ struct AppModeTests {
     @Test("A pre-P12 session restores into the mode that owns it")
     func migratesFlatSelection() async throws {
         let url = try seededBook()
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         defer {
             UserDefaults.standard.removeObject(forKey: legacyKey(url))
             UserDefaults.standard.removeObject(forKey: navigationKey(url))
@@ -258,7 +258,7 @@ struct AppModeTests {
     @Test("The pre-P11 “prices” spelling still restores")
     func migratesPricesSpelling() async throws {
         let url = try seededBook()
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         defer {
             UserDefaults.standard.removeObject(forKey: legacyKey(url))
             UserDefaults.standard.removeObject(forKey: navigationKey(url))
@@ -278,7 +278,7 @@ struct AppModeTests {
     @Test("A vanished account falls back to its mode's home")
     func vanishedAccountFallsBack() async throws {
         let url = try seededBook()
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         defer { UserDefaults.standard.removeObject(forKey: navigationKey(url)) }
 
         // A stored desk pointing at an account this book has never had, beside

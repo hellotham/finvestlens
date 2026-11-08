@@ -26,7 +26,7 @@ struct SecuritiesTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let cba = Commodity(namespace: .security("ASX"), mnemonic: "CBA",
                             fullName: "Commonwealth", smallestFraction: 10000)
@@ -56,7 +56,7 @@ struct SecuritiesTests {
         try model.save(); model.close()
         let reopened = AppModel()
         try await reopened.open(at: url)
-        defer { reopened.close(); try? FileManager.default.removeItem(at: url) }
+        defer { reopened.close(); removeBook(at: url) }
         #expect(reopened.watchlist.first?.mnemonic == "AAPL")
     }
 }

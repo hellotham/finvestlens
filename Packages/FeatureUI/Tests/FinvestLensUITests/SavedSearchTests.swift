@@ -34,7 +34,7 @@ struct SavedSearchTests {
 
         let reopened = AppModel()
         try await reopened.open(at: url)
-        defer { reopened.close(); try? FileManager.default.removeItem(at: url) }
+        defer { reopened.close(); removeBook(at: url) }
         #expect(reopened.savedSearches.first?.name == "Big work")
         reopened.applySavedSearch(reopened.savedSearches.first!.id)
         #expect(reopened.searchQuery == "tag:work amount:>100")

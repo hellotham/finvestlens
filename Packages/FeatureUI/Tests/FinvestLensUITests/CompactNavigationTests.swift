@@ -40,7 +40,7 @@ struct CompactNavigationTests {
 
     private func finish(_ f: Fixture) {
         f.model.close()
-        try? FileManager.default.removeItem(at: f.url)
+        removeBook(at: f.url)
     }
 
     /// The defect this exists to prevent: every account looked at on a phone

@@ -50,7 +50,7 @@ struct FinancialReviewTests {
     @Test("Slides appear only where the book has something to present")
     func slideSelection() throws {
         let (model, url, date) = try makeCashBook()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let slides = model.financialReviewSlides(
             from: date.addingTimeInterval(-86_400 * 30),
@@ -80,7 +80,7 @@ struct FinancialReviewTests {
     @Test("The net-worth bridge reconciles: opening + surplus + valuation = closing")
     func bridgeReconciles() throws {
         let (model, url, date) = try makeCashBook()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let from = date.addingTimeInterval(-86_400 * 30)
         let to = date.addingTimeInterval(86_400)
 
@@ -147,7 +147,7 @@ struct FinancialReviewTests {
     func investmentDeck() throws {
         // The cash book has no securities → no investment deck at all.
         let (cashModel, cashURL, cashDate) = try makeCashBook()
-        defer { cashModel.close(); try? FileManager.default.removeItem(at: cashURL) }
+        defer { cashModel.close(); removeBook(at: cashURL) }
         #expect(cashModel.investmentReviewSlides(
             from: .distantPast, to: cashDate.addingTimeInterval(86_400),
             label: "Test").isEmpty)
@@ -156,7 +156,7 @@ struct FinancialReviewTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let bank = try #require(model.addAccount(name: "Broker", type: .bank))
         let acme = Commodity(namespace: .security("ASX"), mnemonic: "ACME",
                              fullName: "Acme", smallestFraction: 10000)
@@ -207,7 +207,7 @@ struct FinancialReviewTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let bank = try #require(model.addAccount(name: "Everyday Card", type: .bank))
         let income = try #require(model.book?.account(with:
@@ -280,7 +280,7 @@ struct FinancialReviewTests {
     @Test("A percentage is written the reader's way")
     func percentages() throws {
         let (model, url, _) = try makeCashBook()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let english = Locale(identifier: "en_AU")
         #expect(model.reviewPercent(Decimal(string: "8.4")!, locale: english) == "8.4%")
         #expect(model.reviewPercent(26, places: 0, locale: english) == "26%")
@@ -301,7 +301,7 @@ struct FinancialReviewTests {
         // they have to be the same phrase and not two that happen to agree
         // in English.
         let (model, url, date) = try makeCashBook()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         // A year earlier, so that there is a prior period to compare with.
         let bank = try #require(model.postableAccounts.first { $0.name == "Bank" }?.id)
         let salary = try #require(model.postableAccounts.first { $0.name == "Salary" }?.id)

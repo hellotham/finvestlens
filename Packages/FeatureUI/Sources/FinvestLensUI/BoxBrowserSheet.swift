@@ -352,6 +352,16 @@ struct BoxConnectButton: View {
                 }
             }
             .disabled(connecting || !model.isBoxConfigured)
+            if let notice = model.boxSignInNotice, !model.isBoxSignedIn {
+                Label {
+                    Text(verbatim: notice)
+                } icon: {
+                    Image(systemName: "info.circle").foregroundStyle(.secondary)
+                }
+                .scaledFont(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            }
             if let failure {
                 // Red words in a caption fall short of the contrast small text
                 // needs (system red on white is about 3.6:1); the symbol
@@ -406,8 +416,10 @@ private struct BoxSetUpPage: View {
 
 // MARK: - Settings
 
-/// The Box app's client ID and secret, and the connection — in Settings, and
-/// in the browser when Box is not set up yet.
+/// The connection to Box — in Settings, and in the browser when Box is not set
+/// up yet — and, in a build without FinvestLens's own Box app, the client ID
+/// and secret of the person's own. With it there is nothing to set up, and
+/// nothing about it is shown (``AppModel/usesBuiltInBoxApp``).
 struct BoxSettingsSection: View {
     @Bindable var model: AppModel
     /// The field's own text, written to the model — and so to the Keychain —
@@ -416,36 +428,7 @@ struct BoxSettingsSection: View {
 
     var body: some View {
         Section("Box") {
-            // Labelled beside the field, not by its placeholder, which is gone
-            // once something is typed — on the phone that left an ID and a row
-            // of dots with nothing to say which was which.
-            LabeledContent("Box client ID") {
-                TextField("Box client ID", text: Binding(get: { model.boxClientID },
-                                                        set: { model.boxClientID = $0 }))
-                    .labelsHidden()
-                    .textFieldStyle(.roundedBorder)
-                    .autocorrectionDisabled()
-            }
-            // SecureField, and it goes to the Keychain rather than
-            // @AppStorage: Box has no PKCE, so the token exchange needs a
-            // real secret.
-            LabeledContent("Box client secret") {
-                SecureField("Box client secret", text: $secret)
-                    .labelsHidden()
-                    .textFieldStyle(.roundedBorder)
-                    .onSubmit { model.boxClientSecret = secret }
-                    .onChange(of: secret) { model.boxClientSecret = secret }
-            }
-            if let failure = model.boxSecretFailure {
-                Label {
-                    Text(verbatim: failure)
-                } icon: {
-                    Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.red)
-                }
-                .scaledFont(.caption)
-                .foregroundStyle(.secondary)
-                .onAppear { AccessibilityNotification.Announcement(failure).post() }
-            }
+            if !model.usesBuiltInBoxApp { ownBoxApp }
             HStack {
                 if model.isBoxSignedIn {
                     Button("Disconnect") { model.disconnectBox() }
@@ -454,16 +437,58 @@ struct BoxSettingsSection: View {
                     BoxConnectButton(model: model)
                 }
             }
-            Text("Create an app at developer.box.com (User Authentication, OAuth 2.0) with redirect URI \(AppModel.boxRedirectURI), then paste its client ID and secret here. Box does not support PKCE, so the secret is required; it is kept in the Keychain, not in preferences. Sign-in happens on Box’s own page — this app never sees your Box password, and the tokens are kept in the Keychain too.")
-                .scaledFont(.caption)
-                .foregroundStyle(.secondary)
+            if model.usesBuiltInBoxApp {
+                Text("You sign in on Box’s own page: FinvestLens never sees your Box password, and keeps the sign-in in the Keychain on this device.")
+                    .scaledFont(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                Text("Create an app at developer.box.com (User Authentication, OAuth 2.0) with redirect URI \(AppModel.boxRedirectURI), then paste its client ID and secret here. Box does not support PKCE, so the secret is required; it is kept in the Keychain, not in preferences. Sign-in happens on Box’s own page — this app never sees your Box password, and the tokens are kept in the Keychain too.")
+                    .scaledFont(.caption)
+                    .foregroundStyle(.secondary)
+            }
             Text("Open a book with Open from Box…, in the File menu or on the welcome screen. It is kept on this device while you work on it — a book is a database, which can’t run over a web connection — and goes up to Box as a new version when you save with ⌘S, close the book, switch books or quit; autosave keeps your work on this device until then. A version another device saved is never replaced: you’re asked what to keep.")
                 .scaledFont(.caption)
                 .foregroundStyle(.secondary)
         }
         // The secret lives in the Keychain, not in the view: without this the
         // field was empty every time Settings opened, and Connect stayed
-        // disabled until the secret was typed again.
-        .task { if secret.isEmpty { secret = model.boxClientSecret } }
+        // disabled until the secret was typed again. Not asked for at all
+        // where the build carries its own Box app.
+        .task { if !model.usesBuiltInBoxApp, secret.isEmpty { secret = model.boxClientSecret } }
+    }
+
+    /// The fields for a Box app of the person's own.
+    @ViewBuilder
+    private var ownBoxApp: some View {
+        // Labelled beside the field, not by its placeholder, which is gone
+        // once something is typed — on the phone that left an ID and a row
+        // of dots with nothing to say which was which.
+        LabeledContent("Box client ID") {
+            TextField("Box client ID", text: Binding(get: { model.boxClientID },
+                                                    set: { model.boxClientID = $0 }))
+                .labelsHidden()
+                .textFieldStyle(.roundedBorder)
+                .autocorrectionDisabled()
+        }
+        // SecureField, and it goes to the Keychain rather than
+        // @AppStorage: Box has no PKCE, so the token exchange needs a
+        // real secret.
+        LabeledContent("Box client secret") {
+            SecureField("Box client secret", text: $secret)
+                .labelsHidden()
+                .textFieldStyle(.roundedBorder)
+                .onSubmit { model.boxClientSecret = secret }
+                .onChange(of: secret) { model.boxClientSecret = secret }
+        }
+        if let failure = model.boxSecretFailure {
+            Label {
+                Text(verbatim: failure)
+            } icon: {
+                Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.red)
+            }
+            .scaledFont(.caption)
+            .foregroundStyle(.secondary)
+            .onAppear { AccessibilityNotification.Announcement(failure).post() }
+        }
     }
 }

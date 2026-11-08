@@ -27,7 +27,7 @@ struct RulesIntegrationTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let subs = try #require(model.addAccount(name: "Subscriptions", type: .expense))
@@ -66,7 +66,7 @@ struct RulesIntegrationTests {
 
         let reopened = AppModel()
         try await reopened.open(at: url)
-        defer { reopened.close(); try? FileManager.default.removeItem(at: url) }
+        defer { reopened.close(); removeBook(at: url) }
         #expect(reopened.ruleGroups.first?.rules.first?.name == "R")
     }
 }

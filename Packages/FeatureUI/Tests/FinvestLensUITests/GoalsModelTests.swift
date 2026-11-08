@@ -29,7 +29,7 @@ struct GoalsModelTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let bank = try #require(model.addAccount(name: "Everyday", type: .bank))
         _ = try #require(model.addAccount(name: "Wallet", type: .cash))
         _ = try #require(model.addAccount(name: "Rent", type: .expense))
@@ -50,7 +50,7 @@ struct GoalsModelTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let bank = try #require(model.addAccount(name: "Savings", type: .bank))
 
         var goal = SavingsGoal(name: "Holiday", accountGUID: bank, targetAmount: dec("2000"))
@@ -79,7 +79,7 @@ struct GoalsModelTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let bank = try #require(model.addAccount(name: "Savings", type: .bank))
 
         let goal = SavingsGoal(name: "Holiday", accountGUID: bank, targetAmount: dec("1000"))
@@ -108,7 +108,7 @@ struct GoalsModelTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let savings = try #require(model.addAccount(name: "Savings", type: .bank))
         let offset = try #require(model.addAccount(name: "Offset", type: .bank))
 

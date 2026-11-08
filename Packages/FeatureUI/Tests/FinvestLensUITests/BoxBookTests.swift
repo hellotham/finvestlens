@@ -376,7 +376,7 @@ struct BoxBookTests {
             model.close()
             for task in model.boxRetryTasks.values { task.cancel() }
             for task in model.boxWorkTasks.values { task.cancel() }
-            try? FileManager.default.removeItem(at: root)
+            removeBook(at: root)
             UserDefaults().removePersistentDomain(forName: suite)
         })
     }
@@ -390,14 +390,14 @@ struct BoxBookTests {
         for name in accounts { _ = seed.addAccount(name: name, type: .bank) }
         try seed.save()
         seed.close()
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         return try Data(contentsOf: url)
     }
 
     /// An SQLite database that is not a FinvestLens book — a GnuCash one.
     private func foreignSQLite() throws -> Data {
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(UUID().uuidString).db")
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         var db: OpaquePointer?
         guard sqlite3_open(url.path, &db) == SQLITE_OK else { throw URLError(.cannotCreateFile) }
         sqlite3_exec(db, "CREATE TABLE gnclock (hostname TEXT); CREATE TABLE splits (guid TEXT); CREATE TABLE slots (id INTEGER);", nil, nil, nil)
@@ -427,7 +427,7 @@ struct BoxBookTests {
         #expect(model.openBoxFileID == id)
         let local = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
-        defer { try? FileManager.default.removeItem(at: local) }
+        defer { removeBook(at: local) }
         await model.newBook(at: local)
         await model.finishBoxWork(within: .seconds(5))
         let before = box.requests.count
@@ -921,7 +921,7 @@ struct BoxBookTests {
         defer { cleanup() }
         let local = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
-        defer { try? FileManager.default.removeItem(at: local) }
+        defer { removeBook(at: local) }
         await model.newBook(at: local)
         let open = try #require(model.documentURL)
 
@@ -1103,7 +1103,7 @@ struct BoxLibraryTests {
     func recordsAreSeparate() throws {
         let root = FileManager.default.temporaryDirectory
             .appendingPathComponent("BoxRecords-\(UUID().uuidString)", isDirectory: true)
-        defer { try? FileManager.default.removeItem(at: root) }
+        defer { removeBook(at: root) }
         let library = BoxLibrary(root: root)
         var link = BoxBookLink(fileID: "77", fileName: "B.finvestlens", parentID: "42", etag: "3",
                                syncedSHA256: "abc", uploadRequested: true)

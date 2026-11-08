@@ -48,7 +48,7 @@ struct QuoteFetchTests {
     @Test("Fetching latest quotes adds a price and reports success")
     func fetchLatest() async throws {
         let (model, cba, url) = try modelWithSecurity(FixedHTTP(chartJSON))
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         model.setQuoteSymbol("CBA.AX", for: cba)
 
         await model.fetchLatestQuotes(using: .yahoo)
@@ -63,7 +63,7 @@ struct QuoteFetchTests {
     func availability() throws {
         let keys = InMemoryAPIKeyStore([.finnhub: "abc"])
         let (model, _, url) = try modelWithSecurity(FixedHTTP(chartJSON), keys: keys)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         #expect(model.availableProviders.contains(.yahoo))
         #expect(model.availableProviders.contains(.finnhub))
         #expect(model.availableProviders.contains(.eodhd) == false)
@@ -79,7 +79,7 @@ struct QuoteFetchTests {
 
         let reopened = AppModel()
         try await reopened.open(at: url)
-        defer { reopened.close(); try? FileManager.default.removeItem(at: url) }
+        defer { reopened.close(); removeBook(at: url) }
         #expect(reopened.quoteSymbol(for: cba) == "CBA.AX")
     }
 }

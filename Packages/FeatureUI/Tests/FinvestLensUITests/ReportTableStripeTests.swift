@@ -34,11 +34,13 @@ struct ReportTableStripeTests {
         renderer.scale = 2
         let image = try #require(renderer.cgImage)
         let width = image.width, height = image.height
-        var pixels = [UInt8](repeating: 0, count: width * height * 4)
+        // The context owns its buffer: a `&array` handed to it would be a
+        // pointer valid only for the initializer's call, written to later.
         let context = try #require(CGContext(
-            data: &pixels, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * 4,
+            data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * 4,
             space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
         context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+        let pixels = try #require(context.data).bindMemory(to: UInt8.self, capacity: width * height * 4)
         var runs: [Range<Int>] = []
         var start: Int?
         for y in 0..<height {

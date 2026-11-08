@@ -37,7 +37,7 @@ struct SmartDividendTests {
     @Test("Statement with booked gross-up verifies; bare deposit offers a fix; nothing matches → noMatch")
     func verdicts() throws {
         let url = tempURL()
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         let model = AppModel()
         try model.newDocument(at: url)
         defer { model.close() }
@@ -110,7 +110,7 @@ struct SmartInvoiceTests {
     @Test("Bank-posted transaction a few days after the invoice matches; outside the window it doesn't")
     func matching() throws {
         let url = tempURL()
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         let model = AppModel()
         try model.newDocument(at: url)
         defer { model.close() }
@@ -138,7 +138,7 @@ struct SmartInvoiceTests {
     @Test("Applying an invoice splits the counter leg, keeps the funding split's state, and adopts the invoice date")
     func applySplit() throws {
         let url = tempURL()
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         let model = AppModel()
         try model.newDocument(at: url)
         defer { model.close() }
@@ -192,7 +192,7 @@ struct SmartInvoiceTests {
     @Test("An unmatched invoice creates a new transaction funded from the chosen account (FR-AI-07)")
     func createFromInvoice() throws {
         let url = tempURL()
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         let model = AppModel()
         try model.newDocument(at: url)
         defer { model.close() }
@@ -232,7 +232,7 @@ struct SmartInvoiceTests {
     @Test("Line-item shortfall against the total posts an adjustment split")
     func residual() throws {
         let url = tempURL()
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         let model = AppModel()
         try model.newDocument(at: url)
         defer { model.close() }
@@ -269,7 +269,7 @@ struct StatementDatePersistenceTests {
     @Test("statementDate survives save and reopen in the native document")
     func roundTrip() async throws {
         let url = tempURL()
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         let model = AppModel()
         try model.newDocument(at: url)
 

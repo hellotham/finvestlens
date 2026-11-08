@@ -27,7 +27,7 @@ struct CapitalGainsModelTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let cba = Commodity(namespace: .security("ASX"), mnemonic: "CBA",
                             fullName: "Commonwealth Bank", smallestFraction: 10000)
@@ -62,7 +62,7 @@ struct CapitalGainsModelTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         _ = model.addAccount(name: "Cash", type: .bank)
         #expect(model.capitalGains() == nil)
     }

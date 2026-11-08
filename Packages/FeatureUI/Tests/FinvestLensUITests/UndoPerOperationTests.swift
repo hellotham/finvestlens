@@ -59,7 +59,7 @@ private struct Fixture {
 
     func tearDown() {
         model.close()
-        try? FileManager.default.removeItem(at: url)
+        removeBook(at: url)
     }
 }
 

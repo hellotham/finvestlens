@@ -39,7 +39,7 @@ struct StockAssistantTests {
     @Test("Buy then sell yields correct cost basis and net cash")
     func buySell() throws {
         let (model, stock, cash, fee, _, url) = try model()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         try model.recordStockTransaction(
             action: .buy, securityID: stock, settlementID: cash, commissionID: fee,
@@ -64,7 +64,7 @@ struct StockAssistantTests {
     @Test("A staged QIF/OFX investment row creates a stock buy (FR-XIO-01/02)")
     func stagedInvestment() throws {
         let (model, stock, cash, fee, _, url) = try model()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         // The QIF/OFX parsers produce this shape; here we craft one directly.
         let row = StagedTransaction(
@@ -91,7 +91,7 @@ struct StockAssistantTests {
     @Test("A batch of staged rows posts as one edit and one undo step (Performance Review 2, R4)")
     func stagedInvestmentBatch() throws {
         let (model, stock, cash, _, _, url) = try model()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let undo = UndoManager()
         model.undoManager = undo
         let rows = [10, 20].map { quantity in
@@ -123,7 +123,7 @@ struct StockAssistantTests {
     @Test("An imported buy with a fee but no commission account folds the fee into cost (FR-XIO-02)")
     func stagedInvestmentFoldsCommission() throws {
         let (model, stock, cash, _, _, url) = try model()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let row = StagedTransaction(
             date: day(0), amount: dec("-1009.95"), payee: "CBA",
@@ -143,7 +143,7 @@ struct StockAssistantTests {
     @Test("Cash dividend increases income and cash")
     func dividend() throws {
         let (model, _, cash, _, income, url) = try model()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         try model.recordStockTransaction(
             action: .dividend, securityID: nil, settlementID: cash, incomeID: income,
             amount: dec("42.50"), date: day(30), description: "CBA dividend")
@@ -154,7 +154,7 @@ struct StockAssistantTests {
     @Test("Reinvested dividend adds shares")
     func reinvest() throws {
         let (model, stock, _, _, income, url) = try model()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         try model.recordStockTransaction(
             action: .reinvestDividend, securityID: stock, settlementID: nil, incomeID: income,
             shares: dec("2.5"), amount: dec("42.50"), date: day(30), description: "DRP")
@@ -165,7 +165,7 @@ struct StockAssistantTests {
     @Test("A 2:1 split doubles shares and preserves cost basis")
     func stockSplit() throws {
         let (model, stock, cash, _, _, url) = try model()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         try model.recordStockTransaction(
             action: .buy, securityID: stock, settlementID: cash,
             shares: dec("10"), pricePerShare: dec("10"), date: day(0), description: "Buy")
@@ -181,7 +181,7 @@ struct StockAssistantTests {
     @Test("Invalid input throws")
     func invalid() throws {
         let (model, stock, cash, _, _, url) = try model()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         #expect(throws: StockEntryError.invalidInput) {
             try model.recordStockTransaction(
                 action: .buy, securityID: stock, settlementID: cash,

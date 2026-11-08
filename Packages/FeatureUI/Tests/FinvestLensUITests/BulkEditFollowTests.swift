@@ -45,7 +45,7 @@ struct BulkEditFollowTests {
     @Test("Voiding and deleting more than a re-file's worth, and undoing it, leave every index, balance and save right")
     func bulkEdits() throws {
         let (model, url, ids) = try makeModel(transactions: 150)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let book = try #require(model.book)
         let document = try #require(model.document)
         #expect(ids.count > AppModel.refileLimit)
@@ -80,7 +80,7 @@ struct BulkEditFollowTests {
     @Test("A book just opened has nothing unsaved")
     func openedIsSaved() async throws {
         let (model, url, _) = try makeModel(transactions: 5)
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         model.close()
         let reopened = AppModel()
         try await reopened.open(at: url)

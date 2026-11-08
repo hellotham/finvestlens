@@ -290,7 +290,7 @@
             },
             {
               "type": "text",
-              "value": "A book can live in your own Box account. Set up a Box app of your own in Settings ▸ General ▸ Box, then choose **Open from Box…**, in the File menu or on the welcome screen."
+              "value": "A book can live in your own Box account. Choose **Open from Box…**, in the File menu or on the welcome screen, and sign in on Box’s own page — FinvestLens never sees your Box password. Settings ▸ General ▸ Box connects and disconnects."
             },
             {
               "type": "bullets",

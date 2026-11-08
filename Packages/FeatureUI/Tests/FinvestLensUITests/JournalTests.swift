@@ -26,7 +26,7 @@ struct JournalTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let food = try #require(model.addAccount(name: "Food", type: .expense))
@@ -83,7 +83,7 @@ struct JournalTests {
     func wholeJournalAndEdges() throws {
         let url = tempURL()
         let model = try pagedModel(10, at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         // No windowing: every transaction is present, oldest first.
         let rows = model.journalRows(forAccountID: nil)
@@ -109,7 +109,7 @@ struct JournalTests {
     func cacheInvalidation() throws {
         let url = tempURL()
         let model = try pagedModel(3, at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let bank = try #require(model.accountTree.first { $0.name == "Bank" }?.id)
 
         #expect(model.journalRows(forAccountID: nil).filter(\.isHeading).count == 3)      // populates the cache

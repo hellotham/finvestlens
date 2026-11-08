@@ -41,7 +41,7 @@ struct TransactionActionsTests {
     @Test("A check is drawn on the outflow account, spelled out for the payee (FR-REG-11)")
     func checkPrinting() throws {
         let (model, url, _, _, txn) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let check = try #require(model.checkData(forTransaction: txn))
         #expect(check.payee == "Shop")           // the transaction description
@@ -55,7 +55,7 @@ struct TransactionActionsTests {
     @Test("A selected row resolves to its transaction")
     func selectionResolves() throws {
         let (model, url, bank, _, txn) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         #expect(!model.hasSelectedTransaction)
         #expect(model.selectedTransactionID == nil)
@@ -71,7 +71,7 @@ struct TransactionActionsTests {
     @Test("Selecting nothing leaves the commands with nothing to act on")
     func noSelection() throws {
         let (model, url, _, _, _) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         model.selectedSplitIDs = []
         #expect(!model.hasSelectedTransaction)
     }
@@ -82,7 +82,7 @@ struct TransactionActionsTests {
     @Test("A selection pointing at a deleted transaction resolves to nothing")
     func staleSelection() throws {
         let (model, url, bank, _, txn) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         model.selectedAccountID = bank
         model.selectedSplitIDs = [try #require(model.registerRows.first).id]
         model.deleteTransaction(txn)
@@ -94,7 +94,7 @@ struct TransactionActionsTests {
     @Test("Any leg of a transaction stands for the whole transaction")
     func anySplitResolves() throws {
         let (model, url, _, _, txn) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let splitID = try #require(model.anySplitID(ofTransaction: txn))
         #expect(model.transactionID(ofSplit: splitID) == txn)
     }
@@ -102,7 +102,7 @@ struct TransactionActionsTests {
     @Test("An unknown transaction has no leg to act through")
     func anySplitOfUnknown() throws {
         let (model, url, _, _, _) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         #expect(model.anySplitID(ofTransaction: .random()) == nil)
     }
 
@@ -111,7 +111,7 @@ struct TransactionActionsTests {
     @Test("Opening the editor is model state, not view state")
     func editorIsModelState() throws {
         let (model, url, _, _, txn) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         #expect(model.editingTransactionID == nil)
         model.editingTransactionID = txn
         #expect(model.editingTransactionID == txn)
@@ -122,7 +122,7 @@ struct TransactionActionsTests {
     @Test("Every offered operation acts through the selected row")
     func operationsWorkFromSelection() throws {
         let (model, url, bank, _, txn) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         model.selectedAccountID = bank
         model.selectedSplitIDs = [try #require(model.registerRows.first).id]
         let splitID = try #require(model.selectedSplitID)

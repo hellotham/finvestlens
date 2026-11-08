@@ -92,7 +92,7 @@ struct GeneralLedgerPatchTests {
             for reversed in [false, true] {
                 for filtered in [false, true] {
                     let f = try makeFixture()
-                    defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+                    defer { f.model.close(); removeBook(at: f.url) }
                     let undo = UndoManager()
                     undo.groupsByEvent = false
                     f.model.registerSort = sort
@@ -130,7 +130,7 @@ struct GeneralLedgerPatchTests {
     @Test("An account renamed has the ledger built again, with the new name")
     func accountRename() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         _ = f.model.journalRows(forAccountID: nil)
         f.model.updateAccount(id: f.food, name: "Groceries", code: "", description: "", notes: "",
                               isPlaceholder: false, isHidden: false)
@@ -141,7 +141,7 @@ struct GeneralLedgerPatchTests {
     @Test("A sort chosen after the ledger was built is honoured, however it was set")
     func settingsChangedQuietly() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         let byDate = f.model.journalTransactions(forAccountID: nil).map(\.guid)
         // As restoring a register's saved arrangement does: the setters' own
         // refresh suspended.

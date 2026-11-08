@@ -52,7 +52,7 @@ struct TransactionClipboardTests {
     @Test("Copy then paste makes a second, identical transaction")
     func copyPaste() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         #expect(f.model.copyTransaction(f.txn))
         #expect(f.model.canPasteTransaction)
@@ -74,7 +74,7 @@ struct TransactionClipboardTests {
     @Test("Memo and action travel with the transaction")
     func memoAndActionSurvive() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         f.model.copyTransaction(f.txn)
         let pasted = try #require(f.model.book?.transaction(with: try f.model.pasteTransaction()))
         #expect(pasted.splits.contains { $0.memo == "card" && $0.action == "Withdrawal" })
@@ -85,7 +85,7 @@ struct TransactionClipboardTests {
     @Test("A pasted transaction arrives unreconciled, with its own identity")
     func pastedIsNew() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         let book = try #require(f.model.book)
         for split in try #require(book.transaction(with: f.txn)).splits {
             split.reconcileState = .reconciled
@@ -102,7 +102,7 @@ struct TransactionClipboardTests {
     @Test("Cut copies it and takes it away")
     func cut() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         #expect(f.model.cutTransaction(f.txn))
 
         let book = try #require(f.model.book)
@@ -117,7 +117,7 @@ struct TransactionClipboardTests {
     @Test("Cut is a single undo")
     func cutIsUndoable() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         let undo = UndoManager()
         f.model.undoManager = undo
         undo.removeAllActions()
@@ -133,7 +133,7 @@ struct TransactionClipboardTests {
     @Test("Pasting into another book resolves accounts by name")
     func pasteAcrossBooks() throws {
         let source = try makeFixture()
-        defer { source.model.close(); try? FileManager.default.removeItem(at: source.url) }
+        defer { source.model.close(); removeBook(at: source.url) }
         source.model.copyTransaction(source.txn)
 
         // A different book, with accounts of the same names and different ids.
@@ -141,7 +141,7 @@ struct TransactionClipboardTests {
             .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
         let other = AppModel()
         try other.newDocument(at: otherURL)
-        defer { other.close(); try? FileManager.default.removeItem(at: otherURL) }
+        defer { other.close(); removeBook(at: otherURL) }
         _ = try #require(other.addAccount(name: "Bank", type: .bank))
         _ = try #require(other.addAccount(name: "Food", type: .expense))
 
@@ -156,14 +156,14 @@ struct TransactionClipboardTests {
     @Test("Pasting where an account does not exist is refused, by name")
     func pasteMissingAccount() throws {
         let source = try makeFixture()
-        defer { source.model.close(); try? FileManager.default.removeItem(at: source.url) }
+        defer { source.model.close(); removeBook(at: source.url) }
         source.model.copyTransaction(source.txn)
 
         let otherURL = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
         let other = AppModel()
         try other.newDocument(at: otherURL)
-        defer { other.close(); try? FileManager.default.removeItem(at: otherURL) }
+        defer { other.close(); removeBook(at: otherURL) }
         _ = try #require(other.addAccount(name: "Bank", type: .bank))
         // No "Food" here.
 
@@ -177,7 +177,7 @@ struct TransactionClipboardTests {
     @Test("Copying an unknown transaction copies nothing")
     func copyUnknown() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         #expect(!f.model.copyTransaction(.random()))
         #expect(!f.model.cutTransaction(.random()))
     }
@@ -187,7 +187,7 @@ struct TransactionClipboardTests {
     @Test("A copied transaction is also readable text")
     func textRepresentation() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         f.model.copyTransaction(f.txn)
         let clipboard = try #require(TransactionPasteboard.read())
         let text = TransactionPasteboard.describe(clipboard)

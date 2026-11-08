@@ -283,9 +283,10 @@ public enum HelpBook {
                 """),
             .heading("Books on Box"),
             .text("""
-                A book can live in your own Box account. Set up a Box app of your own in \
-                Settings ▸ General ▸ Box, then choose **Open from Box…**, in the File menu \
-                or on the welcome screen.
+                A book can live in your own Box account. Choose **Open from Box…**, in the \
+                File menu or on the welcome screen, and sign in on Box’s own page — \
+                FinvestLens never sees your Box password. Settings ▸ General ▸ Box connects \
+                and disconnects.
                 """),
             .bullets([
                 "The book is kept on this device while you work on it. It goes up to Box as a new version when you save with ⌘S, close the book, switch books or quit — and on iPhone and iPad when you leave the app. Autosave keeps your work on this device until then.",

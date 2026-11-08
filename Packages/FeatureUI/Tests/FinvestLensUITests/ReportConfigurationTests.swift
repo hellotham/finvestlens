@@ -33,7 +33,7 @@ struct ReportConfigurationTests {
     @Test("An AUD book defaults to a July financial year, without writing")
     func audDefaultsToJuly() throws {
         let (model, url) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         #expect(model.financialYearStartMonth == 7)
         #expect(model.defaultReportPeriod == .currentFinancialYear)
         // The default is a computation, not a stored value.
@@ -43,7 +43,7 @@ struct ReportConfigurationTests {
     @Test("The setting overrides the heuristic")
     func settingWins() throws {
         let (model, url) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         model.updateReportSettings(ReportSettings(financialYearStartMonth: 4,
                                                   defaultPeriod: .currentMonth))
         #expect(model.financialYearStartMonth == 4)
@@ -55,7 +55,7 @@ struct ReportConfigurationTests {
     func persistence() async throws {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
 
         let model = AppModel()
         try model.newDocument(at: url)
@@ -81,7 +81,7 @@ struct ReportConfigurationTests {
     @Test("Saving under an existing name replaces")
     func replaceByName() throws {
         let (model, url) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         model.saveReportFavourite(
             ReportConfiguration(kind: "Balance Sheet", period: .allTime), named: "Mine")
         model.saveReportFavourite(
@@ -93,7 +93,7 @@ struct ReportConfigurationTests {
     @Test("A blank name is not a favourite")
     func blankName() throws {
         let (model, url) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         model.saveReportFavourite(
             ReportConfiguration(kind: "Balance Sheet", period: .allTime), named: "   ")
         #expect(model.savedReports.isEmpty)
@@ -102,7 +102,7 @@ struct ReportConfigurationTests {
     @Test("Deleting a favourite deletes that one")
     func deletion() throws {
         let (model, url) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         model.saveReportFavourite(
             ReportConfiguration(kind: "Balance Sheet", period: .allTime), named: "A")
         model.saveReportFavourite(
@@ -118,7 +118,7 @@ struct ReportConfigurationTests {
     @Test("Resolution follows the book's financial year")
     func resolutionFollowsSetting() throws {
         let (model, url) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         var calendar = Calendar.current
         calendar.timeZone = .current
         let today = calendar.date(from: DateComponents(year: 2026, month: 7, day: 17))!

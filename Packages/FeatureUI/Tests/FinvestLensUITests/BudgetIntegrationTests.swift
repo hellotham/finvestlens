@@ -50,7 +50,7 @@ struct BudgetIntegrationTests {
 
         let reopened = AppModel()
         try await reopened.open(at: url)
-        defer { reopened.close(); try? FileManager.default.removeItem(at: url) }
+        defer { reopened.close(); removeBook(at: url) }
         #expect(reopened.budgets.first?.name == "Monthly")
         #expect(reopened.budgets.first?.amount(for: groceries) == Decimal(400))
     }
@@ -77,7 +77,7 @@ struct BudgetIntegrationTests {
 
         let reopened = AppModel()
         try await reopened.open(at: url)
-        defer { reopened.close(); try? FileManager.default.removeItem(at: url) }
+        defer { reopened.close(); removeBook(at: url) }
         let goal = try #require(reopened.savingsGoals.first)
         #expect(goal.name == "Holiday")
         #expect(goal.accountGUID == bank)

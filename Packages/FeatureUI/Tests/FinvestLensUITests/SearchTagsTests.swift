@@ -33,7 +33,7 @@ struct SearchTagsTests {
     @Test("Tags persist and drive tag: search")
     func tagSearch() throws {
         let (model, bank, food, url) = try model()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         try model.addTransaction(date: Date(timeIntervalSince1970: 0), description: "Woolworths",
                                  currency: .aud, splits: [
             SplitInput(accountID: food, value: dec("50")),
@@ -55,7 +55,7 @@ struct SearchTagsTests {
     @Test("Operator tokens are ANDed")
     func operators() throws {
         let (model, bank, food, url) = try model()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         try model.addTransaction(date: Date(timeIntervalSince1970: 0), description: "Woolworths big shop",
                                  currency: .aud, splits: [
             SplitInput(accountID: food, value: dec("150")),
@@ -75,7 +75,7 @@ struct SearchTagsTests {
     @Test("Negation, type:, and has: operators (FR-FIND-01)")
     func negationTypeHas() throws {
         let (model, bank, food, url) = try model()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         try model.addTransaction(date: Date(timeIntervalSince1970: 0), description: "Woolworths",
                                  currency: .aud, splits: [
             SplitInput(accountID: food, value: dec("50")),

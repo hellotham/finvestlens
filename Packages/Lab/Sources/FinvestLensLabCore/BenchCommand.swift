@@ -39,6 +39,8 @@ enum BenchCommand {
             let (readOnly, readOnlySeconds) = try Stopwatch.measure {
                 try FinvestLensDocument.openReadOnly(at: file)
             }
+            // Its working copy is a whole copy of the book: gone with the pass.
+            defer { readOnly.discard() }
             let book = readOnly.book
             log(Fmt.row("open read-only (copy + read)", Fmt.time(readOnlySeconds)))
 
@@ -46,6 +48,8 @@ enum BenchCommand {
             // whatever volume the book is actually on.
             let workingCopy = FileManager.default.temporaryDirectory
                 .appendingPathComponent("finlab-bench-\(UUID().uuidString).finvestlens")
+            // Gone with the pass, whether it finishes or throws.
+            defer { try? FileManager.default.removeItem(at: workingCopy) }
             let (_, copySeconds) = try Stopwatch.measure { () -> Void in
                 try FileManager.default.copyItem(at: file, to: workingCopy)
             }
@@ -54,6 +58,10 @@ enum BenchCommand {
             let (store, openSeconds) = try Stopwatch.measure {
                 try SQLiteDocumentStore(path: workingCopy.path)
             }
+            // Closed before its file goes (defers run last first): removing a
+            // database under an open connection is what SQLite logs as
+            // "vnode unlinked while in use".
+            defer { try? store.close() }
             log(Fmt.row("  ├ open SQLite + migrate", Fmt.time(openSeconds)))
 
             let (_, readSeconds) = try Stopwatch.measure { try store.read() }
@@ -65,8 +73,6 @@ enum BenchCommand {
                 try store.write(book)
             }
             log(Fmt.row("write book → local SQLite", Fmt.time(writeSeconds)))
-
-            try? FileManager.default.removeItem(at: workingCopy)
 
             if alsoSave {
                 // A real save, against the real destination, with the lock and

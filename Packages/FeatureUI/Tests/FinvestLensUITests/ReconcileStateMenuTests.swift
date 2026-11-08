@@ -42,7 +42,7 @@ struct ReconcileStateMenuTests {
     @Test("Frozen can be set from the register")
     func frozenIsReachable() throws {
         let (model, url, split, _) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         model.setReconcileState(splitID: split, to: .frozen)
         #expect(model.reconcileState(ofSplit: split) == .frozen)
     }
@@ -52,7 +52,7 @@ struct ReconcileStateMenuTests {
     @Test("Clicking the R column does not disturb a frozen split")
     func cycleLeavesFrozenAlone() throws {
         let (model, url, split, _) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         model.setReconcileState(splitID: split, to: .frozen)
         model.cycleReconcileState(splitID: split)
         #expect(model.reconcileState(ofSplit: split) == .frozen)
@@ -64,7 +64,7 @@ struct ReconcileStateMenuTests {
     @Test("Every state the menu offers can actually be set")
     func allOfferedStatesRoundTrip() throws {
         let (model, url, split, _) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         for state in ReconcileState.settableInRegister {
             model.setReconcileState(splitID: split, to: state)
             #expect(model.reconcileState(ofSplit: split) == state)
@@ -93,7 +93,7 @@ struct ReconcileStateMenuTests {
     @Test("Reading the state of an unknown split gives nothing")
     func unknownSplit() throws {
         let (model, url, _, _) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         #expect(model.reconcileState(ofSplit: .random()) == nil)
     }
 
@@ -101,7 +101,7 @@ struct ReconcileStateMenuTests {
     @Test("Setting frozen is undoable")
     func undoable() throws {
         let (model, url, split, _) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let undo = UndoManager()
         model.undoManager = undo
         model.setReconcileState(splitID: split, to: .cleared)

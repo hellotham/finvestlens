@@ -49,7 +49,7 @@ struct StructuredFindTests {
     @Test("A find fills the results and marks the search active")
     func findFillsResults() throws {
         let (model, url, _, _) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         model.runFind(query(.text(.description, .contains, "Pay one", matchCase: false)))
 
@@ -64,7 +64,7 @@ struct StructuredFindTests {
     @Test("Splits roll up to one row per transaction")
     func splitsRollUp() throws {
         let (model, url, _, _) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         model.runFind(query(.text(.description, .contains, "Pay", matchCase: false)))
         #expect(model.searchResults.count == 2, "two transactions, not four splits")
@@ -73,7 +73,7 @@ struct StructuredFindTests {
     @Test("Results are newest first")
     func resultsAreNewestFirst() throws {
         let (model, url, _, _) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         model.runFind(query(.text(.description, .contains, "Pay", matchCase: false)))
         #expect(model.searchResults.map(\.description) == ["Pay two", "Pay one"])
@@ -82,7 +82,7 @@ struct StructuredFindTests {
     @Test("A date criterion finds by date, which free text never could")
     func findByDate() throws {
         let (model, url, _, _) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         model.runFind(query(.date(.posted, .isOnOrAfter, day(3))))
         #expect(model.searchResults.map(\.description) == ["Pay two"])
@@ -91,7 +91,7 @@ struct StructuredFindTests {
     @Test("A reconcile criterion finds by state")
     func findByReconcileState() throws {
         let (model, url, bank, _) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         model.selectedAccountID = bank
         let row = try #require(model.registerRows.first { $0.amount == dec("50") })
@@ -106,7 +106,7 @@ struct StructuredFindTests {
     @Test("Typing in the search bar replaces a find")
     func typingReplacesFind() throws {
         let (model, url, _, _) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         model.runFind(query(.text(.description, .contains, "Pay", matchCase: false)))
         #expect(model.findQuery != nil)
@@ -124,7 +124,7 @@ struct StructuredFindTests {
     @Test("Running a find leaves the bar empty and the find live")
     func findSurvivesClearingTheBar() throws {
         let (model, url, _, _) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         model.searchQuery = "Pay one"
         model.runFind(query(.text(.description, .contains, "Pay two", matchCase: false)))
@@ -138,7 +138,7 @@ struct StructuredFindTests {
     @Test("Clearing a find empties the results")
     func clearFind() throws {
         let (model, url, _, _) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         model.runFind(query(.text(.description, .contains, "Pay", matchCase: false)))
         model.clearFind()
@@ -151,7 +151,7 @@ struct StructuredFindTests {
     @Test("Closing a book ends the find")
     func closeEndsFind() throws {
         let (model, url, _, _) = try book()
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
 
         model.runFind(query(.text(.description, .contains, "Pay", matchCase: false)))
         model.close()
@@ -167,7 +167,7 @@ struct StructuredFindTests {
     @Test("An edit refreshes the find rather than dropping it")
     func editKeepsTheFindAlive() throws {
         let (model, url, bank, income) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         model.runFind(query(.text(.description, .contains, "Pay", matchCase: false)))
         let target = try #require(model.searchResults.first { $0.description == "Pay two" })
@@ -187,7 +187,7 @@ struct StructuredFindTests {
     @Test("An edit that no longer matches drops out of the results")
     func editOutOfTheResults() throws {
         let (model, url, bank, income) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         model.runFind(query(.text(.description, .contains, "Pay", matchCase: false)))
         let target = try #require(model.searchResults.first { $0.description == "Pay two" })
@@ -208,7 +208,7 @@ struct StructuredFindTests {
     @Test("Show in Register opens the account the find matched")
     func showInRegisterUsesTheMatchedSplit() throws {
         let (model, url, bank, income) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         model.runFind(query(.account(.isOneOf, [income])))
         let result = try #require(model.searchResults.first)
@@ -226,7 +226,7 @@ struct StructuredFindTests {
     @Test("Show in Register ends the find")
     func showInRegisterEndsFind() throws {
         let (model, url, _, _) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         model.runFind(query(.text(.description, .contains, "Pay one", matchCase: false)))
         let result = try #require(model.searchResults.first)
@@ -243,7 +243,7 @@ struct StructuredFindTests {
     @Test("An empty query finds nothing and stays out of the way")
     func emptyQuery() throws {
         let (model, url, _, _) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         model.runFind(FindQuery())
         #expect(model.searchResults.isEmpty)

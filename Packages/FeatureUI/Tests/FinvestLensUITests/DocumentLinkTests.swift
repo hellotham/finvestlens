@@ -33,7 +33,7 @@ struct DocumentLinkTests {
             UserDefaults.standard.set(saved ?? "", forKey: AppModel.documentFolderDefaultsKey)
         }
         let url = tempURL()
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         let model = AppModel()
         try model.newDocument(at: url)
         defer { model.close() }
@@ -80,7 +80,7 @@ struct DocumentLinkTests {
         try withCleanSetting { model in
             let folder = FileManager.default.temporaryDirectory
                 .appendingPathComponent("finvestlens-docs-\(UUID().uuidString)", isDirectory: true)
-            defer { try? FileManager.default.removeItem(at: folder) }
+            defer { removeBook(at: folder) }
             model.configuredDocumentFolder = folder
 
             let id = try makeTransaction(model)
@@ -126,7 +126,7 @@ struct DocumentLinkTests {
                 try FileManager.default.createDirectory(
                     at: folder.appendingPathComponent("2026-04"), withIntermediateDirectories: true)
             }
-            defer { for f in [invoices, finance] { try? FileManager.default.removeItem(at: f) } }
+            defer { for f in [invoices, finance] { removeBook(at: f) } }
             model.configuredDocumentFolder = invoices
             model.secondaryDocumentFolder = finance
 
@@ -152,7 +152,7 @@ struct DocumentLinkTests {
             let loose = FileManager.default.temporaryDirectory
                 .appendingPathComponent("\(UUID().uuidString).png")
             try Data("L".utf8).write(to: loose)
-            defer { try? FileManager.default.removeItem(at: loose) }
+            defer { removeBook(at: loose) }
             let third = try makeTransaction(model)
             model.linkDocument(at: loose, to: third)
             #expect(model.documentLink(for: third) == loose.standardizedFileURL.path)

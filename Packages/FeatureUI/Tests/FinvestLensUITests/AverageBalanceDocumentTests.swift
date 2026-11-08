@@ -32,7 +32,7 @@ struct AverageBalanceDocumentTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let bankID = try #require(model.addAccount(name: "Everyday", type: .bank))
         let incomeID = try #require(model.addAccount(name: "Salary", type: .income))
@@ -84,7 +84,7 @@ struct AverageBalanceDocumentTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let config = ReportKind.averageBalance.defaultConfiguration(for: model)
         #expect(config.step == .month)

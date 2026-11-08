@@ -56,6 +56,7 @@ struct RegisterRotorMemoTests {
     @Test("Every unreconciled row is offered to the rotor")
     func listsUnreconciledRows() throws {
         let fixture = try makeFixture(transactions: 5)
+        defer { closeAndRemove(fixture.model) }
         // Nothing has been reconciled, so every row qualifies.
         #expect(fixture.model.unreconciledRegisterRows.count == fixture.model.registerRows.count)
         #expect(fixture.model.registerRows.count == 5)
@@ -64,6 +65,7 @@ struct RegisterRotorMemoTests {
     @Test("Asking twice on one revision does no work and returns the same array")
     func memoisesWithinARevision() throws {
         let fixture = try makeFixture(transactions: 5)
+        defer { closeAndRemove(fixture.model) }
         let first = fixture.model.unreconciledRegisterRows
         let second = fixture.model.unreconciledRegisterRows
         // Identity, not just equality: handing SwiftUI a fresh array every body
@@ -75,6 +77,7 @@ struct RegisterRotorMemoTests {
     @Test("Reconciling a row drops it from the rotor on the next revision")
     func invalidatesOnEdit() throws {
         let fixture = try makeFixture(transactions: 3)
+        defer { closeAndRemove(fixture.model) }
         #expect(fixture.model.unreconciledRegisterRows.count == 3)
 
         let target = try #require(fixture.model.registerRows.first)

@@ -77,6 +77,7 @@ struct InvestmentRowsTests {
     @Test("A row carries its units and the total purchase amount")
     func unitsAndPurchaseAmount() throws {
         let model = try makeModel()
+        defer { closeAndRemove(model) }
         let book = model.book!
 
         // 1,000 units for $1,000 through the first broker.
@@ -103,6 +104,7 @@ struct InvestmentRowsTests {
     @Test("A watched security has no units and no purchase amount")
     func watchedRowHasNoCost() throws {
         let model = try makeModel()
+        defer { closeAndRemove(model) }
         model.addWatchSecurity(exchange: "ASX", ticker: "OTHR", name: "Other")
 
         let row = try #require(model.investmentRows().first { $0.symbol == "OTHR" })
@@ -113,6 +115,7 @@ struct InvestmentRowsTests {
     @Test("Held, hand-valued, watched and closed land in different groups")
     func grouping() throws {
         let model = try makeModel()
+        defer { closeAndRemove(model) }
         let book = model.book!
 
         buy(model, acme, units: "10", cost: "1000", daysBack: 60)
@@ -148,6 +151,7 @@ struct InvestmentRowsTests {
     @Test("Closed positions are hidden until asked for, and the choice is a book preference")
     func showClosedIsPersisted() throws {
         let model = try makeModel()
+        defer { closeAndRemove(model) }
         #expect(model.showsClosedPositions == false, "hidden by default")
         model.showsClosedPositions = true
         #expect(model.showsClosedPositions == true)
@@ -158,6 +162,7 @@ struct InvestmentRowsTests {
     @Test("A ticker override makes a security quotable even when the book never marked it")
     func overrideMakesQuotable() throws {
         let model = try makeModel()
+        defer { closeAndRemove(model) }
         let plain = Commodity(namespace: .security("ASX"), mnemonic: "PLAIN",
                               fullName: "Plain", smallestFraction: 10000)
         #expect(model.canFetchQuotes(for: plain) == false)
@@ -169,6 +174,7 @@ struct InvestmentRowsTests {
     @Test("A sparkline breaks at a gap instead of drawing through it")
     func sparklineBreaksAtGaps() throws {
         let model = try makeModel()
+        defer { closeAndRemove(model) }
         let book = model.book!
         buy(model, acme, units: "10", cost: "1000", daysBack: 80)
         // Two clusters a month apart: the line must not be drawn across the void.
@@ -191,6 +197,7 @@ struct InvestmentRowsTests {
         // security a provider prices every day; the fetch never consults that
         // flag, so it stayed current while the table called it hand-valued.
         let model = try makeModel()
+        defer { closeAndRemove(model) }
         let book = model.book!
         let quiet = Commodity(namespace: .security("ASX"), mnemonic: "QUIET",
                               fullName: "Flag says no", smallestFraction: 10000)
@@ -209,6 +216,7 @@ struct InvestmentRowsTests {
     @Test("A security marked no-longer-trading stops being chased, and is not stale")
     func delistedIsFinalNotStale() throws {
         let model = try makeModel()
+        defer { closeAndRemove(model) }
         let book = model.book!
         buy(model, acme, units: "10", cost: "1000", daysBack: 400)
         // Priced long ago and never since — indistinguishable from a neglected
@@ -245,6 +253,7 @@ struct InvestmentRowsTests {
     @Test("A ceased holding does not hold valuation confidence below 100%")
     func ceasedIsOutOfCoverage() throws {
         let model = try makeModel()
+        defer { closeAndRemove(model) }
         let book = model.book!
         // Enough observations for the exchange's own trading calendar to be
         // inferred; with only a couple of priced days it falls back to bare
@@ -282,6 +291,7 @@ struct InvestmentRowsTests {
         // The other direction, which is what keeps the super funds honest:
         // typed, imported and dialog-entered prices all carry a `user:` source.
         let model = try makeModel()
+        defer { closeAndRemove(model) }
         let book = model.book!
         buy(model, fund, units: "100", cost: "10000", daysBack: 40)
         for source in ["user:price", "user:price-editor", "user:split-import", "user:xfer-dialog"] {
@@ -297,6 +307,7 @@ struct InvestmentRowsTests {
     @Test("The sparkline period is adjustable, named, and remembered in the book")
     func sparkRangeIsAPreference() throws {
         let model = try makeModel()
+        defer { closeAndRemove(model) }
         #expect(model.sparkRange == .quarter, "a sensible default, not the longest")
 
         model.sparkRange = .year
@@ -314,6 +325,7 @@ struct InvestmentRowsTests {
     @Test("The window follows the chosen period, and is the same for every row")
     func windowIsSharedAndFollowsRange() throws {
         let model = try makeModel()
+        defer { closeAndRemove(model) }
         let book = model.book!
         buy(model, acme, units: "10", cost: "1000", daysBack: 400)
         buy(model, other, units: "10", cost: "1000", daysBack: 400)
@@ -354,6 +366,7 @@ struct InvestmentRowsTests {
     @Test("The same gap breaks a short window and not a long one")
     func gapThresholdScales() throws {
         let model = try makeModel()
+        defer { closeAndRemove(model) }
         let book = model.book!
         buy(model, acme, units: "10", cost: "1000", daysBack: 400)
         // Daily prices for over a year, with one 19-day hole inside the last
@@ -378,6 +391,7 @@ struct InvestmentRowsTests {
     @Test("The worklist is empty on a healthy book and names the problem on a broken one")
     func worklist() throws {
         let model = try makeModel()
+        defer { closeAndRemove(model) }
         let book = model.book!
         buy(model, acme, units: "10", cost: "1000", daysBack: 60)
         for day in 1...40 {
@@ -397,6 +411,7 @@ struct InvestmentRowsTests {
     @Test("Rows sort by value, so the position that most affects the total is first")
     func sortedByValue() throws {
         let model = try makeModel()
+        defer { closeAndRemove(model) }
         // Names chosen so alphabetical order is the *opposite* of value order:
         // with BIG/SMALL a name sort would have produced the same answer and
         // the test would have passed while proving nothing.
@@ -417,6 +432,7 @@ struct InvestmentRowsTests {
     @Test("Rate health names the currency a holding cannot be valued in")
     func rateHealth() throws {
         let model = try makeModel()
+        defer { closeAndRemove(model) }
         let book = model.book!
         let usd = Commodity(namespace: .currency, mnemonic: "USD",
                             fullName: "US Dollar", smallestFraction: 100)

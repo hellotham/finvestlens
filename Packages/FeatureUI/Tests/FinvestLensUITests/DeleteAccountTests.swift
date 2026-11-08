@@ -53,7 +53,7 @@ struct DeleteAccountTests {
     @Test("An empty account needs no target and just goes")
     func emptyAccount() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         let id = try #require(f.model.addAccount(name: "Unused", type: .expense))
         #expect(f.model.deletionPlan(for: id)?.isUnencumbered == true)
         try f.model.deleteAccount(id)
@@ -64,7 +64,7 @@ struct DeleteAccountTests {
     @Test("An account with postings is deletable once they have somewhere to go")
     func postingsMove() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         let bank = try #require(f.model.addAccount(name: "Bank", type: .bank))
         let old = try #require(f.model.addAccount(name: "Old", type: .expense))
         let new = try #require(f.model.addAccount(name: "New", type: .expense))
@@ -88,7 +88,7 @@ struct DeleteAccountTests {
     @Test("Moving postings keeps every split and leaves the book balanced")
     func nothingIsLost() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         let bank = try #require(f.model.addAccount(name: "Bank", type: .bank))
         let old = try #require(f.model.addAccount(name: "Old", type: .expense))
         let new = try #require(f.model.addAccount(name: "New", type: .expense))
@@ -109,7 +109,7 @@ struct DeleteAccountTests {
     @Test("Refuses to delete an account with postings and no target")
     func postingsNeedTarget() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         let bank = try #require(f.model.addAccount(name: "Bank", type: .bank))
         let old = try #require(f.model.addAccount(name: "Old", type: .expense))
         try post(f, bank, old, 30)
@@ -124,7 +124,7 @@ struct DeleteAccountTests {
     @Test("Children are reparented, keeping their own postings")
     func childrenMove() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         let bank = try #require(f.model.addAccount(name: "Bank", type: .bank))
         let parent = try #require(f.model.addAccount(name: "Parent", type: .expense))
         let child = try #require(f.model.addAccount(name: "Child", type: .expense,
@@ -148,7 +148,7 @@ struct DeleteAccountTests {
     @Test("Refuses to delete a parent with no home for its children")
     func childrenNeedTarget() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         let parent = try #require(f.model.addAccount(name: "Parent", type: .expense))
         _ = try #require(f.model.addAccount(name: "Child", type: .expense, parentID: parent))
         #expect(throws: AppModel.AccountDeletionError.childrenNeedTarget) {
@@ -162,7 +162,7 @@ struct DeleteAccountTests {
     @Test("Refuses a target inside the account being deleted")
     func targetInsideSubtree() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         let bank = try #require(f.model.addAccount(name: "Bank", type: .bank))
         let parent = try #require(f.model.addAccount(name: "Parent", type: .expense))
         let child = try #require(f.model.addAccount(name: "Child", type: .expense,
@@ -182,7 +182,7 @@ struct DeleteAccountTests {
     @Test("Refuses to move postings to an account of another commodity")
     func commodityMismatch() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         let aud = try #require(f.model.addAccount(name: "AUD Bank", type: .bank, commodity: .aud))
         let usd = try #require(f.model.addAccount(name: "USD Bank", type: .bank, commodity: .usd))
         let other = try #require(f.model.addAccount(name: "Other AUD", type: .bank, commodity: .aud))
@@ -203,7 +203,7 @@ struct DeleteAccountTests {
     @Test("Targets exclude the account itself and its descendants")
     func targetsExcludeSubtree() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         let parent = try #require(f.model.addAccount(name: "Parent", type: .expense))
         let child = try #require(f.model.addAccount(name: "Child", type: .expense,
                                                     parentID: parent))
@@ -220,7 +220,7 @@ struct DeleteAccountTests {
     @Test("Deleting the selected account clears the selection")
     func clearsSelection() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         let id = try #require(f.model.addAccount(name: "Gone", type: .expense))
         f.model.selectedAccountID = id
         try f.model.deleteAccount(id)
@@ -236,7 +236,7 @@ struct DeleteAccountTests {
     @Test("Undo puts the account and its postings back")
     func undoRestores() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         let bank = try #require(f.model.addAccount(name: "Bank", type: .bank))
         let old = try #require(f.model.addAccount(name: "Old", type: .expense))
         let new = try #require(f.model.addAccount(name: "New", type: .expense))
@@ -257,7 +257,7 @@ struct DeleteAccountTests {
     @Test("Redo deletes it again")
     func redoDeletes() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         let bank = try #require(f.model.addAccount(name: "Bank", type: .bank))
         let old = try #require(f.model.addAccount(name: "Old", type: .expense))
         let new = try #require(f.model.addAccount(name: "New", type: .expense))

@@ -30,7 +30,7 @@ struct CheckRepairScenarioTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let food = try #require(model.addAccount(name: "Food", type: .expense))
@@ -68,7 +68,7 @@ struct CheckRepairScenarioTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let book = try #require(model.book)
@@ -95,7 +95,7 @@ struct CheckRepairScenarioTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let book = try #require(model.book)
@@ -133,7 +133,7 @@ struct CheckRepairScenarioTests {
         #expect(model.cleanupProposal() == nil)
 
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let food = try #require(model.addAccount(name: "Food", type: .expense))
         model.addTransfer(from: bank, to: food, amount: dec("25"),

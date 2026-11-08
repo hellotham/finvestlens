@@ -108,7 +108,12 @@ enum TestHost {
 
 @main
 struct finvestlensApp: App {
-    @State private var model = AppModel()
+    @State private var model: AppModel = {
+        let model = AppModel()
+        // FinvestLens's own Box app, when this build carries it.
+        model.builtInBoxApp = BuiltInBoxApp.credentials
+        return model
+    }()
 
     init() {
         // Private Cloud Compute is compiled in only alongside Apple's managed

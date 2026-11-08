@@ -16,8 +16,8 @@ import WidgetKit
 #endif
 
 /// Read-only summaries for App Intents / Shortcuts / widgets, driven by the
-/// last-opened book (`FR-PLT-03`). Loading uses the store directly (no lock /
-/// working copy) since these are read-only.
+/// last-opened book (`FR-PLT-03`). Loading reads a copy of the book and takes
+/// no lock, since these are read-only.
 public enum IntentSupport {
 
     static func lastBook() -> Book? {
@@ -31,7 +31,17 @@ public enum IntentSupport {
         // matches and throws `DocumentError.conflict`, and the external-change
         // watcher starts offering to reload the user's own edits away. The
         // v5_invoice_kvp migration made this reachable rather than theoretical.
-        guard let book = try? SQLiteDocumentStore(readOnlyPath: path).read() else { return nil }
+        //
+        // And a copy, never the live file in place (`readSnapshot`: a
+        // coordinated copy, read, then removed): these run in the app's own
+        // process, and an autosave landing during the read renames a new file
+        // over the one being read — SQLite cuts the connection off mid-read
+        // ("vnode unlinked while in use"), and Siri answered "no book has been
+        // opened" while one was. On APFS the copy is a clone. Not a document:
+        // it would hash the whole book for a fingerprint only saving uses.
+        guard let book = try? FinvestLensDocument.readSnapshot(of: URL(fileURLWithPath: path)) else {
+            return nil
+        }
         // A book behind Face/Touch ID (`NFR-07`) stays behind it here too.
         // These entry points answer Spotlight, Shortcuts and Siri without any
         // window, so nothing else would ever put the lock in front of them —

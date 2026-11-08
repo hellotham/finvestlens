@@ -45,7 +45,7 @@ struct QuickEntryTests {
     @Test("A positive amount is money into the register's account")
     func positiveIsIn() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         let id = try #require(f.model.quickEnter(into: f.bank, transferFrom: f.salary,
                                                  amount: 100, date: day(0), description: "Pay"))
         let book = try #require(f.model.book)
@@ -58,7 +58,7 @@ struct QuickEntryTests {
     @Test("A negative amount is money out")
     func negativeIsOut() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         let id = try #require(f.model.quickEnter(into: f.bank, transferFrom: f.food,
                                                  amount: -42, date: day(1),
                                                  description: "Groceries"))
@@ -74,7 +74,7 @@ struct QuickEntryTests {
     @Test("The register lands on the new row")
     func landsOnTheNewRow() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         f.model.selectedAccountID = f.bank
         let id = try #require(f.model.quickEnter(into: f.bank, transferFrom: f.salary,
                                                  amount: 10, date: day(0), description: "Pay"))
@@ -88,7 +88,7 @@ struct QuickEntryTests {
     @Test("Zero amounts and self-transfers are refused")
     func refusesNonsense() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         #expect(f.model.quickEnter(into: f.bank, transferFrom: f.salary, amount: 0,
                                    date: day(0), description: "x") == nil)
         #expect(f.model.quickEnter(into: f.bank, transferFrom: f.bank, amount: 10,
@@ -103,7 +103,7 @@ struct QuickEntryTests {
     @Test("QuickFill offers the last transaction's shape")
     func quickFillFills() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         _ = f.model.quickEnter(into: f.bank, transferFrom: f.food, amount: -55,
                                date: day(0), description: "Groceries")
 
@@ -117,7 +117,7 @@ struct QuickEntryTests {
     @Test("A multi-split template fills nothing")
     func multiSplitTemplateDeclines() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         _ = try f.model.addTransaction(
             date: day(0), description: "Shop", currency: .aud,
             splits: [SplitInput(accountID: f.bank, value: -60),
@@ -130,7 +130,7 @@ struct QuickEntryTests {
     @Test("A template from another register fills nothing here")
     func foreignTemplateDeclines() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         _ = f.model.quickEnter(into: f.food, transferFrom: f.salary, amount: 10,
                                date: day(0), description: "Odd")
         #expect(f.model.quickFill(forDescription: "Odd", into: f.bank) == nil)

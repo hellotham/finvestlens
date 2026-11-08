@@ -14180,49 +14180,49 @@
         }
       }
     },
-    "A book can live in your own Box account. Set up a Box app of your own in Settings ▸ General ▸ Box, then choose **Open from Box…**, in the File menu or on the welcome screen.": {
+    "A book can live in your own Box account. Choose **Open from Box…**, in the File menu or on the welcome screen, and sign in on Box’s own page — FinvestLens never sees your Box password. Settings ▸ General ▸ Box connects and disconnects.": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ein Buch kann in Ihrem eigenen Box-Konto liegen. Richten Sie unter Einstellungen ▸ Allgemein ▸ Box eine eigene Box-App ein und wählen Sie dann **Aus Box öffnen …** im Menü „Ablage“ oder auf dem Willkommensbildschirm."
+            "value": "Ein Buch kann in Ihrem eigenen Box-Konto liegen. Wählen Sie **Aus Box öffnen …** im Menü „Ablage“ oder auf dem Willkommensbildschirm und melden Sie sich auf der Box-eigenen Seite an – FinvestLens sieht Ihr Box-Passwort nie. Unter Einstellungen ▸ Allgemein ▸ Box verbinden und trennen Sie die Verbindung."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Un libro puede estar en tu propia cuenta de Box. Configura una app de Box propia en Ajustes ▸ General ▸ Box y elige **Abrir desde Box…**, en el menú Archivo o en la pantalla de bienvenida."
+            "value": "Un libro puede estar en tu propia cuenta de Box. Elige **Abrir desde Box…**, en el menú Archivo o en la pantalla de bienvenida, e inicia sesión en la propia página de Box: FinvestLens nunca ve tu contraseña de Box. En Ajustes ▸ General ▸ Box te conectas y te desconectas."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Un livre peut se trouver dans votre propre compte Box. Configurez une app Box à vous dans Réglages ▸ Général ▸ Box, puis choisissez **Ouvrir depuis Box…**, dans le menu Fichier ou sur l’écran d’accueil."
+            "value": "Un livre peut se trouver dans votre propre compte Box. Choisissez **Ouvrir depuis Box…**, dans le menu Fichier ou sur l’écran d’accueil, puis connectez-vous sur la page de Box — FinvestLens ne voit jamais votre mot de passe Box. Réglages ▸ Général ▸ Box permet de se connecter et de se déconnecter."
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Un libro può stare nel tuo account Box. Configura un’app Box tua in Impostazioni ▸ Generali ▸ Box, poi scegli **Apri da Box…**, nel menu File o nella schermata di benvenuto."
+            "value": "Un libro può stare nel tuo account Box. Scegli **Apri da Box…**, nel menu File o nella schermata di benvenuto, e accedi sulla pagina di Box: FinvestLens non vede mai la tua password Box. In Impostazioni ▸ Generali ▸ Box ti connetti e ti disconnetti."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "帳簿はあなた自身の Box アカウントに置くこともできます。設定 ▸ 一般 ▸ Box で自分の Box アプリを設定してから、「ファイル」メニューまたはようこそ画面で **Box から開く…** を選びます。"
+            "value": "帳簿はあなた自身の Box アカウントに置くこともできます。「ファイル」メニューまたはようこそ画面で **Box から開く…** を選び、Box 自身のページでサインインします。FinvestLens が Box のパスワードを見ることはありません。接続と接続解除は 設定 ▸ 一般 ▸ Box で行います。"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Um livro pode ficar na sua própria conta do Box. Configure um app do Box seu em Ajustes ▸ Geral ▸ Box e escolha **Abrir do Box…**, no menu Arquivo ou na tela de boas-vindas."
+            "value": "Um livro pode ficar na sua própria conta do Box. Escolha **Abrir do Box…**, no menu Arquivo ou na tela de boas-vindas, e faça login na própria página do Box — o FinvestLens nunca vê sua senha do Box. Em Ajustes ▸ Geral ▸ Box você conecta e desconecta."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "账簿可以存放在你自己的 Box 账户中。在「设置 ▸ 通用 ▸ Box」中设置你自己的 Box 应用，然后在「文件」菜单或欢迎屏幕中选择 **从 Box 打开…**。"
+            "value": "账簿可以存放在你自己的 Box 账户中。在「文件」菜单或欢迎屏幕中选择 **从 Box 打开…**，然后在 Box 自己的页面上登录——FinvestLens 绝不会看到你的 Box 密码。在「设置 ▸ 通用 ▸ Box」中可以连接和断开连接。"
           }
         }
       }
@@ -31561,6 +31561,53 @@
         }
       }
     },
+    "Box isn’t accepting FinvestLens’s sign-in (%@). Your books stay on this device until it does, and nothing is lost.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box akzeptiert die Anmeldung von FinvestLens derzeit nicht (%@). Ihre Bücher bleiben bis dahin auf diesem Gerät, und nichts geht verloren."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box no acepta el inicio de sesión de FinvestLens (%@). Tus libros se quedan en este dispositivo hasta que lo haga, y no se pierde nada."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box n’accepte pas la connexion de FinvestLens (%@). Vos livres restent sur cet appareil d’ici là, et rien n’est perdu."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box non accetta l’accesso di FinvestLens (%@). I tuoi libri restano su questo dispositivo finché non lo fa, e non si perde nulla."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box が FinvestLens のサインインを受け付けていません（%@）。それまで帳簿はこのデバイスに残り、失われるものはありません。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Box não está aceitando o login do FinvestLens (%@). Seus livros ficam neste dispositivo até que aceite, e nada se perde."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box 目前不接受 FinvestLens 的登录（%@）。在此之前，你的账簿会保留在此设备上，不会丢失任何内容。"
+          }
+        }
+      }
+    },
     "Box isn’t ready to send this file yet — it was probably saved moments ago. Try again in a minute.": {
       "extractionState": "manual",
       "localizations": {
@@ -38396,49 +38443,49 @@
         }
       }
     },
-    "Couldn’t keep your version: %@": {
+    "Couldn’t keep your version": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ihre Version konnte nicht behalten werden: %@"
+            "value": "Ihre Version konnte nicht behalten werden"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "No se pudo conservar tu versión: %@"
+            "value": "No se pudo conservar tu versión"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Impossible de garder votre version : %@"
+            "value": "Impossible de garder votre version"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Impossibile mantenere la tua versione: %@"
+            "value": "Impossibile mantenere la tua versione"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "あなたのバージョンを残せませんでした: %@"
+            "value": "あなたのバージョンを残せませんでした"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Não foi possível manter sua versão: %@"
+            "value": "Não foi possível manter sua versão"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "无法保留你的版本：%@"
+            "value": "无法保留你的版本"
           }
         }
       }
@@ -38772,6 +38819,53 @@
         }
       }
     },
+    "Couldn’t reload from disk": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neu laden vom Datenträger nicht möglich"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo recargar desde el disco"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible de recharger depuis le disque"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile ricaricare dal disco"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ディスクから再読み込みできませんでした"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível recarregar do disco"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法从磁盘重新载入"
+          }
+        }
+      }
+    },
     "Couldn’t Remove the Copy": {
       "extractionState": "manual",
       "localizations": {
@@ -38819,49 +38913,96 @@
         }
       }
     },
-    "Couldn’t revert: %@": {
+    "Couldn’t revert": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Zurücksetzen nicht möglich: %@"
+            "value": "Zurücksetzen nicht möglich"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "No se pudo revertir: %@"
+            "value": "No se pudo revertir"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Impossible de revenir en arrière : %@"
+            "value": "Impossible de revenir en arrière"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Impossibile ripristinare: %@"
+            "value": "Impossibile ripristinare"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "復帰できませんでした: %@"
+            "value": "復帰できませんでした"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Não foi possível reverter: %@"
+            "value": "Não foi possível reverter"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "无法复原：%@"
+            "value": "无法复原"
+          }
+        }
+      }
+    },
+    "Couldn’t save to Box": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Konnte nicht in Box sichern"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo guardar en Box"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible d’enregistrer sur Box"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile salvare su Box"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Box に保存できませんでした"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível salvar no Box"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法保存到 Box"
           }
         }
       }
@@ -39003,6 +39144,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "无法将「%1$@」上传到 Box：%2$@ 它已存储在此设备上，稍后会上传。"
+          }
+        }
+      }
+    },
+    "Couldn’t use the other version": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die andere Version konnte nicht verwendet werden"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo usar la otra versión"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible d’utiliser l’autre version"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile usare l’altra versione"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "もう一方のバージョンを使用できませんでした"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível usar a outra versão"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法使用另一版本"
           }
         }
       }
@@ -65947,6 +66135,53 @@
         }
       }
     },
+    "FinvestLens now connects to Box through its own Box app. The sign-in made through your own app has ended: connect again. Your books on this device are kept.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FinvestLens verbindet sich jetzt über seine eigene Box-App mit Box. Die Anmeldung über Ihre eigene App ist beendet: Verbinden Sie sich erneut. Ihre Bücher auf diesem Gerät bleiben erhalten."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FinvestLens ahora se conecta a Box mediante su propia app de Box. El inicio de sesión hecho con tu propia app ha terminado: vuelve a conectarte. Tus libros de este dispositivo se conservan."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FinvestLens se connecte désormais à Box par sa propre app Box. La connexion faite avec votre propre app a pris fin : reconnectez-vous. Vos livres sur cet appareil sont conservés."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FinvestLens ora si collega a Box tramite la propria app Box. L’accesso fatto con la tua app è terminato: collegati di nuovo. I tuoi libri su questo dispositivo vengono conservati."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FinvestLens は独自の Box アプリで Box に接続するようになりました。ご自身のアプリで行ったサインインは終了しました。もう一度接続してください。このデバイス上の帳簿はそのまま残ります。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O FinvestLens agora se conecta ao Box pelo próprio app do Box. O login feito com o seu app terminou: conecte-se de novo. Seus livros neste dispositivo são mantidos."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FinvestLens 现在通过自己的 Box 应用连接 Box。通过你自己的应用进行的登录已结束：请重新连接。此设备上的账簿会保留。"
+          }
+        }
+      }
+    },
     "FinvestLens quits as soon as Box has your book, or in half a minute. What isn’t uploaded by then is kept on this Mac and goes the next time FinvestLens opens.": {
       "extractionState": "manual",
       "localizations": {
@@ -89275,6 +89510,59 @@
           "stringUnit": {
             "state": "translated",
             "value": "买入以来的总回报：资本利得、股息和已缴税抵免，附历史"
+          }
+        }
+      }
+    },
+    "Trade": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trade"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trade"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Operación"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opération"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Operazione"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "売買"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Operação"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "交易"
           }
         }
       }
@@ -155797,6 +156085,53 @@
           "stringUnit": {
             "state": "translated",
             "value": "应付"
+          }
+        }
+      }
+    },
+    "You sign in on Box’s own page: FinvestLens never sees your Box password, and keeps the sign-in in the Keychain on this device.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Anmeldung erfolgt auf der Box-eigenen Seite: FinvestLens sieht Ihr Box-Passwort nie und bewahrt die Anmeldung im Schlüsselbund dieses Geräts auf."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El inicio de sesión ocurre en la propia página de Box: FinvestLens nunca ve tu contraseña de Box y guarda la sesión en el Llavero de este dispositivo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La connexion se fait sur la page de Box : FinvestLens ne voit jamais votre mot de passe Box et garde la connexion dans le trousseau de cet appareil."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L’accesso avviene sulla pagina di Box: FinvestLens non vede mai la tua password Box e conserva l’accesso nel portachiavi di questo dispositivo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サインインは Box 自身のページで行われます。FinvestLens が Box のパスワードを見ることはなく、サインイン情報はこのデバイスのキーチェーンに保管されます。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O login acontece na própria página do Box: o FinvestLens nunca vê sua senha do Box e guarda o login nas Chaves deste dispositivo."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "登录在 Box 自己的页面完成：FinvestLens 绝不会看到你的 Box 密码，并将登录信息保存在此设备的钥匙串中。"
           }
         }
       }

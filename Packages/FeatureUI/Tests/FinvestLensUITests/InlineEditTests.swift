@@ -44,7 +44,7 @@ struct InlineEditTests {
         let url = tempURL()
         let model = AppModel()
         let ids = try makeTransferBook(model, at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         #expect(model.isSimpleTransfer(splitID: ids.bankSplit))
 
@@ -94,7 +94,7 @@ struct InlineEditTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let groceries = try #require(model.addAccount(name: "Groceries", type: .expense))
@@ -162,7 +162,7 @@ struct InlineEditTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let groceries = try #require(model.addAccount(name: "Groceries", type: .expense))
@@ -195,7 +195,7 @@ struct InlineEditTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let groceries = try #require(model.addAccount(name: "Groceries", type: .expense))

@@ -56,7 +56,7 @@ struct GoToDateTests {
     @Test("Landing on a date something happened lands on it")
     func exactDate() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         #expect(f.model.goToDate(day(10)))
         #expect(landedOn(f) == "day 10")
     }
@@ -67,7 +67,7 @@ struct GoToDateTests {
     @Test("A date with nothing on it lands on the next posting")
     func nextPosting() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         #expect(f.model.goToDate(day(5)))
         #expect(landedOn(f) == "day 10")
     }
@@ -82,7 +82,7 @@ struct GoToDateTests {
     @Test("A time of day on the right date still lands on that date")
     func timeOfDayIgnored() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         let sameDay = day(10).addingTimeInterval(2 * 3600)
         #expect(Calendar.current.isDate(sameDay, inSameDayAs: day(10)))
         #expect(f.model.goToDate(sameDay))
@@ -92,7 +92,7 @@ struct GoToDateTests {
     @Test("Before everything lands on the first posting")
     func beforeAll() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         #expect(f.model.goToDate(day(-100)))
         #expect(landedOn(f) == "day 0")
     }
@@ -103,7 +103,7 @@ struct GoToDateTests {
     @Test("After everything goes nowhere, and says so")
     func afterAll() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         #expect(!f.model.goToDate(day(100)))
         #expect(f.model.pendingRegisterSplitID == nil)
     }
@@ -111,7 +111,7 @@ struct GoToDateTests {
     @Test("An empty register goes nowhere")
     func emptyRegister() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         f.model.selectedAccountID = nil
         #expect(!f.model.goToDate(day(0)))
     }
@@ -121,7 +121,7 @@ struct GoToDateTests {
     @Test("A filtered-out row is not a place to land")
     func respectsFilter() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         f.model.registerFilter = RegisterFilter(statuses: Set(ReconcileState.allCases),
                                                 startDate: day(20), endDate: nil)
         #expect(f.model.registerRows.map(\.description) == ["day 20"])
@@ -134,7 +134,7 @@ struct GoToDateTests {
     @Test("Reversing the sort does not change where a date is")
     func independentOfSort() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         f.model.registerSortReversed = true
         #expect(f.model.registerRows.map(\.description) == ["day 20", "day 10", "day 0"])
         #expect(f.model.goToDate(day(5)))

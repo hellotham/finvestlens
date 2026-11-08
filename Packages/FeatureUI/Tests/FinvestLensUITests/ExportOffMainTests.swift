@@ -26,7 +26,7 @@ struct ExportOffMainTests {
             .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let food = try #require(model.addAccount(name: "Groceries", type: .expense))
@@ -62,7 +62,7 @@ struct ExportOffMainTests {
             .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         _ = try #require(model.addAccount(name: "Bank", type: .bank))
         // Both builds have their replicas and neither has started when the
         // book closes — held there, not hoped for with a `Task.yield()`.

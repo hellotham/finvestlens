@@ -55,7 +55,7 @@ struct AutoClearSessionTests {
     @Test("Unmatched rows sort to the top after auto-clear")
     func unmatchedFirst() throws {
         let f = try makeFixture([100, 20, 3])
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         begin(f, statement: 103)
 
         _ = f.model.autoClear()   // matches 100 + 3, leaves 20 unticked
@@ -70,7 +70,7 @@ struct AutoClearSessionTests {
     @Test("Auto-clear leaves the session balanced")
     func leavesSessionBalanced() throws {
         let f = try makeFixture([100, 20, 3])
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         begin(f, statement: 103)
 
         let result = f.model.autoClear()
@@ -85,7 +85,7 @@ struct AutoClearSessionTests {
     @Test("It ticks the chosen items and only those")
     func ticksTheRightItems() throws {
         let f = try makeFixture([100, 20, 3])
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         begin(f, statement: 103)
         f.model.autoClear()
 
@@ -101,7 +101,7 @@ struct AutoClearSessionTests {
     @Test("Auto-clear replaces hand-ticked items rather than adding to them")
     func replacesExistingTicks() throws {
         let f = try makeFixture([100, 20, 3])
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         begin(f, statement: 103)
 
         let session = try #require(f.model.reconcileSession)
@@ -120,7 +120,7 @@ struct AutoClearSessionTests {
     @Test("Auto-clear writes nothing to the book")
     func writesNothing() throws {
         let f = try makeFixture([100, 20, 3])
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         begin(f, statement: 103)
         f.model.autoClear()
 
@@ -136,7 +136,7 @@ struct AutoClearSessionTests {
     @Test("Finishing after an auto-clear reconciles exactly what it ticked")
     func finishAfterAutoClear() throws {
         let f = try makeFixture([100, 20, 3])
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         begin(f, statement: 103)
         f.model.autoClear()
         #expect(f.model.finishReconcile())
@@ -153,7 +153,7 @@ struct AutoClearSessionTests {
     @Test("An ambiguous statement is refused, in words")
     func ambiguousIsExplained() throws {
         let f = try makeFixture([50, 50, 7])
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         begin(f, statement: 50)
 
         #expect(f.model.autoClear() == .failure(.ambiguous))
@@ -166,7 +166,7 @@ struct AutoClearSessionTests {
     @Test("An unreachable statement is refused, in words")
     func unreachableIsExplained() throws {
         let f = try makeFixture([100, 20, 3])
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         begin(f, statement: 7)
         #expect(f.model.autoClear() == .failure(.unreachable))
         #expect(!f.model.describe(AutoClear.Failure.unreachable).isEmpty)
@@ -175,7 +175,7 @@ struct AutoClearSessionTests {
     @Test("Every failure has something to say")
     func everyFailureIsExplained() throws {
         let f = try makeFixture([1])
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         let failures: [AutoClear.Failure] = [.alreadyAtTarget, .nothingUncleared, .unreachable,
                                              .ambiguous, .tooComplex]
         for failure in failures {
@@ -186,7 +186,7 @@ struct AutoClearSessionTests {
     @Test("Auto-clear outside a session does nothing")
     func noSession() throws {
         let f = try makeFixture([100])
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         #expect(f.model.autoClear() == .failure(.nothingUncleared))
     }
 }

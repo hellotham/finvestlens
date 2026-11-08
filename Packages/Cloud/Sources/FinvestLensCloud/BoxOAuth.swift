@@ -11,19 +11,22 @@ import CryptoKit
 
 /// Identifies this app to Box.
 ///
-/// Box requires every client to be a registered application, so these come
-/// from the user's **own** Box developer console rather than being baked in: a
-/// client secret shipped in a binary is not a secret, and a shipped client id
-/// would make every user's traffic look like one developer's.
+/// Box requires every client to be a registered application. Published builds
+/// carry FinvestLens's own, put in at build time from the building Mac's
+/// Keychain and never kept in the source (the owner's decision, 8 Nov 2026;
+/// `scripts/box-app-credentials.sh`). A build without it — one made from the
+/// public source — uses a Box app of the person's own, its secret in their
+/// Keychain, never in `UserDefaults` or a file.
 ///
 /// A secret is unavoidable here. Box does not implement PKCE — verified
 /// against its API reference on 18 Aug 2026: `GET /authorize` accepts only
 /// `response_type`, `client_id`, `redirect_uri`, `state` and `scope` (no
 /// `code_challenge`), and `POST /oauth2/token` has no `code_verifier` and
-/// requires `client_secret` for the `authorization_code` grant. So the secret
-/// is the user's own, kept in their Keychain, never in `UserDefaults` or a
-/// file.
-public struct BoxAppConfiguration: Equatable, Sendable {
+/// requires `client_secret` for the `authorization_code` grant. A secret
+/// shipped in an app can be recovered from it by someone set on it; what the
+/// app can promise is that it never shows, logs or describes one — so neither
+/// this type's description nor its reflection includes the secret.
+public struct BoxAppConfiguration: Equatable, Sendable, CustomStringConvertible, CustomReflectable {
     public var clientID: String
     public var clientSecret: String
     /// Must match the redirect URI registered on the Box application exactly.
@@ -39,6 +42,21 @@ public struct BoxAppConfiguration: Equatable, Sendable {
     /// needs in order to know when Box has finished.
     public var callbackScheme: String? {
         URLComponents(string: redirectURI)?.scheme
+    }
+
+    /// What `print`, string interpolation and `String(describing:)` show:
+    /// whether the two are there, never what they are.
+    public var description: String {
+        "BoxAppConfiguration(clientID: \(clientID.isEmpty ? "none" : "set"), "
+            + "clientSecret: \(clientSecret.isEmpty ? "none" : "set"), redirectURI: \(redirectURI))"
+    }
+
+    /// What `dump` and debuggers walk instead of the stored properties.
+    public var customMirror: Mirror {
+        Mirror(self, children: ["clientID": clientID.isEmpty ? "none" : "set",
+                                "clientSecret": clientSecret.isEmpty ? "none" : "set",
+                                "redirectURI": redirectURI],
+               displayStyle: .struct)
     }
 }
 
@@ -141,6 +159,13 @@ public actor BoxAuthenticator {
     /// A valid access token, refreshing first if the stored one has aged out.
     public func accessToken() async throws -> String {
         guard let tokens = store.tokens() else { throw BoxError.notAuthenticated }
+        // Issued to another Box app — the person's own, before the build
+        // carried FinvestLens's — they would only be refused at the refresh:
+        // never sent, and gone.
+        if let issuer = tokens.clientID, issuer != configuration.clientID {
+            try? store.setTokens(nil)
+            throw BoxError.notAuthenticated
+        }
         guard tokens.isExpired(asOf: now()) else { return tokens.accessToken }
         try await refresh(using: tokens.refreshToken)
         guard let refreshed = store.tokens() else { throw BoxError.notAuthenticated }
@@ -202,10 +227,19 @@ public actor BoxAuthenticator {
 
         let (data, response) = try await transport.send(request)
         guard (200..<300).contains(response.statusCode) else {
-            // A refresh that Box rejects means the grant is gone (revoked, or
-            // the refresh token was already spent). Clearing the tokens turns
-            // a permanent 400 loop into a plain "sign in again".
             if response.statusCode == 400 || response.statusCode == 401 {
+                // Box's OAuth error says whose the fault is. One that refuses
+                // the app itself cannot be mended by signing in again, and
+                // wiping the grant over it only made an endless "Connect
+                // again": the grant is kept, for when Box accepts the app.
+                struct OAuthError: Decodable { let error: String }
+                if let code = (try? JSONDecoder().decode(OAuthError.self, from: data))?.error,
+                   ["invalid_client", "unauthorized_client"].contains(code) {
+                    throw BoxError.appRefused(code: code)
+                }
+                // Anything else means the grant is gone (revoked, or the
+                // refresh token already spent). Clearing the tokens turns a
+                // permanent 400 loop into a plain "sign in again".
                 try? store.setTokens(nil)
                 throw BoxError.notAuthenticated
             }
@@ -222,7 +256,8 @@ public actor BoxAuthenticator {
         }
         try store.setTokens(BoxTokens(accessToken: decoded.access_token,
                                       refreshToken: decoded.refresh_token,
-                                      expiresAt: now().addingTimeInterval(decoded.expires_in)))
+                                      expiresAt: now().addingTimeInterval(decoded.expires_in),
+                                      clientID: configuration.clientID))
     }
 
     private static func escape(_ value: String) -> String {

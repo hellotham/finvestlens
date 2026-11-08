@@ -116,6 +116,10 @@ public enum BoxError: Error, Equatable, Sendable {
     /// Box has the file but is not ready to send it yet — it was uploaded
     /// moments ago — and kept saying so.
     case notReadyYet
+    /// Box refuses the app itself (`invalid_client`, `unauthorized_client`):
+    /// its secret reset, or the app disabled. Signing in again cannot help,
+    /// so the grant is kept for when Box accepts the app again.
+    case appRefused(code: String)
     case malformedResponse(String)
 
     /// Whether retrying with a refreshed access token could plausibly work.
@@ -152,6 +156,8 @@ extension BoxError: LocalizedError {
             String(localized: "The file on Box has changed since it was downloaded.")
         case .notReadyYet:
             String(localized: "Box isn’t ready to send this file yet — it was probably saved moments ago. Try again in a minute.")
+        case .appRefused(let code):
+            String(localized: "Box isn’t accepting FinvestLens’s sign-in (\(code)). Your books stay on this device until it does, and nothing is lost.")
         case .malformedResponse(let detail):
             String(localized: "Box sent an answer that couldn’t be read (\(detail)).")
         }

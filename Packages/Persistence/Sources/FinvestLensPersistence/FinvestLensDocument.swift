@@ -66,8 +66,10 @@ public final class FinvestLensDocument {
     /// say: a book freed by one swap can be reused by the next.
     private var bookGeneration: UInt64 = 0
     /// What the load had to default (open-what-you-can, NFR-05) — surfaced
-    /// as a warning toast by the app layer.
-    public var loadWarnings: LoadWarnings? { store.lastLoadWarnings }
+    /// as a warning toast by the app layer. The book's, kept with it: revert
+    /// reads the shared book with a store of its own before the swap, so the
+    /// store the session goes on with has read nothing.
+    public private(set) var loadWarnings: LoadWarnings?
     /// Whether there are unsaved changes. Each change of it is written into
     /// the lock at once (``lockStateChanged()``), so a machine judging the
     /// lock reads where this session stands, not where it stood a heartbeat
@@ -86,7 +88,12 @@ public final class FinvestLensDocument {
     /// write-back. Readable so a caller can run the write-back itself, off the
     /// main actor — see ``commitSave(workingCopy:to:)``.
     public let workingCopyURL: URL
-    private var store: SQLiteDocumentStore
+    /// Shared with every save this document stages (``StoreHandle``).
+    private let storeHandle: StoreHandle
+    private var store: SQLiteDocumentStore {
+        get { storeHandle.store }
+        set { storeHandle.store = newValue }
+    }
     /// Hash of the shared file as of open / last successful save — for conflict
     /// detection (`FR-DAT-08`).
     ///
@@ -118,7 +125,8 @@ public final class FinvestLensDocument {
         lock.hasUnsavedWork = dirty
         self.advisoryLockHeld = lockHeld
         self.workingCopyURL = workingCopyURL
-        self.store = store
+        self.storeHandle = StoreHandle(store)
+        self.loadWarnings = store.lastLoadWarnings
         self.baselineFingerprint = fingerprint
         self.hasUnsavedChanges = dirty
         // Every caller hands over a book exactly as its working copy holds it
@@ -236,6 +244,16 @@ public final class FinvestLensDocument {
     /// lock as stale-but-present, which is the judgement wanted here.
     public static func create(at fileURL: URL, baseCurrency: Commodity = .aud,
                               breakStaleLock: Bool = false) throws -> FinvestLensDocument {
+        try create(at: fileURL, baseCurrency: baseCurrency, breakStaleLock: breakStaleLock,
+                   workingDirectory: nil)
+    }
+
+    /// `workingDirectory` gives the working copy a folder of its own, for a
+    /// test that removes the folder — the shared one holds every other
+    /// process's copies. (`TMPDIR` cannot stand in: Foundation's temporary
+    /// directory ignores it on the Mac.)
+    static func create(at fileURL: URL, baseCurrency: Commodity = .aud, breakStaleLock: Bool = false,
+                       workingDirectory: URL?) throws -> FinvestLensDocument {
         let lock = FileLock(documentURL: fileURL)
         // `lock.exists()`, not `FileManager.fileExists`: under App Sandbox the
         // sibling lock is visible only inside a coordination, and a check
@@ -253,7 +271,7 @@ public final class FinvestLensDocument {
         // decides whether the failure path below may remove it.
         let preexisting = FileManager.default.fileExists(atPath: fileURL.path)
 
-        let workingCopyURL = Self.makeWorkingCopyURL()
+        let workingCopyURL = Self.makeWorkingCopyURL(in: workingDirectory)
         let store = try SQLiteDocumentStore(path: workingCopyURL.path)
         let book = Book(baseCurrency: baseCurrency)
         try store.write(book)
@@ -290,21 +308,56 @@ public final class FinvestLensDocument {
         let lock = FileLock(documentURL: fileURL)
         let lockHeld = try Self.acquireLockIfPossible(lock, breakStaleLock: breakStaleLock)
 
-        let workingCopyURL = Self.makeWorkingCopyURL()
+        let copy: WorkingCopy
         do {
-            try Self.copyItem(from: fileURL, to: workingCopyURL)
+            copy = try Self.readWorkingCopy(of: fileURL, progress: progress)
         } catch {
             if lockHeld { lock.release() }
             throw error
         }
-        let store = try SQLiteDocumentStore(path: workingCopyURL.path)
-        let book = try store.read(progress: progress)
-        let fingerprint = try Self.fingerprint(of: fileURL)
-
-        return FinvestLensDocument(fileURL: fileURL, book: book, lock: lock,
+        return FinvestLensDocument(fileURL: fileURL, book: copy.book, lock: lock,
                                    lockHeld: lockHeld,
-                                   workingCopyURL: workingCopyURL, store: store,
-                                   fingerprint: fingerprint, dirty: false)
+                                   workingCopyURL: copy.url, store: copy.store,
+                                   fingerprint: copy.fingerprint, dirty: false)
+    }
+
+    typealias WorkingCopy = (url: URL, store: SQLiteDocumentStore, book: Book, fingerprint: Data)
+
+    /// Copies the shared file to a fresh working copy and reads the book from
+    /// it. A failure at any step takes whatever of the copy was made with it —
+    /// it is a whole copy of someone's book, and nothing else clears the
+    /// working folder — closing its store first. `url` is for tests, which
+    /// need to know where to look.
+    static func readWorkingCopy(of fileURL: URL, to url: URL = makeWorkingCopyURL(),
+                                progress: (@Sendable (BookLoadProgress) -> Void)?) throws -> WorkingCopy {
+        var opened: SQLiteDocumentStore?
+        do {
+            try copyItem(from: fileURL, to: url)
+            let store = try SQLiteDocumentStore(path: url.path)
+            opened = store
+            let book = try store.read(progress: progress)
+            return (url, store, book, try fingerprint(of: fileURL))
+        } catch {
+            try? opened?.close()
+            try? FileManager.default.removeItem(at: url)
+            throw error
+        }
+    }
+
+    /// The book as the shared file holds it now, for a reader that needs it
+    /// once and never saves — App Intents and Spotlight, in the app's own
+    /// process. Read from a copy, so a save that replaces the file meanwhile
+    /// cannot pull it from under the read; and with no lock object and no
+    /// fingerprint, which are for saving — the fingerprint is a second read
+    /// of the whole file, on a network share every time Spotlight asks.
+    public static func readSnapshot(of fileURL: URL) throws -> Book {
+        try requireSQLiteBook(at: fileURL)
+        let url = makeWorkingCopyURL()
+        defer { try? FileManager.default.removeItem(at: url) }
+        try copyItem(from: fileURL, to: url)
+        let store = try SQLiteDocumentStore(path: url.path, mustExist: true)
+        defer { try? store.close() }     // runs first: closed, then removed
+        return try store.read()
     }
 
     /// Opens an existing document **read-only** (`FR-DAT-06`): reads it into a
@@ -315,16 +368,12 @@ public final class FinvestLensDocument {
                                     progress: (@Sendable (BookLoadProgress) -> Void)? = nil) throws -> FinvestLensDocument {
         try requireSQLiteBook(at: fileURL)
         let lock = FileLock(documentURL: fileURL)     // constructed but never acquired
-        let workingCopyURL = Self.makeWorkingCopyURL()
-        try Self.copyItem(from: fileURL, to: workingCopyURL)
-        let store = try SQLiteDocumentStore(path: workingCopyURL.path)
-        let book = try store.read(progress: progress)
-        let fingerprint = try Self.fingerprint(of: fileURL)
+        let copy = try Self.readWorkingCopy(of: fileURL, progress: progress)
 
-        let document = FinvestLensDocument(fileURL: fileURL, book: book, lock: lock,
+        let document = FinvestLensDocument(fileURL: fileURL, book: copy.book, lock: lock,
                                            lockHeld: false,
-                                           workingCopyURL: workingCopyURL, store: store,
-                                           fingerprint: fingerprint, dirty: false)
+                                           workingCopyURL: copy.url, store: copy.store,
+                                           fingerprint: copy.fingerprint, dirty: false)
         document.isReadOnly = true
         return document
     }
@@ -446,7 +495,7 @@ public final class FinvestLensDocument {
         let unsaved = book.takeUnsaved()
         stagedCount += 1
         inFlight[stagedCount] = unsaved
-        return StagedSave(token: changeToken, snapshot: BookSnapshot(book, unsaved: unsaved), store: store,
+        return StagedSave(token: changeToken, snapshot: BookSnapshot(book, unsaved: unsaved), storeHandle: storeHandle,
                           fileURL: fileURL, workingCopyURL: workingCopyURL,
                           baselineFingerprint: baselineFingerprint,
                           saveLock: saveLock, unsaved: unsaved, generation: bookGeneration,
@@ -574,39 +623,71 @@ public final class FinvestLensDocument {
     /// Discards unsaved changes by reloading the book from the shared file.
     /// The shared file is untouched.
     public func revert() throws {
-        try saveLock.withLock {
-            // The shared file comes in beside the working copy first, so a copy
-            // that fails leaves the session as it was; the connection closes
-            // before its file is replaced, never after (see
-            // ``SQLiteDocumentStore/close()``).
+        let (fresh, warnings, fingerprint): (Book, LoadWarnings?, Data) = try saveLock.withLock {
+            // The shared file comes in beside the working copy and is read in
+            // full there — the book, and the fingerprint later saves check
+            // against — before anything is closed or replaced. A copy that
+            // fails, a file of no bytes, one that is not ours, or one torn by a
+            // sync that stopped half way (it opens, and fails as it is read)
+            // stops the revert with the session as it was. Whatever is left of
+            // the copy goes on every path; once moved into place there is
+            // nothing left.
             let incoming = workingCopyURL.deletingLastPathComponent()
                 .appendingPathComponent(UUID().uuidString + ".finvestlens")
+            defer { try? FileManager.default.removeItem(at: incoming) }
+            // The system's cleaner can take the working folder with the copy
+            // in it, from a book left untouched for days. Revert is then the
+            // way back to a session that saves, so it makes the folder again.
+            try FileManager.default.createDirectory(at: incoming.deletingLastPathComponent(),
+                                                    withIntermediateDirectories: true)
             try Self.copyItem(from: fileURL, to: incoming)
+            guard ((try? incoming.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? 0) > 0 else {
+                throw DocumentError.notAFinvestLensBook(.unrecognized)
+            }
+            let reader = try SQLiteDocumentStore(path: incoming.path, mustExist: true)
+            let fresh: Book
             do {
-                try store.close()
+                fresh = try reader.read()
+                try reader.close()
             } catch {
-                // `SQLITE_BUSY`: by GRDB's contract the connection may still
-                // be open, so its file is not replaced; the session goes on
-                // as it was, and the revert reports why it did not happen.
-                try? FileManager.default.removeItem(at: incoming)
+                try? reader.close()
                 throw error
             }
-            do {
-                _ = try FileManager.default.replaceItemAt(workingCopyURL, withItemAt: incoming)
-            } catch {
-                try? FileManager.default.removeItem(at: incoming)
-                store = try SQLiteDocumentStore(path: workingCopyURL.path)
-                throw error
+            Self.markPersistedIfFaithful(fresh, readBy: reader)
+            let fingerprint = try Self.fingerprint(of: fileURL)
+            // Closed before its file is replaced (``SQLiteDocumentStore/close()``).
+            // `SQLITE_BUSY` leaves the connection open, by GRDB's contract, so
+            // the revert stops there too.
+            try store.close()
+            let swapped = Result {
+                if FileManager.default.fileExists(atPath: workingCopyURL.path) {
+                    _ = try FileManager.default.replaceItemAt(workingCopyURL, withItemAt: incoming)
+                } else {
+                    // Swept away while open: the copy simply takes its place.
+                    try FileManager.default.moveItem(at: incoming, to: workingCopyURL)
+                }
             }
-            store = try SQLiteDocumentStore(path: workingCopyURL.path)
-            // A save staged before now must not reach the closed store: skipped
-            // here, under the same lock, not only by `rebaseline` once the lock
-            // is let go, when one could already be writing.
+            // Opened whichever way the swap went: `replaceItemAt` replaces
+            // whole or not at all, so on failure what is there is the copy the
+            // session had, and the session goes on with it. Only if a file is
+            // there, though — opening a path with nothing at it makes an
+            // empty book.
+            store = try SQLiteDocumentStore(path: workingCopyURL.path, mustExist: true)
+            try swapped.get()
+            // A save staged before now belongs to the copy just replaced and is
+            // skipped — here, under the same lock, rather than once the lock is
+            // let go, when one could already be writing. After a failed swap
+            // it is not: the session's own copy is still there to take it.
             sequence.lastWritten = stagedCount
+            return (fresh, reader.lastLoadWarnings, fingerprint)
         }
-        book = try store.read()
-        Self.markPersistedIfFaithful(book, readBy: store)
-        baselineFingerprint = try Self.fingerprint(of: fileURL)
+        // Nothing below throws: the book is replaced only once everything that
+        // can fail has not, so a caller that catches an error from here may
+        // treat the session as untouched (`AppModel.reloadFromDisk()` keeps
+        // undo and the views as they were).
+        book = fresh
+        loadWarnings = warnings
+        baselineFingerprint = fingerprint
         hasUnsavedChanges = false
         // A save staged before this belongs to the session just discarded:
         // its rows must not reach the copy that replaced it.
@@ -614,12 +695,13 @@ public final class FinvestLensDocument {
     }
 
     /// The file as it now stands is the one later saves check against, and
-    /// with `discardingStaged`, no save staged before now writes.
+    /// with `discardingStaged`, what the saves staged before now took is
+    /// forgotten — ``revert()`` has already marked them written, under the
+    /// lock that guards the swap.
     private func rebaseline(discardingStaged: Bool) {
         saveLock.withLock {
             sequence.fingerprint = baselineFingerprint
             sequence.wroteBack = true
-            if discardingStaged { sequence.lastWritten = stagedCount }
         }
         if discardingStaged { inFlight = [:] }
     }
@@ -737,8 +819,8 @@ public final class FinvestLensDocument {
 
     // MARK: File helpers
 
-    private static func makeWorkingCopyURL() -> URL {
-        let directory = FileManager.default.temporaryDirectory
+    static func makeWorkingCopyURL(in folder: URL? = nil) -> URL {
+        let directory = folder ?? FileManager.default.temporaryDirectory
             .appendingPathComponent("FinvestLens-working", isDirectory: true)
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         return directory.appendingPathComponent(UUID().uuidString + ".finvestlens")
@@ -867,7 +949,11 @@ public struct StagedSave: Sendable {
     /// The change token at staging time, for ``FinvestLensDocument/finishSave(fingerprint:stagedAt:)``.
     public let token: UInt64
     let snapshot: BookSnapshot
-    let store: SQLiteDocumentStore
+    let storeHandle: StoreHandle
+    /// The document's store as it is now, not as it was when this was staged:
+    /// a revert that closes it and opens another must not leave this writing
+    /// to the closed one. Read under the save lock.
+    var store: SQLiteDocumentStore { storeHandle.store }
     let fileURL: URL
     let workingCopyURL: URL
     let baselineFingerprint: Data?
@@ -880,6 +966,15 @@ public struct StagedSave: Sendable {
     /// Its place in the order saves were staged in.
     let number: UInt64
     let sequence: SaveSequence
+}
+
+/// The document's store, shared with the saves it stages. Replaced only
+/// under the document's `saveLock` (by ``FinvestLensDocument/revert()``), and
+/// read by a staged save only under it, so a save written after a revert
+/// writes through the store revert opened, never the one it closed.
+final class StoreHandle: @unchecked Sendable {
+    var store: SQLiteDocumentStore
+    init(_ store: SQLiteDocumentStore) { self.store = store }
 }
 
 /// The number of the last staged save to reach the working copy. Read and

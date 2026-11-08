@@ -10,7 +10,10 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-VERSION="1.2"
+# The project's own MARKETING_VERSION, so the splash cannot name another: it
+# was written here by hand, and said 1.2 still when the project said 1.3.
+VERSION="$(grep -m1 'MARKETING_VERSION = ' finvestlens.xcodeproj/project.pbxproj | sed -E 's/.*= ([^;]+);.*/\1/')"
+[ -n "$VERSION" ] || { echo "No MARKETING_VERSION in the project" >&2; exit 1; }
 COMMIT="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
 DATE="$(date '+%Y-%m-%d')"
 OUT="finvestlens/BuildInfo.swift"

@@ -47,7 +47,7 @@ struct RegisterViewStateTests {
     @Test("Leaving a register and coming back restores its arrangement")
     func roundTripsAcrossAccountSwitch() throws {
         let f = try makeFixture()
-        defer { cleanDefaults(f); f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { cleanDefaults(f); f.model.close(); removeBook(at: f.url) }
 
         f.model.selectedAccountID = f.bank
         f.model.registerSort = .amount
@@ -71,7 +71,7 @@ struct RegisterViewStateTests {
     @Test("Two accounts keep two arrangements")
     func perAccount() throws {
         let f = try makeFixture()
-        defer { cleanDefaults(f); f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { cleanDefaults(f); f.model.close(); removeBook(at: f.url) }
 
         f.model.selectedAccountID = f.bank
         f.model.registerSort = .amount
@@ -90,7 +90,7 @@ struct RegisterViewStateTests {
     @Test("The default arrangement stores nothing")
     func defaultIsForgotten() throws {
         let f = try makeFixture()
-        defer { cleanDefaults(f); f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { cleanDefaults(f); f.model.close(); removeBook(at: f.url) }
 
         f.model.selectedAccountID = f.bank
         f.model.registerSort = .amount
@@ -107,7 +107,7 @@ struct RegisterViewStateTests {
     @Test("Sorting a register does not dirty the book")
     func sortingIsNotAnEdit() throws {
         let f = try makeFixture()
-        defer { cleanDefaults(f); f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { cleanDefaults(f); f.model.close(); removeBook(at: f.url) }
         try f.model.save()
         #expect(!f.model.hasUnsavedChanges)
 
@@ -121,7 +121,7 @@ struct RegisterViewStateTests {
     @Test("Closing the book remembers the last register's arrangement")
     func persistsOnClose() throws {
         let f = try makeFixture()
-        defer { cleanDefaults(f); try? FileManager.default.removeItem(at: f.url) }
+        defer { cleanDefaults(f); removeBook(at: f.url) }
 
         f.model.selectedAccountID = f.bank
         f.model.registerSort = .memo
@@ -130,7 +130,7 @@ struct RegisterViewStateTests {
 
         // …and a fresh model restores it on return.
         let again = AppModel()
-        defer { again.close() }
+        defer { closeAndRemove(again) }
         try again.newDocument(at: FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens"))
         again.selectedAccountID = f.bank

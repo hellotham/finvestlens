@@ -34,7 +34,15 @@ public final class SQLiteDocumentStore: @unchecked Sendable {
     public private(set) var changeCounter: Int64 = 0
 
     /// Opens (creating if needed) a store at `path` and migrates its schema.
-    public init(path: String) throws {
+    ///
+    /// With `mustExist`, a missing file is an error, not a new, empty book.
+    /// A working copy that has gone — swept from the temporary folder — must
+    /// never be reopened as one: the next save writes only what changed, so
+    /// an empty file written back over the shared book would lose the rest.
+    public init(path: String, mustExist: Bool = false) throws {
+        if mustExist, !FileManager.default.fileExists(atPath: path) {
+            throw CocoaError(.fileNoSuchFile, userInfo: [NSFilePathErrorKey: path])
+        }
         dbQueue = try DatabaseQueue(path: path)
         try Self.requireOwnSchema(dbQueue)
         try Self.migrator.migrate(dbQueue)

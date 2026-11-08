@@ -35,7 +35,7 @@ struct RefreshScopeTests {
         model.undoManager = undo
         let url = tempURL()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let food = try #require(model.addAccount(name: "Food", type: .expense))
         _ = try model.addTransaction(
@@ -82,7 +82,7 @@ struct RefreshScopeTests {
         model.undoManager = undo
         let url = tempURL()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let food = try #require(model.addAccount(name: "Food", type: .expense))
         _ = try model.addTransaction(
@@ -119,7 +119,7 @@ struct RefreshScopeTests {
         let model = AppModel()
         let url = tempURL()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let food = try #require(model.addAccount(name: "Food", type: .expense))
         _ = try model.addTransaction(
@@ -143,7 +143,7 @@ struct RefreshScopeTests {
         model.undoManager = undo
         let url = tempURL()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let cba = Commodity(namespace: .security("ASX"), mnemonic: "CBA",
                             fullName: "Commonwealth Bank", smallestFraction: 10000)
         _ = model.addAccount(name: "CBA", type: .stock, commodity: cba)
@@ -171,7 +171,7 @@ struct RefreshScopeTests {
         let model = AppModel()
         let url = tempURL()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let food = try #require(model.addAccount(name: "Food", type: .expense))
         _ = try model.addTransaction(
@@ -200,10 +200,10 @@ struct RefreshScopeTests {
         let model = AppModel()
         let url = tempURL()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         _ = try #require(model.addAccount(name: "Bank", type: .bank))
         let sidecar = url.deletingPathExtension().appendingPathExtension("audit")
-        defer { try? FileManager.default.removeItem(at: sidecar) }
+        defer { removeBook(at: sidecar) }
         #expect(FileManager.default.fileExists(atPath: sidecar.path))
         #expect(model.auditLogURL == sidecar)
         let tail = model.auditLogTail()
@@ -217,7 +217,7 @@ struct RefreshScopeTests {
         model.undoManager = undo
         let url = tempURL()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let yen = Commodity.currency("JPY", fractionDigits: 0, name: "Yen")
         #expect(model.book?.commodities.contains(yen) == false)
         _ = try #require(model.addAccount(name: "Yen cash", type: .cash, commodity: yen))
@@ -249,7 +249,7 @@ struct RefreshScopeTests {
         let model = AppModel()
         let url = tempURL()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let cba = Commodity(namespace: .security("ASX"), mnemonic: "CBA",
                             fullName: "Commonwealth Bank", smallestFraction: 10000)
         _ = model.addAccount(name: "CBA", type: .stock, commodity: cba)

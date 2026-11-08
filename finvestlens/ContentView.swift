@@ -58,6 +58,13 @@ struct RootHost: View {
         UTType(exportedAs: "com.hellotham.finvestlens.document", conformingTo: .database)
     }
 
+    /// The document alert's title: what failed, as the error says — a save,
+    /// a reload, a revert — and otherwise opening or importing a book.
+    private func documentErrorTitle(_ error: AppModel.DocumentError?) -> Text {
+        if let title = error?.title { return Text(verbatim: title) }
+        return error?.lockedImportSource != nil ? Text("Couldn’t import") : Text("Couldn’t open book")
+    }
+
     var body: some View {
         Group {
             if let openingURL = model.openingURL {
@@ -144,7 +151,7 @@ struct RootHost: View {
         } message: { conflict in
             Text(verbatim: conflict.message)
         }
-        .alert(model.documentError?.lockedImportSource != nil ? "Couldn’t import" : "Couldn’t open book",
+        .alert(documentErrorTitle(model.documentError),
                isPresented: Binding(get: { model.documentError != nil && canPresentDocumentError },
                                     set: { if !$0 { model.documentError = nil } }),
                presenting: model.documentError) { error in
@@ -162,12 +169,15 @@ struct RootHost: View {
                 }
                 Button("Cancel", role: .cancel) {}
             } else if let source = error.gnuCashImportURL {
+                // Set only where a book can be imported
+                // (`AppModel.canImportGnuCash`); the `#if` is for the
+                // compiler, the import panel being the Mac's.
                 #if os(macOS)
                 Button("Import…") { Task { await DocumentDialogs.importGnuCash(model, source: source) } }
-                Button("Cancel", role: .cancel) {}
                 #else
-                Button("OK", role: .cancel) {}
+                let _ = source
                 #endif
+                Button("Cancel", role: .cancel) {}
             } else {
                 Button("OK", role: .cancel) {}
             }

@@ -65,7 +65,7 @@ struct RegisterFXTests {
     @Test("Setting a currency moves the local amounts to quantities")
     func settingCurrencyMovesFigures() throws {
         let (model, card, expense, url) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         var draft = localDraft(card: card, expense: expense)
         let myr = try #require(model.resolveCurrencyCode("MYR"))
@@ -83,7 +83,7 @@ struct RegisterFXTests {
     @Test("Clearing the currency puts the local amounts back")
     func clearingCurrencyRestoresFigures() throws {
         let (model, card, expense, url) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         var draft = localDraft(card: card, expense: expense)
         draft.setCurrency(model.resolveCurrencyCode("MYR"), text: "MYR")
@@ -99,7 +99,7 @@ struct RegisterFXTests {
     @Test("A rate fills every leg's foreign value, signs intact")
     func rateFillsValues() throws {
         let (model, card, expense, url) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         var draft = localDraft(card: card, expense: expense)
         let myr = try #require(model.resolveCurrencyCode("MYR"))
@@ -117,7 +117,7 @@ struct RegisterFXTests {
     @Test("A rate leaves legs that already carry a value alone")
     func rateDoesNotOverwrite() throws {
         let (model, card, expense, url) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         var draft = localDraft(card: card, expense: expense)
         draft.setCurrency(model.resolveCurrencyCode("MYR"), text: "MYR")
@@ -133,7 +133,7 @@ struct RegisterFXTests {
     @Test("The implied rate is quantity over value")
     func impliedRate() throws {
         let (model, card, expense, url) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         var draft = localDraft(card: card, expense: expense)
         draft.setCurrency(model.resolveCurrencyCode("MYR"), text: "MYR")
@@ -149,7 +149,7 @@ struct RegisterFXTests {
     @Test("A currency cell accepts blank and ISO codes, and nothing else")
     func currencyValidation() throws {
         let (model, card, expense, url) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         #expect(model.resolveCurrencyCode("myr")?.mnemonic == "MYR", "case is not the user's problem")
         #expect(model.resolveCurrencyCode("AUD") != nil)
@@ -172,7 +172,7 @@ struct RegisterFXTests {
     @Test("A register FX edit round-trips as value and quantity")
     func roundTrip() throws {
         let (model, card, expense, url) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let myr = try #require(model.resolveCurrencyCode("MYR"))
         try model.addTransaction(date: day(0), description: "Hotel", currency: myr, splits: [
@@ -207,7 +207,7 @@ struct RegisterFXTests {
     @Test("A stored rate is offered for the next transaction")
     func storedRatePrefills() throws {
         let (model, card, expense, url) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let myr = try #require(model.resolveCurrencyCode("MYR"))
         model.addExchangeRate(from: myr, to: .aud, rate: dec("0.3383"), date: day(0))
@@ -306,7 +306,7 @@ struct DocumentCurrencyTests {
     @Test("A real conversion restructures and says so")
     func restructures() throws {
         let (model, card, expense, url) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let id = try simpleTransaction(model, card, expense, local: dec("600"))
 
         let outcome = model.restructureAsForeign(transactionID: id,
@@ -321,7 +321,7 @@ struct DocumentCurrencyTests {
     @Test("Near-parity amounts are refused, with the implied rate")
     func nearParityIsNamed() throws {
         let (model, card, expense, url) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let id = try simpleTransaction(model, card, expense, local: dec("102"))
 
         let outcome = model.restructureAsForeign(transactionID: id,
@@ -335,7 +335,7 @@ struct DocumentCurrencyTests {
     @Test("More than two legs is reported as too complex, not as nothing")
     func multiLegIsNamed() throws {
         let (model, card, expense, url) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let fees = try #require(model.addAccount(name: "Fees", type: .expense, commodity: .aud))
         try model.addTransaction(date: day(0), description: "Hotel", currency: .aud, splits: [
             SplitInput(accountID: card, value: dec("-610")),
@@ -356,7 +356,7 @@ struct DocumentCurrencyTests {
     @Test("Matching amounts mean there is nothing to convert")
     func matchingAmounts() throws {
         let (model, card, expense, url) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let id = try simpleTransaction(model, card, expense, local: dec("600"))
         #expect(model.restructureAsForeign(transactionID: id,
                                            foreignAmount: dec("600"),
@@ -388,7 +388,7 @@ struct SecurityLookupTests {
     @Test("A found security keeps the provider's own symbol and exchange")
     func keepsProviderSymbol() throws {
         let (model, url) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let found = SecuritySearchResult(symbol: "WMX.AX", exchange: "ASX",
                                          name: "Wam Income Maximiser Limited", kind: "EQUITY")
@@ -404,7 +404,7 @@ struct SecurityLookupTests {
     @Test("Adding a security creates no account")
     func createsNoAccount() throws {
         let (model, url) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let before = model.book?.accounts.count ?? 0
         _ = model.createSecurity(from: SecuritySearchResult(
@@ -415,7 +415,7 @@ struct SecurityLookupTests {
     @Test("The same security is never added twice")
     func noDuplicates() throws {
         let (model, url) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let found = SecuritySearchResult(symbol: "BHP.AX", exchange: "ASX",
                                          name: "BHP Group", kind: "EQUITY")
@@ -428,7 +428,7 @@ struct SecurityLookupTests {
     @Test("A result with no exchange gets a namespace anyway")
     func missingExchange() throws {
         let (model, url) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let made = try #require(model.createSecurity(from: SecuritySearchResult(
             symbol: "XYZ", exchange: "", name: "Something", kind: "")))

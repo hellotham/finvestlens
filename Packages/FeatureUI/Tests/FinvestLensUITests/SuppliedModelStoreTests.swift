@@ -98,7 +98,7 @@ struct SuppliedModelStoreTests {
         store.install(StandInLoader())
         #expect(handed.offered == 1)
         let folder = try folder([("alpha-4b", "gemma4"), ("beta-7b", "an-architecture-nobody-has")])
-        defer { try? FileManager.default.removeItem(at: folder) }
+        defer { removeBook(at: folder) }
 
         store.chooseFolder(folder)
         await store.settling?.value
@@ -117,7 +117,7 @@ struct SuppliedModelStoreTests {
         let store = store(defaults, handed)
         store.install(StandInLoader())
         let folder = try folder([("alpha-4b", "gemma4")])
-        defer { try? FileManager.default.removeItem(at: folder) }
+        defer { removeBook(at: folder) }
         store.chooseFolder(folder)
         await store.settling?.value
         let model = try #require(store.models.first)
@@ -151,7 +151,7 @@ struct SuppliedModelStoreTests {
         let store = store(defaults(), handed)
         store.install(StandInLoader(reason: "Not now."))
         let folder = try folder([("alpha-4b", "gemma4")])
-        defer { try? FileManager.default.removeItem(at: folder) }
+        defer { removeBook(at: folder) }
         store.chooseFolder(folder)
         await store.settling?.value
         store.use(try #require(store.models.first))
@@ -179,7 +179,7 @@ struct SuppliedModelStoreTests {
         let store = store(defaults(), handed)
         store.install(loader)
         let folder = try folder([("alpha-4b", "gemma4")])
-        defer { try? FileManager.default.removeItem(at: folder) }
+        defer { removeBook(at: folder) }
         store.chooseFolder(folder)
         await store.settling?.value
         store.use(try #require(store.models.first))
@@ -200,7 +200,7 @@ struct SuppliedModelStoreTests {
         // before the second can be mistaken for it.
         let first = try self.folder([("gamma-9b", "gemma4")])
         let second = try self.folder([("gamma-9b", "gemma4")])
-        defer { try? FileManager.default.removeItem(at: first); try? FileManager.default.removeItem(at: second) }
+        defer { removeBook(at: first); removeBook(at: second) }
         store.chooseFolder(first)
         await store.settling?.value
         store.use(try #require(store.models.first))
@@ -219,7 +219,7 @@ struct SuppliedModelStoreTests {
         store.install(StandInLoader())
         let old = try folder([("old-model", "gemma4")])
         let new = try folder([("new-model", "gemma4")])
-        defer { try? FileManager.default.removeItem(at: old); try? FileManager.default.removeItem(at: new) }
+        defer { removeBook(at: old); removeBook(at: new) }
         store.chooseFolder(old)
         let reading = store.settling          // the old folder's reading, still in flight
         store.chooseFolder(new)
@@ -235,7 +235,7 @@ struct SuppliedModelStoreTests {
         let store = store(defaults(), handed)
         store.install(loader)
         let folder = try folder([("alpha-4b", "gemma4"), ("gamma-9b", "gemma4")])
-        defer { try? FileManager.default.removeItem(at: folder) }
+        defer { removeBook(at: folder) }
         store.chooseFolder(folder)
         await store.settling?.value
         let alpha = try #require(store.models.first { $0.name == "alpha-4b" })

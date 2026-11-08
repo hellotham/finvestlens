@@ -39,7 +39,7 @@ struct QuoteAutoRefreshTests {
         let url = tempURL()
         let model = AppModel(quoteHTTP: FixedHTTP(chartJSON))
         try model.newDocument(at: url)
-        defer { model.stopQuoteAutoRefresh(); model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.stopQuoteAutoRefresh(); model.close(); removeBook(at: url) }
 
         let cba = Commodity(namespace: .security("ASX"), mnemonic: "CBA",
                             fullName: "Commonwealth Bank", smallestFraction: 10000)

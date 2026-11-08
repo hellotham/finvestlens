@@ -30,7 +30,7 @@ struct ImportMatchOffMainTests {
             .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let card = try #require(model.addAccount(name: "Card", type: .credit))
@@ -93,7 +93,7 @@ struct ImportMatchOffMainTests {
             .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let rows = [StagedTransaction(date: Date(), amount: dec("-1"), payee: "X")]
 

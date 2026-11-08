@@ -38,7 +38,7 @@ struct SaveAndCloseTests {
     @Test("The edit is on disk, the book is closed, and its lock is gone")
     func savesAndCloses() async throws {
         let dir = try folder()
-        defer { try? FileManager.default.removeItem(at: dir) }
+        defer { removeBook(at: dir) }
         let url = dir.appendingPathComponent("Book.finvestlens")
         let model = AppModel()
         try model.newDocument(at: url)
@@ -55,7 +55,7 @@ struct SaveAndCloseTests {
     @Test("An autosave already writing is waited for, not raced")
     func waitsForAutosave() async throws {
         let dir = try folder()
-        defer { try? FileManager.default.removeItem(at: dir) }
+        defer { removeBook(at: dir) }
         let url = dir.appendingPathComponent("Book.finvestlens")
         let model = AppModel()
         try model.newDocument(at: url)
@@ -74,7 +74,7 @@ struct SaveAndCloseTests {
     @Test("Edits that land while the file is being written are saved before it closes")
     func editsDuringTheWriteAreKept() async throws {
         let dir = try folder()
-        defer { try? FileManager.default.removeItem(at: dir) }
+        defer { removeBook(at: dir) }
         let url = dir.appendingPathComponent("Book.finvestlens")
         let model = AppModel()
         try model.newDocument(at: url)
@@ -108,7 +108,7 @@ struct SaveAndCloseTests {
         defer {
             try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: dir.path)
             try? FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: url.path)
-            try? FileManager.default.removeItem(at: dir)
+            removeBook(at: dir)
         }
         let model = AppModel()
         try model.newDocument(at: url)
@@ -139,7 +139,7 @@ struct SaveAndCloseTests {
           arguments: Replacement.allCases)
     func oneReplacementAtATime(_ order: Replacement) async throws {
         let dir = try folder()
-        defer { try? FileManager.default.removeItem(at: dir) }
+        defer { removeBook(at: dir) }
         let other = dir.appendingPathComponent("Other.finvestlens")
         let third = dir.appendingPathComponent("Third.finvestlens")
         for (url, name) in [(other, "Other"), (third, "Third")] {

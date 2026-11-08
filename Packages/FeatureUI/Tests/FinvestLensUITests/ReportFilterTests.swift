@@ -44,7 +44,7 @@ struct ReportFilterTests {
         let late: ReportPeriod          // 16–30 Nov 2025: after both sales
         let utc: Calendar
 
-        func close() { model.close(); try? FileManager.default.removeItem(at: url) }
+        func close() { model.close(); removeBook(at: url) }
     }
 
     private func fixture() throws -> Fixture {

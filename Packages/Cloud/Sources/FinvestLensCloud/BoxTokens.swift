@@ -16,11 +16,16 @@ public struct BoxTokens: Codable, Equatable, Sendable {
     public var accessToken: String
     public var refreshToken: String
     public var expiresAt: Date
+    /// The client ID of the Box app that was issued them: a refresh token is
+    /// good only with that app's credentials. `nil` for tokens stored before
+    /// it was kept.
+    public var clientID: String?
 
-    public init(accessToken: String, refreshToken: String, expiresAt: Date) {
+    public init(accessToken: String, refreshToken: String, expiresAt: Date, clientID: String? = nil) {
         self.accessToken = accessToken
         self.refreshToken = refreshToken
         self.expiresAt = expiresAt
+        self.clientID = clientID
     }
 
     /// Treated as expired a minute early, so a token does not die in flight

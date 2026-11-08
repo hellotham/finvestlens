@@ -82,7 +82,7 @@ struct EditFidelityTests {
     @Test("editData → updateTransaction preserves share count and memos")
     func modelRoundTripPreservesQuantityAndMemo() throws {
         let (model, url, txn, shares) = try bookWithHolding()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         // Exactly what the editor sheet sends back: read via editData, write via
         // updateTransaction, with no user change in between.
@@ -104,7 +104,7 @@ struct EditFidelityTests {
     @Test("Editing the value of a security split leaves the share count alone")
     func editingValueKeepsShares() throws {
         let (model, url, txn, shares) = try bookWithHolding()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let edit = try #require(model.editData(forTransaction: txn))
         let repriced = edit.splits.map { input -> SplitInput in
@@ -128,7 +128,7 @@ struct EditFidelityTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let income = try #require(model.addAccount(name: "Salary", type: .income))
@@ -159,7 +159,7 @@ struct EditFidelityTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let income = try #require(model.addAccount(name: "Salary", type: .income))
@@ -187,7 +187,7 @@ struct EditFidelityTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let income = try #require(model.addAccount(name: "Salary", type: .income))
@@ -213,7 +213,7 @@ struct EditFidelityTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let income = try #require(model.addAccount(name: "Salary", type: .income))
@@ -241,7 +241,7 @@ struct EditFidelityTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let income = try #require(model.addAccount(name: "Salary", type: .income))

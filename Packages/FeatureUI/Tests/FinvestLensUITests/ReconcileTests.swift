@@ -42,7 +42,7 @@ struct ReconcileTests {
     @Test("Begin builds items and difference from the statement")
     func begin() throws {
         let (model, bank, url) = try setup()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         // Statement covers all three: net balance = 1000 + 500 − 200 = 1300.
         model.beginReconcile(accountID: bank, statementDate: Date(),
@@ -57,7 +57,7 @@ struct ReconcileTests {
     @Test("Clearing items reconciles to zero and persists state")
     func clearToZero() throws {
         let (model, bank, url) = try setup()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         model.beginReconcile(accountID: bank, statementDate: Date(),
                              statementBalance: Decimal(1300))
@@ -80,7 +80,7 @@ struct ReconcileTests {
     @Test("Finish is refused while unbalanced")
     func refusesUnbalanced() throws {
         let (model, bank, url) = try setup()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         model.beginReconcile(accountID: bank, statementDate: Date(),
                              statementBalance: Decimal(1300))
@@ -95,7 +95,7 @@ struct ReconcileTests {
     @Test("A second reconciliation starts from the reconciled balance")
     func startingBalanceCarries() throws {
         let (model, bank, url) = try setup()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         // First: reconcile the two deposits only (balance 1500).
         model.beginReconcile(accountID: bank, statementDate: Date(timeIntervalSince1970: 1_615_000_000),

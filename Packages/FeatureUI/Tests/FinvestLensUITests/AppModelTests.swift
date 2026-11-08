@@ -24,7 +24,7 @@ struct AppModelTests {
     @Test("New document starts empty")
     func newDocument() throws {
         let url = tempURL()
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         let model = AppModel()
         try model.newDocument(at: url)
         defer { model.close() }
@@ -35,7 +35,7 @@ struct AppModelTests {
     @Test("Adding accounts builds the tree with balances")
     func addAccounts() throws {
         let url = tempURL()
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         let model = AppModel()
         try model.newDocument(at: url)
         defer { model.close() }
@@ -53,7 +53,7 @@ struct AppModelTests {
     @Test("A transfer posts to the register with a running balance")
     func transferAndRegister() throws {
         let url = tempURL()
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         let model = AppModel()
         try model.newDocument(at: url)
         defer { model.close() }
@@ -77,7 +77,7 @@ struct AppModelTests {
     @Test("Delete is guarded for accounts with postings")
     func deleteGuard() throws {
         let url = tempURL()
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         let model = AppModel()
         try model.newDocument(at: url)
         defer { model.close() }
@@ -97,7 +97,7 @@ struct AppModelTests {
     @Test("Save then reopen preserves the model")
     func saveReopen() async throws {
         let url = tempURL()
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
 
         let model = AppModel()
         try model.newDocument(at: url)

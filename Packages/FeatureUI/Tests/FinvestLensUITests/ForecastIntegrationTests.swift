@@ -26,7 +26,7 @@ struct ForecastIntegrationTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let salary = try #require(model.addAccount(name: "Salary", type: .income))

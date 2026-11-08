@@ -59,7 +59,7 @@ struct WholeBookRegisterTests {
     @Test("A two-legged transaction names both accounts")
     func twoLeggedNamesBothEnds() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         let id = try #require(try f.model.addTransaction(
             date: Date(timeIntervalSince1970: 0), description: "Woolworths", currency: .aud,
@@ -76,7 +76,7 @@ struct WholeBookRegisterTests {
     @Test("A multi-split transaction shows the split marker")
     func multiSplitShowsMarker() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         let id = try #require(try f.model.addTransaction(
             date: Date(timeIntervalSince1970: 0), description: "Shop", currency: .aud,
@@ -97,7 +97,7 @@ struct WholeBookRegisterTests {
     @Test("Reconcile is the legs' agreement, or nothing")
     func reconcileIsAgreement() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         let id = try #require(try f.model.addTransaction(
             date: Date(timeIntervalSince1970: 0), description: "Pay", currency: .aud,
@@ -120,7 +120,7 @@ struct WholeBookRegisterTests {
     @Test("An unknown transaction summarises to nothing")
     func unknownTransactionIsEmpty() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         let summary = f.model.wholeBookRowSummary(ofTransaction: .random())
         #expect(summary.accounts.isEmpty)
@@ -152,7 +152,7 @@ struct WholeBookRegisterTests {
     @Test("All Transactions honours the register's date filter")
     func wholeBookHonoursFilter() throws {
         let f = try makeDatedBook()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         #expect(f.model.journalTransactions(forAccountID: nil).count == 3)
 
@@ -167,7 +167,7 @@ struct WholeBookRegisterTests {
     @Test("All Transactions honours the sort its own headers set")
     func wholeBookHonoursSort() throws {
         let f = try makeDatedBook()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         f.model.registerSort = .description
         #expect(f.model.journalTransactions(forAccountID: nil).map(\.transactionDescription)
@@ -191,7 +191,7 @@ struct WholeBookRegisterTests {
     @Test("The whole-book summary counts what is showing and totals the debits")
     func wholeBookSummary() throws {
         let f = try makeDatedBook()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         let all = f.model.wholeBookRegisterSummary()
         #expect(all.count == 3)
@@ -211,7 +211,7 @@ struct WholeBookRegisterTests {
     @Test("A whole-book row anchors on the debit leg, deterministically")
     func anchorIsTheDebitLeg() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         let txn = try #require(f.model.addTransfer(from: f.bank, to: f.groceries,
                                                    amount: 25, date: Date(),
@@ -230,7 +230,7 @@ struct WholeBookRegisterTests {
     @Test("A new transaction can be given a Num")
     func newTransactionTakesANumber() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         let id = try f.model.addTransaction(
             date: Date(), description: "Rent", currency: .aud,
@@ -244,7 +244,7 @@ struct WholeBookRegisterTests {
     @Test("Sorting by amount uses the debit total the row shows")
     func wholeBookSortsByDisplayedTotal() throws {
         let f = try makeDatedBook()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         f.model.registerSort = .amount
         let sorted = f.model.journalTransactions(forAccountID: nil)
@@ -257,7 +257,7 @@ struct WholeBookRegisterTests {
     @Test("The one-pass row summary is the one it replaced, leg shape by leg shape")
     func onePassMatchesTheOld() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         func old(_ txn: Transaction) -> WholeBookRowSummary {
             let splits = txn.splits
             let states = Set(splits.map(\.reconcileState))

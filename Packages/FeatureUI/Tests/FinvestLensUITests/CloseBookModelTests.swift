@@ -43,7 +43,7 @@ struct CloseBookModelTests {
     @Test("Preview reports the accounts and net without mutating")
     func preview() throws {
         let (model, url, _, _, equity) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let before = model.book?.transactions.count
         let p = try #require(model.closingPreview(asOf: Date(timeIntervalSince1970: 10_000_000),
                                                   equityID: equity))
@@ -58,7 +58,7 @@ struct CloseBookModelTests {
     @Test("Close posts closing entries and undo removes them")
     func postAndUndo() throws {
         let (model, url, income, expense, equity) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let undo = UndoManager()
         model.undoManager = undo
         let book = try #require(model.book)

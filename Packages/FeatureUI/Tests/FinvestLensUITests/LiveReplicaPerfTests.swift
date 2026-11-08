@@ -38,7 +38,7 @@ struct LiveReplicaPerfTests {
         let copy = FileManager.default.temporaryDirectory
             .appendingPathComponent("flperf-\(UUID().uuidString).finvestlens")
         try FileManager.default.copyItem(at: source, to: copy)
-        defer { try? FileManager.default.removeItem(at: copy) }
+        defer { removeBook(at: copy) }
 
         let model = AppModel()
         try await model.open(at: copy)

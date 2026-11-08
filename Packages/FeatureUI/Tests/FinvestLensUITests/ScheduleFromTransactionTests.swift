@@ -51,7 +51,7 @@ struct ScheduleFromTransactionTests {
     @Test("A schedule copies the transaction that made it")
     func copiesTheSource() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         let id = try #require(f.model.scheduleTransaction(f.txn, period: .monthly))
         let scheduled = try #require(f.model.scheduledTransactions.first { $0.id == id })
@@ -68,7 +68,7 @@ struct ScheduleFromTransactionTests {
     @Test("Split memos come with it")
     func memosSurvive() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         let id = try #require(f.model.scheduleTransaction(f.txn, period: .monthly))
         let scheduled = try #require(f.model.scheduledTransactions.first { $0.id == id })
         #expect(scheduled.splits.contains { $0.memo == "direct debit" })
@@ -78,7 +78,7 @@ struct ScheduleFromTransactionTests {
     @Test("The transaction it was made from is not immediately due")
     func doesNotDuplicateTheSource() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         let id = try #require(f.model.scheduleTransaction(f.txn, period: .monthly))
         let scheduled = try #require(f.model.scheduledTransactions.first { $0.id == id })
 
@@ -91,7 +91,7 @@ struct ScheduleFromTransactionTests {
     @Test("The next occurrence is one period later")
     func nextOccurrence() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         let id = try #require(f.model.scheduleTransaction(f.txn, period: .monthly))
         let scheduled = try #require(f.model.scheduledTransactions.first { $0.id == id })
 
@@ -105,7 +105,7 @@ struct ScheduleFromTransactionTests {
     @Test("Posting the schedule adds the next one only")
     func postingAddsOne() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         f.model.scheduleTransaction(f.txn, period: .monthly)
 
         let before = try #require(f.model.book).transactions.count
@@ -119,7 +119,7 @@ struct ScheduleFromTransactionTests {
     @Test("An interval of more than one is honoured")
     func interval() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         let id = try #require(f.model.scheduleTransaction(f.txn, period: .weekly, interval: 2))
         let scheduled = try #require(f.model.scheduledTransactions.first { $0.id == id })
         #expect(scheduled.recurrence.interval == 2)
@@ -132,7 +132,7 @@ struct ScheduleFromTransactionTests {
     @Test("A name given is a name kept")
     func customName() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         let id = try #require(f.model.scheduleTransaction(f.txn, period: .monthly,
                                                           name: "Monthly rent"))
         #expect(f.model.scheduledTransactions.first { $0.id == id }?.name == "Monthly rent")
@@ -142,7 +142,7 @@ struct ScheduleFromTransactionTests {
     @Test("A transaction with no description still gets a name")
     func namelessSource() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         let blank = try f.model.addTransaction(
             date: day(1), description: "  ", currency: .aud,
             splits: [SplitInput(accountID: f.bank, value: -1),
@@ -155,7 +155,7 @@ struct ScheduleFromTransactionTests {
     @Test("An unknown transaction schedules nothing")
     func unknownTransaction() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         #expect(f.model.scheduleTransaction(.random(), period: .monthly) == nil)
         #expect(f.model.scheduledTransactions.isEmpty)
     }
@@ -165,7 +165,7 @@ struct ScheduleFromTransactionTests {
     @Test("A leg with no account is refused rather than half-scheduled")
     func splitWithoutAccount() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         let book = try #require(f.model.book)
         let txn = try #require(book.transaction(with: f.txn))
         txn.splits.first?.account = nil

@@ -40,7 +40,7 @@ struct LiveBondPricingTests {
             .appendingPathComponent("flbond-\(UUID().uuidString).finvestlens")
         try FileManager.default.copyItem(at: URL(fileURLWithPath: perfPath), to: copy)
         defer {
-            try? FileManager.default.removeItem(at: copy)
+            removeBook(at: copy)
             try? FileManager.default.removeItem(at: URL(fileURLWithPath: copy.path + ".audit.log"))
         }
 

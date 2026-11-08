@@ -34,7 +34,7 @@ struct IntentSupportTests {
             SplitInput(accountID: opening, value: dec("-1000")),
         ])
         try model.save()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let summary = IntentSupport.netWorthSummary()
         #expect(summary.contains("net worth"))
@@ -72,7 +72,7 @@ struct LockWidgetSyncTests {
         // the widget or the alert schedule that opening a protected book had
         // cleared. Both transitions now go through `publishWidgetData`.
         let (model, url) = try makeBook()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         model.requireAuthentication = true
         model.lockNow()

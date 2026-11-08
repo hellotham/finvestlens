@@ -35,7 +35,7 @@ struct LiveWholeBookPerfTests {
         let copy = FileManager.default.temporaryDirectory
             .appendingPathComponent("flwb-\(UUID().uuidString).finvestlens")
         try FileManager.default.copyItem(at: source, to: copy)
-        defer { try? FileManager.default.removeItem(at: copy) }
+        defer { removeBook(at: copy) }
 
         let clock = ContinuousClock()
         let model = AppModel()

@@ -52,7 +52,7 @@ struct ModeSidebarTests {
     @Test("No mode's sidebar goes deeper than two levels")
     func twoLevels() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         for mode in AppMode.allCases where mode != .accounts {
             let rows = ModeSidebarRows.groups(for: mode, model: f.model).flatMap(\.rows)
@@ -72,7 +72,7 @@ struct ModeSidebarTests {
     @Test("Sidebar rows have distinct, stable destinations")
     func distinctStableIDs() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         for mode in AppMode.allCases where mode != .accounts {
             let first = walk(ModeSidebarRows.groups(for: mode, model: f.model).flatMap(\.rows))
@@ -91,7 +91,7 @@ struct ModeSidebarTests {
     @Test("Every row belongs to the mode that lists it")
     func rowsStayInTheirMode() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         for mode in AppMode.allCases where mode != .accounts {
             for entry in walk(ModeSidebarRows.groups(for: mode, model: f.model).flatMap(\.rows)) {
@@ -107,7 +107,7 @@ struct ModeSidebarTests {
     @Test("Each row carries exactly one kind of label")
     func oneLabelKind() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         for mode in AppMode.allCases where mode != .accounts {
             for entry in walk(ModeSidebarRows.groups(for: mode, model: f.model).flatMap(\.rows)) {
@@ -123,7 +123,7 @@ struct ModeSidebarTests {
     @Test("Planning lists the book's plans")
     func planningListsInstances() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         let rows = ModeSidebarRows.groups(for: .planning, model: f.model).flatMap(\.rows)
         let budgets = try #require(rows.first { $0.id == .budgets })
@@ -135,7 +135,7 @@ struct ModeSidebarTests {
     @Test("Records lists the book's rule groups and its log")
     func recordsListsInstances() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         let rows = ModeSidebarRows.groups(for: .records, model: f.model).flatMap(\.rows)
         let rules = try #require(rows.first { $0.id == .rules })
@@ -150,7 +150,7 @@ struct ModeSidebarTests {
     @Test("Reports lists the whole standard catalogue")
     func reportsListsCatalogue() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         let groups = ModeSidebarRows.groups(for: .reports, model: f.model)
         let listed = groups.flatMap(\.rows).compactMap { $0.id.reportKind }
@@ -165,7 +165,7 @@ struct ModeSidebarTests {
     @Test("Business omits its empty collections but keeps the mode")
     func businessStaysThin() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         let groups = ModeSidebarRows.groups(for: .business, model: f.model)
         #expect(groups.flatMap(\.rows).contains { $0.id == .business })
@@ -183,7 +183,7 @@ struct ModeSidebarTests {
     @Test("A filter that matches nothing still leaves the mode's home row")
     func filterKeepsTheHomeRow() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         for mode in AppMode.allCases where mode != .accounts {
             let groups = ModeSidebarRows.groups(for: mode, model: f.model)
@@ -203,7 +203,7 @@ struct ModeSidebarTests {
     @Test("Pinning the home row does not stop the filter filtering")
     func filterStillNarrows() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         let groups = ModeSidebarRows.groups(for: .planning, model: f.model)
         let all = groups.flatMap(\.rows).count
@@ -223,7 +223,7 @@ struct ModeSidebarTests {
     @Test("Planning lists its three planners as rows")
     func planningListsItsPlanners() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         let rows = ModeSidebarRows.groups(for: .planning, model: f.model).flatMap(\.rows)
         let planner = try #require(rows.first { $0.id == .planner })
@@ -241,7 +241,7 @@ struct ModeSidebarTests {
     @Test("A planner opens in a tab and restores")
     func plannerOpensAndRestores() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
 
         f.model.navigate(to: .plannerTax, inNewTab: true)
         #expect(f.model.mode == .planning)
@@ -276,7 +276,7 @@ struct ModeSidebarRegressionTests {
     @Test("Deleting an account closes its tab")
     func deletedAccountLosesItsTab() throws {
         let (model, url) = try fixture()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let keep = try #require(model.addAccount(name: "Everyday", type: .bank))
         let doomed = try #require(model.addAccount(name: "Old Card", type: .credit))
@@ -295,7 +295,7 @@ struct ModeSidebarRegressionTests {
     @Test("Deleting a rule group closes its tab")
     func deletedRuleGroupLosesItsTab() throws {
         let (model, url) = try fixture()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         model.addRuleGroup(named: "Imports")
         let group = try #require(model.ruleGroups.first?.id)
@@ -312,7 +312,7 @@ struct ModeSidebarRegressionTests {
     @Test("Name order sorts instances, not headings")
     func nameOrderSortsInstancesOnly() throws {
         let (model, url) = try fixture()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         model.addRuleGroup(named: "Zebra")
         model.addRuleGroup(named: "Apple")
@@ -343,7 +343,7 @@ struct ModeSidebarRegressionTests {
         let (model, url) = try fixture()
         defer {
             model.close()
-            try? FileManager.default.removeItem(at: url)
+            removeBook(at: url)
             UserDefaults.standard.removeObject(
                 forKey: "overview.views:\(url.standardizedFileURL.path)")
         }
@@ -374,7 +374,7 @@ struct SidebarSectionIdentityTests {
             .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         _ = try #require(model.addAccount(name: "Everyday", type: .bank))
         model.addBudget(Budget(name: "Monthly"))
         model.addRuleGroup(named: "Imports")
@@ -399,7 +399,7 @@ struct SidebarSectionIdentityTests {
             .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         for mode in AppMode.allCases where mode != .accounts {
             let first = ModeSidebarRows.groups(for: mode, model: model).map(\.id)
@@ -448,7 +448,7 @@ struct SidebarCreationTests {
     @Test("Asking to create goes to the collection first")
     func requestNavigatesFirst() throws {
         let (model, url) = try model()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         model.showMode(.dashboard)
         model.requestCreate(.budget)
@@ -467,7 +467,7 @@ struct SidebarCreationTests {
     @Test("New Account opens as a tab, through the panel it already had")
     func accountUsesItsPanel() throws {
         let (model, url) = try model()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         model.requestCreate(.account)
         #expect(model.presentedPanel == nil, "an editor must not also be a sheet")
@@ -481,7 +481,7 @@ struct SidebarCreationTests {
     @Test("A question you must answer is still a sheet")
     func questionsStayModal() throws {
         let (model, url) = try model()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         for panel in [RootPanel.closeBook, .taxOptions, .find, .findAccount, .saveSearch] {
             model.presentedPanel = panel
@@ -496,7 +496,7 @@ struct SidebarCreationTests {
     @Test("Collections filter by their displayed name")
     func collectionsAreFilterable() throws {
         let (model, url) = try model()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let rows = ModeSidebarRows.groups(for: .planning, model: model).flatMap(\.rows)
         let budgets = try #require(rows.first { $0.id == .budgets })

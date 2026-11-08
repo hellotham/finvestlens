@@ -50,7 +50,7 @@ struct RegisterSortFilterTests {
     @Test("Standard order is date order, with true running balances")
     func standardOrder() throws {
         let (model, url, _) = try bookWithPostings()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         #expect(model.registerRows.map(\.amount) == [dec("100"), dec("50"), dec("-30")])
         #expect(model.registerRows.map(\.runningBalance) == [dec("100"), dec("150"), dec("120")])
@@ -62,7 +62,7 @@ struct RegisterSortFilterTests {
     @Test("Sorting by amount re-orders rows but never re-computes balances")
     func sortByAmountKeepsBalances() throws {
         let (model, url, _) = try bookWithPostings()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         model.registerSort = .amount
 
@@ -74,7 +74,7 @@ struct RegisterSortFilterTests {
     @Test("Reverse order flips the display without touching balances")
     func reverseOrder() throws {
         let (model, url, _) = try bookWithPostings()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         model.registerSortReversed = true
         #expect(model.registerRows.map(\.amount) == [dec("-30"), dec("50"), dec("100")])
@@ -84,7 +84,7 @@ struct RegisterSortFilterTests {
     @Test("Sorting by description orders case-insensitively")
     func sortByDescription() throws {
         let (model, url, _) = try bookWithPostings()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         model.registerSort = .description
         #expect(model.registerRows.map(\.description) == ["Big pay", "Rent", "Small pay"])
@@ -95,7 +95,7 @@ struct RegisterSortFilterTests {
     @Test("Filtering hides rows without re-computing balances")
     func filterKeepsBalances() throws {
         let (model, url, _) = try bookWithPostings()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         // Clear the middle posting only.
         let middle = try #require(model.registerRows.first { $0.amount == dec("50") })
@@ -112,7 +112,7 @@ struct RegisterSortFilterTests {
     @Test("A date range keeps both ends, whole days")
     func filterByDateRange() throws {
         let (model, url, _) = try bookWithPostings()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         // Mid-day bounds must not clip postings on the boundary days.
         model.registerFilter = RegisterFilter(
@@ -127,7 +127,7 @@ struct RegisterSortFilterTests {
     @Test("Clearing every status empties the register")
     func filterWithNoStatuses() throws {
         let (model, url, _) = try bookWithPostings()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         model.registerFilter = RegisterFilter(statuses: [])
         #expect(model.registerRows.isEmpty)
@@ -136,7 +136,7 @@ struct RegisterSortFilterTests {
     @Test("Show All restores every row")
     func showAllRestores() throws {
         let (model, url, _) = try bookWithPostings()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         model.registerFilter = RegisterFilter(statuses: [.reconciled])
         #expect(model.registerRows.isEmpty)
@@ -151,7 +151,7 @@ struct RegisterSortFilterTests {
     @Test("Closing a book resets the register view")
     func closeResetsView() throws {
         let (model, url, _) = try bookWithPostings()
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
 
         model.registerSort = .amount
         model.registerSortReversed = true
@@ -169,7 +169,7 @@ struct RegisterSortFilterTests {
     @Test("Filtering out a voided row leaves the balance alone")
     func voidedAndFiltered() throws {
         let (model, url, _) = try bookWithPostings()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let middle = try #require(model.registerRows.first { $0.amount == dec("50") })
         let txn = try #require(model.transactionID(ofSplit: middle.id))

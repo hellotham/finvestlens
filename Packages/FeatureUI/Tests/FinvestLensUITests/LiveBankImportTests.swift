@@ -63,7 +63,7 @@ struct LiveBankImportTests {
         let copy = FileManager.default.temporaryDirectory
             .appendingPathComponent("flimport-\(UUID().uuidString).finvestlens")
         try FileManager.default.copyItem(at: source, to: copy)
-        defer { try? FileManager.default.removeItem(at: copy) }
+        defer { removeBook(at: copy) }
 
         let model = AppModel()
         await model.openBook(at: copy, breakStaleLock: true)

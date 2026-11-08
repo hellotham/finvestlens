@@ -1858,6 +1858,20 @@ public final class AppModel {
     /// Bumped when the Box sign-in or the Box app's settings change, so
     /// views that show them look again (the Keychain is not observable).
     public internal(set) var boxSessionRevision = 0
+    /// FinvestLens's own Box app, when the build carries it — published builds
+    /// do, set as the app starts (`BuiltInBoxApp` in the app target). With
+    /// it, everyone signs in to Box through it and nothing about a Box app is
+    /// shown or asked for; ``boxClientID`` and ``boxClientSecret`` are for a
+    /// build without it.
+    public var builtInBoxApp: BuiltInBoxCredentials? {
+        didSet {
+            boxSessionRevision &+= 1
+            retireBoxTokensIssuedElsewhere()
+        }
+    }
+    /// Why the person has to connect to Box again, when it is not because
+    /// they chose to disconnect: shown beside Connect until they do.
+    public internal(set) var boxSignInNotice: String?
     /// True while quitting waits for Box work to finish (the Mac).
     public internal(set) var isFinishingBoxWorkBeforeQuit = false
     @ObservationIgnored var boxRetryTasks: [String: Task<Void, Never>] = [:]
@@ -1898,9 +1912,14 @@ public final class AppModel {
     /// A user-facing document error (open/new/import failed). When
     /// ``DocumentError/lockedURL`` is set the UI offers "Break Lock" recovery;
     /// when ``DocumentError/gnuCashImportURL`` is set it offers "Import…" —
-    /// the user tried to *open* a GnuCash book, which only imports.
+    /// the user tried to *open* a GnuCash book, which only imports. That is
+    /// set only where a book can be imported (``canImportGnuCash``).
     public struct DocumentError: Identifiable, Sendable {
         public let id = UUID()
+        /// What failed, for the alert's title, when it is not opening a book:
+        /// a reload or a revert that failed leaves the book open as it was,
+        /// and "Couldn't open book" over it read as though it had closed.
+        public var title: String?
         public var message: String
         public var lockedURL: URL?
         public var gnuCashImportURL: URL?
@@ -2510,7 +2529,16 @@ public final class AppModel {
             }
             return
         }
-        try? document.reloadFromDisk()
+        do {
+            try document.reloadFromDisk()
+        } catch {
+            // Not reloaded: the banner stays, and undo with it. The book on
+            // screen is still this device's, and clearing them said otherwise —
+            // inviting Keep Mine to save it over the other device's version.
+            documentError = DocumentError(title: String(localized: "Couldn’t reload from disk"),
+                                          message: error.localizedDescription)
+            return
+        }
         forgetSearchCaches()
         externalChangePending = false
         // The freshly adopted book invalidates every undo snapshot — replaying
@@ -2539,8 +2567,8 @@ public final class AppModel {
             try document.save()
             externalChangePending = false
         } catch {
-            documentError = DocumentError(
-                message: String(localized: "Couldn’t keep your version: \(error.localizedDescription)"))
+            documentError = DocumentError(title: String(localized: "Couldn’t keep your version"),
+                                          message: error.localizedDescription)
         }
         refreshAll()
     }
@@ -2559,7 +2587,13 @@ public final class AppModel {
         if let newest = versions.max(by: {
             ($0.modificationDate ?? .distantPast) < ($1.modificationDate ?? .distantPast)
         }) {
-            try? document.adoptConflictVersion(newest)
+            do {
+                try document.adoptConflictVersion(newest)
+            } catch {
+                documentError = DocumentError(title: String(localized: "Couldn’t use the other version"),
+                                              message: error.localizedDescription)
+                return
+            }
         }
         reloadFromDisk()
     }
@@ -2737,28 +2771,35 @@ public final class AppModel {
         }
     }
 
+    /// Whether this device imports GnuCash books: the Mac's alone
+    /// (`FR-PLT-06`). The one place that says so — the message for opening a
+    /// GnuCash file and the alert's Import button both follow it, so they
+    /// cannot disagree. Before, each decided for itself, and on iPhone and
+    /// iPad the message told the person to import, then offered only OK.
+    public nonisolated static var canImportGnuCash: Bool {
+        #if os(macOS)
+        true
+        #else
+        false
+        #endif
+    }
+
     /// The message for opening a file that is not a `.finvestlens` book —
     /// GnuCash books get pointed (or handed straight) to the import flow
-    /// instead of a raw SQLite error.
-    static func foreignBookError(_ kind: FinvestLensDocument.ForeignFileKind,
-                                 at url: URL) -> DocumentError {
-        // Importing is the Mac's alone (`FR-PLT-06`), and on iPhone and iPad
-        // the alert has no Import button, so there the message says where to
-        // go: it told the person to import, then offered only OK.
+    /// instead of a raw SQLite error. Where nothing imports, the message says
+    /// where to go instead, and no Import is offered.
+    static func foreignBookError(_ kind: FinvestLensDocument.ForeignFileKind, at url: URL,
+                                 canImport: Bool = canImportGnuCash) -> DocumentError {
         switch kind {
         case .gnuCashBook:
-            #if os(macOS)
-            let message = String(localized: "“\(url.lastPathComponent)” is a GnuCash book. FinvestLens keeps books in its own .finvestlens format — import it to create a native copy, and you can export back to GnuCash at any time.")
-            #else
-            let message = String(localized: "“\(url.lastPathComponent)” is a GnuCash book. FinvestLens keeps books in its own .finvestlens format: import this one with FinvestLens on a Mac, and the book it makes opens here too.")
-            #endif
-            return DocumentError(message: message, gnuCashImportURL: url)
+            let message = canImport
+                ? String(localized: "“\(url.lastPathComponent)” is a GnuCash book. FinvestLens keeps books in its own .finvestlens format — import it to create a native copy, and you can export back to GnuCash at any time.")
+                : String(localized: "“\(url.lastPathComponent)” is a GnuCash book. FinvestLens keeps books in its own .finvestlens format: import this one with FinvestLens on a Mac, and the book it makes opens here too.")
+            return DocumentError(message: message, gnuCashImportURL: canImport ? url : nil)
         case .gnuCashSQLite:
-            #if os(macOS)
-            let message = String(localized: "“\(url.lastPathComponent)” was saved with GnuCash’s SQLite backend, which FinvestLens can’t read. In GnuCash, choose File ▸ Save As… with the XML format, then use File ▸ Import GnuCash… here.")
-            #else
-            let message = String(localized: "“\(url.lastPathComponent)” was saved with GnuCash’s SQLite backend, which FinvestLens can’t read. In GnuCash, choose File ▸ Save As… with the XML format, then import that file with FinvestLens on a Mac.")
-            #endif
+            let message = canImport
+                ? String(localized: "“\(url.lastPathComponent)” was saved with GnuCash’s SQLite backend, which FinvestLens can’t read. In GnuCash, choose File ▸ Save As… with the XML format, then use File ▸ Import GnuCash… here.")
+                : String(localized: "“\(url.lastPathComponent)” was saved with GnuCash’s SQLite backend, which FinvestLens can’t read. In GnuCash, choose File ▸ Save As… with the XML format, then import that file with FinvestLens on a Mac.")
             return DocumentError(message: message)
         case .unrecognized:
             return DocumentError(
@@ -2830,6 +2871,7 @@ public final class AppModel {
                 try save()
             } catch {
                 documentError = DocumentError(
+                    title: String(localized: "Couldn’t save"),
                     message: String(localized: "Couldn’t save “\(documentURL?.lastPathComponent ?? "")”: \(error.localizedDescription)"))
                 return false
             }
@@ -2882,6 +2924,7 @@ public final class AppModel {
                 if writes < 3 { try await writeInBackground() } else { try save() }
             } catch {
                 documentError = DocumentError(
+                    title: String(localized: "Couldn’t save"),
                     message: String(localized: "Couldn’t save “\(documentURL?.lastPathComponent ?? "")”: \(error.localizedDescription)"))
                 return false
             }
@@ -3013,6 +3056,7 @@ public final class AppModel {
             }
         } catch {
             documentError = DocumentError(
+                title: String(localized: "Couldn’t import"),
                 message: String(localized: "Couldn’t import “\(source.lastPathComponent)”: \(error.localizedDescription)"))
         }
     }
@@ -3075,10 +3119,12 @@ public final class AppModel {
             if interactive { requestUploadOfOpenBoxBook(announce: true) }
         } catch {
             if interactive {
-                documentError = DocumentError(message: error.localizedDescription)
+                documentError = DocumentError(title: String(localized: "Couldn’t save"),
+                                              message: error.localizedDescription)
             } else if documentError == nil {
                 // Surface once; don't stack alerts every autosave interval.
                 documentError = DocumentError(
+                    title: String(localized: "Couldn’t save"),
                     message: String(localized: "Autosave failed: \(error.localizedDescription)"))
             }
         }
@@ -3135,7 +3181,7 @@ public final class AppModel {
                     try revert()
                     showToast(.info, "Reverted to the saved book — including what the save that was running wrote.")
                 } catch {
-                    documentError = DocumentError(message: String(localized: "Couldn’t revert: \(error.localizedDescription)"))
+                    documentError = DocumentError(title: String(localized: "Couldn’t revert"), message: error.localizedDescription)
                 }
             }
             return
@@ -3144,7 +3190,7 @@ public final class AppModel {
             try revert()
             showToast(.success, "Reverted to the saved book.")
         } catch {
-            documentError = DocumentError(message: String(localized: "Couldn’t revert: \(error.localizedDescription)"))
+            documentError = DocumentError(title: String(localized: "Couldn’t revert"), message: error.localizedDescription)
         }
     }
 

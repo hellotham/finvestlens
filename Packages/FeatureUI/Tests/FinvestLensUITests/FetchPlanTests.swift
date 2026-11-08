@@ -87,7 +87,7 @@ struct FetchPlanTests {
     @Test("Holdings scope leaves closed positions out")
     func holdingsScope() throws {
         let (model, url) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let open = hold(model, "OPEN", pricedOn: [Date()])
         _ = hold(model, "CLOSED", closed: true)
 
@@ -104,7 +104,7 @@ struct FetchPlanTests {
         // worth one fetch; today's price for a position you no longer own is
         // worth none.
         let (model, url) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         _ = hold(model, "OPEN", pricedOn: [Date()])
         let closed = hold(model, "CLOSED", closed: true)
 
@@ -124,7 +124,7 @@ struct FetchPlanTests {
         // cheapest scope look like the dearest: eleven bonds and one share is
         // two requests, not twelve.
         let (model, url) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         _ = hold(model, "SHARE", pricedOn: [Date()])
         for index in 1...3 {
             let bond = hold(model, "BOND\(index)", namespace: "Bond",
@@ -142,7 +142,7 @@ struct FetchPlanTests {
     @Test("The plan names what the scope leaves out, so an empty run is explicable")
     func skippedIsReported() throws {
         let (model, url) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         _ = hold(model, "OPEN", pricedOn: [Date()])
         _ = hold(model, "CLOSED", closed: true)
 
@@ -153,7 +153,7 @@ struct FetchPlanTests {
     @Test("The chosen scope survives a save and reopen")
     func scopeIsPersisted() async throws {
         let (model, url) = try book()
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         model.fetchScope = .withClosedGaps
         try model.save()
         model.close()
@@ -172,7 +172,7 @@ struct FetchPlanTests {
         // quarterly reads as stale every Tuesday the ASX trades, and a worklist
         // that tells you off for that is one you stop reading.
         let (model, url) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let sixWeeksAgo = Calendar.current.date(byAdding: .day, value: -42, to: Date())!
         let fund = hold(model, "SUPER", namespace: "Super", pricedOn: [sixWeeksAgo])
 
@@ -186,7 +186,7 @@ struct FetchPlanTests {
     @Test("A holding valued only when the user says is never overdue")
     func neverCadence() throws {
         let (model, url) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let old = Calendar.current.date(byAdding: .year, value: -5, to: Date())!
         let art = hold(model, "ART", namespace: "Other", pricedOn: [old])
 
@@ -198,7 +198,7 @@ struct FetchPlanTests {
     @Test("A security never valued at all is overdue by definition")
     func neverValued() throws {
         let (model, url) = try book()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let fund = hold(model, "SUPER", namespace: "Super")
         #expect(model.isValuationOverdue(fund), "there is no figure to trust")
     }
@@ -206,7 +206,7 @@ struct FetchPlanTests {
     @Test("The cadence defaults to quarterly and survives a reopen")
     func cadenceIsPersisted() async throws {
         let (model, url) = try book()
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         let fund = hold(model, "SUPER", namespace: "Super")
         #expect(model.valuationCadence(for: fund) == .quarterly,
                 "what an Australian super fund typically publishes")

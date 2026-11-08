@@ -66,6 +66,7 @@ struct RegisterEditModelTests {
     @Test("In place, a wide register tabs date → description → transfer → amount → notes → tags")
     func inPlaceOrderWide() throws {
         let fixture = try makeFixture()
+        defer { closeAndRemove(fixture.model) }
         let draft = try draft(fixture, expanded: false)
         let order = draft.fieldOrder(
             metrics: RegisterMetrics(width: 900), expandedOnScreen: false,
@@ -78,6 +79,7 @@ struct RegisterEditModelTests {
     @Test("Folded columns are not tab stops")
     func foldedColumnsSkipped() throws {
         let fixture = try makeFixture()
+        defer { closeAndRemove(fixture.model) }
         let draft = try draft(fixture, expanded: false)
         // 360pt: date, side and balance columns are all folded away.
         let order = draft.fieldOrder(
@@ -91,6 +93,7 @@ struct RegisterEditModelTests {
     @Test("Opened out, the order continues onto every split line")
     func expandedOrderCoversSplits() throws {
         let fixture = try makeFixture()
+        defer { closeAndRemove(fixture.model) }
         let draft = try draft(fixture, expanded: true)
         let order = draft.fieldOrder(
             metrics: RegisterMetrics(width: 900), expandedOnScreen: true,
@@ -108,6 +111,7 @@ struct RegisterEditModelTests {
     @Test("⇥ wraps forward and ⇧⇥ wraps backward within the transaction")
     func traversalWraps() throws {
         let fixture = try makeFixture()
+        defer { closeAndRemove(fixture.model) }
         let draft = try draft(fixture, expanded: false)
         let order = draft.fieldOrder(
             metrics: RegisterMetrics(width: 900), expandedOnScreen: false,
@@ -124,6 +128,7 @@ struct RegisterEditModelTests {
     @Test("Editing one amount of a plain two-leg transaction mirrors the other")
     func twoLegMirror() throws {
         let fixture = try makeFixture()
+        defer { closeAndRemove(fixture.model) }
         var draft = try draft(fixture, expanded: false)
         draft.setAmountText("-40", at: 0)
         #expect(draft.lines[0].amount == -40)
@@ -135,6 +140,7 @@ struct RegisterEditModelTests {
     @Test("The mirror stays out of an FX leg's way")
     func mirrorSkipsForeignLegs() throws {
         let fixture = try makeFixture()
+        defer { closeAndRemove(fixture.model) }
         var draft = try draft(fixture, expanded: false)
         draft.lines[1].quantityText = "12.5"   // the counterleg carries its own commodity amount
         draft.setAmountText("-40", at: 0)
@@ -145,6 +151,7 @@ struct RegisterEditModelTests {
     @Test("Three or more legs are never auto-rebalanced")
     func mirrorSkipsMultiSplit() throws {
         let fixture = try makeFixture()
+        defer { closeAndRemove(fixture.model) }
         var draft = try draft(fixture, expanded: true)
         draft.lines.append(EditableSplit(accountID: fixture.cash, amountText: "5"))
         draft.setAmountText("-40", at: 0)
@@ -203,6 +210,7 @@ struct RegisterTapMapTests {
             .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
         let model = AppModel()
         try model.newDocument(at: url)
+        defer { closeAndRemove(model) }
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let cash = try #require(model.addAccount(name: "Cash", type: .cash))
         let currency = model.transactionCurrency(for: [bank, cash])

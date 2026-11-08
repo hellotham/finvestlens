@@ -47,7 +47,7 @@ struct ReportWarmTests {
     @Test("Built off the main actor, it is the report the main actor builds, and the memo has it")
     func sameReport() async throws {
         let (model, url, scope) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let (from, to) = range
         let request = model.averageBalanceRequest(accountIDs: scope, from: from, to: to, step: .week)
 
@@ -65,7 +65,7 @@ struct ReportWarmTests {
     @Test("An edit made while it builds keeps that build out of the memo; the one built after it goes in")
     func editMeanwhile() async throws {
         let (model, url, scope) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let (from, to) = range
         let bank = try #require(scope.first)
         let rent = try #require(model.addAccount(name: "Rent", type: .expense))
@@ -97,7 +97,7 @@ struct ReportWarmTests {
     @Test("A report measured fast is built where it is asked, not on a replica")
     func fastStaysHere() async throws {
         let (model, url, scope) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let (from, to) = range
         let request = model.averageBalanceRequest(accountIDs: scope, from: from, to: to, step: .day)
         model.reportBuildTimes[request.kind] = ReportBuildTime(took: .milliseconds(1), work: request.work)
@@ -111,7 +111,7 @@ struct ReportWarmTests {
     @Test("A quick build over a quiet account does not keep a busy account's report on the main actor")
     func quietDoesNotVouchForBusy() async throws {
         let (model, url, scope) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let (from, to) = range
         let bank = try #require(scope.first)
         let quiet = try #require(model.addAccount(name: "Quiet", type: .bank))
@@ -138,7 +138,7 @@ struct ReportWarmTests {
     @Test("A quick month does not keep All Time's average balance on the main actor")
     func monthDoesNotVouchForAllTime() async throws {
         let (model, url, scope) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let (from, _) = range
         let month = model.averageBalanceRequest(accountIDs: scope, from: from,
                                                 to: from.addingTimeInterval(86_400 * 30), step: .week)
@@ -157,7 +157,7 @@ struct ReportWarmTests {
     @Test("Build times describe one book: closing it forgets them")
     func closeForgetsBuildTimes() async throws {
         let (model, url, scope) = try makeModel()
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         let (from, to) = range
         let request = model.averageBalanceRequest(accountIDs: scope, from: from, to: to, step: .week)
         await model.warm(request)
@@ -169,7 +169,7 @@ struct ReportWarmTests {
     @Test("What the warm step builds is what the document reads — nothing is built again on the main actor")
     func warmIsWhatTheDocumentReads() async throws {
         let (model, url, scope) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         for kind in [ReportKind.averageBalance, .transactions, .reconcile] {
             var configuration = kind.defaultConfiguration(for: model)
             configuration.accountIDs = scope
@@ -195,7 +195,7 @@ struct ReportWarmTests {
     @Test("The Reports view's warm step leaves a document that is the one built in place")
     func documentFromWarmMemo() async throws {
         let (model, url, scope) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         var configuration = ReportKind.averageBalance.defaultConfiguration(for: model)
         configuration.accountIDs = scope
         await model.warmReports(for: configuration)

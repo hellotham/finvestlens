@@ -65,6 +65,8 @@ After the project's packages change (`AcknowledgementsTests` fails when they hav
 
 Release DMG: `scripts/release-dmg.sh` (archive → notarize + staple the app → build, sign, notarize + staple the DMG; uses the `hellotham-notary` keychain profile).
 
+FinvestLens's own Box app goes into every build from the login Keychain: the app target's *Embed Box App* phase (`scripts/box-app-credentials.sh`) writes its client ID and secret, masked, into the build folder — never the source tree, git or a log, and never print them. A Release build stops without them; store them once per Mac with `scripts/box-app-credentials.sh store` (the secret is not echoed). Debug and CI builds without them fall back to asking for a Box app of the person's own.
+
 A model the person supplies is asked for real by `SuppliedModelLiveTests`, in the app's own test target (`finvestlensTests`) because only the app links MLX. It skips itself unless a folder and a model in it are named, downloads nothing, and takes about twenty minutes on a 26B model — most of it one 120-row statement, read twice:
 
 ```bash

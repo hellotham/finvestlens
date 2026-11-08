@@ -29,7 +29,7 @@ struct FYPackTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let bank = try #require(model.addAccount(name: "Everyday Card", type: .bank))
         let income = try #require(model.book?.account(with:
@@ -103,7 +103,7 @@ struct FYPackTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         _ = model.addAccount(name: "Bank", type: .bank)
         #expect(model.dividendFrankingDocument(
             from: .distantPast, to: .distantFuture, periodLabel: "FY") == nil)

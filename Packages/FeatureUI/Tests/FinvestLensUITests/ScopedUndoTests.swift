@@ -75,7 +75,7 @@ struct ScopedUndoTests {
     @Test("Each business operation undoes and redoes, keeping every posting and lot linked")
     func businessOperations() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         let model = f.model
         let ar = try #require(model.addAccount(name: "A/R", type: .receivable))
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
@@ -136,7 +136,7 @@ struct ScopedUndoTests {
     @Test("Unposting undoes back to the very transaction that was posted")
     func unpostUndo() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         let model = f.model
         let ar = try #require(model.addAccount(name: "A/R", type: .receivable))
         let sales = try #require(model.addAccount(name: "Sales", type: .income))
@@ -165,7 +165,7 @@ struct ScopedUndoTests {
     @Test("Posting scheduled transactions undoes the postings and the schedules' progress together")
     func postScheduledUndo() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         let model = f.model
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let rent = try #require(model.addAccount(name: "Rent", type: .expense))
@@ -196,7 +196,7 @@ struct ScopedUndoTests {
     @Test("Closing a year undoes to before the closing entries, and redoes them")
     func closeYearUndo() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         let model = f.model
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let salary = try #require(model.addAccount(name: "Salary", type: .income))
@@ -223,7 +223,7 @@ struct ScopedUndoTests {
     @Test("Repair Book undoes every repair it made, and the accounts it made for them")
     func repairUndo() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         let model = f.model
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let food = try #require(model.addAccount(name: "Food", type: .expense))

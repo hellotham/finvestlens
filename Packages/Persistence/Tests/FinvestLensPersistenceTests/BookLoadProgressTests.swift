@@ -18,7 +18,19 @@ import FinvestLensEngine
 @testable import FinvestLensPersistence
 
 @Suite("Book load progress")
-struct BookLoadProgressTests {
+final class BookLoadProgressTests {
+
+    /// The scratch stores this test made: closed and removed when it ends
+    /// (Swift Testing makes an instance per test). They were left in the
+    /// temporary folder, nine a run.
+    private var made: [(store: SQLiteDocumentStore, url: URL)] = []
+
+    deinit {
+        for (store, url) in made {
+            try? store.close()
+            try? FileManager.default.removeItem(at: url)
+        }
+    }
 
     /// A book with `txnCount` transactions (one split each) and `priceCount`
     /// prices, written to a scratch store and read back.
@@ -26,6 +38,7 @@ struct BookLoadProgressTests {
         let url = URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent("progress-\(UUID().uuidString).finvestlens")
         let store = try SQLiteDocumentStore(path: url.path)
+        made.append((store, url))
         let book = Book(baseCurrency: .aud)
         let bank = book.addAccount(Account(name: "Bank", type: .bank, commodity: .aud))
         let stock = Commodity(namespace: .security("ASX"), mnemonic: "BHP",

@@ -55,7 +55,7 @@ struct PortfolioIntegrationTests {
 
         let reopened = AppModel()
         try await reopened.open(at: url)
-        defer { reopened.close(); try? FileManager.default.removeItem(at: url) }
+        defer { reopened.close(); removeBook(at: url) }
         #expect(reopened.priceRows.count == 1)
         #expect(reopened.priceRows.first?.symbol == "CBA")
     }

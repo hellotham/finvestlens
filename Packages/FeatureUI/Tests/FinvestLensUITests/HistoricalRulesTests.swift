@@ -27,7 +27,7 @@ struct HistoricalRulesTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let uncategorised = try #require(model.addAccount(name: "Uncategorised", type: .expense))
@@ -65,7 +65,7 @@ struct HistoricalRulesTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let savings = try #require(model.addAccount(name: "Savings", type: .bank))
@@ -102,7 +102,7 @@ struct HistoricalRulesTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let food = try #require(model.addAccount(name: "Food", type: .expense))
         try model.addTransaction(date: Date(timeIntervalSince1970: 0), description: "COLES",

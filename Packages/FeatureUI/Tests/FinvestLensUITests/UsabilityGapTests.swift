@@ -29,7 +29,7 @@ struct UsabilityGapTests {
     @Test("Re-parenting: parentID, validParents excludes self+descendants, move works")
     func reparenting() throws {
         let url = tempURL()
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         let model = AppModel()
         try model.newDocument(at: url)
         defer { model.close() }
@@ -56,7 +56,7 @@ struct UsabilityGapTests {
     @Test("Price targets: set, read back, and remove")
     func priceTargets() throws {
         let url = tempURL()
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         let model = AppModel()
         try model.newDocument(at: url)
         defer { model.close() }
@@ -82,8 +82,8 @@ struct UsabilityGapTests {
     func staleLockRecovery() async throws {
         let url = tempURL()
         let lockURL = url.deletingPathExtension().appendingPathExtension("lock")
-        defer { try? FileManager.default.removeItem(at: url)
-                try? FileManager.default.removeItem(at: lockURL) }
+        defer { removeBook(at: url)
+                removeBook(at: lockURL) }
 
         // Create the book, then leave behind a *stale* lock (holder "crashed"
         // long ago — heartbeat far past the 90 s staleness window).
@@ -115,8 +115,8 @@ struct UsabilityGapTests {
     @Test("openBook auto-saves and closes the previous book")
     func switchingBooksSaves() async throws {
         let a = tempURL(), b = tempURL()
-        defer { try? FileManager.default.removeItem(at: a)
-                try? FileManager.default.removeItem(at: b) }
+        defer { removeBook(at: a)
+                removeBook(at: b) }
 
         let model = AppModel()
         try model.newDocument(at: a)
@@ -161,7 +161,7 @@ struct UndoTests {
     @Test("Mutations are undoable and redoable via whole-book snapshots")
     func undoRedo() throws {
         let url = tempURL()
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         let model = AppModel()
         let undo = UndoManager()
         model.undoManager = undo
@@ -185,7 +185,7 @@ struct UndoTests {
     @Test("Delete transaction is undoable")
     func undoDelete() throws {
         let url = tempURL()
-        defer { try? FileManager.default.removeItem(at: url) }
+        defer { removeBook(at: url) }
         let model = AppModel()
         let undo = UndoManager()
         model.undoManager = undo

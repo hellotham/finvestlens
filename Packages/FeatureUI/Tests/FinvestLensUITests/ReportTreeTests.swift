@@ -67,7 +67,7 @@ struct ReportTreeTests {
     @Test("Income & Expense breaks each category down, every level, largest first; the top row is its slice")
     func incomeExpenseBreakdown() throws {
         let f = try fixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         let configuration = ReportKind.incomeExpense.defaultConfiguration(for: f.model)
         var period = configuration
         period.period = .currentFinancialYear
@@ -90,7 +90,7 @@ struct ReportTreeTests {
     @Test("The income statement is the same tree, by name, and its tops sum to the section")
     func incomeStatementTree() throws {
         let f = try fixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         var configuration = ReportKind.incomeStatement.defaultConfiguration(for: f.model)
         configuration.period = .currentFinancialYear
         let document = try #require(f.model.reportDocument(for: configuration))
@@ -104,7 +104,7 @@ struct ReportTreeTests {
     @Test("Each node is rounded once, from the exact amounts beneath it")
     func roundedOncePerNode() throws {
         let f = try fixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         let lines = [f.supermarket, f.market].map { id in
             ReportLine(id: id, name: "", fullName: "", amount: dec("0.335"))
         } + [ReportLine(id: f.groceries, name: "", fullName: "", amount: dec("0.33"))]
@@ -118,7 +118,7 @@ struct ReportTreeTests {
     @Test("Side by side, a column with nothing beneath a row stays blank, and lines that are not accounts are kept")
     func columnsAndLooseLines() throws {
         let f = try fixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         let current = [ReportLine(id: f.market, name: "Market", fullName: "Expenses:Groceries:Market", amount: 4),
                        ReportLine(id: .random(), name: "Unrealised FX", fullName: "Trading", amount: 2)]
         let prior = [ReportLine(id: f.dining, name: "Dining", fullName: "Expenses:Dining", amount: 9)]
@@ -134,7 +134,7 @@ struct ReportTreeTests {
     @Test("The transaction report covers every account by default, grouped by account in name order")
     func transactionsAllAccounts() throws {
         let f = try fixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         let report = try #require(f.model.transactionReport(accountIDs: nil, from: f.from, to: f.to))
         #expect(report.groups.map(\.accountName) == [
             "Bank", "Expenses:Dining", "Expenses:Groceries",
@@ -156,7 +156,7 @@ struct ReportTreeTests {
     @Test("Choosing a parent — a placeholder too — reports it and every subaccount beneath, every level")
     func transactionsSubtree() throws {
         let f = try fixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         let report = try #require(f.model.transactionReport(accountIDs: [f.expenses], from: f.from, to: f.to))
         #expect(Set(report.groups.map(\.id)) == [f.dining, f.groceries, f.market, f.supermarket])
         let groceries = try #require(f.model.transactionReport(accountIDs: [f.groceries], from: f.from, to: f.to))
@@ -178,7 +178,7 @@ struct ReportTreeTests {
     @Test("The Account Summary opens on every level, and its stepper reaches the deepest")
     func accountSummaryEveryLevel() throws {
         let f = try fixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         let configuration = ReportKind.accountSummary.defaultConfiguration(for: f.model)
         #expect(configuration.depth == nil)
         #expect(f.model.accountTreeDepth == 3)
@@ -195,7 +195,7 @@ struct ReportTreeTests {
     @Test("Two accounts with one full name are two sections, not one drawn twice")
     func duplicateFullNames() throws {
         let f = try fixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         // "Expenses:Dining" twice: a top-level account named with a colon.
         let impostor = try #require(f.model.addAccount(name: "Expenses:Dining", type: .expense))
         _ = try f.model.addTransaction(date: Calendar.current.date(byAdding: .day, value: 21, to: f.from)!,
@@ -210,7 +210,7 @@ struct ReportTreeTests {
     @Test("Cash Flow lists where the money came from largest first, at every level")
     func cashFlowLargestFirst() throws {
         let f = try fixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         let salary = try #require(f.model.addAccount(name: "Salary", type: .income))
         let refunds = try #require(f.model.addAccount(name: "Refunds", type: .income))
         for (account, amount) in [(salary, dec("3000")), (refunds, dec("5"))] {

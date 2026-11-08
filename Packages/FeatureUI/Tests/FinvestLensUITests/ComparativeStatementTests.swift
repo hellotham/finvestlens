@@ -30,7 +30,7 @@ struct ComparativeStatementTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let bankID = try #require(model.addAccount(name: "Bank", type: .bank))
         let salaryID = try #require(model.addAccount(name: "Salary", type: .income))
@@ -77,7 +77,7 @@ struct ComparativeStatementTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let bankID = try #require(model.addAccount(name: "Bank", type: .bank))
         let openingID = try #require(model.addAccount(name: "Opening", type: .equity))
@@ -119,7 +119,7 @@ struct ComparativeStatementTests {
         let url = tempURL()
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         _ = try #require(model.addAccount(name: "Bank", type: .bank))
 
         // All time has no natural stride: asking to compare yields one column.

@@ -40,7 +40,7 @@ struct OverviewViewTests {
     @Test("No view or card selection ever switches mode")
     func selectionNeverSwitchesMode() throws {
         let (model, url) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         model.showMode(.dashboard)
         for view in OverviewView.standards {
@@ -58,7 +58,7 @@ struct OverviewViewTests {
     @Test("The board's Open button is what switches mode")
     func explicitButtonSwitchesMode() throws {
         let (model, url) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         model.navigate(to: .overviewView("accounts"))
         #expect(model.mode == .dashboard)
@@ -125,7 +125,7 @@ struct OverviewViewTests {
         let (model, url) = try makeModel()
         defer {
             model.close()
-            try? FileManager.default.removeItem(at: url)
+            removeBook(at: url)
             UserDefaults.standard.removeObject(forKey: viewsKey(url))
         }
 
@@ -148,7 +148,7 @@ struct OverviewViewTests {
     @Test("A card no view carries is still reachable")
     func everyCardIsReachable() throws {
         let (model, url) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         for card in OverviewCard.allCases {
             model.navigate(to: .overviewCard(view: "overview", card: card.rawValue))
@@ -162,7 +162,7 @@ struct OverviewViewTests {
     @Test("An unknown view falls back to Mix")
     func unknownViewFallsBack() throws {
         let (model, url) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         model.navigate(to: .overviewView("no-such-view"))
         #expect(model.currentOverviewView.id == "overview")
@@ -178,7 +178,7 @@ struct BoardDataTests {
             .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let salary = try #require(model.addAccount(name: "Salary", type: .income))
         let food = try #require(model.addAccount(name: "Food", type: .expense))

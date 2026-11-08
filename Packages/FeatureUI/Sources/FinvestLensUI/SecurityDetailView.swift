@@ -296,15 +296,21 @@ struct SecurityDetailView: View {
     @ViewBuilder
     private func figureRow(_ label: LocalizedStringKey, _ value: String?,
                            tint: Color? = nil) -> some View {
+        // One VoiceOver stop for the pair, made on the label's cell: a GridRow
+        // hands its modifiers to each cell, so `.combine` on the row paired
+        // nothing, and the label and the figure were read as strangers.
         GridRow {
             Text(label).foregroundStyle(.secondary)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(Text(label))
+                .accessibilityValue(Text(verbatim: value ?? "—"))
             Text(value ?? "—")
                 .monospacedDigit()
                 .foregroundStyle(value == nil ? AnyShapeStyle(.secondary)
                                               : AnyShapeStyle(tint ?? .primary))
                 .gridColumnAlignment(.trailing)
+                .accessibilityHidden(true)
         }
-        .accessibilityElement(children: .combine)
     }
 
     // MARK: The price chart (`FR-INV-16`)
@@ -318,14 +324,14 @@ struct SecurityDetailView: View {
                 Text("Not enough price history to draw a chart for this period.")
                     .scaledFont(.callout).foregroundStyle(.secondary)
             } else {
-                PriceHistoryChart(detail: detail, window: window, points: points,
-                                  currencyCode: code)
-                    // Its marks are a value; the same value need not lay out
-                    // again because something else on the page redrew.
-                    .equatable()
+                let chart = PriceHistoryChart(detail: detail, window: window, points: points,
+                                              currencyCode: code)
+                // Its marks are a value; the same value need not lay out
+                // again because something else on the page redrew.
+                chart.equatable()
                     .frame(height: 220)
                     .padding(.vertical, 4)
-                chartLegend(detail, window: window)
+                chartLegend(chart, detail: detail)
             }
         } header: {
             HStack {
@@ -344,33 +350,39 @@ struct SecurityDetailView: View {
     }
 
     /// The chart's marks named in words, because colour and shape alone do not
-    /// survive a monochrome display or a screen reader.
+    /// survive a monochrome display or a screen reader — read from the chart
+    /// itself, so the key and VoiceOver name only what it draws. A split or a
+    /// transfer in specie is a buy or a sale with no price, and has no mark; a
+    /// holding closed before the period has no shading; a cost of nothing
+    /// draws no rule.
     @ViewBuilder
-    private func chartLegend(_ detail: SecurityDetail, window: ClosedRange<Date>) -> some View {
-        let events = detail.events.filter { window.contains($0.date) && $0.kind != .income }
-        let buys = events.filter { $0.kind == .buy }.count
-        let sells = events.filter { $0.kind == .sell }.count
-        HStack(spacing: 12) {
+    private func chartLegend(_ chart: PriceHistoryChart, detail: SecurityDetail) -> some View {
+        let buys = chart.markers.filter { $0.kind == .buy }.count
+        let sells = chart.markers.filter { $0.kind == .sell }.count
+        let average = chart.averageCost.flatMap { $0 > 0 ? $0 : nil }
+        ChartKey {
             ChartKeyMark("Price", symbol: "minus", colour: .appAccent)
             if buys > 0 { ChartKeyMark(.buy, "Bought") }
             if sells > 0 { ChartKeyMark(.sale, "Sold") }
-            if detail.averageCost != nil {
+            if average != nil {
                 ChartKeyMark("Average cost", symbol: "minus", colour: .secondary)
             }
-            if !detail.holdingPeriods.isEmpty {
-                ChartKeyMark("Held", symbol: "square.fill", colour: .appAccent.opacity(0.12))
+            if !chart.shadedPeriods.isEmpty {
+                // The chart's shading: `.tint` at 0.10, which is the accent.
+                ChartKeyMark("Held", symbol: "square.fill", colour: .appAccent.opacity(0.10))
             }
         }
         .scaledFont(.caption2)
         .foregroundStyle(.secondary)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(chartVoiceOver(detail, window: window, buys: buys, sells: sells))
+        .accessibilityLabel(chartVoiceOver(detail, window: chart.window, buys: buys, sells: sells,
+                                           average: average))
     }
 
     /// A chart is invisible to VoiceOver, so its whole content is spoken here:
     /// the range of the line, and what the markers on it are.
     private func chartVoiceOver(_ detail: SecurityDetail, window: ClosedRange<Date>,
-                                buys: Int, sells: Int) -> String {
+                                buys: Int, sells: Int, average: Decimal?) -> String {
         let inWindow = detail.prices.filter { window.contains($0.date) }
         var parts: [String] = []
         if let low = inWindow.map(\.value).min(), let high = inWindow.map(\.value).max() {
@@ -378,7 +390,7 @@ struct SecurityDetailView: View {
         }
         if buys > 0 { parts.append(String(localized: "\(buys) purchases marked")) }
         if sells > 0 { parts.append(String(localized: "\(sells) sales marked")) }
-        if let average = detail.averageCost {
+        if let average {
             parts.append(String(localized: "average cost \(AmountFormat.string(average, code: code))"))
         }
         return parts.joined(separator: ", ")
@@ -770,7 +782,14 @@ struct SecurityDetailView: View {
                 commit: { model.setExchangeCode($0, for: commodity) })
             VStack(alignment: .leading, spacing: 2) {
                 Picker("Price provider", selection: Binding(
-                    get: { model.quoteProvider(for: commodity)?.rawValue ?? "" },
+                    // The stored choice only where it can price here: a keyed
+                    // provider with no key on this device (keys stay on the
+                    // device that has them) is no item of this menu, and the
+                    // run's provider is what `effectiveProvider` uses instead.
+                    get: {
+                        model.quoteProvider(for: commodity)
+                            .flatMap { model.availableProviders.contains($0) ? $0.rawValue : nil } ?? ""
+                    },
                     set: { model.setQuoteProvider(QuoteProviderKind(rawValue: $0), for: commodity) })) {
                     Text("Use the run's provider").tag("")
                     ForEach(model.availableProviders) { provider in
@@ -939,7 +958,9 @@ struct PriceHistoryChart: View, Equatable {
             if let average = averageCost, average > 0 {
                 RuleMark(y: .value("Average cost", Self.asDouble(average)))
                     .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
-                    .foregroundStyle(.secondary)
+                    // The colour, as the key draws it: on a mark the
+                    // hierarchical `.secondary` is the accent at half strength.
+                    .foregroundStyle(Color.secondary)
             }
 
             // Your movements, placed at what you actually paid or received, so
@@ -1253,10 +1274,12 @@ extension SecurityEvent.Kind {
         }
     }
 
+    /// A buy's and a sale's are the chart's marks' (``TradeMark``), so the
+    /// list and the chart above it draw a trade in one colour.
     var tint: Color {
         switch self {
-        case .buy: .green
-        case .sell: .red
+        case .buy: TradeMark.buy.colour
+        case .sell: TradeMark.sale.colour
         case .income: .appAccent
         }
     }

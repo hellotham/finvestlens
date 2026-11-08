@@ -62,7 +62,7 @@ struct SubaccountRegisterTests {
     @Test("Off, the register is the account's own postings")
     func withoutSubaccounts() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         f.model.selectedAccountID = f.parent
         #expect(f.model.registerRows.count == 1)
         #expect(f.model.registerRows.map(\.description) == ["to parent"])
@@ -71,7 +71,7 @@ struct SubaccountRegisterTests {
     @Test("On, the register is the subtree's postings, in date order")
     func withSubaccounts() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         f.model.selectedAccountID = f.parent
         f.model.registerIncludesSubaccounts = true
         #expect(f.model.registerRows.map(\.description) == ["to parent", "to child"])
@@ -84,7 +84,7 @@ struct SubaccountRegisterTests {
     @Test("Balances accumulate across the subtree")
     func subtreeBalances() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         f.model.selectedAccountID = f.parent
         f.model.registerIncludesSubaccounts = true
         #expect(f.model.registerRows.map(\.runningBalance) == [100, 130])
@@ -97,7 +97,7 @@ struct SubaccountRegisterTests {
     @Test("A subtree row says which account it posted to")
     func rowsNameTheirAccount() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         f.model.selectedAccountID = f.parent
         f.model.registerIncludesSubaccounts = true
         #expect(f.model.registerRows.map(\.accountName) == ["Savings", "Holiday"])
@@ -114,7 +114,7 @@ struct SubaccountRegisterTests {
             .appendingPathComponent(UUID().uuidString).appendingPathExtension("finvestlens")
         let model = AppModel()
         try model.newDocument(at: url)
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let bhp = Commodity(namespace: .security("ASX"), mnemonic: "BHP",
                             fullName: "BHP", smallestFraction: 10000)
@@ -153,7 +153,7 @@ struct SubaccountRegisterTests {
     @Test("A voided split in a subaccount does not move the balance")
     func voidedInSubtree() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         let book = try #require(f.model.book)
         let child = try #require(book.account(with: f.child))
         for split in book.splits(for: child) { split.reconcileState = .voided }
@@ -168,7 +168,7 @@ struct SubaccountRegisterTests {
     @Test("Only an account with children is offered subaccounts")
     func onlyOfferedWhereItMeansSomething() throws {
         let f = try makeFixture()
-        defer { f.model.close(); try? FileManager.default.removeItem(at: f.url) }
+        defer { f.model.close(); removeBook(at: f.url) }
         f.model.selectedAccountID = f.parent
         #expect(f.model.selectedAccountHasChildren)
         f.model.selectedAccountID = f.child
@@ -180,7 +180,7 @@ struct SubaccountRegisterTests {
     @Test("Closing a book forgets the setting")
     func resetOnClose() throws {
         let f = try makeFixture()
-        defer { try? FileManager.default.removeItem(at: f.url) }
+        defer { removeBook(at: f.url) }
         f.model.selectedAccountID = f.parent
         f.model.registerIncludesSubaccounts = true
         f.model.close()

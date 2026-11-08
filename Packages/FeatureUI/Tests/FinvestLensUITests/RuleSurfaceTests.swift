@@ -37,7 +37,7 @@ struct RuleSurfaceTests {
     @Test("Groups can be made, renamed, switched off and deleted")
     func groupLifecycle() throws {
         let (model, url) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
 
         let id = model.addRuleGroup(named: "Imports")
         #expect(model.ruleGroups.map(\.name).contains("Imports"))
@@ -55,7 +55,7 @@ struct RuleSurfaceTests {
     @Test("A rule can be added to a named group")
     func addToGroup() throws {
         let (model, url) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let first = model.addRuleGroup(named: "First")
         let second = model.addRuleGroup(named: "Second")
         model.addRule(Rule(name: "r"), toGroup: second)
@@ -68,7 +68,7 @@ struct RuleSurfaceTests {
     @Test("Rules can be reordered within a group")
     func reorder() throws {
         let (model, url) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let group = model.addRuleGroup(named: "G")
         model.addRule(Rule(name: "a"), toGroup: group)
         model.addRule(Rule(name: "b"), toGroup: group)
@@ -81,7 +81,7 @@ struct RuleSurfaceTests {
     @Test("A rule can be switched off without deleting it")
     func ruleActive() throws {
         let (model, url) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let group = model.addRuleGroup(named: "G")
         let rule = Rule(name: "r")
         model.addRule(rule, toGroup: group)
@@ -97,7 +97,7 @@ struct RuleSurfaceTests {
     @Test("Editing a rule preserves every field the engine honours")
     func editRoundTrip() throws {
         let (model, url) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let account = try #require(model.addAccount(name: "Food", type: .expense))
         let group = model.addRuleGroup(named: "G")
 
@@ -128,7 +128,7 @@ struct RuleSurfaceTests {
     @Test("A notes-only rule reaches the engine and does what it says")
     func notesOnlyRule() throws {
         let (model, url) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let food = try #require(model.addAccount(name: "Food", type: .expense))
         _ = try model.addTransaction(
@@ -152,7 +152,7 @@ struct RuleSurfaceTests {
     @Test("Match-all and match-any select different transactions")
     func andOrDiffer() throws {
         let (model, url) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let triggers = [RuleTrigger(field: .description, op: .contains, value: "WOOLIES"),
                         RuleTrigger(field: .amount, op: .greaterThan, value: "100")]
 
@@ -191,7 +191,7 @@ struct RuleSurfaceTests {
     @Test("Known tags come from the book, and exclude ones already used")
     func tagSuggestions() throws {
         let (model, url) = try makeModel()
-        defer { model.close(); try? FileManager.default.removeItem(at: url) }
+        defer { model.close(); removeBook(at: url) }
         let bank = try #require(model.addAccount(name: "Bank", type: .bank))
         let food = try #require(model.addAccount(name: "Food", type: .expense))
         _ = try model.addTransaction(
