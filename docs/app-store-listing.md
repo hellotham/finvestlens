@@ -90,7 +90,7 @@ https://hellotham.com/finvestlens/privacy/
 2026 Hello Tham Pty. Ltd.
 ```
 
-**Version** — What's New in 1.3 (drafted 8 Nov 2026; build 12):
+**Version** — What's New in 1.3 (drafted 8 Nov 2026; build 12; on the App Store since 9 Nov 2026):
 ```
 • Box: sign in with your Box account and open your books there. There is no longer a Box app of your own to set up.
 • Reports: every second row is shaded across the whole width of the table, as GnuCash shades it, and long reports scroll smoothly.

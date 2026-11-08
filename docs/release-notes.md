@@ -7,12 +7,12 @@ uses FinvestLens would notice.
 
 ---
 
-## 1.3 (submitted for App Review 8 November 2026)
+## 1.3 (9 November 2026)
 
 Books on Box without setting anything up, reports that read and scroll as they
 should, and reverting a book that checks what it reverts to. For Mac, iPhone and
 iPad on the App Store, and as a notarized disk image for Mac from the same
-source.
+source (published 8 November 2026).
 
 ### New
 

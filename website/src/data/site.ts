@@ -27,9 +27,10 @@ export const site = {
 
 export const release = {
   version: '1.3',
-  /** The date this version was released: the disk image's, until the App
-   *  Store's own date (`releaseDate` in its record) replaces it. */
-  released: '8 November 2026',
+  /** The date this version reached the App Store: `currentVersionReleaseDate`
+   *  in its record (`releaseDate` is the app's first release), read as the
+   *  date in Sydney. Until then, the disk image's. */
+  released: '9 November 2026',
   /** Every system this version runs on, in words. */
   platforms: 'Mac, iPhone and iPad',
   /** The same, for the structured data. `minimumOsVersion` in the App Store record. */
