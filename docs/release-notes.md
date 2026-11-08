@@ -7,6 +7,57 @@ uses FinvestLens would notice.
 
 ---
 
+## 1.3 (submitted for App Review 8 November 2026)
+
+Books on Box without setting anything up, reports that read and scroll as they
+should, and reverting a book that checks what it reverts to. For Mac, iPhone and
+iPad on the App Store, and as a notarized disk image for Mac from the same
+source.
+
+### New
+
+- **Box without a Box app of your own.** FinvestLens now signs in to Box as
+  itself: choose **Open from Box…**, sign in on Box's own page, and your books
+  are there. There is no longer a developer app to register and no client ID or
+  secret to enter. FinvestLens never sees your Box password, and it keeps the
+  sign-in in the Keychain on your device. If you had connected through an app
+  of your own, connect once more; your books on the device are kept.
+
+### Better
+
+- **Report tables.** Every second row is shaded across the whole width of the
+  table, as GnuCash shades it, where the shading used to stop at each column.
+  Long reports scroll as smoothly as they did before.
+- **Price History.** Buys and sales are marked in the same shapes and colours
+  in the chart and in its key. The key fits a phone screen and wraps rather
+  than crowding the chart. VoiceOver and Audio Graph name each buy and sale.
+  Choosing a security that is also the benchmark no longer compares it with
+  itself.
+- **A security's page.** The chart's key lists only what the chart draws. A
+  split, which has no price, is no longer keyed as a purchase. VoiceOver reads
+  each figure with its name, as one item. Buys and sales use colours that
+  stand out against the page, and the transactions list below uses the same
+  ones.
+- **Reload and Revert.** The saved book is read in full before anything is
+  replaced, so a file damaged or half-written by a sync can no longer take the
+  place of your work. If a reload, a revert, a save or a Box upload fails, the
+  alert says which, and leaves the book open as it was.
+- **Shortcuts and Spotlight** read your book from a copy, so a save that lands
+  while they are reading no longer cuts them off.
+
+### Fixed
+
+- The Payable Aging report's icon, which was blank.
+- The Auto-refresh setting named one price provider; it refreshes from the
+  one you choose.
+- Opening a GnuCash book on iPhone or iPad said to import it, then offered
+  only OK. It now says to import it with FinvestLens on a Mac.
+- Three internal requirement numbers that appeared in the interface.
+- A price-provider choice made on another device no longer shows as a blank
+  menu.
+
+---
+
 ## 1.2 (31 October 2026)
 
 FinvestLens on the 27 releases, on a phone, in the reader's language, and with
