@@ -25,9 +25,15 @@ grep -n '^VERSION=' scripts/stamp_build_info.sh
 
 The published copy follows the DMG, not the tree: `website/src/data/site.ts`
 (`version`, `file`, `sizeLabel`, `sha256` **and `requirements`**, which
-describes what that file needs), `docs/release-notes.md`, and the README's
-release sentence. App Store Connect carries its own version record per
-platform (`docs/app-store.md`).
+describes what that file needs), `docs/release-notes.md`, the README's
+release sentence, and the hand-written headline list under "What's in
+{version}" in `website/src/pages/download.astro`. That list is not
+generated: 1.3 shipped with 1.2's headlines there, one of them telling people
+to set up a Box app that 1.3 no longer needs. App Store Connect carries its
+own version record per platform (`docs/app-store.md`).
+`released` in `site.ts` is the App Store's date for the version
+(`currentVersionReleaseDate`, not `releaseDate`, which is the app's first
+release), so it moves again once App Review approves.
 
 Bump every one of them to the same value before anything else.
 

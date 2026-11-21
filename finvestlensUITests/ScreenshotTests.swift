@@ -94,11 +94,16 @@ final class ScreenshotTests: XCTestCase {
     /// The four investment reports on the phone — Portfolio, Investment
     /// Lots, Capital Gains, Investment Return — one capture each, opened from
     /// the gallery: the visual pass for their shared layout (a section per
-    /// portfolio, five or six columns and a Yield p.a. column) at phone
-    /// width, where a table that fits a Mac can crowd. Not part of the store
-    /// set, so it runs only with `FL_INVEST=1`; the Portfolio report is
+    /// portfolio; the Portfolio report's ten columns end in Annualised) at
+    /// phone width, where a table that fits a Mac can crowd. Not part of the
+    /// store set, so it runs only with `FL_INVEST=1`; the Portfolio report is
     /// asserted to have rendered its table, since the demo book holds
-    /// securities.
+    /// securities. The check is the last column's header: until 22 Nov 2026
+    /// it looked for "Yield p.a.", which the rebuild of the investment
+    /// reports (`ce68bc8`) replaced with Annualised, so the assertion failed
+    /// on every run while the report itself was fine. "Annualised" is that
+    /// header alone; the summary line that starts with the word is a longer
+    /// label.
     @MainActor
     func testCaptureInvestmentReports() throws {
         guard ProcessInfo.processInfo.environment["FL_INVEST"] != nil else {
@@ -112,8 +117,8 @@ final class ScreenshotTests: XCTestCase {
                        "Average Balance"] {
             guard openReport(report, app) || openCard(report, app) else { continue }
             if report == "Portfolio" {
-                XCTAssertTrue(app.staticTexts["Yield p.a."].firstMatch.waitForExistence(timeout: 30),
-                              "the Portfolio report showed no Yield p.a. column")
+                XCTAssertTrue(app.staticTexts["Annualised"].firstMatch.waitForExistence(timeout: 30),
+                              "the Portfolio report showed no Annualised column")
             }
             settle(2)
             capture("invest-" + report.lowercased().replacingOccurrences(of: " ", with: "-"))

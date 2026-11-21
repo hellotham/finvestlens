@@ -6011,3 +6011,52 @@ source tree, git or a log.
 - The person's own client ID and secret, unused while the built-in app is,
   are kept: deleting someone's settings cannot be undone, and nothing needs it.
 
+
+## App Store notices, accessibility labels and two layout defects (22 Nov 2026)
+
+1.3 went on sale on 9 Nov 2026. On 22 Nov the owner asked for the App
+Accessibility labels to be updated, and for the three notices on App Store
+Connect's home page to be dealt with. The App Store side is recorded in
+`docs/app-store.md`:
+- the age rating's two new questions, answered on 1.3.1 (a version made for
+  the purpose);
+- the China mainland AIGC and Security Assessment declarations, both No;
+- Dark Interface and Reduced Motion, re-checked against 1.3 and published for
+  iPhone, iPad and Mac.
+
+Re-checking the labels meant running the screenshot tours in dark mode, and
+at AX3, Apple's 200% threshold for Larger Text. Two of the defects they
+showed were visible at the standard text size, to every user, and are fixed:
+
+- **The Reports gallery's Recent row** broke report names mid-word on the
+  iPhone ("Inve / stm / ent / Retu / rn"), and at AX3 one letter per line.
+  Five recents do not fit a phone's width, and an `HStack` squeezes every
+  capsule until its text wraps inside it. The row is now a `WrappingRow`, the
+  layout 1.3's chart keys use. Each capsule keeps its own width and a new
+  line starts when the next one does not fit. Only a name wider than the
+  whole line wraps, at its words (`ReportsHome.swift`).
+- **Settings ▸ General ▸ Reporting** drew "Financial year starts", "Default
+  period" and the note under them on top of each other, on iPhone and iPad.
+  - *The cause:* `ReportSettingsForm` is a `Group` of three views. It still
+    carried the `.padding(16)` and `.windowFloor(minWidth: 340)` it had as a
+    popover from the Reports toolbar, before it moved into Settings. On iOS
+    `WindowFloor` puts its content in `FloorLayout`, which sizes and places
+    only its first subview. The other two were never placed, so SwiftUI drew
+    them over the first.
+  - *The form:* it carries neither modifier now.
+  - *`WindowFloor`:* it hands `FloorLayout` its content as a single
+    `VStack(spacing: 0)`, so content of several views can never stack on
+    itself again. A scan of every `windowFloor` use found each one attached
+    to a single view (49 `NavigationStack`s, 6 `Form`s, 5
+    `DestinationStack`s and single views). For those the stack is the view
+    itself, and nothing moves (`CompactSupport.swift`).
+
+`testCaptureInvestmentReports` had failed on every run since the investment
+reports were rebuilt (`ce68bc8`). It looked for a "Yield p.a." column that
+the rebuild replaced with Annualised, while the report itself was right. It
+now checks for the Annualised header and passes. The tours themselves are
+`ScreenshotTests`, which are not in CI.
+
+The rest of what AX3 showed, and the contrast failures the audit counted, are
+the Larger Text and contrast pass the owner approved for 1.3.1 (see
+`docs/app-store.md` ▸ App Accessibility for the list).

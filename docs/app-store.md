@@ -29,6 +29,49 @@ Platforms, never a second New App). The version records it made said 1.0
 and were edited to **1.2** on each platform's version page (11 Oct 2026), to
 match `MARKETING_VERSION`; the build number is what TestFlight keys on.
 
+**1.3 (build 12) went on sale on 9 Nov 2026.** **1.3.1** exists on both
+platforms in Prepare for Submission since 22 Nov 2026, with no build attached
+and nothing submitted. It was made to answer the age rating's new questions
+(below), which App Store Connect will not edit on a live record.
+
+## Age rating and China mainland compliance
+
+**Age rating.** Apple added two questions in Nov 2026: *Shared Location* and
+*Dating and Relationships*. Both are answered **No** for FinvestLens: it has
+no location access at all (no `CoreLocation`, no location usage strings) and
+no dating features. The rating stays 4+.
+
+The answers can only be edited on an app version in Prepare for Submission.
+The live app-info record is read-only: App Information ▸ Age Ratings offers
+only *View*, and the API's `appInfos` lists one `READY_FOR_DISTRIBUTION`
+record until a new version exists. So the answers were saved on 1.3.1's
+record (22 Nov 2026, read back through the API) and go out with 1.3.1. Apple
+says they are not required before 15 Jan 2027.
+
+**China mainland (App Information ▸ App Compliance).** Apple's help page
+(*View China mainland compliance information*, read 22 Nov 2026) asks every
+app sold there two Yes/No questions. Answering Yes needs filings from China's
+regulators that Hello Tham does not hold. Existing apps must have verified
+declarations by 31 Jan 2027, and Apple re-checks them with the next version
+submitted.
+
+- **AI-Generated or Synthetic Content: No** (the owner's decision, 22 Nov
+  2026, status Active).
+  - The app offers none of the examples on Apple's form: AI chatbots, image
+    or video generation, voice or face alteration.
+  - Apple Intelligence, on device or on Private Cloud Compute, does not work
+    in China mainland (support.apple.com/en-us/121115, read the same day).
+  - What remains there is a model the person supplies (MLX). The app neither
+    bundles nor fetches one.
+- **Security Assessment: No** (the owner's decision, 22 Nov 2026, status
+  Active). FinvestLens has no messaging and publishes nothing to other
+  people.
+
+Apple's help also says "No" is the answer when a feature is "disabled or
+geoblocked in China mainland". Should these answers ever be questioned, that
+is the route that keeps No exact: turn off the supplied-model path for the
+China mainland storefront.
+
 ## What the build has to carry
 
 - **App Sandbox on every target** (`ENABLE_APP_SANDBOX = YES`): the Mac App
@@ -208,33 +251,65 @@ accessibility-extra-extra-extra-large`. The audit tries other text sizes on
 the app as it runs, so run a tour's assertions without it when they are what
 is being checked.
 
-Declared for 1.2, on iPhone, iPad and Mac:
+**Published 22 Nov 2026** on iPhone, iPad and Mac, after a re-check against
+1.3 (each feature's criteria page says to re-evaluate with every update):
 
-- **Dark Interface** — the app follows the system appearance or its own
-  setting; every iPhone and iPad screen captured in dark mode (62) measured
-  dark from its pixels (mean luminance 5–49 of 255, at most 1.1% bright
-  pixels). The Financial Review slides, the Passport page and the check
-  preview are drawn as paper, light, and are not common tasks. Mac: the same
-  views plus the register's semantic AppKit colours (by reading the code).
-- **Reduced Motion** — nothing in the app spins, zooms, parallaxes or
-  advances on its own: its only animations are fades, a toast's short slide
-  and the system's own transitions (by reading every animation site).
+- **Dark Interface.** The app follows the system appearance or its own
+  setting.
+  - *1.3 measurements:* every screen the tours capture in dark mode measured
+    dark from its pixels, 50 on the iPhone 18 Pro and 18 on the iPad Pro 13.
+    The highest mean luminance is 55.8 of 255, from the welcome screen's
+    purple gradient. The largest share of bright pixels is 3.9%, from the
+    Help page's body text. (1.2: 62 screens, mean 5–49, at most 1.1%.)
+  - *Light by design:* the Financial Review slides, the Passport page and
+    the check preview are drawn as paper, and none is a common task. The
+    only white added since 1.2 is a PDF export's page (`ReportExport`),
+    which is output, not the interface.
+  - *Mac:* the same views, plus the register's semantic AppKit colours, by
+    reading the code.
+- **Reduced Motion.** Nothing in the app spins, zooms, parallaxes or
+  advances on its own. Its animations are fades, a toast's short slide, a
+  numeric-text transition and scroll-to, by reading every animation site.
+  No animation call was added between the 1.2 survey (`8f6a0c2`) and 1.3:
+  `git diff` over every Swift source finds none.
 
-Not declared, and why:
+Not declared, and why (1.3, 22 Nov 2026):
 
-- **Larger Text** — at the largest accessibility size the Overview's charts
-  overlap their own axis labels, the statements' Note column breaks a letter
-  to a line, and the phone tour cannot reach a holding's row. (The welcome
-  screen and the register do scale.)
-- **Sufficient Contrast** — the audit found 150 contrast failures on the
-  iPad's screens, among them the welcome screen's title, tagline and buttons,
-  and toolbar buttons in the lavender accent on glass.
-- **Differentiate Without Color Alone** — the Overview's allocation donut,
-  performance lines and cash-flow bars tell series apart by colour alone, with
-  no legend.
-- **VoiceOver, Voice Control** — Apple asks for proficient testing with each
-  on every device, which has not been done.
-- **Captions, Audio Descriptions** — the app has no video or audio.
+- **Larger Text.** Apple's bar is text at 200% or more, which Dynamic Type
+  passes at AX3 (the Larger Text criteria page: "larger than 200% at the AX3
+  size"). At AX3 the iPhone and iPad tours showed:
+  - report summary tiles breaking words ("INCOM / E", "UNREA / LISED") and
+    truncating figures;
+  - account balances and statement figures split mid-number;
+  - the iPad sidebar breaking every label mid-word;
+  - chart axis labels crowding;
+  - the report scope picker clipped at the screen edge.
+
+  Two defects showed at the standard size too and were fixed on 22 Nov: the
+  Reports gallery's Recent row broke names mid-word, and Settings ▸ General
+  ▸ Reporting was drawn on top of itself on iOS (`WindowFloor`). The rest is
+  the owner-approved Larger Text pass for 1.3.1. (1.2's finding, at AX5, was
+  the Overview's charts and the statements' Note column.)
+- **Sufficient Contrast.** The 1.3 audit in dark mode found 92 contrast
+  failures across 49 iPhone screens and 193 across 18 iPad screens. They
+  concentrate in the welcome screen's title, tagline and buttons, report
+  column headers and secondary figures, and lavender accent text on glass.
+  Raising them is approved for 1.3.1.
+- **Differentiate Without Color Alone.** The dashboard's charts still hide
+  their legends (`chartLegend(.hidden)` in `DashboardView`). The allocation
+  donut, performance lines and cash-flow bars tell series apart by colour
+  alone.
+- **VoiceOver, Voice Control.** Apple: "proficient testing of your app using
+  VoiceOver is necessary on all devices your app supports". That has not
+  been done. The audit found no unlabelled control of the app's own: its
+  three "no description" hits are the system keyboard's prediction cells.
+- **Captions, Audio Descriptions.** The app has no video or audio.
+
+The 1.3 runs drive `ScreenshotTests` with the demo book. The audited dark
+run (`FL_AUDIT=1`) disturbs the tour's taps, as noted above: its four
+navigation failures did not occur in the same tour run without the audit. So
+take the dark screens from an unaudited run, and use the audited one for its
+`audit.txt`.
 
 ## What a sandboxed FinvestLens does differently
 

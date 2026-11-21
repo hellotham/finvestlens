@@ -80,9 +80,20 @@ private struct WindowFloor: ViewModifier {
     /// One layout either way — a branch here would give everything under
     /// every floor a new identity when an iPad window crosses the compact
     /// threshold, and whatever was typed in an open sheet would go with it.
+    ///
+    /// The content goes in as one view. `FloorLayout` sizes and places only
+    /// its first subview, and content that is several views (a `Group`)
+    /// arrives as several subviews: the ones after the first were never
+    /// placed, so SwiftUI drew them on top of the first. Settings ▸ General
+    /// ▸ Reporting showed exactly that on iPhone and iPad (22 Nov 2026),
+    /// with "Financial year starts", "Default period" and the note under them
+    /// drawn over one another. A one-view stack is the same view, so a
+    /// single view, the usual case, lays out as before.
     func body(content: Content) -> some View {
         #if os(iOS)
-        FloorLayout(minWidth: compact ? nil : minWidth, minHeight: compact ? nil : minHeight) { content }
+        FloorLayout(minWidth: compact ? nil : minWidth, minHeight: compact ? nil : minHeight) {
+            VStack(spacing: 0) { content }
+        }
         #else
         content.frame(minWidth: compact ? nil : minWidth, minHeight: compact ? nil : minHeight)
         #endif

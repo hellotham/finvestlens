@@ -449,7 +449,16 @@ struct ReportGallery: View {
             VStack(alignment: .leading, spacing: 20) {
                 if !recents.isEmpty {
                     Text("Recent").scaledFont(.title2).fontWeight(.semibold)
-                    HStack(spacing: 8) {
+                    // A row that wraps, not an HStack. Five recents do not
+                    // fit a phone's width, and an HStack squeezes every
+                    // capsule until each name breaks a letter or two to a
+                    // line ("Inve / stm / ent / Retu / rn"): seen at the
+                    // standard text size on iPhone and, at AX3, as a
+                    // letter per line (22 Nov 2026). `WrappingRow` keeps each
+                    // capsule at its own width and starts a new line instead;
+                    // only a name wider than the whole line wraps, at its
+                    // words.
+                    WrappingRow(spacing: 8, lineSpacing: 8) {
                         ForEach(recents) { kind in
                             Button {
                                 open(kind.defaultConfiguration(for: model))
@@ -462,7 +471,6 @@ struct ReportGallery: View {
                             }
                             .buttonStyle(.plain)
                         }
-                        Spacer()
                     }
                 }
                 if !model.savedReports.isEmpty {
@@ -696,8 +704,11 @@ struct ReportSettingsForm: View {
                 .scaledFont(.caption)
                 .foregroundStyle(.secondary)
         }
-        .padding(16)
-        .windowFloor(minWidth: 340)
+        // No padding and no window floor: those sized this form when it was a
+        // popover from the Reports toolbar. It now sits in a Settings section
+        // (`DocumentSettingsView` ▸ Reporting), where each view is its own row
+        // with the form's own insets. On iOS the floor also drew the rows on
+        // top of each other; see `WindowFloor`.
     }
 }
 

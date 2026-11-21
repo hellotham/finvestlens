@@ -47,6 +47,10 @@
   answered *no*, and has no such feeds.
 - **Age rating questionnaire.** Expected to come out at 4+: no user-generated
   content shared with others, no web browsing, no gambling, no health topics.
+  Two questions were added in Nov 2026, Shared Location and Dating and
+  Relationships, and both are answered No. They can only be edited on a
+  version in Prepare for Submission (see `app-store.md` ▸ *Age rating and
+  China mainland compliance*).
 - **App Privacy.** Expected "Data Not Collected": the app has no account, no
   analytics and no server of the publisher's, and its privacy manifest
   declares no collected data types. Requests to a price provider, to the
