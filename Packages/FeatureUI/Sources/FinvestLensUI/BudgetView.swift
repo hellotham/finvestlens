@@ -84,7 +84,7 @@ struct BudgetView: View {
                         Text("Create a monthly budget to track spending.")
                     } actions: {
                         Button("Create Budget") { model.addBudget(Budget(name: String(localized: "Monthly"))) }
-                            .buttonStyle(.borderedProminent)
+                            .buttonStyle(.borderedProminent).prominentFill()
                     }
                 }
             }

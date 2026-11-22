@@ -346,7 +346,7 @@ struct BoxConnectButton: View {
         VStack(alignment: prominent ? .center : .leading, spacing: 6) {
             Group {
                 if prominent {
-                    Button("Connect to Box…", action: connect).buttonStyle(.borderedProminent)
+                    Button("Connect to Box…", action: connect).buttonStyle(.borderedProminent).prominentFill()
                 } else {
                     Button("Connect to Box…", action: connect)
                 }

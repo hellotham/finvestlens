@@ -94,6 +94,16 @@ https://hellotham.com/finvestlens/privacy/
 2026 Hello Tham Pty. Ltd.
 ```
 
+**Version** — What's New in 1.3.1 (drafted 22 Nov 2026; build 13):
+```
+• Larger text: at the largest text sizes, report figures, statements, account balances and holdings rearrange instead of breaking words or numbers, and on iPad the register switches to a layout that keeps each transaction whole.
+• Contrast: buttons and accent-coloured text are easier to read in light and dark appearance, and Increase Contrast now strengthens the app's own colours.
+• The welcome screen is easier to read.
+• Fixed: on iPhone, report names in the Reports screen's Recent row broke mid-word; and the Reporting settings were drawn on top of each other.
+
+FinvestLens 1.3.1 requires iOS 27, iPadOS 27 or macOS 27.
+```
+
 **Version** — What's New in 1.3 (drafted 8 Nov 2026; build 12; on the App Store since 9 Nov 2026):
 ```
 • Box: sign in with your Box account and open your books there. There is no longer a Box app of your own to set up.

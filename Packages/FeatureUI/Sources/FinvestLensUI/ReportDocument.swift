@@ -242,6 +242,8 @@ struct ReportFactsSource {
 /// Renders a ``ReportDocument`` in the app's annual-report style.
 struct ReportDocumentView: View {
     @Environment(\.isCompactShell) private var compact
+    /// Always `.large` on the Mac, which has its own Text Size instead.
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Bindable var model: AppModel
     let document: ReportDocument
     @State private var commentary: [String]?
@@ -283,9 +285,21 @@ struct ReportDocumentView: View {
     /// regular width; at phone width three still fit and four do not — the
     /// Portfolio report's four gave each about 55 points — so there they go
     /// two to a row, and a figure shrinks before it is ever cut short.
+    ///
+    /// At the accessibility text sizes none of that holds: at AX3 (Apple's
+    /// 200% bar for Larger Text) three tiles across a phone broke their
+    /// labels inside words ("INCOM / E", "UNREA / LISED") and cut their
+    /// figures short (22 Nov 2026). There a tile gets the whole width on a
+    /// phone and half of it on a wider screen.
     @ViewBuilder
     private var kpiRow: some View {
-        if compact, document.kpis.count > 3 {
+        if dynamicTypeSize.isAccessibilitySize {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12, alignment: .top),
+                                     count: compact ? 1 : 2),
+                      spacing: 12) {
+                ForEach(document.kpis) { kpiTile($0) }
+            }
+        } else if compact, document.kpis.count > 3 {
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12, alignment: .top),
                                      count: 2),
                       spacing: 12) {
@@ -311,9 +325,10 @@ struct ReportDocumentView: View {
                 .foregroundStyle(kpi.signed && kpi.amount < 0 ? Color.negativeAmount : Color.primary)
                 // A figure is one word: three tiles across a phone broke a
                 // six-figure amount in the middle of its digits. The regular
-                // shell is left as it was.
-                .lineLimit(compact ? 1 : nil)
-                .minimumScaleFactor(compact ? 0.5 : 1)
+                // shell is left as it was, except at the accessibility sizes,
+                // where an iPad's tiles split figures the same way.
+                .lineLimit(compact || dynamicTypeSize.isAccessibilitySize ? 1 : nil)
+                .minimumScaleFactor(compact || dynamicTypeSize.isAccessibilitySize ? 0.5 : 1)
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)

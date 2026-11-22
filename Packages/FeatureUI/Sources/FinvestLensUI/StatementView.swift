@@ -39,6 +39,9 @@ enum StatementFormat {
 struct StatementSheet: View {
     let statement: Statement
     @Environment(\.appFontScale) private var appFontScale
+    /// Always `.large` on the Mac and in `ReportExport`'s renderer, so print
+    /// keeps the face below.
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private var amountWidth: CGFloat { 108 * appFontScale }
     private var noteWidth: CGFloat { 40 * appFontScale }
@@ -46,10 +49,19 @@ struct StatementSheet: View {
         statement.sections.contains { $0.items.contains { $0.noteRef != nil } }
     }
 
+    /// The statement's form at the accessibility text sizes: each line's
+    /// caption on a line of its own, then every period's figure against that
+    /// period's heading. The face's fixed 108-point columns follow only the
+    /// Mac's Text Size, so at AX3 (Apple's 200% bar for Larger Text) an iPad
+    /// split figures mid-number ("$23,07 / 9.27") and the Note heading broke
+    /// in two (22 Nov 2026). Widening the columns instead would push a
+    /// comparative statement's two figures off a phone's width.
+    private var stacked: Bool { dynamicTypeSize.isAccessibilitySize }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             masthead
-            columnHeadings
+            if !stacked { columnHeadings }
             ForEach(statement.sections) { section in
                 sectionView(section)
             }
@@ -117,33 +129,66 @@ struct StatementSheet: View {
         }
     }
 
+    @ViewBuilder
     private func faceRow(_ item: StatementItem, firstSymbol: Bool) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Text(item.caption)
-                .scaledFont(item.role == .childLine ? .callout : .body)
-                .foregroundStyle(item.role == .childLine ? .secondary : .primary)
-                .padding(.leading, CGFloat(item.depth) * 18)
-            Spacer(minLength: 12)
-            if hasNotesColumn {
-                Text(item.noteRef.map(String.init) ?? "")
-                    .scaledFont(.callout)
-                    .foregroundStyle(.secondary)
-                    .frame(width: noteWidth, alignment: .trailing)
+        let font: Font.TextStyle = item.role == .childLine ? .callout : .body
+        if stacked {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(item.caption)
+                        .scaledFont(font)
+                        .foregroundStyle(item.role == .childLine ? .secondary : .primary)
+                    if let note = item.noteRef {
+                        Text("Note \(note)")
+                            .scaledFont(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                figureLines(item.amounts, symbol: firstSymbol, font: font)
             }
-            amounts(item.amounts, symbol: firstSymbol,
-                    font: item.role == .childLine ? .callout : .body)
+            .padding(.leading, CGFloat(item.depth) * 18)
+            .padding(.vertical, 3.5)
+        } else {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(item.caption)
+                    .scaledFont(font)
+                    .foregroundStyle(item.role == .childLine ? .secondary : .primary)
+                    .padding(.leading, CGFloat(item.depth) * 18)
+                Spacer(minLength: 12)
+                if hasNotesColumn {
+                    Text(item.noteRef.map(String.init) ?? "")
+                        .scaledFont(.callout)
+                        .foregroundStyle(.secondary)
+                        .frame(width: noteWidth, alignment: .trailing)
+                }
+                amounts(item.amounts, symbol: firstSymbol, font: font)
+            }
+            .padding(.vertical, 3.5)
         }
-        .padding(.vertical, 3.5)
+    }
+
+    /// A caption and its figures: side by side, or stacked at the
+    /// accessibility sizes (``stacked``).
+    @ViewBuilder
+    private func labelledFigures(_ label: String, _ values: [Decimal?], weight: Font.Weight) -> some View {
+        if stacked {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label).scaledFont(.body, weight: weight)
+                figureLines(values, symbol: true, font: .body, weight: weight)
+            }
+        } else {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(label).scaledFont(.body, weight: weight)
+                Spacer(minLength: 12)
+                if hasNotesColumn { Color.clear.frame(width: noteWidth, height: 1) }
+                amounts(values, symbol: true, font: .body, weight: weight)
+            }
+        }
     }
 
     /// Section subtotal: a single rule above, medium weight.
     private func subtotalRow(_ label: String, _ values: [Decimal?]) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Text(label).scaledFont(.body, weight: .medium)
-            Spacer(minLength: 12)
-            if hasNotesColumn { Color.clear.frame(width: noteWidth, height: 1) }
-            amounts(values, symbol: true, font: .body, weight: .medium)
-        }
+        labelledFigures(label, values, weight: .medium)
         .padding(.vertical, 5)
         .overlay(alignment: .top) {
             singleRule.padding(.leading, ruleIndent)
@@ -153,12 +198,7 @@ struct StatementSheet: View {
     /// The statement's closing figure: semibold, double rule beneath.
     private func grandTotalRow(_ label: String, _ values: [Decimal?],
                                firstSymbol: Bool) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Text(label).scaledFont(.body, weight: .semibold)
-            Spacer(minLength: 12)
-            if hasNotesColumn { Color.clear.frame(width: noteWidth, height: 1) }
-            amounts(values, symbol: true, font: .body, weight: .semibold)
-        }
+        labelledFigures(label, values, weight: .semibold)
         .padding(.vertical, 6)
         .overlay(alignment: .top) { singleRule.padding(.leading, ruleIndent) }
         .overlay(alignment: .bottom) {
@@ -180,6 +220,27 @@ struct StatementSheet: View {
                 .scaledFont(font, weight: weight)
                 .monospacedDigit()
                 .frame(width: amountWidth, alignment: .trailing)
+        }
+    }
+
+    /// The stacked form's figures: one line per period, its heading at the
+    /// left and the figure, whole, at the right. A figure is one word; it
+    /// shrinks before it ever wraps.
+    private func figureLines(_ values: [Decimal?], symbol: Bool,
+                             font: Font.TextStyle, weight: Font.Weight = .regular) -> some View {
+        ForEach(Array(values.enumerated()), id: \.offset) { index, value in
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(index < statement.columns.count ? statement.columns[index] : "")
+                    .scaledFont(.caption)
+                    .foregroundStyle(.secondary)
+                Spacer(minLength: 8)
+                Text(StatementFormat.amount(value, code: statement.currencyCode, symbol: symbol))
+                    .scaledFont(font, weight: weight)
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+            }
+            .padding(.leading, 12)
         }
     }
 
@@ -208,30 +269,50 @@ struct StatementSheet: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             ForEach(note.rows) { row in
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(row.label)
-                        .scaledFont(.callout)
-                        .foregroundStyle(row.depth > 0 ? .secondary : .primary)
-                        .padding(.leading, CGFloat(row.depth) * 16)
-                    Spacer(minLength: 12)
-                    ForEach(Array(row.amounts.enumerated()), id: \.offset) { _, value in
-                        Text(StatementFormat.amount(value, code: statement.currencyCode, symbol: false))
+                if stacked {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(row.label)
                             .scaledFont(.callout)
-                            .monospacedDigit()
-                            .frame(width: amountWidth, alignment: .trailing)
+                            .foregroundStyle(row.depth > 0 ? .secondary : .primary)
+                        figureLines(row.amounts, symbol: false, font: .callout)
                     }
+                    .padding(.leading, CGFloat(row.depth) * 16)
+                    .padding(.vertical, 2)
+                } else {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text(row.label)
+                            .scaledFont(.callout)
+                            .foregroundStyle(row.depth > 0 ? .secondary : .primary)
+                            .padding(.leading, CGFloat(row.depth) * 16)
+                        Spacer(minLength: 12)
+                        ForEach(Array(row.amounts.enumerated()), id: \.offset) { _, value in
+                            Text(StatementFormat.amount(value, code: statement.currencyCode, symbol: false))
+                                .scaledFont(.callout)
+                                .monospacedDigit()
+                                .frame(width: amountWidth, alignment: .trailing)
+                        }
+                    }
+                    .padding(.vertical, 2)
                 }
-                .padding(.vertical, 2)
             }
             if let totalLabel = note.totalLabel {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(totalLabel).scaledFont(.callout, weight: .medium)
-                    Spacer(minLength: 12)
-                    ForEach(Array(note.totalAmounts.enumerated()), id: \.offset) { _, value in
-                        Text(StatementFormat.amount(value, code: statement.currencyCode, symbol: true))
-                            .scaledFont(.callout, weight: .medium)
-                            .monospacedDigit()
-                            .frame(width: amountWidth, alignment: .trailing)
+                Group {
+                    if stacked {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(totalLabel).scaledFont(.callout, weight: .medium)
+                            figureLines(note.totalAmounts, symbol: true, font: .callout, weight: .medium)
+                        }
+                    } else {
+                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                            Text(totalLabel).scaledFont(.callout, weight: .medium)
+                            Spacer(minLength: 12)
+                            ForEach(Array(note.totalAmounts.enumerated()), id: \.offset) { _, value in
+                                Text(StatementFormat.amount(value, code: statement.currencyCode, symbol: true))
+                                    .scaledFont(.callout, weight: .medium)
+                                    .monospacedDigit()
+                                    .frame(width: amountWidth, alignment: .trailing)
+                            }
+                        }
                     }
                 }
                 .padding(.vertical, 4)

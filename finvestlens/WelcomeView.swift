@@ -16,6 +16,16 @@ private enum Brand {
     static let mauve  = Color(.sRGB, red: 0.757, green: 0.451, blue: 0.651)   // #C173A6
     static let apricot = Color(.sRGB, red: 0.969, green: 0.627, blue: 0.373)  // #F7A05F
     static let cream  = Color(.sRGB, red: 1.0, green: 0.969, blue: 0.937)     // #FFF7EF
+
+    // Text and fills that carry text, measured from the screen on 22 Nov
+    // 2026: white on `mauve` read 2.73–2.83:1 on New Book, and mauve as
+    // text, 2.8:1 on the light background. These keep the hue and measure
+    // past 4.5:1.
+    /// Behind white text: white on it about 6:1.
+    static let mauveFill = Color(.sRGB, red: 0.58, green: 0.28, blue: 0.49)   // #944780
+    /// As text: about 5:1 on the light background, 5.5:1 on the dark.
+    static let mauveText = Color.dynamic(light: Color(.sRGB, red: 0.58, green: 0.28, blue: 0.49),
+                                         dark: Color(.sRGB, red: 0.90, green: 0.62, blue: 0.80))
 }
 
 // MARK: - Icon mark, reproduced
@@ -166,12 +176,17 @@ struct WelcomeView: View {
                         LinearGradient(
                             colors: scheme == .dark
                                 ? [.white, Color(.sRGB, red: 0.82, green: 0.75, blue: 1.0)]
-                                : [Color(.sRGB, red: 0.32, green: 0.22, blue: 0.60), Brand.mauve],
+                                : [Color(.sRGB, red: 0.32, green: 0.22, blue: 0.60), Brand.mauveText],
                             startPoint: .topLeading, endPoint: .bottomTrailing))
                     .accessibilityAddTraits(.isHeader)
+                // A deep slate violet in light appearance: the system's
+                // secondary grey measured 3.16:1 over the light gradient
+                // (22 Nov 2026). Dark appearance keeps it, at 5.4:1.
                 Text("Bring your money into focus.")
                     .scaledFont(size: 16, relativeTo: .title3, weight: .medium, design: .rounded)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(scheme == .dark
+                                     ? AnyShapeStyle(.secondary)
+                                     : AnyShapeStyle(Color(.sRGB, red: 0.30, green: 0.27, blue: 0.38, opacity: 1)))
             }
         }
     }
@@ -239,12 +254,18 @@ struct WelcomeView: View {
                 .fontWeight(.semibold).frame(minWidth: 120)
         }
         .buttonStyle(.borderedProminent)
-        .tint(Brand.mauve)
+        .tint(Brand.mauveFill)
 
+        // Tinted with the primary colour: the window's lavender on the
+        // bordered capsules over the gradient measured 2.49–2.89:1 for "Open
+        // from Box…" (22 Nov 2026). A bordered button paints its label in its
+        // tint, over any foreground style the label sets, so the tint is the
+        // place to change it.
         Button(action: onOpen) {
             Label("Open…", systemImage: "folder").frame(minWidth: 96)
         }
         .buttonStyle(.bordered)
+        .tint(.primary)
 
         // Only once a Box app has been set up: most people never will, and
         // the menu item is there for those who look.
@@ -253,6 +274,7 @@ struct WelcomeView: View {
                 Label("Open from Box…", systemImage: "cloud").frame(minWidth: 96)
             }
             .buttonStyle(.bordered)
+            .tint(.primary)
         }
     }
 
@@ -273,7 +295,9 @@ struct WelcomeView: View {
             VStack(spacing: 4) {
                 Text("Recent")
                     .scaledFont(size: 11, relativeTo: .caption, weight: .semibold, design: .rounded)
-                    .foregroundStyle(.tertiary)
+                    // Not `.tertiary`, which is too faint to read over the
+                    // gradient; 4.5:1 or better in both appearances.
+                    .foregroundStyle(.primary.opacity(0.6))
                     .textCase(.uppercase)
                 ForEach(model.recentBooks.prefix(3), id: \.self) { url in
                     let onBox = model.isBoxCopy(url)
@@ -285,7 +309,7 @@ struct WelcomeView: View {
                             .scaledFont(size: 12.5, relativeTo: .footnote, design: .rounded)
                     }
                     .buttonStyle(.plain)
-                    .foregroundStyle(Brand.mauve)
+                    .foregroundStyle(Brand.mauveText)
                     // A Box book's path is its copy in Application Support —
                     // true, and no help to anyone.
                     .help(onBox ? Text("On Box") : Text(verbatim: url.path))
@@ -346,12 +370,16 @@ struct WelcomeView: View {
                 .fill(.primary.opacity(0.08))
                 .frame(width: 220, height: 1)
                 .padding(.bottom, 4)
+            // The primary colour, faded, not `.secondary` and `.tertiary`:
+            // over the gradient those measured 3.15:1 and 1.67:1 in light
+            // appearance (22 Nov 2026). These keep the two lines' hierarchy
+            // and measure about 7:1 and 5:1 in either appearance.
             Text("\(BuildInfo.versionString)  ·  Built \(BuildInfo.buildDate)")
                 .scaledFont(size: 11.5, relativeTo: .caption, weight: .medium, design: .rounded)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.primary.opacity(0.7))
             Text("© 2026 Hello Tham  ·  Crafted by Chris Tham")
                 .scaledFont(size: 11.5, relativeTo: .caption, design: .rounded)
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(.primary.opacity(0.6))
         }
         .multilineTextAlignment(.center)
         .accessibilityElement(children: .combine)

@@ -26,8 +26,11 @@ struct RegisterActions: View {
         /// the iPhone), and nothing that works on a multiple selection or a
         /// picked batch of files — Bulk Edit, Match Attachments — because
         /// the phone's list offers neither. Reconciling is offered for an
-        /// account's register, not for the journal.
-        case phone(account: Bool)
+        /// account's register, not for the journal. `imports` is for an
+        /// iPad showing this list at the accessibility text sizes
+        /// (`DestinationContent`): importing is the iPad's to offer, and only
+        /// the iPhone leaves it out.
+        case phone(account: Bool, imports: Bool = false)
     }
 
     @Bindable var model: AppModel
@@ -36,10 +39,17 @@ struct RegisterActions: View {
 
     private var isRegular: Bool { scope == .regular }
 
+    private var offersImports: Bool {
+        switch scope {
+        case .regular: true
+        case .phone(_, let imports): imports
+        }
+    }
+
     private var offersReconcile: Bool {
         switch scope {
         case .regular: true
-        case .phone(let account): account
+        case .phone(let account, _): account
         }
     }
 
@@ -59,6 +69,8 @@ struct RegisterActions: View {
                 model.presentedPanel = .bulkEdit
             }
             .disabled(model.selectedTransactionIDs.count < 2)
+        }
+        if offersImports {
             Divider()
             Button("Import Bank File…", systemImage: "square.and.arrow.down.on.square") {
                 model.bankImportRequested = true

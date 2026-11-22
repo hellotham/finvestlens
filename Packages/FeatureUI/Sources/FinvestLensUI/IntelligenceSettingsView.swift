@@ -135,7 +135,19 @@ public struct IntelligenceSettingsView: View {
             Section("Apple Intelligence") {
                 switch LanguageModels.availability(of: .onDevice) {
                 case .available:
-                    Label("Available on this device", systemImage: "checkmark.circle")
+                    // An icon and a line of text that wraps, not a `Label`:
+                    // at AX3 the iPad's sheet held the `Label`'s title to one
+                    // line and cut it to "Available on this d" (22 Nov 2026),
+                    // even with the title allowed to grow; the plain text
+                    // around it wrapped.
+                    HStack(alignment: .firstTextBaseline, spacing: 10) {
+                        Image(systemName: "checkmark.circle")
+                            .foregroundStyle(.tint)
+                            .accessibilityHidden(true)
+                        Text("Available on this device")
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .accessibilityElement(children: .combine)
                 case .unavailable(let reason):
                     Label {
                         Text(verbatim: reason)

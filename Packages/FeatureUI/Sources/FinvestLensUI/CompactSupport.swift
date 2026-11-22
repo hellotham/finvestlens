@@ -197,3 +197,16 @@ private struct TitleRule: ViewModifier {
         }
     }
 }
+
+/// Whether a register is drawn as the phone's list rather than the table: on a
+/// phone, and at the accessibility text sizes everywhere on iOS, where the
+/// table's fixed columns cut dates and amounts short (``DestinationContent``).
+/// One rule for every register, so search results and an account cannot
+/// disagree at the same text size.
+func usesPhoneRegister(compact: Bool, dynamicTypeSize: DynamicTypeSize) -> Bool {
+    #if os(iOS)
+    compact || dynamicTypeSize.isAccessibilitySize
+    #else
+    false
+    #endif
+}

@@ -834,7 +834,16 @@ struct DashboardView: View {
                     LineMark(x: .value("Month", point.date), y: .value("Net worth", asDouble(point.netWorth)))
                 }
                 .frame(minHeight: 70, maxHeight: .infinity)
-                .chartXAxis { AxisMarks(values: .stride(by: .month, count: 3)) }
+                // Fewer marks at the accessibility text sizes: at AX3 the
+                // tile's five figures overlapped one another and its months
+                // were cut to "O…" and "Ja…" (22 Nov 2026). Charts sizes its
+                // marks without regard to how large their labels are.
+                .chartXAxis {
+                    AxisMarks(values: .stride(by: .month, count: dynamicTypeSize.isAccessibilitySize ? 6 : 3))
+                }
+                .chartYAxis {
+                    AxisMarks(values: dynamicTypeSize.isAccessibilitySize ? .automatic(desiredCount: 2) : .automatic)
+                }
                 .accessibilityLabel("Net worth trend over the last 12 months")
             }
         }
@@ -1591,12 +1600,17 @@ private struct UpNextRow: View {
     var button: LocalizedStringKey
     var progress: Double?
     var action: () -> Void
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         HStack(spacing: 8) {
             Label(text, systemImage: systemImage)
                 .scaledFont(.callout)
-                .lineLimit(2)
+                // Two lines hold it at every standard size. At AX3 (Apple's
+                // 200% bar for Larger Text) they cut "Prices updated 22 days
+                // ago" to "Prices updated 22…" with the tile's room unused
+                // below (22 Nov 2026).
+                .lineLimit(dynamicTypeSize.isAccessibilitySize ? 4 : 2)
             Spacer(minLength: 12)
             if let progress {
                 ProgressView(value: progress)

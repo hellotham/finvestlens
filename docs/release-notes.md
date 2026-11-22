@@ -7,6 +7,50 @@ uses FinvestLens would notice.
 
 ---
 
+## 1.3.1 (submitted for App Review 22 November 2026)
+
+Easier to read: at the largest text sizes, and in both light and dark
+appearance.
+
+### Larger text
+
+At the accessibility text sizes, screens rearrange rather than cutting words
+or figures in two:
+
+- **Report summaries.** The figures at the top of a report sit one to a row
+  on iPhone and two on iPad, each whole.
+- **Statements.** Each line's caption sits above its figures, one period to
+  a line, with its note number beside the caption.
+- **Accounts.** A balance sits under its account's name, in the list and in
+  the iPad's sidebar.
+- **Holdings.** On iPad, a holding shows its name, then cost and value.
+- **The register on iPad** switches to the iPhone's layout, which keeps each
+  transaction whole.
+- **Also:** the iPad's sidebar widens with the text; a report's settings
+  wrap instead of scrolling sideways; the dashboard's Net Worth chart keeps
+  fewer, larger labels; and a long press on the iPad's area bar shows the
+  area's name large.
+
+### Contrast
+
+- **Buttons.** White text on a prominent button, such as Create Budget or
+  New Goal, now reads in dark appearance. The lavender used for text is a
+  shade deeper, so Save, Cancel and Done read on the toolbar.
+- **Increase Contrast.** With the setting on, every accent colour darkens
+  or lightens to read at 7:1.
+- **The welcome screen's** buttons, tagline, version and credits are
+  readable over its background.
+
+### Fixed
+
+- On iPhone, the Reports screen's Recent row broke report names in the
+  middle of words.
+- In Settings ▸ General ▸ Reporting, "Financial year starts", "Default
+  period" and the note under them were drawn on top of each other on iPhone
+  and iPad.
+
+---
+
 ## 1.3 (9 November 2026)
 
 Books on Box without setting anything up, reports that read and scroll as they

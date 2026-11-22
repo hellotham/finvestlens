@@ -307,7 +307,7 @@ public struct LockView: View {
             } label: {
                 Label("Unlock", systemImage: "touchid").frame(minWidth: 160)
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.borderedProminent).prominentFill()
             if failed {
                 Text("Authentication failed. Try again.").scaledFont(.caption).foregroundStyle(.red)
             }
@@ -1100,6 +1100,16 @@ struct ModeButton: View {
         // screenshot would have shown it.
         .accessibilityLabel(mode.name)
         .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+        #if os(iOS)
+        // **Large Content Viewer.** The labels keep to one line and the bar
+        // does not grow with the text, as Apple's Larger Text guidance has
+        // tab bars do, so at the accessibility sizes they cut short ("Dashb…",
+        // "Accoun…" at AX3 on an iPad, 22 Nov 2026). That guidance's answer
+        // is the Large Content Viewer: a long press shows the name large.
+        .accessibilityShowsLargeContentViewer {
+            Label(mode.title, systemImage: mode.symbol)
+        }
+        #endif
     }
 }
 
@@ -1272,10 +1282,10 @@ struct ExternalChangeBanner: View {
             if conflicted {
                 Button("Keep My Version") { model.resolveConflictsKeepingMine() }
                 Button("Use Other Version") { model.resolveConflictsUsingOther() }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.borderedProminent).prominentFill()
             } else {
                 Button("Reload") { model.reloadFromDisk() }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.borderedProminent).prominentFill()
                 Button("Dismiss") { model.externalChangePending = false }
             }
         }
@@ -1309,7 +1319,7 @@ struct OnboardingSheet: View {
                     Label("Create Starter Accounts", systemImage: "square.stack.3d.up")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.borderedProminent).prominentFill()
                 Button("Start Empty") { dismiss() }
             }
             .padding(32)
@@ -2731,7 +2741,13 @@ struct RegisterFilterSheet: View {
 
 struct SearchResultsView: View {
     @Environment(\.isCompactShell) private var compact
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Bindable var model: AppModel
+
+    /// The phone's register, by the same rule as ``DestinationContent``.
+    private var phoneRegister: Bool {
+        usesPhoneRegister(compact: compact, dynamicTypeSize: dynamicTypeSize)
+    }
 
     /// The results **as a register** — GnuCash's search ledger. Its Find opens
     /// what it found as a register page (`dialog-find-transactions.c`:
@@ -2749,7 +2765,7 @@ struct SearchResultsView: View {
     var body: some View {
         Group {
             #if os(iOS)
-            if compact {
+            if phoneRegister {
                 CompactRegisterView(model: model, searchScoped: true)
             } else {
                 RegisterView(model: model, wholeBook: true, searchScoped: true)
@@ -2760,7 +2776,7 @@ struct SearchResultsView: View {
         }
         .overlay {
             // The phone's register says so itself.
-            if model.searchMatchCount == 0, !compact { noResults }
+            if model.searchMatchCount == 0, !phoneRegister { noResults }
         }
         .safeAreaInset(edge: .top) {
             if !model.searchNotices.isEmpty { noticeBanner }
@@ -4072,13 +4088,24 @@ struct DestinationContent: View {
     @Bindable var model: AppModel
     let selection: SidebarSelection
     @Environment(\.isCompactShell) private var compact
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    /// The phone's register, which holds a row's text however large it gets.
+    /// At the accessibility text sizes the iPad uses it too: the table's
+    /// columns are fixed in points while the text passes 200%, so at AX3 its
+    /// dates and amounts were cut to "2/10/…" and "$522.…". With the sidebar
+    /// grown to fit its own labels, the Description column was squeezed to
+    /// nothing and its text drew over Transfer's (22 Nov 2026).
+    private var phoneRegister: Bool {
+        usesPhoneRegister(compact: compact, dynamicTypeSize: dynamicTypeSize)
+    }
 
     var body: some View {
         switch selection {
         case .dashboard, .overviewView, .overviewCard: DashboardView(model: model)
         case .account:
             #if os(iOS)
-            if compact, case .account(let id) = selection {
+            if phoneRegister, case .account(let id) = selection {
                 CompactRegisterView(model: model, accountID: id)
             } else {
                 RegisterView(model: model)
@@ -4089,7 +4116,7 @@ struct DestinationContent: View {
         case .reports, .report, .savedReport: ReportsHome(model: model)
         case .generalLedger:
             #if os(iOS)
-            if compact { CompactRegisterView(model: model) } else { GeneralLedgerView(model: model) }
+            if phoneRegister { CompactRegisterView(model: model) } else { GeneralLedgerView(model: model) }
             #else
             GeneralLedgerView(model: model)
             #endif

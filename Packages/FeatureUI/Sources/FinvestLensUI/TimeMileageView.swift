@@ -41,7 +41,7 @@ struct TimeMileageView: View {
                         Text("Log billable hours or travel, then gather them onto a customer invoice.")
                     } actions: {
                         Button("Log Entry") { creating = true }
-                            .buttonStyle(.borderedProminent)
+                            .buttonStyle(.borderedProminent).prominentFill()
                             .disabled(model.businessCustomers.isEmpty)
                     }
                 } else {

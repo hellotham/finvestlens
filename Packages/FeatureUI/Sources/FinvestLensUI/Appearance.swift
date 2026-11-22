@@ -105,6 +105,7 @@ public extension Color {
     /// a person's own accent never reaches.
     static var appAccent: Color { AccentCache.shared.color }
 
+
     /// Drops the cached accent, for a caller that has seen the stored value
     /// change before the cache could: the register, which redraws its glyphs
     /// in the accent the moment it sees one.
@@ -158,26 +159,95 @@ public enum AppAccent: String, CaseIterable, Identifiable, Sendable {
     public var label: String { rawValue.capitalized }
 
     /// A colour that resolves lighter in dark mode and richer in light mode, so
-    /// text/fills keep enough contrast either way.
+    /// text/fills keep enough contrast either way — and, under the system's
+    /// Increase Contrast setting, further still: 7:1 or better as text, on
+    /// white in light appearance and on `#1C1C1E` in dark (the
+    /// ``highContrastValues`` pair). Apple's Sufficient Contrast criteria accept
+    /// an app whose Increase Contrast setting "applies sufficient contrast"
+    /// where its default does not reach 4.5:1 (22 Nov 2026).
     public var color: Color {
+        let (light, dark) = standardValues
+        let (lightHigh, darkHigh) = highContrastValues
+        return Color.dynamic(light: rgb(light), dark: rgb(dark),
+                             highContrastLight: rgb(lightHigh), highContrastDark: rgb(darkHigh))
+    }
+
+    /// The colour behind white text: a prominent button's fill, the same in
+    /// either appearance. The accent's dark value is pale so that text on a
+    /// dark background reads, and white on it measured 2.15:1 on "Create
+    /// Budget" and "New Goal" in dark mode (22 Nov 2026). Each fill gives
+    /// white at least 4.6:1; the high-contrast fill is the high-contrast
+    /// light value, 7:1.
+    public var fill: Color {
+        let standardFill = rgb(fillValue), high = rgb(highContrastValues.light)
+        return Color.dynamic(light: standardFill, dark: standardFill,
+                             highContrastLight: high, highContrastDark: high)
+    }
+
+    /// The light value, darkened just enough for white on it to reach 4.6:1.
+    /// Lavender, red and graphite pass as they are; the rest of the light
+    /// values give white only 3.95–4.53:1 (computed 22 Nov 2026,
+    /// `ContrastTests`).
+    var fillValue: RGB {
         switch self {
-        case .lavender: Color.dynamic(light: rgb(0.46, 0.36, 0.80), dark: rgb(0.74, 0.64, 0.98))
-        case .blue:     Color.dynamic(light: rgb(0.00, 0.48, 1.00), dark: rgb(0.34, 0.64, 1.00))
-        case .teal:     Color.dynamic(light: rgb(0.00, 0.52, 0.56), dark: rgb(0.32, 0.80, 0.83))
-        case .green:    Color.dynamic(light: rgb(0.15, 0.53, 0.25), dark: rgb(0.40, 0.78, 0.46))
+        case .lavender: (0.42, 0.32, 0.76)
+        case .blue:     (0.00, 0.44, 0.92)
+        case .teal:     (0.00, 0.50, 0.54)
+        case .green:    (0.15, 0.52, 0.25)
+        case .yellow:   (0.57, 0.44, 0.00)
+        case .orange:   (0.70, 0.37, 0.00)
+        case .pink:     (0.80, 0.23, 0.52)
+        case .red:      (0.78, 0.19, 0.19)
+        case .graphite: (0.38, 0.38, 0.41)
+        }
+    }
+
+    /// Light and dark values at the standard contrast (`ContrastTests`).
+    var standardValues: (light: RGB, dark: RGB) {
+        switch self {
+        // Deepened 22 Nov 2026, from (0.46, 0.36, 0.80): as text on the
+        // light toolbar glass that measured 4.33:1 ("Save", "Cancel", "Done"
+        // read 4.1–4.3:1 from the screen). This measures 5.0:1 on that glass
+        // and 5.84:1 on white, and white on it 5.84:1.
+        case .lavender: ((0.42, 0.32, 0.76), (0.74, 0.64, 0.98))
+        case .blue:     ((0.00, 0.48, 1.00), (0.34, 0.64, 1.00))
+        case .teal:     ((0.00, 0.52, 0.56), (0.32, 0.80, 0.83))
+        case .green:    ((0.15, 0.53, 0.25), (0.40, 0.78, 0.46))
         // Darkened Aug 2026: at their old light values these two measured
         // 2.58:1 and 2.77:1 against the register's selection wash — under
         // WCAG 1.4.11's 3:1 for non-text controls, which matters now that the
         // register's row controls are tinted with the accent. These values
         // measure 3.22:1 on the same background; every other accent already
         // passed.
-        case .yellow:   Color.dynamic(light: rgb(0.63, 0.48, 0.00), dark: rgb(0.95, 0.80, 0.32))
-        case .orange:   Color.dynamic(light: rgb(0.76, 0.40, 0.00), dark: rgb(1.00, 0.62, 0.26))
-        case .pink:     Color.dynamic(light: rgb(0.83, 0.24, 0.54), dark: rgb(1.00, 0.47, 0.71))
-        case .red:      Color.dynamic(light: rgb(0.78, 0.19, 0.19), dark: rgb(1.00, 0.44, 0.44))
-        case .graphite: Color.dynamic(light: rgb(0.38, 0.38, 0.41), dark: rgb(0.64, 0.64, 0.67))
+        case .yellow:   ((0.63, 0.48, 0.00), (0.95, 0.80, 0.32))
+        case .orange:   ((0.76, 0.40, 0.00), (1.00, 0.62, 0.26))
+        case .pink:     ((0.83, 0.24, 0.54), (1.00, 0.47, 0.71))
+        case .red:      ((0.78, 0.19, 0.19), (1.00, 0.44, 0.44))
+        case .graphite: ((0.38, 0.38, 0.41), (0.64, 0.64, 0.67))
         }
     }
+
+    /// Light and dark values under Increase Contrast: each the standard value
+    /// darkened (light) or lightened toward white (dark), keeping its hue,
+    /// just far enough to measure 7:1 as text (computed 22 Nov 2026; blue,
+    /// red and graphite nudged past it after `ContrastTests` caught their
+    /// two-place rounding at 6.94–6.999).
+    var highContrastValues: (light: RGB, dark: RGB) {
+        switch self {
+        case .lavender: ((0.37, 0.29, 0.64), (0.78, 0.70, 0.98))
+        case .blue:     ((0.00, 0.33, 0.69), (0.39, 0.67, 1.00))
+        case .teal:     ((0.00, 0.38, 0.41), (0.32, 0.80, 0.83))
+        case .green:    ((0.11, 0.40, 0.19), (0.40, 0.78, 0.46))
+        case .yellow:   ((0.43, 0.33, 0.00), (0.95, 0.80, 0.32))
+        case .orange:   ((0.53, 0.28, 0.00), (1.00, 0.62, 0.26))
+        case .pink:     ((0.61, 0.18, 0.40), (1.00, 0.48, 0.71))
+        case .red:      ((0.64, 0.15, 0.15), (1.00, 0.52, 0.52))
+        case .graphite: ((0.34, 0.34, 0.36), (0.65, 0.65, 0.68))
+        }
+    }
+
+    typealias RGB = (Double, Double, Double)
+    private func rgb(_ c: RGB) -> Color { Color(.sRGB, red: c.0, green: c.1, blue: c.2, opacity: 1) }
 
     private func rgb(_ r: Double, _ g: Double, _ b: Double) -> Color {
         Color(.sRGB, red: r, green: g, blue: b, opacity: 1)
@@ -458,14 +528,31 @@ public extension Color {
     /// A colour that resolves differently in light vs dark appearance, so accents
     /// keep contrast in both (context-adaptive).
     static func dynamic(light: Color, dark: Color) -> Color {
+        dynamic(light: light, dark: dark, highContrastLight: light, highContrastDark: dark)
+    }
+
+    /// The same, with values for the system's Increase Contrast setting —
+    /// `accessibilityContrast == .high` on iOS, the high-contrast appearances
+    /// on the Mac.
+    static func dynamic(light: Color, dark: Color,
+                        highContrastLight: Color, highContrastDark: Color) -> Color {
         #if canImport(AppKit)
         return Color(nsColor: NSColor(name: nil) { appearance in
-            let isDark = appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
-            return NSColor(isDark ? dark : light)
+            switch appearance.bestMatch(from: [.aqua, .darkAqua, .accessibilityHighContrastAqua,
+                                               .accessibilityHighContrastDarkAqua]) {
+            case .darkAqua?: NSColor(dark)
+            case .accessibilityHighContrastAqua?: NSColor(highContrastLight)
+            case .accessibilityHighContrastDarkAqua?: NSColor(highContrastDark)
+            default: NSColor(light)
+            }
         })
         #elseif canImport(UIKit)
         return Color(uiColor: UIColor { traits in
-            UIColor(traits.userInterfaceStyle == .dark ? dark : light)
+            let isDark = traits.userInterfaceStyle == .dark
+            if traits.accessibilityContrast == .high {
+                return UIColor(isDark ? highContrastDark : highContrastLight)
+            }
+            return UIColor(isDark ? dark : light)
         })
         #else
         return light
@@ -586,4 +673,20 @@ enum ReportPalette {
         [.appAccent, .teal, .indigo, .orange, .purple,
          .pink, .mint, .brown, .cyan, .yellow]
     }
+}
+
+/// A prominent button's fill: the chosen accent's ``AppAccent/fill``, behind
+/// white text. The window's own tint is the accent as text, whose dark value
+/// is too pale to carry white (2.15:1 on "Create Budget", 22 Nov 2026). Read
+/// through `@AppStorage`, so the button redraws when the accent changes.
+private struct ProminentFill: ViewModifier {
+    @AppStorage(AppearanceKey.accent) private var accentRaw = AppAccent.lavender.rawValue
+    func body(content: Content) -> some View {
+        content.tint((AppAccent(rawValue: accentRaw) ?? .lavender).fill)
+    }
+}
+
+extension View {
+    /// The tint for a `.borderedProminent` button (``ProminentFill``).
+    func prominentFill() -> some View { modifier(ProminentFill()) }
 }

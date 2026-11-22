@@ -782,6 +782,8 @@ struct PeriodSelector: View {
 /// view, for the kinds that keep one).
 struct ReportScreen: View {
     @Environment(\.isCompactShell) private var compact
+    /// Always `.large` on the Mac, which has its own Text Size instead.
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Bindable var model: AppModel
     @State var configuration: ReportConfiguration
     let close: () -> Void
@@ -892,9 +894,19 @@ struct ReportScreen: View {
     /// widened everything under it: the Portfolio report captured on an
     /// iPhone 18 Pro (25 Oct 2026) had its tiles, its table's label column
     /// and its notes cut off at both edges.
+    ///
+    /// At the accessibility text sizes a phone's bar wraps instead of
+    /// scrolling sideways: at AX3 (Apple's 200% bar for Larger Text) the
+    /// scope picker sat half off the screen ("All portfol") with nothing to
+    /// say the bar scrolled (22 Nov 2026).
     @ViewBuilder
     private var parameterBar: some View {
-        if compact {
+        if compact, dynamicTypeSize.isAccessibilitySize {
+            WrappingRow(spacing: 12, lineSpacing: 8) { parameterItems }
+                .scaledFont(.body)
+                .padding(10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        } else if compact {
             ScrollView(.horizontal, showsIndicators: false) { parameterControls }
         } else {
             parameterControls
@@ -903,121 +915,128 @@ struct ReportScreen: View {
 
     private var parameterControls: some View {
         HStack(spacing: 12) {
-            if kind?.usesPeriod == true {
-                // The window's period, not a second copy. Two selectors were
-                // on screen at once — the toolbar's and this — showing
-                // different values and not tracking each other, which is
-                // exactly the "which period am I looking at?" the phase set out
-                // to answer once (`FR-NAV-11`).
-                PeriodSelector(model: model, period: $model.period)
-            }
-            if kind?.usesPeriodCount == true {
-                // How many financial years Returns by Period lays side by side.
-                let shown = (configuration.comparePeriods ?? 2) + 1
-                Stepper(value: Binding(
-                    get: { shown },
-                    set: { configuration.comparePeriods = max(0, $0 - 1) }), in: 1...10) {
-                    Text("Years: \(shown)")
-                }
-                .fixedSize()
-                .help("How many financial years to lay side by side")
-            }
-            if kind?.usesHorizon == true {
-                let months = configuration.horizonMonths ?? 6
-                Stepper(value: Binding(
-                    get: { months },
-                    set: { configuration.horizonMonths = $0 == 6 ? nil : $0 }), in: 1...36) {
-                    Text("Months: \(months)")
-                }
-                .fixedSize()
-                .help("How far ahead to project")
-            }
-            if kind?.usesDepth == true {
-                // Up to the book's own deepest level, which is "All" — the
-                // default — rather than a fixed six that a deeper book outgrew.
-                let deepest = model.accountTreeDepth
-                let shown = min(configuration.depth ?? deepest, deepest)
-                Stepper(value: Binding(
-                    get: { shown },
-                    set: { configuration.depth = $0 >= deepest ? nil : $0 }), in: 1...deepest) {
-                    if shown >= deepest {
-                        Text("Depth: All")
-                    } else {
-                        Text("Depth: \(shown)")
-                    }
-                }
-                .fixedSize()
-            }
-            if let kind, kind.usesAccounts {
-                AccountScopeButton(model: model, accountIDs: $configuration.accountIDs,
-                                   emptyLabel: kind.emptyScopeLabel)
-            }
-            if let kind, kind.usesSingleAccount {
-                AccountField(nodes: model.postableAccounts, selection: Binding(
-                    get: { model.singleAccount(for: configuration, kind: kind) },
-                    set: { configuration.accountIDs = $0.map { [$0] } }))
-                    .frame(maxWidth: 320)
-            }
-            if kind?.usesPriceHistoryOptions == true {
-                PriceHistoryControls(model: model, configuration: $configuration)
-            }
-            if kind?.usesPortfolioFilter == true {
-                // Every portfolio, closed ones too: the Closed positions
-                // switch beside this can bring a closed portfolio back.
-                let portfolios = model.portfolioAccounts(includingClosed: true)
-                if !portfolios.isEmpty {
-                    // A portfolio the book no longer has reads as every one,
-                    // as the report then covers.
-                    Picker("Portfolio", selection: Binding(
-                        get: { portfolios.contains { $0.id == configuration.portfolioID }
-                                   ? configuration.portfolioID : nil },
-                        set: { configuration.portfolioID = $0 })) {
-                        Text("All portfolios").tag(GncGUID?.none)
-                        ForEach(portfolios) { portfolio in
-                            Text(portfolio.name).tag(Optional(portfolio.id))
-                        }
-                    }
-                    .pickerStyle(.menu)
-                    .fixedSize()
-                    .help("Report on one portfolio — the account your security accounts sit under")
-                }
-            }
-            if kind?.usesInvestmentOptions == true {
-                Picker("Method", selection: $model.costBasisMethod) {
-                    ForEach(CostBasisMethod.allCases) { Text($0.displayName).tag($0) }
-                }
-                .pickerStyle(.menu)
-                .fixedSize()
-                Picker("Fees", selection: $model.feeTreatment) {
-                    ForEach(FeeTreatment.allCases) { Text($0.displayName).tag($0) }
-                }
-                .pickerStyle(.menu)
-                .fixedSize()
-            }
-            if kind?.usesClosedPositions == true, let kind {
-                // Reported on build 7: "No toggle to show closed positions
-                // in investment tab and reports."
-                Toggle("Closed positions", isOn: Binding(
-                    get: { configuration.includeClosed ?? kind.includesClosedByDefault },
-                    set: { configuration.includeClosed = $0 }))
-                .fixedSize()
-                .help(kind.closedPositionsHelp)
-            }
-            if kind?.usesStep == true {
-                Picker("Interval", selection: Binding(
-                    get: { configuration.step ?? .month },
-                    set: { configuration.step = $0 })) {
-                    ForEach(AverageBalanceStep.allCases) { step in
-                        Text(verbatim: step.displayName).tag(step)
-                    }
-                }
-                .pickerStyle(.menu)
-                .fixedSize()
-            }
+            parameterItems
             Spacer()
         }
         .scaledFont(.body)
         .padding(10)
+    }
+
+    /// The bar's controls: in a row, or in the wrapping row ``parameterBar``
+    /// uses at the accessibility sizes on a phone.
+    @ViewBuilder
+    private var parameterItems: some View {
+        if kind?.usesPeriod == true {
+            // The window's period, not a second copy. Two selectors were
+            // on screen at once — the toolbar's and this — showing
+            // different values and not tracking each other, which is
+            // exactly the "which period am I looking at?" the phase set out
+            // to answer once (`FR-NAV-11`).
+            PeriodSelector(model: model, period: $model.period)
+        }
+        if kind?.usesPeriodCount == true {
+            // How many financial years Returns by Period lays side by side.
+            let shown = (configuration.comparePeriods ?? 2) + 1
+            Stepper(value: Binding(
+                get: { shown },
+                set: { configuration.comparePeriods = max(0, $0 - 1) }), in: 1...10) {
+                Text("Years: \(shown)")
+            }
+            .fixedSize()
+            .help("How many financial years to lay side by side")
+        }
+        if kind?.usesHorizon == true {
+            let months = configuration.horizonMonths ?? 6
+            Stepper(value: Binding(
+                get: { months },
+                set: { configuration.horizonMonths = $0 == 6 ? nil : $0 }), in: 1...36) {
+                Text("Months: \(months)")
+            }
+            .fixedSize()
+            .help("How far ahead to project")
+        }
+        if kind?.usesDepth == true {
+            // Up to the book's own deepest level, which is "All" — the
+            // default — rather than a fixed six that a deeper book outgrew.
+            let deepest = model.accountTreeDepth
+            let shown = min(configuration.depth ?? deepest, deepest)
+            Stepper(value: Binding(
+                get: { shown },
+                set: { configuration.depth = $0 >= deepest ? nil : $0 }), in: 1...deepest) {
+                if shown >= deepest {
+                    Text("Depth: All")
+                } else {
+                    Text("Depth: \(shown)")
+                }
+            }
+            .fixedSize()
+        }
+        if let kind, kind.usesAccounts {
+            AccountScopeButton(model: model, accountIDs: $configuration.accountIDs,
+                               emptyLabel: kind.emptyScopeLabel)
+        }
+        if let kind, kind.usesSingleAccount {
+            AccountField(nodes: model.postableAccounts, selection: Binding(
+                get: { model.singleAccount(for: configuration, kind: kind) },
+                set: { configuration.accountIDs = $0.map { [$0] } }))
+                .frame(maxWidth: 320)
+        }
+        if kind?.usesPriceHistoryOptions == true {
+            PriceHistoryControls(model: model, configuration: $configuration)
+        }
+        if kind?.usesPortfolioFilter == true {
+            // Every portfolio, closed ones too: the Closed positions
+            // switch beside this can bring a closed portfolio back.
+            let portfolios = model.portfolioAccounts(includingClosed: true)
+            if !portfolios.isEmpty {
+                // A portfolio the book no longer has reads as every one,
+                // as the report then covers.
+                Picker("Portfolio", selection: Binding(
+                    get: { portfolios.contains { $0.id == configuration.portfolioID }
+                               ? configuration.portfolioID : nil },
+                    set: { configuration.portfolioID = $0 })) {
+                    Text("All portfolios").tag(GncGUID?.none)
+                    ForEach(portfolios) { portfolio in
+                        Text(portfolio.name).tag(Optional(portfolio.id))
+                    }
+                }
+                .pickerStyle(.menu)
+                .fixedSize()
+                .help("Report on one portfolio — the account your security accounts sit under")
+            }
+        }
+        if kind?.usesInvestmentOptions == true {
+            Picker("Method", selection: $model.costBasisMethod) {
+                ForEach(CostBasisMethod.allCases) { Text($0.displayName).tag($0) }
+            }
+            .pickerStyle(.menu)
+            .fixedSize()
+            Picker("Fees", selection: $model.feeTreatment) {
+                ForEach(FeeTreatment.allCases) { Text($0.displayName).tag($0) }
+            }
+            .pickerStyle(.menu)
+            .fixedSize()
+        }
+        if kind?.usesClosedPositions == true, let kind {
+            // Reported on build 7: "No toggle to show closed positions
+            // in investment tab and reports."
+            Toggle("Closed positions", isOn: Binding(
+                get: { configuration.includeClosed ?? kind.includesClosedByDefault },
+                set: { configuration.includeClosed = $0 }))
+            .fixedSize()
+            .help(kind.closedPositionsHelp)
+        }
+        if kind?.usesStep == true {
+            Picker("Interval", selection: Binding(
+                get: { configuration.step ?? .month },
+                set: { configuration.step = $0 })) {
+                ForEach(AverageBalanceStep.allCases) { step in
+                    Text(verbatim: step.displayName).tag(step)
+                }
+            }
+            .pickerStyle(.menu)
+            .fixedSize()
+        }
     }
 
     @ViewBuilder

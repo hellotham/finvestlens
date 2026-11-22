@@ -18,6 +18,8 @@ import SwiftUI
 import FinvestLensEngine
 
 struct CompactRegisterView: View {
+    /// False on an iPad showing this list at the accessibility text sizes.
+    @Environment(\.isCompactShell) private var compactShell
     @Bindable var model: AppModel
     /// The account this register was pushed for; `nil` for the journal.
     var accountID: GncGUID?
@@ -154,7 +156,7 @@ struct CompactRegisterView: View {
             // dashboard's Up Next card, never from the account itself.
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
-                    RegisterActions(model: model, scope: .phone(account: !wholeBook))
+                    RegisterActions(model: model, scope: .phone(account: !wholeBook, imports: !compactShell))
                 } label: {
                     Label("Actions", systemImage: "ellipsis.circle")
                 }

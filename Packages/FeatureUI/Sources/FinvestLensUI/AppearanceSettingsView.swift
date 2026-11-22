@@ -116,7 +116,7 @@ public struct AppearanceSettingsView: View {
             Text("Accent-tinted controls and text scale with your settings.")
                 .scaledFont(.callout).foregroundStyle(.secondary)
             HStack {
-                Button("Primary") {}.buttonStyle(.borderedProminent)
+                Button("Primary") {}.buttonStyle(.borderedProminent).prominentFill()
                 Button("Secondary") {}.buttonStyle(.bordered)
                 Toggle("On", isOn: .constant(true)).labelsHidden()
                 ProgressView(value: 0.6).frame(width: 80)

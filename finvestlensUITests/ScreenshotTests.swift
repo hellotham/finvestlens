@@ -117,12 +117,32 @@ final class ScreenshotTests: XCTestCase {
                        "Average Balance"] {
             guard openReport(report, app) || openCard(report, app) else { continue }
             if report == "Portfolio" {
-                XCTAssertTrue(app.staticTexts["Annualised"].firstMatch.waitForExistence(timeout: 30),
+                XCTAssertTrue(reveal(app.staticTexts["Annualised"].firstMatch, in: app),
                               "the Portfolio report showed no Annualised column")
             }
             settle(2)
             capture("invest-" + report.lowercased().replacingOccurrences(of: " ", with: "-"))
         }
+    }
+
+    /// Whether `element` turns up, scrolling down for it if it is not built
+    /// yet, then scrolling back so the capture shows the top. A report's
+    /// table is lazy: at AX3 a phone's tiles go one to a row and push the
+    /// table below the fold, where its rows do not exist until scrolled to
+    /// (22 Nov 2026).
+    @MainActor
+    private func reveal(_ element: XCUIElement, in app: XCUIApplication, swipes: Int = 8) -> Bool {
+        if element.waitForExistence(timeout: 15) { return true }
+        var swiped = 0
+        while swiped < swipes, !element.exists {
+            app.swipeUp()
+            swiped += 1
+            settle(1)
+        }
+        let found = element.exists
+        for _ in 0..<swiped { app.swipeDown() }
+        settle(1)
+        return found
     }
 
     /// A gallery card further down than `tapRow` scrolls: its button's label
@@ -606,11 +626,19 @@ final class ScreenshotTests: XCTestCase {
         do {
             try app.performAccessibilityAudit(for: .all) { issue in
                 var element = "-"
+                // The frame, in points, is what lets a contrast finding be
+                // measured from the screenshot by something other than the
+                // audit that raised it (the probe in docs/app-store.md ▸ App
+                // Accessibility). The audit itself gives no ratio.
+                var frame = "-"
                 if let target = issue.element, target.exists {
                     element = "\(target.elementType.rawValue) “\(target.label)” id “\(target.identifier)”"
+                    let f = target.frame
+                    frame = String(format: "%.1f %.1f %.1f %.1f", f.minX, f.minY, f.width, f.height)
                 }
                 lines.append([name, "type \(issue.auditType.rawValue)", issue.compactDescription,
-                              element, issue.detailedDescription.replacingOccurrences(of: "\n", with: " ")]
+                              element, issue.detailedDescription.replacingOccurrences(of: "\n", with: " "),
+                              frame]
                     .joined(separator: "\t"))
                 return true
             }

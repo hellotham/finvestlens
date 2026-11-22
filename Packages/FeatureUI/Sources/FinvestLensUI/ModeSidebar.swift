@@ -136,6 +136,14 @@ struct ModeSidebar: View {
     /// so marking one hidden greyed its name and changed nothing else.
     @AppStorage("showHiddenAccounts") private var showHidden = false
     @Environment(\.appFontScale) private var appFontScale
+    /// Dynamic Type's scale for body text: 1 on the Mac, where `appFontScale`
+    /// is the text size instead.
+    @ScaledMetric(relativeTo: .body) private var typeScale: CGFloat = 1
+    /// The column's width follows the text, to 1.6 times at most. At AX3 the
+    /// iPad kept its 240 points and broke every label mid-word ("Overvi / ew",
+    /// "Plannin / g"); 1.6 times holds every mode's name and leaves the
+    /// content most of the screen (22 Nov 2026).
+    private var widthScale: CGFloat { appFontScale * min(max(typeScale, 1), 1.6) }
     /// Read through `@AppStorage` so choosing a criterion redraws the list —
     /// the model writes the same key, and the two stay in step by construction
     /// rather than by remembering to bump a revision.
@@ -156,9 +164,9 @@ struct ModeSidebar: View {
             Divider()
             list
         }
-        .navigationSplitViewColumnWidth(min: 200 * appFontScale,
-                                        ideal: 240 * appFontScale,
-                                        max: 400 * appFontScale)
+        .navigationSplitViewColumnWidth(min: 200 * widthScale,
+                                        ideal: 240 * widthScale,
+                                        max: 400 * widthScale)
         // The filter belongs to the list it filters; carrying one mode's text
         // into another mode's list would hide rows for a reason nobody typed.
         .onChange(of: model.mode) { filter = "" }
@@ -881,22 +889,36 @@ struct AccountSidebarRow: View {
     @State private var hovering = false
     #endif
 
+    /// Always `.large` on the Mac, which has its own Text Size instead.
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    /// At the accessibility text sizes the balance goes under the name: side
+    /// by side, at AX3 (Apple's 200% bar for Larger Text), the iPhone's list
+    /// and the iPad's sidebar split balances mid-number ("$26,304.9 / 0",
+    /// "$830 / ,464. / 55") and names mid-word (22 Nov 2026).
+    private var stacked: Bool { dynamicTypeSize.isAccessibilitySize }
+
     var body: some View {
-        HStack {
-            // GnuCash account colour, shown Finder-tag style.
-            if let dot = node.color.flatMap(GnuCashColor.color(from:)) {
-                Circle()
-                    .fill(dot)
-                    .frame(width: 9, height: 9)
-                    .accessibilityHidden(true)
+        (stacked ? AnyLayout(VStackLayout(alignment: .leading, spacing: 2)) : AnyLayout(HStackLayout())) {
+            HStack {
+                // GnuCash account colour, shown Finder-tag style.
+                if let dot = node.color.flatMap(GnuCashColor.color(from:)) {
+                    Circle()
+                        .fill(dot)
+                        .frame(width: 9, height: 9)
+                        .accessibilityHidden(true)
+                }
+                Text(label)
+                    .scaledFont(.body)
+                    .foregroundStyle(node.isHidden ? .secondary : .primary)
             }
-            Text(label)
-                .scaledFont(.body)
-                .foregroundStyle(node.isHidden ? .secondary : .primary)
-            Spacer()
+            if !stacked { Spacer() }
+            // A balance is one word: it shrinks before it ever wraps.
             Text(AmountFormat.string(node.balance, code: node.currencyCode))
                 .scaledFont(.body)
                 .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(stacked ? 0.6 : 1)
                 .foregroundStyle(node.balance < 0 ? Color.negativeAmount : Color.secondary)
             #if os(macOS)
             if let dragHandle {

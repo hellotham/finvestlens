@@ -42,7 +42,7 @@ struct GoalsView: View {
                     } description: {
                         Text("Set aside part of an account toward a target — a holiday, an emergency fund, a deposit.")
                     } actions: {
-                        Button("New Goal") { creating = true }.buttonStyle(.borderedProminent)
+                        Button("New Goal") { creating = true }.buttonStyle(.borderedProminent).prominentFill()
                     }
                 } else {
                     SidebarFocusScroll(model: model) {

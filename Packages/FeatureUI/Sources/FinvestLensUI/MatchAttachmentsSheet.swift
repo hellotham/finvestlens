@@ -65,7 +65,7 @@ struct MatchAttachmentsSheet: View {
                         IntelligenceRunsNote(.matchAttachments)
                     } actions: {
                         Button("Choose Files…") { importerShown = true }
-                            .buttonStyle(.borderedProminent)
+                            .buttonStyle(.borderedProminent).prominentFill()
                     }
                 } else {
                     // A ScrollView, not a List: List's row machinery swallows

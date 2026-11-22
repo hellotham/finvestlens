@@ -321,7 +321,10 @@ struct InvestmentsView: View {
                                       ? "chevron.down" : "chevron.right")
                                     .scaledFont(.caption2)
                                 Text(group.title)
-                                Text("\(members.count)").foregroundStyle(.secondary)
+                                // The header's own colour, as the title's: a
+                                // `.secondary` inside a header already
+                                // secondary measured 1.71:1 (22 Nov 2026).
+                                Text("\(members.count)").monospacedDigit()
                                 Spacer()
                             }
                         }
@@ -515,7 +518,12 @@ private struct InvestmentRowView: View {
                 .foregroundStyle(row.freshness.style)
                 .accessibilityHidden(true)
 
-            if compact {
+            // The phone's row at the accessibility text sizes everywhere: the
+            // regular row's fixed columns kept their widths while the text
+            // grew, and at AX3 an iPad broke "today" in two and split values
+            // mid-number ("$13,0 / 23.60", 22 Nov 2026). The phone's form
+            // gives the name its own line and the comparison the next.
+            if compact || typeSize.isAccessibilitySize {
                 compactColumns
             } else {
                 regularColumns

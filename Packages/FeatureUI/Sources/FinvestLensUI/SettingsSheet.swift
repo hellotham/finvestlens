@@ -56,7 +56,17 @@ struct SettingsSheet: View {
                 NavigationLink {
                     AcknowledgementsView()
                 } label: {
-                    Label("Acknowledgements", systemImage: "heart")
+                    // One word longer than the row at AX3 (Apple's 200% bar
+                    // for Larger Text), which the list broke by letters,
+                    // "Acknowledgemen / ts" (22 Nov 2026). It shrinks a
+                    // little instead.
+                    Label {
+                        Text("Acknowledgements")
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                    } icon: {
+                        Image(systemName: "heart")
+                    }
                 }
             }
             .navigationTitle("Settings")

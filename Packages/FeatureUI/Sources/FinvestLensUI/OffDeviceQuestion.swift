@@ -96,7 +96,7 @@ struct OffDeviceQuestionCard: View {
             HStack {
                 Button("Keep on This Device") { OffDeviceQuestion.shared.answer(usePrivateCloud: false) }
                 Button("Use Private Cloud Compute") { OffDeviceQuestion.shared.answer(usePrivateCloud: true) }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.borderedProminent).prominentFill()
             }
             .controlSize(.small)
         }

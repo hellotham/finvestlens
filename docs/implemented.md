@@ -6060,3 +6060,88 @@ now checks for the Annualised header and passes. The tours themselves are
 The rest of what AX3 showed, and the contrast failures the audit counted, are
 the Larger Text and contrast pass the owner approved for 1.3.1 (see
 `docs/app-store.md` ▸ App Accessibility for the list).
+
+## Larger Text and contrast, for 1.3.1 (22 Nov 2026)
+
+The owner approved both passes after the 1.3 accessibility re-check (above),
+to bring Larger Text and Sufficient Contrast within reach of the App Store's
+labels. NFR-05 in the PRD now states the bars.
+
+### Measuring
+
+The tours ran on the iPhone 18 Pro and iPad Pro 13 simulators with the demo
+book:
+- at AX3, the first Dynamic Type size past 200%;
+- in dark and light appearance, with Xcode's audit;
+- with Increase Contrast on.
+
+The audit now records each finding's frame (`ScreenshotTests.audit`). A
+pixel probe measured every contrast finding from the screenshot; the audit
+itself gives no ratio. Many audit hits were iOS's own section headers and
+secondary greys. Apple's criteria accept those where the Increase Contrast
+setting "applies sufficient contrast", so the app's own colours were made
+to follow that setting too.
+
+### Larger Text
+
+Every change applies only at the accessibility text sizes, which are always
+`.large` on the Mac. Standard sizes are unchanged.
+- **Report summary tiles** (`ReportDocumentView.kpiRow`): one to a row on a
+  phone, two on a wider screen; figures on one line.
+- **Annual-report statements** (`StatementSheet`) take a stacked form. Each
+  caption sits on its own line with its note as "Note n" (a new catalog key,
+  translated as a statement's note reference). Under it, each period's
+  heading sits against its figure. The face's 108-point columns follow only
+  the Mac's Text Size. `ReportExport` renders at the standard size, so the
+  PDF is unchanged.
+- **Account rows** (`AccountSidebarRow`, used by the iPhone's list and the
+  iPad's sidebar): the balance goes under the name and shrinks rather than
+  wrapping.
+- **The iPad's sidebar** widens with Dynamic Type, up to 1.6 times.
+- **The iPad's register** uses the phone's list (`usesPhoneRegister`, one
+  rule for accounts, the journal and search results). The table's columns
+  are fixed in points; at AX3 they cut dates and amounts short, and with the
+  wider sidebar Description drew over Transfer. The list's Actions menu
+  keeps importing on the iPad (`RegisterActions.Scope.phone(imports:)`).
+- **Holdings on the iPad** take the phone's stacked row.
+- **A report's parameter bar** on a phone wraps (`WrappingRow`) instead of
+  scrolling sideways.
+- **Small changes:**
+  - the dashboard's Net Worth tile has fewer axis marks;
+  - Up Next allows four lines;
+  - "Acknowledgements" shrinks to fit;
+  - "Available on this device" is a plain wrapping row;
+  - the iPad's mode bar offers the Large Content Viewer, the answer Apple's
+    guidance gives for tab-bar-like controls.
+
+### Contrast
+
+- **`AppAccent`** has three value tables, all read by `ContrastTests`:
+  `standardValues`, `highContrastValues` (7:1 as text in either
+  appearance) and `fillValue` (white on it at least 4.6:1).
+  - *Light lavender* is a shade deeper: 5.84:1 on white and 5.0:1 on the
+    toolbar glass, where it had been 4.33:1.
+  - *`Color.dynamic`* takes high-contrast values, read from
+    `accessibilityContrast` on iOS and the high-contrast appearances on the
+    Mac.
+  - *The `AccentColor` asset* matches, with its own high-contrast variants.
+- **Prominent buttons** take `.prominentFill()`. Dark mode's pale accent
+  had given white text 2.15:1. The modifier reads the accent through
+  `@AppStorage`, so the fill follows a change of accent.
+- **The welcome screen:**
+  - a deeper mauve behind New Book;
+  - Open… and Open from Box… tinted with the primary colour (a bordered
+    button paints its label in its tint, so a foreground style on the label
+    did not take: the first try still measured 2.4–2.75:1);
+  - a deep slate tagline in light appearance;
+  - version, credits and the Recent heading in faded primary instead of
+    `.secondary` or `.tertiary`.
+- **The holdings group count** no longer stacks `.secondary` on a header
+  that is already secondary.
+
+### Tests
+
+`ContrastTests`, now 6 tests, reads the accent tables from the enum. The
+fill and high-contrast tests caught four rounding shortfalls (6.94–6.999)
+before they shipped. A mutation, blue's fill back to its light value
+(4.00:1), failed as it should.

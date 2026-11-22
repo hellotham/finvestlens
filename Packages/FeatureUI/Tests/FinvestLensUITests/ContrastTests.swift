@@ -89,19 +89,9 @@ struct ContrastTests {
     /// focused row, which is the weakest background any of them sits on.
     @Test("Every accent clears 3:1 as a control, on every background")
     func accentsMeetNonTextContrast() {
-        let accents: [(String, (Double, Double, Double), (Double, Double, Double))] = [
-            ("lavender", (0.46, 0.36, 0.80), (0.74, 0.64, 0.98)),
-            ("blue", (0.00, 0.48, 1.00), (0.34, 0.64, 1.00)),
-            ("teal", (0.00, 0.52, 0.56), (0.32, 0.80, 0.83)),
-            ("green", (0.15, 0.53, 0.25), (0.40, 0.78, 0.46)),
-            ("yellow", (0.63, 0.48, 0.00), (0.95, 0.80, 0.32)),
-            ("orange", (0.76, 0.40, 0.00), (1.00, 0.62, 0.26)),
-            ("pink", (0.83, 0.24, 0.54), (1.00, 0.47, 0.71)),
-            ("red", (0.78, 0.19, 0.19), (1.00, 0.44, 0.44)),
-            ("graphite", (0.38, 0.38, 0.41), (0.64, 0.64, 0.67)),
-        ]
-        #expect(accents.count == AppAccent.allCases.count,
-                "an accent was added without a contrast measurement")
+        // Read from `AppAccent` itself since 22 Nov 2026, so an accent added
+        // or changed is measured without anyone copying it here.
+        let accents = AppAccent.allCases.map { ($0.rawValue, $0.standardValues.light, $0.standardValues.dark) }
         for (name, light, dark) in accents {
             let backgrounds: [(String, (Double, Double, Double), (Double, Double, Double))] = [
                 ("light row", light, Self.lightRow),
@@ -116,5 +106,48 @@ struct ContrastTests {
                 #expect(r >= 3.0, "\(name) on the \(where_) is \(r), under WCAG 1.4.11's 3:1")
             }
         }
+    }
+
+    // MARK: The 22 Nov 2026 contrast pass (NFR-05)
+
+    /// The light toolbar glass a "Save" or "Cancel" sits on, as read from the
+    /// iPhone 18 Pro screen.
+    static let lightGlass = (0.93, 0.93, 0.94)
+    /// iOS's dark secondary background, the darkest a dark-mode accent sits on
+    /// that is not black.
+    static let darkGrouped = (0.1098, 0.1098, 0.1176)
+
+    /// A prominent button's fill under white text. The dark-mode accent was
+    /// pale and white on it measured 2.15:1 from the screen.
+    @Test("Every accent's fill carries white text at 4.5:1, and 7:1 under Increase Contrast")
+    func fillsCarryWhiteText() {
+        for accent in AppAccent.allCases {
+            let standard = Self.ratio((1, 1, 1), accent.fillValue)
+            #expect(standard >= 4.5, "white on \(accent.rawValue)'s fill is \(standard), under 4.5:1")
+            let high = Self.ratio((1, 1, 1), accent.highContrastValues.light)
+            #expect(high >= 7.0, "white on \(accent.rawValue)'s high-contrast fill is \(high), under 7:1")
+        }
+    }
+
+    /// Apple's Sufficient Contrast criteria accept an app whose Increase
+    /// Contrast setting "applies sufficient contrast"; these variants are how
+    /// this one does for the colour it owns.
+    @Test("Under Increase Contrast every accent reads at 7:1 as text")
+    func highContrastAccentsReachSeven() {
+        for accent in AppAccent.allCases {
+            let (light, dark) = accent.highContrastValues
+            let onWhite = Self.ratio(light, Self.lightRow)
+            #expect(onWhite >= 7.0, "\(accent.rawValue) high-contrast on white is \(onWhite)")
+            let onDark = Self.ratio(dark, Self.darkGrouped)
+            #expect(onDark >= 7.0, "\(accent.rawValue) high-contrast on #1C1C1E is \(onDark)")
+        }
+    }
+
+    /// The default accent as toolbar text: 4.33:1 on the light glass before
+    /// it was deepened.
+    @Test("The default accent reads at 4.5:1 on the light toolbar glass")
+    func defaultAccentReadsOnGlass() {
+        let r = Self.ratio(AppAccent.lavender.standardValues.light, Self.lightGlass)
+        #expect(r >= 4.5, "lavender on the light glass is \(r), under 4.5:1")
     }
 }
