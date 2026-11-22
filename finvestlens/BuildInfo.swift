@@ -13,11 +13,11 @@ import Foundation
 /// Build metadata shown on the splash screen.
 enum BuildInfo {
     /// Marketing version (matches MARKETING_VERSION in the project).
-    static let version = "1.3"
+    static let version = "1.3.1"
     /// Short git commit the build was cut from.
-    static let commit = "b34ab5a"
+    static let commit = "eaa7fac"
     /// The day the build was cut, ISO 8601.
-    static let buildDay = "2026-11-08"
+    static let buildDay = "2026-11-22"
 
     /// The build day as the reader writes a date — "11 October 2026",
     /// "11. Oktober 2026", "2026年10月11日". It was stamped as English text.
@@ -28,6 +28,6 @@ enum BuildInfo {
         return date.formatted(date: .long, time: .omitted)
     }
 
-    /// e.g. "Version 1.0 (b34ab5a)".
+    /// e.g. "Version 1.0 (eaa7fac)".
     static var versionString: String { String(localized: "Version \(version) (\(commit))") }
 }
