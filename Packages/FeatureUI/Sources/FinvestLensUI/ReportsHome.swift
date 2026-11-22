@@ -903,8 +903,7 @@ struct ReportScreen: View {
     private var parameterBar: some View {
         if compact, dynamicTypeSize.isAccessibilitySize {
             WrappingRow(spacing: 12, lineSpacing: 8) { parameterItems }
-                .scaledFont(.body)
-                .padding(10)
+                .parameterChrome()
                 .frame(maxWidth: .infinity, alignment: .leading)
         } else if compact {
             ScrollView(.horizontal, showsIndicators: false) { parameterControls }
@@ -918,8 +917,7 @@ struct ReportScreen: View {
             parameterItems
             Spacer()
         }
-        .scaledFont(.body)
-        .padding(10)
+        .parameterChrome()
     }
 
     /// The bar's controls: in a row, or in the wrapping row ``parameterBar``
@@ -1291,4 +1289,10 @@ struct FinancialYearPackSheet: View {
         exportDocument = PDFReportDocument(data: data)
         exporting = true
     }
+}
+
+private extension View {
+    /// The report parameter bar's type and inset, one definition for its row
+    /// and its wrapping form (``ReportScreen``).
+    func parameterChrome() -> some View { scaledFont(.body).padding(10) }
 }

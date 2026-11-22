@@ -29,10 +29,11 @@ Platforms, never a second New App). The version records it made said 1.0
 and were edited to **1.2** on each platform's version page (11 Oct 2026), to
 match `MARKETING_VERSION`; the build number is what TestFlight keys on.
 
-**1.3 (build 12) went on sale on 9 Nov 2026.** **1.3.1** exists on both
-platforms in Prepare for Submission since 22 Nov 2026, with no build attached
-and nothing submitted. It was made to answer the age rating's new questions
-(below), which App Store Connect will not edit on a live record.
+**1.3 (build 12) went on sale on 9 Nov 2026.** **1.3.1 (build 13, `c5961ab`)**
+was submitted for review on both platforms on 22 Nov 2026, on the owner's
+instruction, with automatic release. It carries the Larger Text and contrast
+pass and the age rating's new answers (below), which App Store Connect will
+not edit on a live record.
 
 ## Age rating and China mainland compliance
 
